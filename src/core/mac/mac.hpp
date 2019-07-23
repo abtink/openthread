@@ -99,6 +99,162 @@ class Mac : public InstanceLocator
 
 public:
     /**
+     * This class defines all the methods that `Mac` class expects to be provided by its client (next layers).
+     *
+     */
+    class Callbacks : public InstanceLocator
+    {
+    public:
+        /**
+         * This constructor initializes the `Callbacks` object.
+         *
+         * @param[in]  aInstance  A reference to the OpenThread instance.
+         *
+         */
+        explicit Callbacks(Instance &aInstance);
+
+        /**
+         * This callback method checks the "frame pending" in a received frame.
+         *
+         * @param[in] aFrame   The received frame.
+         *
+         */
+        void CheckFramePending(const RxFrame &aFrame);
+
+        /**
+         *  This callback method notifies the `Mac` client of a received data frame.
+         *
+         * @param[in] aFrame  The received data frame.
+         *
+         */
+        void HandleReceivedFrame(RxFrame &aFrame);
+
+        /**
+         * This callback method notifies the `Mac` client of a received data poll frame.
+         *
+         * @param[in] aFrame   The received data poll frame.
+         *
+         */
+        void HandleReceivedDataPoll(RxFrame &aFrame);
+
+        /**
+         * This callback method requests a frame to be prepared for direct transmission.
+         *
+         * This method is invoked after a successful `RequestDirectFrameTransmission()` call when `Mac` is ready to
+         * start the transmission.
+         *
+         * @param[out] aFrame      A reference to a `Frame` where the new frame would be placed.
+         *
+         * @retval OT_ERROR_NONE   Frame was prepared successfully.
+         * @retval OT_ERROR_ABORT  The transmission should be aborted (no frame to send).
+         *
+         */
+        otError PrepareDirectFrame(TxFrame &aFrame);
+
+        /**
+         * This callback method notifies the `Mac` client of the completion of a direct transmission.
+         *
+         * @param[in]  aFrame      The sent frame.
+         * @param[in]  aError      OT_ERROR_NONE when the frame was transmitted successfully,
+         *                         OT_ERROR_NO_ACK when the frame was transmitted but no ACK was received,
+         *                         OT_ERROR_CHANNEL_ACCESS_FAILURE when the tx failed due to activity on the channel,
+         *                         OT_ERROR_ABORT when transmission was aborted for other reasons.
+         *
+         */
+        void HandleSentDirectFrame(TxFrame &aFrame, otError aError);
+
+        /**
+         * This callback method requests a frame to be prepared for indirect transmission.
+         *
+         * This method is invoked after a successful `RequestIndirectFrameTransmission()` call when `Mac` is ready to
+         * start the transmission.
+         *
+         * @param[out] aFrame      A reference to a `Frame` where the new frame would be placed.
+         *
+         * @retval OT_ERROR_NONE   Frame was prepared successfully.
+         * @retval OT_ERROR_ABORT  The transmission should be aborted (no frame to send).
+         *
+         */
+        otError PrepareIndirectFrame(TxFrame &aFrame);
+
+        /**
+         * This callback method notifies the `Mac` client of the completion of an indirect transmission.
+         *
+         * @param[in]  aFrame      The sent frame.
+         * @param[in]  aError      OT_ERROR_NONE when the frame was transmitted successfully,
+         *                         OT_ERROR_NO_ACK when the frame was transmitted but no ACK was received,
+         *                         OT_ERROR_CHANNEL_ACCESS_FAILURE when the tx failed due to activity on the channel,
+         *                         OT_ERROR_ABORT when transmission was aborted for other reasons.
+         *
+         */
+        void HandleSentIndirectFrame(TxFrame &aFrame, otError aError);
+
+        /**
+         * This callback method gets the destination MAC address for a data poll frame.
+         *
+         * This method is invoked after a successful `RequestDataPollTransmission()` call when `Mac` is ready to start
+         * the transmission.
+         *
+         * @param[out] aDest       Reference to an `Address` to output the poll destination address (on success).
+         *
+         * @retval OT_ERROR_NONE   @p aDest was updated successfully.
+         * @retval OT_ERROR_ABORT  Abort the data poll transmission.
+         *
+         */
+        otError GetPollDestinationAddress(Address &aDest);
+
+        /**
+         * This callback method notifies the `Mac` client of the completion of a data poll frame transmission.
+         *
+         * @param[in]  aFrame      The sent frame.
+         * @param[in]  aError      OT_ERROR_NONE when the frame was transmitted successfully,
+         *                         OT_ERROR_NO_ACK when the frame was transmitted but no ACK was received,
+         *                         OT_ERROR_CHANNEL_ACCESS_FAILURE when the tx failed due to activity on the channel,
+         *                         OT_ERROR_ABORT when transmission was aborted for other reasons.
+         *
+         */
+        void HandleSentPoll(TxFrame &aFrame, otError aError);
+
+        /**
+         * This callback method notifies the `Mac` client that a data poll timeout happened
+         *
+         * Data poll timeout indicates that the "frame pending" flag was set in the ack response to a data poll frame
+         * but no frame was received within data poll timeout interval.
+         *
+         */
+        void HandlePollTimeout(void);
+
+        /**
+         * This method returns a pointer to a `Neighbor` object associated with a given MAC address.
+         *
+         * @param[in]  aAddress   The MAC address of the neighbor.
+         *
+         * @returns A pointer to the `Neighbor` object, or NULL if no neighbor for the given address.
+         *
+         */
+        Neighbor *GetNeighbor(const Address &aAddress);
+
+        /**
+         * This method returns a pointer to a `Neighbor` object associated with a given MAC address even if a one-way
+         * link is maintained.
+         *
+         * @param[in]  aAddress  The MAC address of the neighbor.
+         *
+         * @returns A pointer to the `Neighbor` object, or NULL if no neighbor for the given address.
+         *
+         */
+        Neighbor *GetRxOnlyNeighbor(const Address &aAddress);
+
+        /**
+         * This method indicates whether or not the "Joining Permitted" flag in a transmitted beacon should be set.
+         *
+         * @returns TRUE if the "Joining Permitted" flag should be set in a transmitted beacon frame. FALSE otherwise.
+         *
+         */
+        bool IsJoinable(void);
+    };
+
+    /**
      * This constructor initializes the MAC object.
      *
      * @param[in]  aInstance  A reference to the OpenThread instance.
@@ -725,6 +881,7 @@ private:
     uint32_t           mKeyIdMode2FrameCounter;
     SuccessRateTracker mCcaSuccessRateTracker;
     uint16_t           mCcaSampleCount;
+    Callbacks          mCallbacks;
 
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
     Filter mFilter;

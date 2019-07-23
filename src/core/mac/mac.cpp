@@ -65,7 +65,85 @@ static const otExtAddress sMode2ExtAddress = {
 static const otExtendedPanId sExtendedPanidInit = {
     {0xde, 0xad, 0x00, 0xbe, 0xef, 0x00, 0xca, 0xfe},
 };
+
 static const char sNetworkNameInit[] = "OpenThread";
+
+
+//---------------------------------------------------------------------------------------------------------------------
+// Mac::Callbacks
+
+Mac::Callbacks::Callbacks(Instance &aInstance)
+    : InstanceLocator(aInstance)
+{
+}
+
+inline void Mac::Callbacks::CheckFramePending(const RxFrame &aFrame)
+{
+    Get<DataPollSender>().CheckFramePending(aFrame);
+}
+
+inline void Mac::Callbacks::HandleReceivedFrame(RxFrame &aFrame)
+{
+    Get<MeshForwarder>().HandleReceivedFrame(aFrame);
+}
+
+inline void Mac::Callbacks::HandleReceivedDataPoll(RxFrame &aFrame)
+{
+    Get<DataPollHandler>().HandleDataPoll(aFrame);
+}
+
+inline otError Mac::Callbacks::PrepareDirectFrame(TxFrame &aFrame)
+{
+    return Get<MeshForwarder>().HandleFrameRequest(aFrame);
+}
+
+inline void Mac::Callbacks::HandleSentDirectFrame(TxFrame &aFrame, otError aError)
+{
+    Get<MeshForwarder>().HandleSentFrame(aFrame, aError);
+}
+
+inline otError Mac::Callbacks::PrepareIndirectFrame(TxFrame &aFrame)
+{
+    return Get<DataPollHandler>().HandleFrameRequest(aFrame);
+}
+
+inline void Mac::Callbacks::HandleSentIndirectFrame(TxFrame &aFrame, otError aError)
+{
+    Get<DataPollHandler>().HandleSentFrame(aFrame, aError);
+}
+
+inline otError Mac::Callbacks::GetPollDestinationAddress(Address &aDest)
+{
+    return Get<DataPollSender>().GetPollDestinationAddress(aDest);
+}
+
+inline void Mac::Callbacks::HandleSentPoll(TxFrame &aFrame, otError aError)
+{
+    return Get<DataPollSender>().HandleSentPoll(aFrame, aError);
+}
+
+inline void Mac::Callbacks::HandlePollTimeout(void)
+{
+    Get<DataPollSender>().HandlePollTimeout();
+}
+
+inline Neighbor *Mac::Callbacks::GetNeighbor(const Address &aAddress)
+{
+    return Get<Mle::MleRouter>().GetNeighbor(aAddress);
+}
+
+inline Neighbor *Mac::Callbacks::GetRxOnlyNeighbor(const Address &aAddress)
+{
+    return Get<Mle::MleRouter>().GetRxOnlyNeighborRouter(aAddress);
+}
+
+inline bool Mac::Callbacks::IsJoinable(void)
+{
+    return true; // TODO
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+// Mac
 
 Mac::Mac(Instance &aInstance)
     : InstanceLocator(aInstance)
@@ -106,6 +184,7 @@ Mac::Mac(Instance &aInstance)
     , mOobFrame(NULL)
     , mKeyIdMode2FrameCounter(0)
     , mCcaSampleCount(0)
+    , mCallbacks(aInstance)
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
     , mFilter()
 #endif
@@ -774,7 +853,7 @@ otError Mac::PrepareDataRequest(TxFrame &aFrame)
     Address  src, dst;
     uint16_t fcf;
 
-    SuccessOrExit(error = Get<DataPollSender>().GetPollDestinationAddress(dst));
+    SuccessOrExit(error = mCallbacks.GetPollDestinationAddress(dst));
     VerifyOrExit(!dst.IsNone(), error = OT_ERROR_ABORT);
 
     fcf = Frame::kFcfFrameMacCmd | Frame::kFcfPanidCompression | Frame::kFcfFrameVersion2006 | Frame::kFcfAckRequest |
@@ -1278,7 +1357,7 @@ void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, otError aError
 
         mCounters.mTxDataPoll++;
         FinishOperation();
-        Get<DataPollSender>().HandlePollSent(aFrame, aError);
+        Get<DataPollSender>().HandleSentPoll(aFrame, aError);
         PerformNextOperation();
         break;
 

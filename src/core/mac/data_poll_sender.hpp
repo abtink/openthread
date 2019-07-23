@@ -153,7 +153,7 @@ public:
      * @param[in] aError     Error status of a data poll message transmission.
      *
      */
-    void HandlePollSent(Mac::TxFrame &aFrame, otError aError);
+    void HandleSentPoll(Mac::TxFrame &aFrame, otError aError);
 
     /**
      * This method informs the data poll sender that a data poll timeout happened, i.e., when the ack in response to
@@ -170,7 +170,7 @@ public:
      * pending frame.
      *
      */
-    void CheckFramePending(Mac::RxFrame &aFrame);
+    void CheckFramePending(const Mac::Frame &aFrame);
 
     /**
      * This method asks the data poll sender to recalculate the poll period.
