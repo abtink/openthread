@@ -244,13 +244,12 @@ class Frame : public otRadioFrame
 public:
     enum
     {
-        kMtu                 = OT_RADIO_FRAME_MAX_SIZE,
         kFcfSize             = sizeof(uint16_t),
         kDsnSize             = sizeof(uint8_t),
         kSecurityControlSize = sizeof(uint8_t),
         kFrameCounterSize    = sizeof(uint32_t),
         kCommandIdSize       = sizeof(uint8_t),
-        kFcsSize             = sizeof(uint16_t),
+        k154FcsSize          = sizeof(uint16_t),
 
         kFcfFrameBeacon      = 0 << 0,
         kFcfFrameData        = 1 << 0,
@@ -317,9 +316,9 @@ public:
         kHeaderIeCsl          = 0x1a,
         kHeaderIeTermination2 = 0x7f,
 
-        kInfoStringSize = 110, ///< Max chars needed for the info string representation (@sa ToInfoString()).
+        kImmAckLength = kFcfSize + kDsnSize + k154FcsSize,
 
-        kImmAckLength = kFcfSize + kDsnSize + kFcsSize,
+        kInfoStringSize = 128, ///< Max chars needed for the info string representation (@sa ToInfoString()).
     };
 
     /**
@@ -941,13 +940,38 @@ public:
 
 #endif // OPENTHREAD_CONFIG_MAC_HEADER_IE_SUPPORT
 
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    /**
+     * This method gets the radio link type of the frame.
+     *
+     * @returns Frame's radio link type.
+     *
+     */
+    RadioType GetRadioType(void) const { return static_cast<RadioType>(mRadioType); }
+
+    /**
+     * This method sets the radio link type of the frame.
+     *
+     * @param[in] aRadioType  A radio link type.
+     *
+     */
+    void SetRadioType(RadioType aRadioType) { mRadioType = static_cast<uint8_t>(aRadioType); }
+#endif
+
     /**
      * This method returns the maximum transmission unit size (MTU).
      *
      * @returns The maximum transmission unit (MTU).
      *
      */
-    uint16_t GetMtu(void) const { return kMtu; }
+    uint16_t GetMtu(void) const
+#if !OPENTHREAD_CONFIG_MULTI_RADIO && OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    {
+        return OT_RADIO_FRAME_MAX_SIZE;
+    }
+#else
+        ;
+#endif
 
     /**
      * This method returns the FCS size.
@@ -955,7 +979,14 @@ public:
      * @returns This method returns the FCS size.
      *
      */
-    uint16_t GetFcsSize(void) const { return kFcsSize; }
+    uint8_t GetFcsSize(void) const
+#if !OPENTHREAD_CONFIG_MULTI_RADIO && OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    {
+        return sizeof(uint16_t);
+    }
+#else
+        ;
+#endif
 
     /**
      * This method returns information about the frame object as an `InfoString` object.
@@ -1182,7 +1213,7 @@ public:
     void SetAesKey(const Mac::Key &aAesKey) { mInfo.mTxInfo.mAesKey = &aAesKey; }
 
     /**
-     * This method copies the PSDU and all attributes from another frame.
+     * This method copies the PSDU and all attributes (except for frame link type) from another frame.
      *
      * @note This method performs a deep copy meaning the content of PSDU buffer from the given frame is copied into
      * the PSDU buffer of the current frame.

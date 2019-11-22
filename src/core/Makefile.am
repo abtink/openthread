@@ -177,6 +177,7 @@ SOURCES_COMMON                             = \
     mac/mac.cpp                              \
     mac/mac_filter.cpp                       \
     mac/mac_frame.cpp                        \
+    mac/mac_links.cpp                        \
     mac/mac_types.cpp                        \
     mac/sub_mac.cpp                          \
     mac/sub_mac_callbacks.cpp                \
@@ -211,6 +212,8 @@ SOURCES_COMMON                             = \
     radio/radio.cpp                          \
     radio/radio_callbacks.cpp                \
     radio/radio_platform.cpp                 \
+    radio/toble.cpp                          \
+    radio/trel.cpp                           \
     thread/address_resolver.cpp              \
     thread/announce_begin_server.cpp         \
     thread/announce_sender.cpp               \
@@ -234,6 +237,7 @@ SOURCES_COMMON                             = \
     thread/network_data_notifier.cpp         \
     thread/network_diagnostic.cpp            \
     thread/panid_query_server.cpp            \
+    thread/radio_selector.cpp                \
     thread/router_table.cpp                  \
     thread/src_match_controller.cpp          \
     thread/thread_netif.cpp                  \
@@ -366,6 +370,7 @@ HEADERS_COMMON                             = \
     config/openthread-core-default-config.h  \
     config/parent_search.h                   \
     config/platform.h                        \
+    config/radio_link.h                      \
     config/sntp_client.h                     \
     config/time_sync.h                       \
     config/tmf.h                             \
@@ -385,6 +390,7 @@ HEADERS_COMMON                             = \
     mac/mac.hpp                              \
     mac/mac_filter.hpp                       \
     mac/mac_frame.hpp                        \
+    mac/mac_links.hpp                        \
     mac/mac_types.hpp                        \
     mac/sub_mac.hpp                          \
     meshcop/announce_begin_client.hpp        \
@@ -419,6 +425,8 @@ HEADERS_COMMON                             = \
     net/tcp.hpp                              \
     net/udp6.hpp                             \
     radio/radio.hpp                          \
+    radio/toble.hpp                          \
+    radio/trel.hpp                           \
     thread/address_resolver.hpp              \
     thread/announce_begin_server.hpp         \
     thread/announce_sender.hpp               \
@@ -444,6 +452,7 @@ HEADERS_COMMON                             = \
     thread/network_diagnostic.hpp            \
     thread/network_diagnostic_tlvs.hpp       \
     thread/panid_query_server.hpp            \
+    thread/radio_selector.hpp                \
     thread/router_table.hpp                  \
     thread/src_match_controller.hpp          \
     thread/thread_netif.hpp                  \
