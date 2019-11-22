@@ -335,7 +335,7 @@ public:
     otError Send(void);
 
     /**
-     * This method gets the number of transmit retries of last transmit packet.
+     * This method gets the number of transmit retries of last transmitted frame.
      *
      * @returns Number of transmit retries.
      *

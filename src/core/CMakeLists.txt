@@ -139,6 +139,7 @@ set(COMMON_SOURCES
     mac/mac.cpp
     mac/mac_filter.cpp
     mac/mac_frame.cpp
+    mac/mac_links.cpp
     mac/mac_types.cpp
     mac/sub_mac.cpp
     mac/sub_mac_callbacks.cpp
@@ -174,6 +175,8 @@ set(COMMON_SOURCES
     radio/radio.cpp
     radio/radio_callbacks.cpp
     radio/radio_platform.cpp
+    radio/toble.cpp
+    radio/trel.cpp
     thread/address_resolver.cpp
     thread/announce_begin_server.cpp
     thread/announce_sender.cpp
@@ -201,6 +204,7 @@ set(COMMON_SOURCES
     thread/network_data_notifier.cpp
     thread/network_diagnostic.cpp
     thread/panid_query_server.cpp
+    thread/radio_selector.cpp
     thread/router_table.cpp
     thread/src_match_controller.cpp
     thread/thread_netif.cpp
