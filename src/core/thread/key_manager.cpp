@@ -38,6 +38,7 @@
 #include "common/instance.hpp"
 #include "common/locator-getters.hpp"
 #include "common/timer.hpp"
+#include "crypto/hkdf_sha256.hpp"
 #include "thread/mle_router.hpp"
 #include "thread/thread_netif.hpp"
 
@@ -66,6 +67,18 @@ const otMasterKey KeyManager::kDefaultMasterKey = {{
     0xff,
 }};
 
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+const uint8_t KeyManager::kHkdfExtractSaltString[] = {'T', 'h', 'r', 'e', 'a', 'd', 'S', 'e', 'q', 'u', 'e', 'n',
+                                                      'c', 'e', 'M', 'a', 's', 't', 'e', 'r', 'K', 'e', 'y'};
+
+const uint8_t KeyManager::kTrelInfoString[] = {'T', 'h', 'r', 'e', 'a', 'd', 'O', 'v', 'e',
+                                               'r', 'W', 'i', 'F', 'i', 'K', 'e', 'y'};
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+const uint8_t KeyManager::kTobleString[] = {'T', 'o', 'B', 'L', 'E'};
+#endif
+
 KeyManager::KeyManager(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mKeySequence(0)
@@ -81,6 +94,7 @@ KeyManager::KeyManager(Instance &aInstance)
     , mSecurityPolicyFlags(0xff)
     , mIsPskcSet(false)
 {
+    mMacFrameCounters.Reset();
     mMasterKey = static_cast<const MasterKey &>(kDefaultMasterKey);
     mPskc.Clear();
 }
@@ -117,7 +131,7 @@ otError KeyManager::SetMasterKey(const MasterKey &aKey)
     // reset parent frame counters
     parent = &Get<Mle::MleRouter>().GetParent();
     parent->SetKeySequence(0);
-    parent->SetLinkFrameCounter(0);
+    parent->GetLinkFrameCounters().Reset();
     parent->SetMleFrameCounter(0);
 
 #if OPENTHREAD_FTD
@@ -125,7 +139,7 @@ otError KeyManager::SetMasterKey(const MasterKey &aKey)
     for (Router &router : Get<RouterTable>().Iterate())
     {
         router.SetKeySequence(0);
-        router.SetLinkFrameCounter(0);
+        router.GetLinkFrameCounters().Reset();
         router.SetMleFrameCounter(0);
     }
 
@@ -133,7 +147,7 @@ otError KeyManager::SetMasterKey(const MasterKey &aKey)
     for (Child &child : Get<ChildTable>().Iterate(Child::kInStateAnyExceptInvalid))
     {
         child.SetKeySequence(0);
-        child.SetLinkFrameCounter(0);
+        child.GetLinkFrameCounters().Reset();
         child.SetMleFrameCounter(0);
     }
 #endif
@@ -156,20 +170,63 @@ void KeyManager::ComputeKeys(uint32_t aKeySequence, HashKeys &aHashKeys)
     hmac.Finish(aHashKeys.mHash);
 }
 
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+void KeyManager::ComputeTrelKey(uint32_t aKeySequence, Mac::Key &aTrelKey)
+{
+    Crypto::HkdfSha256 hkdf;
+    uint8_t            salt[sizeof(uint32_t) + sizeof(kHkdfExtractSaltString)];
+
+    Encoding::BigEndian::WriteUint32(aKeySequence, salt);
+    memcpy(salt + sizeof(uint32_t), kHkdfExtractSaltString, sizeof(kHkdfExtractSaltString));
+
+    hkdf.Extract(salt, sizeof(salt), mMasterKey.m8, sizeof(MasterKey));
+    hkdf.Expand(kTrelInfoString, sizeof(kTrelInfoString), aTrelKey.m8, sizeof(Mac::Key));
+}
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+void KeyManager::ComputeTobleKey(uint32_t aKeySequence, Mac::Key &aTobleKey)
+{
+    Crypto::HmacSha256 hmac;
+    uint8_t            keySequenceBytes[sizeof(uint32_t)];
+    HashKeys           hash;
+
+    hmac.Start(mMasterKey.m8, sizeof(mMasterKey.m8));
+
+    Encoding::BigEndian::WriteUint32(aKeySequence, keySequenceBytes);
+    hmac.Update(keySequenceBytes, sizeof(keySequenceBytes));
+    hmac.Update(kTobleString, sizeof(kTobleString));
+    hmac.Finish(hash.mHash);
+
+    aTobleKey = hash.mKeys.mMacKey;
+}
+#endif
+
 void KeyManager::UpdateKeyMaterial(void)
 {
-    HashKeys prev;
     HashKeys cur;
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    HashKeys prev;
     HashKeys next;
+#endif
 
-    ComputeKeys(mKeySequence - 1, prev);
     ComputeKeys(mKeySequence, cur);
-    ComputeKeys(mKeySequence + 1, next);
-
     mMleKey = cur.mKeys.mMleKey;
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    ComputeKeys(mKeySequence - 1, prev);
+    ComputeKeys(mKeySequence + 1, next);
 
     Get<Mac::SubMac>().SetMacKey(Mac::Frame::kKeyIdMode1, (mKeySequence & 0x7f) + 1, prev.mKeys.mMacKey,
                                  cur.mKeys.mMacKey, next.mKeys.mMacKey);
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    ComputeTrelKey(mKeySequence, mTrelKey);
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    ComputeTobleKey(mKeySequence, mTobleKey);
+#endif
 }
 
 void KeyManager::SetCurrentKeySequence(uint32_t aKeySequence)
@@ -191,7 +248,7 @@ void KeyManager::SetCurrentKeySequence(uint32_t aKeySequence)
     mKeySequence = aKeySequence;
     UpdateKeyMaterial();
 
-    SetMacFrameCounter(0);
+    mMacFrameCounters.Reset();
     mMleFrameCounter = 0;
 
     Get<Notifier>().Signal(kEventThreadKeySeqCounterChanged);
@@ -210,23 +267,72 @@ const Mle::Key &KeyManager::GetTemporaryMleKey(uint32_t aKeySequence)
     return mTemporaryMleKey;
 }
 
-uint32_t KeyManager::GetMacFrameCounter(void) const
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+const Mac::Key &KeyManager::GetTemporaryTrelMacKey(uint32_t aKeySequence)
 {
-    return Get<Mac::SubMac>().GetFrameCounter();
-}
+    ComputeTrelKey(aKeySequence, mTemporaryTrelKey);
 
-void KeyManager::SetMacFrameCounter(uint32_t aMacFrameCounter)
+    return mTemporaryTrelKey;
+}
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+const Mac::Key &KeyManager::GetTemporaryTobleMacKey(uint32_t aKeySequence)
 {
+    ComputeTobleKey(aKeySequence, mTemporaryTobleKey);
+
+    return mTemporaryTobleKey;
+}
+#endif
+
+void KeyManager::SetAllMacFrameCounters(uint32_t aMacFrameCounter)
+{
+    mMacFrameCounters.SetAll(aMacFrameCounter);
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
     Get<Mac::SubMac>().SetFrameCounter(aMacFrameCounter);
+#endif
 }
 
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
 void KeyManager::MacFrameCounterUpdated(uint32_t aMacFrameCounter)
 {
-    if (aMacFrameCounter >= mStoredMacFrameCounter)
+    mMacFrameCounters.Set154(aMacFrameCounter);
+
+    if (mMacFrameCounters.Get154() >= mStoredMacFrameCounter)
     {
         IgnoreError(Get<Mle::MleRouter>().Store());
     }
 }
+#else
+void KeyManager::MacFrameCounterUpdated(uint32_t)
+{
+}
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+void KeyManager::IncrementTrelMacFrameCounter(void)
+{
+    mMacFrameCounters.IncrementTrel();
+
+    if (mMacFrameCounters.GetTrel() >= mStoredMacFrameCounter)
+    {
+        IgnoreError(Get<Mle::MleRouter>().Store());
+    }
+}
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+void KeyManager::IncrementTobleMacFrameCounter(void)
+{
+    mMacFrameCounters.IncrementToble();
+
+    if (mMacFrameCounters.GetToble() >= mStoredMacFrameCounter)
+    {
+        IgnoreError(Get<Mle::MleRouter>().Store());
+    }
+}
+#endif
 
 void KeyManager::IncrementMleFrameCounter(void)
 {

@@ -616,7 +616,7 @@ private:
                                     uint8_t                 aTlvsLength,
                                     const Challenge &       aChallenge);
     void SendDataResponse(const Ip6::Address &aDestination, const uint8_t *aTlvs, uint8_t aTlvsLength, uint16_t aDelay);
-    otError SendDiscoveryResponse(const Ip6::Address &aDestination, uint16_t aPanId);
+    otError SendDiscoveryResponse(const Ip6::Address &aDestination, const Message &aDiscoverRequestMessage);
 
     void    SetStateRouter(uint16_t aRloc16);
     void    SetStateLeader(uint16_t aRloc16);

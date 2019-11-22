@@ -171,5 +171,191 @@ exit:
 }
 #endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
 
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+
+const RadioType RadioTypes::kAllRadioTypes[kNumRadioTypes] = {
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    kRadioTypeIeee802154,
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    kRadioTypeTrel,
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    kRadioTypeToble,
+#endif
+};
+
+void RadioTypes::AddAll(void)
+{
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    Add(kRadioTypeIeee802154);
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    Add(kRadioTypeTrel);
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    Add(kRadioTypeToble);
+#endif
+}
+
+RadioTypes::InfoString RadioTypes::ToString(void) const
+{
+    InfoString string("{");
+    bool       addComma = false;
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    if (Contains(kRadioTypeIeee802154))
+    {
+        IgnoreError(string.Append("%s%s", addComma ? ", " : " ", RadioTypeToString(kRadioTypeIeee802154)));
+        addComma = true;
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    if (Contains(kRadioTypeTrel))
+    {
+        IgnoreError(string.Append("%s%s", addComma ? ", " : " ", RadioTypeToString(kRadioTypeTrel)));
+        addComma = true;
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    if (Contains(kRadioTypeToble))
+    {
+        IgnoreError(string.Append("%s%s", addComma ? ", " : " ", RadioTypeToString(kRadioTypeToble)));
+        addComma = true;
+    }
+#endif
+
+    OT_UNUSED_VARIABLE(addComma);
+
+    IgnoreError(string.Append(" }"));
+
+    return string;
+}
+
+const char *RadioTypeToString(RadioType aRadioType)
+{
+    const char *str = "unknown";
+
+    switch (aRadioType)
+    {
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    case kRadioTypeIeee802154:
+        str = "15.4";
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    case kRadioTypeTrel:
+        str = "trel";
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    case kRadioTypeToble:
+        str = "toble";
+        break;
+#endif
+    }
+
+    return str;
+}
+
+uint32_t LinkFrameCounters::Get(RadioType aRadioType) const
+{
+    uint32_t counter = 0;
+
+    switch (aRadioType)
+    {
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    case kRadioTypeIeee802154:
+        counter = m154Counter;
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    case kRadioTypeTrel:
+        counter = mTrelCounter;
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    case kRadioTypeToble:
+        counter = mTobleCounter;
+        break;
+#endif
+    }
+
+    return counter;
+}
+
+void LinkFrameCounters::Set(RadioType aRadioType, uint32_t aCounter)
+{
+    switch (aRadioType)
+    {
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    case kRadioTypeIeee802154:
+        m154Counter = aCounter;
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    case kRadioTypeTrel:
+        mTrelCounter = aCounter;
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    case kRadioTypeToble:
+        mTobleCounter = aCounter;
+        break;
+#endif
+    }
+}
+
+#endif // OPENTHREAD_CONFIG_MULTI_RADIO
+
+uint32_t LinkFrameCounters::GetMaximum(void) const
+{
+    uint32_t counter = 0;
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    if (counter < m154Counter)
+    {
+        counter = m154Counter;
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    if (counter < mTrelCounter)
+    {
+        counter = mTrelCounter;
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    if (counter < mTobleCounter)
+    {
+        counter = mTobleCounter;
+    }
+#endif
+
+    return counter;
+}
+
+void LinkFrameCounters::SetAll(uint32_t aCounter)
+{
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    m154Counter = aCounter;
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    mTrelCounter = aCounter;
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    mTobleCounter = aCounter;
+#endif
+}
+
 } // namespace Mac
 } // namespace ot

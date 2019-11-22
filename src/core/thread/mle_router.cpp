@@ -670,6 +670,13 @@ void MleRouter::HandleLinkRequest(const Message &aMessage, const Ip6::MessageInf
     }
 #endif
 
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    if (neighbor != nullptr)
+    {
+        neighbor->ClearLastRxFragmentTag();
+    }
+#endif
+
     SuccessOrExit(error = SendLinkAccept(aMessageInfo, neighbor, requestedTlvs, challenge));
 
 exit:
@@ -967,7 +974,7 @@ otError MleRouter::HandleLinkAccept(const Message &         aMessage,
     aMessageInfo.GetPeerAddr().GetIid().ConvertToExtAddress(extAddr);
     router->SetExtAddress(extAddr);
     router->SetRloc16(sourceAddress);
-    router->SetLinkFrameCounter(linkFrameCounter);
+    router->GetLinkFrameCounters().SetAll(linkFrameCounter);
     router->SetMleFrameCounter(mleFrameCounter);
     router->SetLastHeard(TimerMilli::GetNow());
     router->SetDeviceMode(DeviceMode(DeviceMode::kModeFullThreadDevice | DeviceMode::kModeRxOnWhenIdle |
@@ -2307,13 +2314,16 @@ void MleRouter::HandleChildIdRequest(const Message &         aMessage,
     }
 
     child->SetLastHeard(TimerMilli::GetNow());
-    child->SetLinkFrameCounter(linkFrameCounter);
+    child->GetLinkFrameCounters().SetAll(linkFrameCounter);
     child->SetMleFrameCounter(mleFrameCounter);
     child->SetKeySequence(aKeySequence);
     child->SetDeviceMode(mode);
     child->SetVersion(static_cast<uint8_t>(version));
     child->GetLinkInfo().AddRss(aMessageInfo.GetThreadLinkInfo()->GetRss());
     child->SetTimeout(timeout);
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    child->ClearLastRxFragmentTag();
+#endif
 
     if (mode.IsFullNetworkData())
     {
@@ -2547,6 +2557,10 @@ void MleRouter::HandleChildUpdateRequest(const Message &         aMessage,
         }
     }
 
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    child->ClearLastRxFragmentTag();
+#endif
+
     SendChildUpdateResponse(child, aMessageInfo, tlvs, tlvslength, challenge);
 
 exit:
@@ -2628,7 +2642,7 @@ void MleRouter::HandleChildUpdateResponse(const Message &         aMessage,
     switch (Tlv::FindUint32Tlv(aMessage, Tlv::kLinkFrameCounter, linkFrameCounter))
     {
     case OT_ERROR_NONE:
-        child->SetLinkFrameCounter(linkFrameCounter);
+        child->GetLinkFrameCounters().SetAll(linkFrameCounter);
         break;
     case OT_ERROR_NOT_FOUND:
         break;
@@ -2906,13 +2920,13 @@ void MleRouter::HandleDiscoveryRequest(const Message &aMessage, const Ip6::Messa
         }
     }
 
-    error = SendDiscoveryResponse(aMessageInfo.GetPeerAddr(), aMessage.GetPanId());
+    error = SendDiscoveryResponse(aMessageInfo.GetPeerAddr(), aMessage);
 
 exit:
     LogProcessError(kTypeDiscoveryRequest, error);
 }
 
-otError MleRouter::SendDiscoveryResponse(const Ip6::Address &aDestination, uint16_t aPanId)
+otError MleRouter::SendDiscoveryResponse(const Ip6::Address &aDestination, const Message &aDiscoverRequestMessage)
 {
     otError                       error = OT_ERROR_NONE;
     Message *                     message;
@@ -2924,7 +2938,13 @@ otError MleRouter::SendDiscoveryResponse(const Ip6::Address &aDestination, uint1
 
     VerifyOrExit((message = NewMleMessage()) != nullptr, error = OT_ERROR_NO_BUFS);
     message->SetSubType(Message::kSubTypeMleDiscoverResponse);
-    message->SetPanId(aPanId);
+    message->SetPanId(aDiscoverRequestMessage.GetPanId());
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    // Send the MLE Discovery Response message on same radio link
+    // from which the "MLE Discover Request" message was received.
+    message->SetRadioType(aDiscoverRequestMessage.GetRadioType());
+#endif
+
     SuccessOrExit(error = AppendHeader(*message, kCommandDiscoveryResponse));
 
     // Discovery TLV

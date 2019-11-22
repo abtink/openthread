@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2020, The OpenThread Authors.
+ *  Copyright (c) 2019, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -26,41 +26,76 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "radio.hpp"
+/**
+ * @file
+ *   This file includes definitions for Thread over BLE (ToBLE).
+ */
 
-#include "common/locator-getters.hpp"
-#include "utils/otns.hpp"
+#ifndef TOBLE_HPP_
+#define TOBLE_HPP_
+
+#include "openthread-core-config.h"
+
+#include "common/locator.hpp"
+#include "mac/mac_frame.hpp"
+#include "mac/mac_types.hpp"
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
 
 namespace ot {
+namespace Toble {
 
-#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+/**
+ * @addtogroup core-toble
+ *
+ * @brief
+ *   This module includes definitions for Thread over BLE (ToBLE)
+ *
+ * @{
+ *
+ */
 
-void Radio::SetExtendedAddress(const Mac::ExtAddress &aExtAddress)
+/**
+ * This class represents a Thread over BLE (ToBLE) link.
+ *
+ */
+class Link : public InstanceLocator
 {
-    otPlatRadioSetExtendedAddress(GetInstancePtr(), &aExtAddress);
+    friend class Instance;
 
-#if (OPENTHREAD_MTD || OPENTHREAD_FTD) && OPENTHREAD_CONFIG_OTNS_ENABLE
-    Get<Utils::Otns>().EmitExtendedAddress(aExtAddress);
-#endif
-}
+public:
+    enum
+    {
+        kMtuSize = 1600,
+        kFcsSize = 0,
+    };
 
-void Radio::SetShortAddress(Mac::ShortAddress aShortAddress)
-{
-    otPlatRadioSetShortAddress(GetInstancePtr(), aShortAddress);
+    explicit Link(Instance &aInstance);
 
-#if (OPENTHREAD_MTD || OPENTHREAD_FTD) && OPENTHREAD_CONFIG_OTNS_ENABLE
-    Get<Utils::Otns>().EmitShortAddress(aShortAddress);
-#endif
-}
+    void SetPanId(Mac::PanId aPanId) { (void)aPanId; }
 
-otError Radio::Transmit(Mac::TxFrame &aFrame)
-{
-#if (OPENTHREAD_MTD || OPENTHREAD_FTD) && OPENTHREAD_CONFIG_OTNS_ENABLE
-    Get<Utils::Otns>().EmitTransmit(aFrame);
-#endif
+    void Enable(void) {}
+    void Disable(void) {}
 
-    return otPlatRadioTransmit(GetInstancePtr(), &aFrame);
-}
-#endif // OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    void Sleep(void) {}
+    void Receive(uint8_t aChannel) { (void)aChannel; }
+    void Send(void) {}
 
+    Mac::TxFrame &GetTransmitFrame(void) { return mTxFrame; }
+
+private:
+    Mac::TxFrame mTxFrame;
+    uint8_t      mFrameBuffer[kMtuSize];
+};
+
+/**
+ * @}
+ *
+ */
+
+} // namespace Toble
 } // namespace ot
+
+#endif // #if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+
+#endif // TOBLE_HPP_
