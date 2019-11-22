@@ -72,6 +72,7 @@
 #include "thread/network_data_local.hpp"
 #include "thread/network_diagnostic.hpp"
 #include "thread/panid_query_server.hpp"
+#include "thread/radio_selector.hpp"
 #include "thread/time_sync_service.hpp"
 #include "utils/child_supervision.hpp"
 
@@ -187,6 +188,9 @@ private:
     Mac::Mac                mMac;
     MeshForwarder           mMeshForwarder;
     Mle::MleRouter          mMleRouter;
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    RadioSelector mRadioSelector;
+#endif
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
     NetworkData::Local mNetworkDataLocal;
 #endif // OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE

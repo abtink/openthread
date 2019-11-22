@@ -2742,7 +2742,7 @@ otError MleRouter::HandleDiscoveryRequest(const Message &aMessage, const Ip6::Me
         offset += sizeof(meshcopTlv) + meshcopTlv.GetLength();
     }
 
-    error = SendDiscoveryResponse(aMessageInfo.GetPeerAddr(), aMessage.GetPanId());
+    error = SendDiscoveryResponse(aMessageInfo.GetPeerAddr(), aMessage);
 
 exit:
 
@@ -2754,7 +2754,7 @@ exit:
     return error;
 }
 
-otError MleRouter::SendDiscoveryResponse(const Ip6::Address &aDestination, uint16_t aPanId)
+otError MleRouter::SendDiscoveryResponse(const Ip6::Address &aDestination, const Message &aDiscoverRequestMessage)
 {
     otError                       error = OT_ERROR_NONE;
     Message *                     message;
@@ -2769,7 +2769,13 @@ otError MleRouter::SendDiscoveryResponse(const Ip6::Address &aDestination, uint1
 
     VerifyOrExit((message = NewMleMessage()) != NULL, error = OT_ERROR_NO_BUFS);
     message->SetSubType(Message::kSubTypeMleDiscoverResponse);
-    message->SetPanId(aPanId);
+    message->SetPanId(aDiscoverRequestMessage.GetPanId());
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    // Send the MLE Discovery Response message on same radio link
+    // from which the "MLE Discover Request" message was received.
+    message->SetRadioType(aDiscoverRequestMessage.GetRadioType());
+#endif
+
     SuccessOrExit(error = AppendHeader(*message, Header::kCommandDiscoveryResponse));
 
     // Discovery TLV
@@ -3401,7 +3407,6 @@ exit:
 Neighbor *MleRouter::FindNeighbor(const Mac::Address &aAddress, Neighbor::StateFilter aFilter)
 {
     Neighbor *neighbor = NULL;
-    Neighbor *parent;
 
     VerifyOrExit(!aAddress.IsNone() && !aAddress.IsBroadcast());
 

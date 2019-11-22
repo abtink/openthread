@@ -559,7 +559,21 @@ void MeshForwarder::HandleMesh(uint8_t *               aFrame,
         message->SetPanId(aLinkInfo.mPanId);
         message->AddRss(aLinkInfo.mRss);
 
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+        // We set the received radio type on the message in order for it
+        // to be logged correctly from LogMessage().
+        message->SetRadioType(static_cast<Mac::RadioType>(aLinkInfo.mRadioType));
+#endif
+
         LogMessage(kMessageReceive, *message, &aMacSource, OT_ERROR_NONE);
+
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+        // Since the message will be forwarded, we clear the radio
+        // type on the message to allow the radio type for tx to be
+        // selected later (based on the radios supported by the next
+        // hop).
+        message->ClearRadioType();
+#endif
 
         SendMessage(*message);
     }
@@ -867,14 +881,24 @@ otError MeshForwarder::LogMeshFragmentHeader(MessageAction       aAction,
     shouldLogRss = (aAction == kMessageReceive) || (aAction == kMessageReassemblyDrop);
 
     otLogMac(
-        aLogLevel, "%s mesh frame, len:%d%s%s, msrc:%s, mdst:%s, hops:%d, frag:%s, sec:%s%s%s%s%s",
+        aLogLevel,
+        "%s mesh frame, len:%d%s%s, msrc:%s, mdst:%s, hops:%d, frag:%s, sec:%s%s%s%s%s"
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+        ", radio:%s"
+#endif
+        ,
         MessageActionToString(aAction, aError), aMessage.GetLength(),
         (aMacAddress == NULL) ? "" : ((aAction == kMessageReceive) ? ", from:" : ", to:"),
         (aMacAddress == NULL) ? "" : aMacAddress->ToString().AsCString(), aMeshSource.ToString().AsCString(),
         aMeshDest.ToString().AsCString(), meshHeader.GetHopsLeft() + ((aAction == kMessageReceive) ? 1 : 0),
         hasFragmentHeader ? "yes" : "no", aMessage.IsLinkSecurityEnabled() ? "yes" : "no",
         (aError == OT_ERROR_NONE) ? "" : ", error:", (aError == OT_ERROR_NONE) ? "" : otThreadErrorToString(aError),
-        shouldLogRss ? ", rss:" : "", shouldLogRss ? aMessage.GetRssAverager().ToString().AsCString() : "");
+        shouldLogRss ? ", rss:" : "", shouldLogRss ? aMessage.GetRssAverager().ToString().AsCString() : ""
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+        ,
+        aMessage.IsRadioTypeSet() ? RadioTypeToString(aMessage.GetRadioType()) : "all"
+#endif
+    );
 
     if (hasFragmentHeader)
     {

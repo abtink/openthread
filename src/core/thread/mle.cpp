@@ -2718,6 +2718,28 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
     {
         if (keySequence == neighbor->GetKeySequence())
         {
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+            // Only when counter is exactly one off, we allow it to be
+            // used for updating radio link info (by `RadioSelector`)
+            // before message is dropped as a duplicate. This handles
+            // the common case where a broadcast MLE message (such as
+            // Link Advertisement) is received over multiple radio
+            // links.
+
+            if ((frameCounter + 1) == neighbor->GetMleFrameCounter())
+            {
+                assert(aMessage.IsRadioTypeSet());
+                Get<RadioSelector>().UpdateOnReceive(*neighbor, aMessage.GetRadioType(), /* IsDuplicate */ true);
+
+                // We intentionally exit without setting the error to
+                // skip logging "Failed to process UDP" at the exit
+                // label. Note that in multi-radio mode, receiving
+                // duplicate MLE message (with one-off counter) would
+                // be common and ok for broadcast MLE messages (e.g.
+                // MLE Link Advertisements).
+                ExitNow();
+            }
+#endif
             VerifyOrExit(frameCounter >= neighbor->GetMleFrameCounter(), error = OT_ERROR_DUPLICATED);
         }
         else
@@ -2729,6 +2751,14 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
 
         neighbor->SetMleFrameCounter(frameCounter + 1);
     }
+
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    if (neighbor != NULL)
+    {
+        assert(aMessage.IsRadioTypeSet());
+        Get<RadioSelector>().UpdateOnReceive(*neighbor, aMessage.GetRadioType(), /* IsDuplicate */ false);
+    }
+#endif
 
     switch (command)
     {
@@ -2806,6 +2836,30 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
         break;
 #endif
     }
+
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    // If we could not find a neighbor matching the MAC address of the
+    // received MLE messages, or if the neighbor is now invalid, we
+    // check again after the message is handled with a relaxed neighbor
+    // state filer. The processing of the received MLE message may
+    // create a new neighbor or change the neighbor table (e.g.,
+    // receiving a "Parent Request" from a new child, or processing a
+    // "Link Request" from a previous child which is being promoted to a
+    // router).
+
+    if ((neighbor == NULL) || neighbor->IsStateInvalid())
+    {
+        Mac::Address address;
+
+        address.SetExtended(macAddr);
+        neighbor = Get<MleRouter>().FindNeighbor(address, Neighbor::kInStateAnyExceptInvalid);
+
+        if (neighbor != NULL)
+        {
+            Get<RadioSelector>().UpdateOnReceive(*neighbor, aMessage.GetRadioType(), /* aIsDuplicate */ false);
+        }
+    }
+#endif
 
 exit:
 
@@ -3954,12 +4008,10 @@ Neighbor *Mle::FindNeighbor(const Mac::Address &aAddress, Neighbor::StateFilter 
     {
         neighbor = &mParent;
     }
-    else if (mParentCandidate.IsStateValid() && mParentCandidate.MatchesFilter(aFilter) &&
+    else if (mParentCandidate.MatchesFilter(aFilter) &&
              ((aAddress.IsShort() && (mParentCandidate.GetRloc16() == aAddress.GetShort())) ||
               (aAddress.IsExtended() && mParentCandidate.GetExtAddress() == aAddress.GetExtended())))
     {
-        // Parent candidate is considered only when it is in valid state.
-
         neighbor = &mParentCandidate;
     }
 
