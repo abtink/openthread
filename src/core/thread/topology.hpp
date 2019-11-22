@@ -47,6 +47,7 @@
 #include "thread/indirect_sender.hpp"
 #include "thread/link_quality.hpp"
 #include "thread/mle_tlvs.hpp"
+#include "thread/radio_selector.hpp"
 
 namespace ot {
 
@@ -57,6 +58,9 @@ class Instance;
  *
  */
 class Neighbor
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    : public RadioSelector::NeighborInfo
+#endif
 {
 public:
     /**
