@@ -2705,20 +2705,42 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
         break;
     }
 
-    if (neighbor != NULL && neighbor->IsStateValid())
+    if (neighbor != NULL)
     {
-        if (keySequence == neighbor->GetKeySequence())
+        if (neighbor->IsStateValid())
         {
-            VerifyOrExit(frameCounter >= neighbor->GetMleFrameCounter(), error = OT_ERROR_DUPLICATED);
-        }
-        else
-        {
-            VerifyOrExit(keySequence > neighbor->GetKeySequence(), error = OT_ERROR_DUPLICATED);
-            neighbor->SetKeySequence(keySequence);
-            neighbor->SetLinkFrameCounter(0);
+            if (keySequence == neighbor->GetKeySequence())
+            {
+                if (frameCounter < neighbor->GetMleFrameCounter())
+                {
+                    error = OT_ERROR_DUPLICATED;
+                }
+            }
+            else
+            {
+                if (keySequence <= neighbor->GetKeySequence())
+                {
+                    error = OT_ERROR_DUPLICATED;
+                }
+                else
+                {
+                    neighbor->SetKeySequence(keySequence);
+                    neighbor->SetLinkFrameCounter(0);
+                }
+            }
+
+            if (error == OT_ERROR_NONE)
+            {
+                neighbor->SetMleFrameCounter(frameCounter + 1);
+            }
         }
 
-        neighbor->SetMleFrameCounter(frameCounter + 1);
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+        Get<RadioSelector>().UpdateOnReceive(*neighbor, aMessage.GetRadioType(),
+                                             /* IsDuplicate */ (error == OT_ERROR_DUPLICATED));
+#endif
+
+        SuccessOrExit(error);
     }
 
     switch (command)
@@ -2797,6 +2819,27 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
         break;
 #endif
     }
+
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    // If we could not find a neighbor matching the MAC address of the
+    // received MLE messages, we check again after the message is
+    // handled with a relaxed neighbor state filer. The processing of
+    // the received MLE message may also create a new neighbor entry
+    // (e.g., receiving a "Parent Request" from a new child).
+
+    if (neighbor == NULL)
+    {
+        Mac::Address address;
+
+        address.SetExtended(macAddr);
+        neighbor = Get<MleRouter>().FindNeighbor(address, Neighbor::kInStateAnyExceptInvalid);
+
+        if (neighbor != NULL)
+        {
+            Get<RadioSelector>().UpdateOnReceive(*neighbor, aMessage.GetRadioType(), /* aIsDuplicate */ false);
+        }
+    }
+#endif
 
 exit:
 
@@ -3950,12 +3993,10 @@ Neighbor *Mle::FindNeighbor(const Mac::Address &aAddress, Neighbor::StateFilter 
     {
         neighbor = &mParent;
     }
-    else if (mParentCandidate.IsStateValid() && mParentCandidate.MatchesFilter(aFilter) &&
+    else if (mParentCandidate.MatchesFilter(aFilter) &&
              ((aAddress.IsShort() && (mParentCandidate.GetRloc16() == aAddress.GetShort())) ||
               (aAddress.IsExtended() && mParentCandidate.GetExtAddress() == aAddress.GetExtended())))
     {
-        // Parent candidate is considered only when it is in valid state.
-
         neighbor = &mParentCandidate;
     }
 

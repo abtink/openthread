@@ -38,6 +38,8 @@
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
 #include "crypto/aes_ccm.hpp"
+#include "radio/toble.hpp"
+#include "radio/trel.hpp"
 #include "thread/key_manager.hpp"
 
 namespace ot {
@@ -979,24 +981,129 @@ exit:
 }
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
 
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+uint16_t Frame::GetMtu(void) const
+{
+    uint16_t mtu;
+
+    switch (GetRadioType())
+    {
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    case kRadioTypeIeee802154:
+        mtu = OT_RADIO_FRAME_MAX_SIZE;
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    case kRadioTypeTrel:
+        mtu = Trel::Link::kMtuSize;
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    case kRadioTypeToble:
+        mtu = Toble::Link::kMtuSize;
+        break;
+#endif
+
+    default:
+        assert(false);
+    }
+
+    return mtu;
+}
+
+uint8_t Frame::GetFcsSize(void) const
+{
+    uint8_t fcsSize;
+
+    switch (GetRadioType())
+    {
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    case kRadioTypeIeee802154:
+        fcsSize = sizeof(uint16_t);
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    case kRadioTypeTrel:
+        fcsSize = Trel::Link::kFcsSize;
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    case kRadioTypeToble:
+        fcsSize = Toble::Link::kFcsSize;
+        break;
+#endif
+
+    default:
+        assert(false);
+    }
+
+    return fcsSize;
+}
+
+#elif !OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+
+uint16_t Frame::GetMtu(void) const
+{
+    return
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+        Trel::Link::kMtuSize;
+#elif OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+        Toble::Link::kMtuSize;
+#endif
+}
+
+uint8_t Frame::GetFcsSize(void) const
+{
+    return
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+        Trel::Link::kFcsSize;
+#elif OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+        Toble::Link::kFcsSize;
+#endif
+}
+
+#endif // #elif !OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+
 void TxFrame::CopyFrom(const TxFrame &aFromFrame)
 {
     uint8_t *      psduBuffer   = mPsdu;
     otRadioIeInfo *ieInfoBuffer = mInfo.mTxInfo.mIeInfo;
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    uint8_t radioType = mRadioType;
+#endif
 
     memcpy(this, &aFromFrame, sizeof(Frame));
 
-    // Set the original buffer pointers back on the frame
-    // which were overwritten by above `memcpy()`.
+    // Set the original buffer pointers (and link type) back on
+    // the frame (which were overwritten by above `memcpy()`).
 
     mPsdu                 = psduBuffer;
     mInfo.mTxInfo.mIeInfo = ieInfoBuffer;
+
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    mRadioType = radioType;
+#endif
 
     memcpy(mPsdu, aFromFrame.mPsdu, aFromFrame.GetPsduLength());
 
     // mIeInfo may be null when TIME_SYNC is not enabled.
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
     memcpy(mInfo.mTxInfo.mIeInfo, aFromFrame.mInfo.mTxInfo.mIeInfo, sizeof(otRadioIeInfo));
+#endif
+
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    if (mRadioType != aFromFrame.GetRadioType())
+    {
+        // Frames associated with different radio link types can have
+        // different FCS size. We adjust the PSDU length after the
+        // copy to account for this.
+
+        SetPsduLength(aFromFrame.GetPsduLength() - aFromFrame.GetFcsSize() + GetFcsSize());
+    }
 #endif
 }
 
@@ -1020,7 +1127,7 @@ void TxFrame::ProcessTransmitAesCcm(const ExtAddress &aExtAddress)
     KeyManager::GenerateNonce(aExtAddress, frameCounter, securityLevel, nonce);
 
     aesCcm.SetKey(GetAesKey(), 16);
-    tagLength = GetFooterLength() - Frame::kFcsSize;
+    tagLength = GetFooterLength() - GetFcsSize();
 
     error = aesCcm.Init(GetHeaderLength(), GetPayloadLength(), tagLength, nonce, sizeof(nonce));
     assert(error == OT_ERROR_NONE);
@@ -1095,6 +1202,10 @@ Frame::InfoString Frame::ToInfoString(void) const
 
     string.Append(", src:%s, dst:%s, sec:%s, ackreq:%s", src.ToString().AsCString(), dst.ToString().AsCString(),
                   GetSecurityEnabled() ? "yes" : "no", GetAckRequest() ? "yes" : "no");
+
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    string.Append(", radio:%s", RadioTypeToString(GetRadioType()));
+#endif
 
     return string;
 }

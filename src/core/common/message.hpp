@@ -113,8 +113,15 @@ struct MessageInfo
     bool    mDoNotEvict : 1;   ///< Indicates whether or not this message may be evicted.
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
     bool    mTimeSync : 1;      ///< Indicates whether the message is also used for time sync purpose.
-    uint8_t mTimeSyncSeq;       ///< The time sync sequence.
     int64_t mNetworkTimeOffset; ///< The time offset to the Thread network time, in microseconds.
+    uint8_t mTimeSyncSeq;       ///< The time sync sequence.
+#endif
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    uint8_t mRadioType : 2;       ///< The radio link type the message was received on, or should be sent on.
+    uint8_t mTxAttemptRadios : 3; ///< Tracks the previous radio link types message was transmitted on.
+
+    OT_STATIC_ASSERT(Mac::kNumRadioTypes <= (1 << 2), "mRadioType bitfield cannot store all radio type values");
+    OT_STATIC_ASSERT(Mac::kNumRadioTypes <= 3, "mTxAttemptRadios bitfield cannot store all radio type values");
 #endif
 };
 
@@ -777,6 +784,51 @@ public:
      */
     uint8_t GetTimeSyncSeq(void) const { return mBuffer.mHead.mInfo.mTimeSyncSeq; }
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
+
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    /**
+     * This method gets the radio link type the message was received on, or should be sent on.
+     *
+     * @returns The radio link type of the message.
+     *
+     */
+    Mac::RadioType GetRadioType(void) const { return static_cast<Mac::RadioType>(mBuffer.mHead.mInfo.mRadioType); }
+
+    /**
+     * This method sets the radio link type the message was received on, or should be sent on.
+     *
+     * @param[in] aRadioType   A radio link type of the message.
+     *
+     */
+    void SetRadioType(Mac::RadioType aRadioType) { mBuffer.mHead.mInfo.mRadioType = aRadioType; }
+
+    /**
+     * This method gets the set of radio links that the message was previous sent on.
+     *
+     * @return Set of radio links on which a transmit was attempted earlier.
+     *
+     */
+    Mac::RadioTypes GetTxAttemptRadios(void) const { return Mac::RadioTypes(mBuffer.mHead.mInfo.mTxAttemptRadios); }
+
+    /**
+     * This method clears the set of radio links that the message is sent on.
+     *
+     */
+    void ClearTxAttemptRadios(void) { mBuffer.mHead.mInfo.mTxAttemptRadios = 0; }
+
+    /**
+     * This method adds a radio link type to the set of radio links that the message was previous sent on.
+     *
+     * @param[in] aRadioType  A radio link type.
+     *
+     */
+    void AddToTxAttemptRadios(Mac::RadioType aRadioType)
+    {
+        Mac::RadioTypes attemptRadios = GetTxAttemptRadios();
+        attemptRadios.Add(aRadioType);
+        mBuffer.mHead.mInfo.mTxAttemptRadios = attemptRadios.GetAsBitMask();
+    }
+#endif // #if OPENTHREAD_CONFIG_MULTI_RADIO
 
 private:
     /**

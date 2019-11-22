@@ -145,5 +145,86 @@ exit:
     return error;
 }
 
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+
+void RadioTypes::AddAll(void)
+{
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    Add(kRadioTypeIeee802154);
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    Add(kRadioTypeTrel);
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    Add(kRadioTypeToble);
+#endif
+}
+
+RadioTypes::InfoString RadioTypes::ToString(void) const
+{
+    InfoString string("{");
+    bool       addComma = false;
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    if (Contains(kRadioTypeIeee802154))
+    {
+        string.Append("%s%s", addComma ? ", " : " ", RadioTypeToString(kRadioTypeIeee802154));
+        addComma = true;
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    if (Contains(kRadioTypeTrel))
+    {
+        string.Append("%s%s", addComma ? ", " : " ", RadioTypeToString(kRadioTypeTrel));
+        addComma = true;
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    if (Contains(kRadioTypeToble))
+    {
+        string.Append("%s%s", addComma ? ", " : " ", RadioTypeToString(kRadioTypeToble));
+        addComma = true;
+    }
+#endif
+
+    OT_UNUSED_VARIABLE(addComma);
+
+    string.Append(" }");
+
+    return string;
+}
+
+const char *RadioTypeToString(RadioType aRadioType)
+{
+    const char *str = "unknown";
+
+    switch (aRadioType)
+    {
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+    case kRadioTypeIeee802154:
+        str = "15.4";
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    case kRadioTypeTrel:
+        str = "trel";
+        break;
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
+    case kRadioTypeToble:
+        str = "toble";
+        break;
+#endif
+    }
+
+    return str;
+}
+
+#endif // #if OPENTHREAD_CONFIG_MULTI_RADIO
+
 } // namespace Mac
 } // namespace ot

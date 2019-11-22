@@ -136,7 +136,11 @@ exit:
     return error;
 }
 
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+otError DataPollSender::GetPollDestinationAddress(Mac::Address &aDest, Mac::RadioType &aRadioType) const
+#else
 otError DataPollSender::GetPollDestinationAddress(Mac::Address &aDest) const
+#endif
 {
     otError         error  = OT_ERROR_NONE;
     const Neighbor &parent = GetParent();
@@ -153,6 +157,10 @@ otError DataPollSender::GetPollDestinationAddress(Mac::Address &aDest) const
     {
         aDest.SetShort(parent.GetRloc16());
     }
+
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    aRadioType = Get<RadioSelector>().SelectPollFrameRadio(parent);
+#endif
 
 exit:
     return error;
