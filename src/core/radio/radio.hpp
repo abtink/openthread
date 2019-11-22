@@ -192,28 +192,12 @@ public:
     }
 
     /**
-     * This method gets the radio capabilities.
-     *
-     * @returns The radio capability bit vector (see `OT_RADIO_CAP_*` definitions).
-     *
-     */
-    otRadioCaps GetCaps(void) { return otPlatRadioGetCaps(GetInstance()); }
-
-    /**
      * This method gets the radio version string.
      *
      * @returns A pointer to the OpenThread radio version.
      *
      */
-    const char *GetVersionString(void) { return otPlatRadioGetVersionString(GetInstance()); }
-
-    /**
-     * This method gets the radio receive sensitivity value.
-     *
-     * @returns The radio receive sensitivity value in dBm.
-     *
-     */
-    int8_t GetReceiveSensitivity(void) { return otPlatRadioGetReceiveSensitivity(GetInstance()); }
+    const char *GetVersionString(void);
 
     /**
      * This method gets the factory-assigned IEEE EUI-64 for the device.
@@ -221,7 +205,23 @@ public:
      * @param[out] aIeeeEui64  A reference to `Mac::ExtAddress` to place the factory-assigned IEEE EUI-64.
      *
      */
-    void GetIeeeEui64(Mac::ExtAddress &aIeeeEui64) { otPlatRadioGetIeeeEui64(GetInstance(), aIeeeEui64.m8); }
+    void GetIeeeEui64(Mac::ExtAddress &aIeeeEui64);
+
+    /**
+     * This method gets the radio capabilities.
+     *
+     * @returns The radio capability bit vector (see `OT_RADIO_CAP_*` definitions).
+     *
+     */
+    otRadioCaps GetCaps(void);
+
+    /**
+     * This method gets the radio receive sensitivity value.
+     *
+     * @returns The radio receive sensitivity value in dBm.
+     *
+     */
+    int8_t GetReceiveSensitivity(void);
 
     /**
      * This method sets the PAN ID for address filtering.
@@ -229,7 +229,7 @@ public:
      * @param[in] aPanId     The IEEE 802.15.4 PAN ID.
      *
      */
-    void SetPanId(Mac::PanId aPanId) { otPlatRadioSetPanId(GetInstance(), aPanId); }
+    void SetPanId(Mac::PanId aPanId);
 
     /**
      * This method sets the Extended Address for address filtering.
@@ -237,10 +237,7 @@ public:
      * @param[in] aExtAddress  The IEEE 802.15.4 Extended Address stored in little-endian byte order.
      *
      */
-    void SetExtendedAddress(const Mac::ExtAddress &aExtAddress)
-    {
-        otPlatRadioSetExtendedAddress(GetInstance(), &aExtAddress);
-    }
+    void SetExtendedAddress(const Mac::ExtAddress &aExtAddress);
 
     /**
      * This method sets the Short Address for address filtering.
@@ -248,7 +245,7 @@ public:
      * @param[in] aShortAddress  The IEEE 802.15.4 Short Address.
      *
      */
-    void SetShortAddress(Mac::ShortAddress aShortAddress) { otPlatRadioSetShortAddress(GetInstance(), aShortAddress); }
+    void SetShortAddress(Mac::ShortAddress aShortAddress);
 
     /**
      * This method gets the radio's transmit power in dBm.
@@ -259,7 +256,7 @@ public:
      * @retval OT_ERROR_NOT_IMPLEMENTED  Transmit power configuration via dBm is not implemented.
      *
      */
-    otError GetTransmitPower(int8_t &aPower) { return otPlatRadioGetTransmitPower(GetInstance(), &aPower); }
+    otError GetTransmitPower(int8_t &aPower);
 
     /**
      * This method sets the radio's transmit power in dBm.
@@ -270,7 +267,7 @@ public:
      * @retval OT_ERROR_NOT_IMPLEMENTED  Transmit power configuration via dBm is not implemented.
      *
      */
-    otError SetTransmitPower(int8_t aPower) { return otPlatRadioSetTransmitPower(GetInstance(), aPower); }
+    otError SetTransmitPower(int8_t aPower);
 
     /**
      * This method gets the radio's CCA ED threshold in dBm.
@@ -281,10 +278,7 @@ public:
      * @retval OT_ERROR_NOT_IMPLEMENTED  CCA ED threshold configuration via dBm is not implemented.
      *
      */
-    otError GetCcaEnergyDetectThreshold(int8_t &aThreshold)
-    {
-        return otPlatRadioGetCcaEnergyDetectThreshold(GetInstance(), &aThreshold);
-    }
+    otError GetCcaEnergyDetectThreshold(int8_t &aThreshold);
 
     /**
      * This method sets the radio's CCA ED threshold in dBm.
@@ -295,10 +289,7 @@ public:
      * @retval OT_ERROR_NOT_IMPLEMENTED  CCA ED threshold configuration via dBm is not implemented.
      *
      */
-    otError SetCcaEnergyDetectThreshold(int8_t aThreshold)
-    {
-        return otPlatRadioSetCcaEnergyDetectThreshold(GetInstance(), aThreshold);
-    }
+    otError SetCcaEnergyDetectThreshold(int8_t aThreshold);
 
     /**
      * This method gets the status of promiscuous mode.
@@ -307,7 +298,7 @@ public:
      * @retval FALSE  Promiscuous mode is disabled.
      *
      */
-    bool GetPromiscuous(void) { return otPlatRadioGetPromiscuous(GetInstance()); }
+    bool GetPromiscuous(void);
 
     /**
      * This method enables or disables promiscuous mode.
@@ -315,7 +306,7 @@ public:
      * @param[in]  aEnable   TRUE to enable or FALSE to disable promiscuous mode.
      *
      */
-    void SetPromiscuous(bool aEnable) { otPlatRadioSetPromiscuous(GetInstance(), aEnable); }
+    void SetPromiscuous(bool aEnable);
 
     /**
      * This method returns the current state of the radio.
@@ -327,7 +318,7 @@ public:
      * @return  Current state of the radio.
      *
      */
-    otRadioState GetState(void) { return otPlatRadioGetState(GetInstance()); }
+    otRadioState GetState(void);
 
     /**
      * This method enables the radio.
@@ -336,7 +327,7 @@ public:
      * @retval OT_ERROR_FAILED   The radio could not be enabled.
      *
      */
-    otError Enable(void) { return otPlatRadioEnable(GetInstance()); }
+    otError Enable(void);
 
     /**
      * This method disables the radio.
@@ -345,7 +336,7 @@ public:
      * @retval OT_ERROR_INVALID_STATE   The radio was not in sleep state.
      *
      */
-    otError Disable(void) { return otPlatRadioDisable(GetInstance()); }
+    otError Disable(void);
 
     /**
      * This method indicates whether radio is enabled or not.
@@ -353,7 +344,7 @@ public:
      * @returns TRUE if the radio is enabled, FALSE otherwise.
      *
      */
-    bool IsEnabled(void) { return otPlatRadioIsEnabled(GetInstance()); }
+    bool IsEnabled(void);
 
     /**
      * This method transitions the radio from Receive to Sleep (turn off the radio).
@@ -363,7 +354,7 @@ public:
      * @retval OT_ERROR_INVALID_STATE The radio was disabled.
      *
      */
-    otError Sleep(void) { return otPlatRadioSleep(GetInstance()); }
+    otError Sleep(void);
 
     /**
      * This method transitions the radio from Sleep to Receive (turn on the radio).
@@ -374,7 +365,7 @@ public:
      * @retval OT_ERROR_INVALID_STATE The radio was disabled or transmitting.
      *
      */
-    otError Receive(uint8_t aChannel) { return otPlatRadioReceive(GetInstance(), aChannel); }
+    otError Receive(uint8_t aChannel);
 
     /**
      * This method gets the radio transmit frame buffer.
@@ -384,10 +375,7 @@ public:
      * @returns A reference to the transmit frame buffer.
      *
      */
-    Mac::TxFrame &GetTransmitBuffer(void)
-    {
-        return *static_cast<Mac::TxFrame *>(otPlatRadioGetTransmitBuffer(GetInstance()));
-    }
+    Mac::TxFrame &GetTransmitBuffer(void);
 
     /**
      * This method starts the transmit sequence on the radio.
@@ -401,7 +389,7 @@ public:
      * @retval OT_ERROR_INVALID_STATE The radio was not in the Receive state.
      *
      */
-    otError Transmit(Mac::TxFrame &aFrame) { return otPlatRadioTransmit(GetInstance(), &aFrame); }
+    otError Transmit(Mac::TxFrame &aFrame);
 
     /**
      * This method gets the most recent RSSI measurement.
@@ -409,7 +397,7 @@ public:
      * @returns The RSSI in dBm when it is valid.  127 when RSSI is invalid.
      *
      */
-    int8_t GetRssi(void) { return otPlatRadioGetRssi(GetInstance()); }
+    int8_t GetRssi(void);
 
     /**
      * This method begins the energy scan sequence on the radio.
@@ -423,10 +411,7 @@ public:
      * @retval OT_ERROR_NOT_IMPLEMENTED  The radio doesn't support energy scanning.
      *
      */
-    otError EnergyScan(uint8_t aScanChannel, uint16_t aScanDuration)
-    {
-        return otPlatRadioEnergyScan(GetInstance(), aScanChannel, aScanDuration);
-    }
+    otError EnergyScan(uint8_t aScanChannel, uint16_t aScanDuration);
 
     /**
      * This method enables/disables source address match feature.
@@ -445,7 +430,7 @@ public:
      * @param[in]  aEnable     Enable/disable source address match feature.
      *
      */
-    void EnableSrcMatch(bool aEnable) { return otPlatRadioEnableSrcMatch(GetInstance(), aEnable); }
+    void EnableSrcMatch(bool aEnable);
 
     /**
      * This method adds a short address to the source address match table.
@@ -456,10 +441,7 @@ public:
      * @retval OT_ERROR_NO_BUFS   No available entry in the source match table.
      *
      */
-    otError AddSrcMatchShortEntry(Mac::ShortAddress aShortAddress)
-    {
-        return otPlatRadioAddSrcMatchShortEntry(GetInstance(), aShortAddress);
-    }
+    otError AddSrcMatchShortEntry(Mac::ShortAddress aShortAddress);
 
     /**
      * This method adds an extended address to the source address match table.
@@ -470,10 +452,7 @@ public:
      * @retval OT_ERROR_NO_BUFS   No available entry in the source match table.
      *
      */
-    otError AddSrcMatchExtEntry(const Mac::ExtAddress &aExtAddress)
-    {
-        return otPlatRadioAddSrcMatchExtEntry(GetInstance(), &aExtAddress);
-    }
+    otError AddSrcMatchExtEntry(const Mac::ExtAddress &aExtAddress);
 
     /**
      * This method removes a short address from the source address match table.
@@ -484,10 +463,7 @@ public:
      * @retval OT_ERROR_NO_ADDRESS  The short address is not in source address match table.
      *
      */
-    otError ClearSrcMatchShortEntry(Mac::ShortAddress aShortAddress)
-    {
-        return otPlatRadioClearSrcMatchShortEntry(GetInstance(), aShortAddress);
-    }
+    otError ClearSrcMatchShortEntry(Mac::ShortAddress aShortAddress);
 
     /**
      * This method removes an extended address from the source address match table.
@@ -498,22 +474,19 @@ public:
      * @retval OT_ERROR_NO_ADDRESS  The extended address is not in source address match table.
      *
      */
-    otError ClearSrcMatchExtEntry(const Mac::ExtAddress &aExtAddress)
-    {
-        return otPlatRadioClearSrcMatchExtEntry(GetInstance(), &aExtAddress);
-    }
+    otError ClearSrcMatchExtEntry(const Mac::ExtAddress &aExtAddress);
 
     /**
      * This method clears all short addresses from the source address match table.
      *
      */
-    void ClearSrcMatchShortEntries(void) { otPlatRadioClearSrcMatchShortEntries(GetInstance()); }
+    void ClearSrcMatchShortEntries(void);
 
     /**
      * This method clears all the extended/long addresses from source address match table.
      *
      */
-    void ClearSrcMatchExtEntries(void) { otPlatRadioClearSrcMatchExtEntries(GetInstance()); }
+    void ClearSrcMatchExtEntries(void);
 
     /**
      * This method gets the radio supported channel mask that the device is allowed to be on.
@@ -521,7 +494,7 @@ public:
      * @returns The radio supported channel mask.
      *
      */
-    uint32_t GetSupportedChannelMask(void) { return otPlatRadioGetSupportedChannelMask(GetInstance()); }
+    uint32_t GetSupportedChannelMask(void);
 
     /**
      * This method gets the radio preferred channel mask that the device prefers to form on.
@@ -529,13 +502,319 @@ public:
      * @returns The radio preferred channel mask.
      *
      */
-    uint32_t GetPreferredChannelMask(void) { return otPlatRadioGetPreferredChannelMask(GetInstance()); }
+    uint32_t GetPreferredChannelMask(void);
 
 private:
-    otInstance *GetInstance(void) { return reinterpret_cast<otInstance *>(&InstanceLocator::GetInstance()); }
+    otInstance *GetInstancePtr(void) { return reinterpret_cast<otInstance *>(&InstanceLocator::GetInstance()); }
 
     Callbacks mCallbacks;
 };
+
+//---------------------------------------------------------------------------------------------------------------------
+// Radio APIs that are always mapped to the same `otPlatRadio` function (independent of the link type)
+
+inline const char *Radio::GetVersionString(void)
+{
+    return otPlatRadioGetVersionString(GetInstancePtr());
+}
+
+inline void Radio::GetIeeeEui64(Mac::ExtAddress &aIeeeEui64)
+{
+    otPlatRadioGetIeeeEui64(GetInstancePtr(), aIeeeEui64.m8);
+}
+
+inline uint32_t Radio::GetSupportedChannelMask(void)
+{
+    return otPlatRadioGetSupportedChannelMask(GetInstancePtr());
+}
+
+inline uint32_t Radio::GetPreferredChannelMask(void)
+{
+    return otPlatRadioGetPreferredChannelMask(GetInstancePtr());
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+// If IEEE 802.15.4 is among supported radio links, provide inline
+// mapping of `Radio` method to related `otPlatRadio` functions.
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+
+inline otRadioCaps Radio::GetCaps(void)
+{
+    return otPlatRadioGetCaps(GetInstancePtr());
+}
+
+inline int8_t Radio::GetReceiveSensitivity(void)
+{
+    return otPlatRadioGetReceiveSensitivity(GetInstancePtr());
+}
+
+inline void Radio::SetPanId(Mac::PanId aPanId)
+{
+    otPlatRadioSetPanId(GetInstancePtr(), aPanId);
+}
+
+inline void Radio::SetExtendedAddress(const Mac::ExtAddress &aExtAddress)
+{
+    otPlatRadioSetExtendedAddress(GetInstancePtr(), &aExtAddress);
+}
+
+inline void Radio::SetShortAddress(Mac::ShortAddress aShortAddress)
+{
+    otPlatRadioSetShortAddress(GetInstancePtr(), aShortAddress);
+}
+
+inline otError Radio::GetTransmitPower(int8_t &aPower)
+{
+    return otPlatRadioGetTransmitPower(GetInstancePtr(), &aPower);
+}
+
+inline otError Radio::SetTransmitPower(int8_t aPower)
+{
+    return otPlatRadioSetTransmitPower(GetInstancePtr(), aPower);
+}
+
+inline otError Radio::GetCcaEnergyDetectThreshold(int8_t &aThreshold)
+{
+    return otPlatRadioGetCcaEnergyDetectThreshold(GetInstancePtr(), &aThreshold);
+}
+
+inline otError Radio::SetCcaEnergyDetectThreshold(int8_t aThreshold)
+{
+    return otPlatRadioSetCcaEnergyDetectThreshold(GetInstancePtr(), aThreshold);
+}
+
+inline bool Radio::GetPromiscuous(void)
+{
+    return otPlatRadioGetPromiscuous(GetInstancePtr());
+}
+
+inline void Radio::SetPromiscuous(bool aEnable)
+{
+    otPlatRadioSetPromiscuous(GetInstancePtr(), aEnable);
+}
+
+inline otRadioState Radio::GetState(void)
+{
+    return otPlatRadioGetState(GetInstancePtr());
+}
+
+inline otError Radio::Enable(void)
+{
+    return otPlatRadioEnable(GetInstancePtr());
+}
+
+inline otError Radio::Disable(void)
+{
+    return otPlatRadioDisable(GetInstancePtr());
+}
+
+inline bool Radio::IsEnabled(void)
+{
+    return otPlatRadioIsEnabled(GetInstancePtr());
+}
+
+inline otError Radio::Sleep(void)
+{
+    return otPlatRadioSleep(GetInstancePtr());
+}
+
+inline otError Radio::Receive(uint8_t aChannel)
+{
+    return otPlatRadioReceive(GetInstancePtr(), aChannel);
+}
+
+inline Mac::TxFrame &Radio::GetTransmitBuffer(void)
+{
+    return *static_cast<Mac::TxFrame *>(otPlatRadioGetTransmitBuffer(GetInstancePtr()));
+}
+
+inline otError Radio::Transmit(Mac::TxFrame &aFrame)
+{
+    return otPlatRadioTransmit(GetInstancePtr(), &aFrame);
+}
+
+inline int8_t Radio::GetRssi(void)
+{
+    return otPlatRadioGetRssi(GetInstancePtr());
+}
+
+inline otError Radio::EnergyScan(uint8_t aScanChannel, uint16_t aScanDuration)
+{
+    return otPlatRadioEnergyScan(GetInstancePtr(), aScanChannel, aScanDuration);
+}
+
+inline void Radio::EnableSrcMatch(bool aEnable)
+{
+    otPlatRadioEnableSrcMatch(GetInstancePtr(), aEnable);
+}
+
+inline otError Radio::AddSrcMatchShortEntry(Mac::ShortAddress aShortAddress)
+{
+    return otPlatRadioAddSrcMatchShortEntry(GetInstancePtr(), aShortAddress);
+}
+
+inline otError Radio::AddSrcMatchExtEntry(const Mac::ExtAddress &aExtAddress)
+{
+    return otPlatRadioAddSrcMatchExtEntry(GetInstancePtr(), &aExtAddress);
+}
+
+inline otError Radio::ClearSrcMatchShortEntry(Mac::ShortAddress aShortAddress)
+{
+    return otPlatRadioClearSrcMatchShortEntry(GetInstancePtr(), aShortAddress);
+}
+
+inline otError Radio::ClearSrcMatchExtEntry(const Mac::ExtAddress &aExtAddress)
+{
+    return otPlatRadioClearSrcMatchExtEntry(GetInstancePtr(), &aExtAddress);
+}
+
+inline void Radio::ClearSrcMatchShortEntries(void)
+{
+    otPlatRadioClearSrcMatchShortEntries(GetInstancePtr());
+}
+
+inline void Radio::ClearSrcMatchExtEntries(void)
+{
+    otPlatRadioClearSrcMatchExtEntries(GetInstancePtr());
+}
+
+#else //----------------------------------------------------------------------------------------------------------------
+
+inline otRadioCaps Radio::GetCaps(void)
+{
+    return OT_RADIO_CAPS_ACK_TIMEOUT | OT_RADIO_CAPS_CSMA_BACKOFF | OT_RADIO_CAPS_TRANSMIT_RETRIES;
+}
+
+inline int8_t Radio::GetReceiveSensitivity(void)
+{
+    return -110;
+}
+
+inline void Radio::SetPanId(Mac::PanId)
+{
+}
+
+inline void Radio::SetExtendedAddress(const Mac::ExtAddress &)
+{
+}
+
+inline void Radio::SetShortAddress(Mac::ShortAddress)
+{
+}
+
+inline otError Radio::GetTransmitPower(int8_t &)
+{
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+inline otError Radio::SetTransmitPower(int8_t)
+{
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+inline otError Radio::GetCcaEnergyDetectThreshold(int8_t &)
+{
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+inline otError Radio::SetCcaEnergyDetectThreshold(int8_t)
+{
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+inline bool Radio::GetPromiscuous(void)
+{
+    return false;
+}
+
+inline void Radio::SetPromiscuous(bool)
+{
+}
+
+inline otRadioState Radio::GetState(void)
+{
+    return OT_RADIO_STATE_DISABLED;
+}
+
+inline otError Radio::Enable(void)
+{
+    return OT_ERROR_NONE;
+}
+
+inline otError Radio::Disable(void)
+{
+    return OT_ERROR_INVALID_STATE;
+}
+
+inline bool Radio::IsEnabled(void)
+{
+    return true;
+}
+
+inline otError Radio::Sleep(void)
+{
+    return OT_ERROR_NONE;
+}
+
+inline otError Radio::Receive(uint8_t)
+{
+    return OT_ERROR_NONE;
+}
+
+inline Mac::TxFrame &Radio::GetTransmitBuffer(void)
+{
+    return *static_cast<Mac::TxFrame *>(otPlatRadioGetTransmitBuffer(GetInstancePtr()));
+}
+
+inline otError Radio::Transmit(Mac::TxFrame &)
+{
+    return OT_ERROR_ABORT;
+}
+
+inline int8_t Radio::GetRssi(void)
+{
+    return OT_RADIO_RSSI_INVALID;
+}
+
+inline otError Radio::EnergyScan(uint8_t, uint16_t)
+{
+    return OT_ERROR_NOT_IMPLEMENTED;
+}
+
+inline void Radio::EnableSrcMatch(bool)
+{
+}
+
+inline otError Radio::AddSrcMatchShortEntry(Mac::ShortAddress)
+{
+    return OT_ERROR_NONE;
+}
+
+inline otError Radio::AddSrcMatchExtEntry(const Mac::ExtAddress &)
+{
+    return OT_ERROR_NONE;
+}
+
+inline otError Radio::ClearSrcMatchShortEntry(Mac::ShortAddress)
+{
+    return OT_ERROR_NONE;
+}
+
+inline otError Radio::ClearSrcMatchExtEntry(const Mac::ExtAddress &)
+{
+    return OT_ERROR_NONE;
+}
+
+inline void Radio::ClearSrcMatchShortEntries(void)
+{
+}
+
+inline void Radio::ClearSrcMatchExtEntries(void)
+{
+}
+
+#endif // #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
 
 } // namespace ot
 

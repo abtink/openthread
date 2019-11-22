@@ -398,10 +398,11 @@ private:
     void    RemoveMessage(Message &aMessage);
     void    HandleDiscoverComplete(void);
 
-    void      HandleReceivedFrame(Mac::RxFrame &aFrame);
-    otError   HandleFrameRequest(Mac::TxFrame &aFrame);
-    Neighbor *UpdateNeighborOnSentFrame(Mac::TxFrame &aFrame, otError aError, const Mac::Address &aMacDest);
-    void      HandleSentFrame(Mac::TxFrame &aFrame, otError aError);
+    void          HandleReceivedFrame(Mac::RxFrame &aFrame);
+    Mac::TxFrame *HandleFrameRequest(Mac::TxFrames &aTxFrames);
+    Neighbor *    UpdateNeighborOnSentFrame(Mac::TxFrame &aFrame, otError aError, const Mac::Address &aMacDest);
+    void          HandleSentFrame(Mac::TxFrame &aFrame, otError aError);
+    void          UpdateSendMessage(otError aFrameTxError, Mac::Address &aMacDest, Neighbor *aNeighbor);
 
     static void HandleDiscoverTimer(Timer &aTimer);
     void        HandleDiscoverTimer(void);

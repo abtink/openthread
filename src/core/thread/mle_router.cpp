@@ -3399,7 +3399,6 @@ exit:
 Neighbor *MleRouter::FindNeighbor(const Mac::Address &aAddress, Neighbor::StateFilter aFilter)
 {
     Neighbor *neighbor = NULL;
-    Neighbor *parent;
 
     VerifyOrExit(!aAddress.IsNone() && !aAddress.IsBroadcast());
 

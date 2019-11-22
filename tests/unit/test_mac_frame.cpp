@@ -272,10 +272,11 @@ void TestMacHeader(void)
 
     for (unsigned i = 0; i < OT_ARRAY_LENGTH(tests); i++)
     {
-        uint8_t      psdu[Mac::Frame::kMtu];
+        uint8_t      psdu[OT_RADIO_FRAME_MAX_SIZE];
         Mac::TxFrame frame;
 
-        frame.mPsdu = psdu;
+        frame.mPsdu      = psdu;
+        frame.mRadioType = 0;
 
         frame.InitMacHeader(tests[i].fcf, tests[i].secCtl);
         printf("%d\n", frame.GetHeaderLength());

@@ -45,8 +45,11 @@
 #include "mac/channel_mask.hpp"
 #include "mac/mac_filter.hpp"
 #include "mac/mac_frame.hpp"
+#include "mac/mac_links.hpp"
 #include "mac/mac_types.hpp"
 #include "mac/sub_mac.hpp"
+#include "radio/toble.hpp"
+#include "radio/trel.hpp"
 #include "thread/key_manager.hpp"
 #include "thread/link_quality.hpp"
 
@@ -262,7 +265,7 @@ public:
      * @returns A pointer to the IEEE 802.15.4 Extended Address.
      *
      */
-    const ExtAddress &GetExtAddress(void) const { return mSubMac.GetExtAddress(); }
+    const ExtAddress &GetExtAddress(void) const { return mLinks.GetExtAddress(); }
 
     /**
      * This method sets the IEEE 802.15.4 Extended Address.
@@ -270,7 +273,7 @@ public:
      * @param[in]  aExtAddress  A reference to the IEEE 802.15.4 Extended Address.
      *
      */
-    void SetExtAddress(const ExtAddress &aExtAddress) { mSubMac.SetExtAddress(aExtAddress); }
+    void SetExtAddress(const ExtAddress &aExtAddress) { mLinks.SetExtAddress(aExtAddress); }
 
     /**
      * This method returns the IEEE 802.15.4 Short Address.
@@ -278,7 +281,7 @@ public:
      * @returns The IEEE 802.15.4 Short Address.
      *
      */
-    ShortAddress GetShortAddress(void) const { return mSubMac.GetShortAddress(); }
+    ShortAddress GetShortAddress(void) const { return mLinks.GetShortAddress(); }
 
     /**
      * This method sets the IEEE 802.15.4 Short Address.
@@ -286,7 +289,7 @@ public:
      * @param[in]  aShortAddress  The IEEE 802.15.4 Short Address.
      *
      */
-    void SetShortAddress(ShortAddress aShortAddress) { mSubMac.SetShortAddress(aShortAddress); }
+    void SetShortAddress(ShortAddress aShortAddress) { mLinks.SetShortAddress(aShortAddress); }
 
     /**
      * This method returns the IEEE 802.15.4 PAN Channel.
@@ -541,7 +544,7 @@ public:
      */
     void SetPcapCallback(otLinkPcapCallback aPcapCallback, void *aCallbackContext)
     {
-        mSubMac.SetPcapCallback(aPcapCallback, aCallbackContext);
+        mLinks.SetPcapCallback(aPcapCallback, aCallbackContext);
     }
 
     /**
@@ -648,6 +651,7 @@ public:
 private:
     enum
     {
+        kDefaultNoiseFloor = -100,
         kInvalidRssiValue  = SubMac::kInvalidRssiValue,
         kMaxCcaSampleCount = OPENTHREAD_CONFIG_CCA_FAILURE_RATE_AVERAGING_WINDOW,
         kMaxAcquisitionId  = 0xffff,
@@ -704,18 +708,22 @@ private:
      */
     void ProcessTransmitSecurity(TxFrame &aFrame, bool aProcessAesCcm);
 
-    otError ProcessReceiveSecurity(RxFrame &aFrame, const Address &aSrcAddr, Neighbor *aNeighbor);
-    void    UpdateIdleMode(void);
-    void    StartOperation(Operation aOperation);
-    void    FinishOperation(void);
-    void    PerformNextOperation(void);
-    otError PrepareDataRequest(TxFrame &aFrame);
-    void    PrepareBeaconRequest(TxFrame &aFrame);
-    void    PrepareBeacon(TxFrame &aFrame);
-    bool    ShouldSendBeacon(void) const;
-    bool    IsJoinable(void) const;
-    void    BeginTransmit(void);
-    bool    HandleMacCommand(RxFrame &aFrame);
+    otError ProcessReceiveSecurity(RxFrame &      aFrame,
+                                   const Address &aSrcAddr,
+                                   Neighbor *     aNeighbor,
+                                   bool           aSkipCounterCheck);
+
+    void     UpdateIdleMode(void);
+    void     StartOperation(Operation aOperation);
+    void     FinishOperation(void);
+    void     PerformNextOperation(void);
+    TxFrame *PrepareDataRequest(void);
+    TxFrame *PrepareBeaconRequest(void);
+    TxFrame *PrepareBeacon(void);
+    bool     ShouldSendBeacon(void) const;
+    bool     IsJoinable(void) const;
+    void     BeginTransmit(void);
+    bool     HandleMacCommand(RxFrame &aFrame);
 
     static void HandleTimer(Timer &aTimer);
     void        HandleTimer(void);
@@ -780,13 +788,14 @@ private:
 #if OPENTHREAD_FTD
     uint8_t mMaxFrameRetriesIndirect;
 #endif
+
     union
     {
         ActiveScanHandler mActiveScanHandler;
         EnergyScanHandler mEnergyScanHandler;
     };
 
-    SubMac             mSubMac;
+    Links              mLinks;
     Tasklet            mOperationTask;
     TimerMilli         mTimer;
     TxFrame *          mOobFrame;
@@ -796,6 +805,11 @@ private:
     uint16_t           mCcaSampleCount;
 #if OPENTHREAD_CONFIG_MAC_RETRY_SUCCESS_HISTOGRAM_ENABLE
     RetryHistogram mRetryHistogram;
+#endif
+
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    RadioTypes mTxPendingLinks;
+    otError    mTxError;
 #endif
 
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
