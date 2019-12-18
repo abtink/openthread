@@ -43,6 +43,7 @@
 #include "common/timer.hpp"
 #include "mac/mac_types.hpp"
 #include "net/ip6.hpp"
+#include "radio/trel_link.hpp"
 #include "thread/device_mode.hpp"
 #include "thread/indirect_sender.hpp"
 #include "thread/link_quality.hpp"
@@ -60,6 +61,12 @@ class Instance;
 class Neighbor
 #if OPENTHREAD_CONFIG_MULTI_RADIO
     : public RadioSelector::NeighborInfo
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    ,
+      public Trel::NeighborInfo
+#endif
+#elif OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    : public Trel::NeighborInfo
 #endif
 {
 public:

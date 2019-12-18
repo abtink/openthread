@@ -205,8 +205,10 @@ SOURCES_COMMON                             = \
     net/udp6.cpp                             \
     radio/radio_callbacks.cpp                \
     radio/radio_platform.cpp                 \
-    radio/toble.cpp                          \
-    radio/trel.cpp                           \
+    radio/toble_link.cpp                     \
+    radio/trel_interface.cpp                 \
+    radio/trel_link.cpp                      \
+    radio/trel_packet.cpp                    \
     thread/address_resolver.cpp              \
     thread/announce_begin_server.cpp         \
     thread/announce_sender.cpp               \
@@ -406,8 +408,10 @@ HEADERS_COMMON                             = \
     net/tcp.hpp                              \
     net/udp6.hpp                             \
     radio/radio.hpp                          \
-    radio/toble.hpp                          \
-    radio/trel.hpp                           \
+    radio/toble_link.hpp                     \
+    radio/trel_interface.hpp                 \
+    radio/trel_link.hpp                      \
+    radio/trel_packet.hpp                    \
     thread/address_resolver.hpp              \
     thread/announce_begin_server.hpp         \
     thread/announce_sender.hpp               \

@@ -54,6 +54,7 @@ add_library(openthread-posix
     radio.c
     spi-stubs.c
     system.c
+    trel.c
     uart-posix.c
     sim/alarm-sim.c
     sim/platform-sim.c

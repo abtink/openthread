@@ -41,8 +41,8 @@
 #include "mac/mac_frame.hpp"
 #include "mac/mac_types.hpp"
 #include "mac/sub_mac.hpp"
-#include "radio/toble.hpp"
-#include "radio/trel.hpp"
+#include "radio/toble_link.hpp"
+#include "radio/trel_link.hpp"
 
 namespace ot {
 namespace Mac {
@@ -398,6 +398,9 @@ public:
         mSubMac.SetExtAddress(aExtAddress);
 #else
         mExtAddress = aExtAddress;
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+        mTrel.HandleExtAddressChange();
+#endif
 #endif
     }
 
