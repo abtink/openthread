@@ -27,38 +27,32 @@
 
 /**
  * @file
- *   This file implements Thread Radio Encapsulation Link (TREL).
+ *   This file implements Thread over BLE (ToBLE).
  */
 
-#include "trel.hpp"
+#include "toble_link.hpp"
 
 #include "common/code_utils.hpp"
 #include "common/instance.hpp"
 #include "common/locator-getters.hpp"
 
-#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+#if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
 
 namespace ot {
-namespace Trel {
+namespace Toble {
 
 Link::Link(Instance &aInstance)
     : InstanceLocator(aInstance)
 {
     memset(&mTxFrame, 0, sizeof(mTxFrame));
-    mTxFrame.mPsdu = &mFrameBuffer[kHeaderSize];
+    mTxFrame.mPsdu = &mFrameBuffer[0];
     mTxFrame.SetLength(0);
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-    mTxFrame.SetRadioType(Mac::kRadioTypeTrel);
+    mTxFrame.SetRadioType(Mac::kRadioTypeToble);
 #endif
 }
 
-void Link::Send(void)
-{
-    Get<Mac::Mac>().RecordFrameTransmitStatus(mTxFrame, NULL, OT_ERROR_ABORT, 0, false);
-    Get<Mac::Mac>().HandleTransmitDone(mTxFrame, NULL, OT_ERROR_ABORT);
-}
-
-} // namespace Trel
+} // namespace Toble
 } // namespace ot
 
-#endif // #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+#endif // #if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
