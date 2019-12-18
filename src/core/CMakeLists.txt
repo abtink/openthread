@@ -171,8 +171,10 @@ set(COMMON_SOURCES
     radio/radio.cpp
     radio/radio_callbacks.cpp
     radio/radio_platform.cpp
-    radio/toble.cpp
-    radio/trel.cpp
+    radio/toble_link.cpp
+    radio/trel_interface.cpp
+    radio/trel_link.cpp
+    radio/trel_packet.cpp
     thread/address_resolver.cpp
     thread/announce_begin_server.cpp
     thread/announce_sender.cpp

@@ -47,6 +47,7 @@ ot_platform_headers                     = \
     settings.h                            \
     messagepool.h                         \
     toolchain.h                           \
+    trel-udp6.h                           \
     $(NULL)
 
 noinst_HEADERS                          = \
