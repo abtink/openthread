@@ -38,8 +38,8 @@
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
 #include "crypto/aes_ccm.hpp"
-#include "radio/toble.hpp"
-#include "radio/trel.hpp"
+#include "radio/toble_link.hpp"
+#include "radio/trel_link.hpp"
 #include "thread/key_manager.hpp"
 
 namespace ot {

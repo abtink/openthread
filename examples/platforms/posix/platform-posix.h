@@ -230,4 +230,11 @@ void otSimSendUartWriteEvent(const uint8_t *aData, uint16_t aLength);
  */
 bool platformRadioIsTransmitPending(void);
 
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+void platformTrelInit(uint32_t aSpeedUpFactor);
+void platformTrelDeinit(void);
+void platformTrelUpdateFdSet(fd_set *aReadFdSet, fd_set *aWriteFdSet, struct timeval *aTimeout, int *aMaxFd);
+void platformTrelProcess(otInstance *aInstance, const fd_set *aReadFdSet, const fd_set *aWriteFdSet);
+#endif // OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+
 #endif // PLATFORM_POSIX_H_
