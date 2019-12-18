@@ -49,6 +49,7 @@ PLATFORM_SOURCES                          = \
     radio.c                                 \
     spi-stubs.c                             \
     system.c                                \
+    trel.c                                  \
     uart-posix.c                            \
     sim/alarm-sim.c                         \
     sim/platform-sim.c                      \

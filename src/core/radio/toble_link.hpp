@@ -31,8 +31,8 @@
  *   This file includes definitions for Thread over BLE (ToBLE).
  */
 
-#ifndef TOBLE_HPP_
-#define TOBLE_HPP_
+#ifndef TOBLE_LINK_HPP_
+#define TOBLE_LINK_HPP_
 
 #include "openthread-core-config.h"
 
@@ -66,8 +66,8 @@ class Link : public InstanceLocator
 public:
     enum
     {
-        kMtuSize = 1600,
-        kFcsSize = 0,
+        kMtuSize = OT_RADIO_FRAME_MAX_SIZE, ///< MTU size for ToBLE frame.
+        kFcsSize = 2,                       ///< FCS size for ToBLE frame.
     };
 
     explicit Link(Instance &aInstance);
@@ -98,4 +98,4 @@ private:
 
 #endif // #if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
 
-#endif // TOBLE_HPP_
+#endif // TOBLE_LINK_HPP_

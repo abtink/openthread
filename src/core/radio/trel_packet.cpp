@@ -27,35 +27,69 @@
 
 /**
  * @file
- *   This file implements Thread Radio Encapsulation Link (TREL).
+ *   This file implements Thread Radio Encapsulation Link (TREL) packet.
  */
 
-#include "trel.hpp"
+#include "trel_packet.hpp"
 
 #include "common/code_utils.hpp"
+#include "common/debug.hpp"
 #include "common/instance.hpp"
 #include "common/locator-getters.hpp"
+#include "common/logging.hpp"
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
 
 namespace ot {
 namespace Trel {
 
-Link::Link(Instance &aInstance)
-    : InstanceLocator(aInstance)
+uint16_t Header::GetSize(Type aType)
 {
-    memset(&mTxFrame, 0, sizeof(mTxFrame));
-    mTxFrame.mPsdu = &mFrameBuffer[kHeaderSize];
-    mTxFrame.SetLength(0);
-#if OPENTHREAD_CONFIG_MULTI_RADIO
-    mTxFrame.SetRadioType(Mac::kRadioTypeTrel);
-#endif
+    uint16_t size = sizeof(Header);
+
+    switch (aType)
+    {
+    case kTypeUnicast:
+        break;
+
+    case kTypeBroadcast:
+        size -= sizeof(Mac::ExtAddress); // `mDestination` in excluded in broadcast header.
+        break;
+    }
+
+    return size;
 }
 
-void Link::Send(void)
+void Packet::Init(uint8_t *aBuffer, uint16_t aLength)
 {
-    Get<Mac::Mac>().RecordFrameTransmitStatus(mTxFrame, NULL, OT_ERROR_ABORT, 0, false);
-    Get<Mac::Mac>().HandleTransmitDone(mTxFrame, NULL, OT_ERROR_ABORT);
+    mBuffer = aBuffer;
+    mLength = aLength;
+}
+
+void Packet::Init(Header::Type aType, uint8_t *mPayload, uint16_t mPayloadLength)
+{
+    uint16_t headerSize = Header::GetSize(aType);
+
+    // The payload buffer should reserve enough bytes for
+    // header (depending on type) before the payload.
+
+    Init(mPayload - headerSize, mPayloadLength + headerSize);
+    GetHeader().Init(aType);
+}
+
+otError Packet::ValidateHeader(void) const
+{
+    otError error = OT_ERROR_PARSE;
+
+    VerifyOrExit((mBuffer != NULL) && (mLength > 0));
+
+    VerifyOrExit(GetHeader().IsVersionValid());
+    VerifyOrExit(mLength >= GetHeader().GetLength());
+
+    error = OT_ERROR_NONE;
+
+exit:
+    return error;
 }
 
 } // namespace Trel
