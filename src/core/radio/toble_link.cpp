@@ -30,7 +30,7 @@
  *   This file implements Thread over BLE (ToBLE).
  */
 
-#include "toble.hpp"
+#include "toble_link.hpp"
 
 #include "common/code_utils.hpp"
 #include "common/instance.hpp"
