@@ -1456,6 +1456,21 @@ protected:
     }
 
     /**
+     * This method searches for a neighbor with a given MAC address matching a given state filter.
+     *
+     * This method searches between parent and parent candidate for a neighbor matching a MAC address and a state
+     * filter. The behavior of this method is different from `GetNeighbor()` which only accepts neighbors in valid or
+     * restoring states.
+     *
+     * @param[in]  aAddress   A MAC address.
+     * @param[in]  aFilter    A neighbor state filter.
+     *
+     * @returns A pointer to the neighbor matching the address and the state filter if one is found, NULL otherwise.
+     *
+     */
+    Neighbor *FindNeighbor(const Mac::Address &aAddress, Neighbor::StateFilter aFilter);
+
+    /**
      * This method returns the next hop towards an RLOC16 destination.
      *
      * @param[in]  aDestination  The RLOC16 of the destination.

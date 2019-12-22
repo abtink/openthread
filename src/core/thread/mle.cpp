@@ -3940,6 +3940,28 @@ Neighbor *Mle::GetNeighbor(const Mac::Address &aAddress)
     return neighbor;
 }
 
+Neighbor *Mle::FindNeighbor(const Mac::Address &aAddress, Neighbor::StateFilter aFilter)
+{
+    Neighbor *neighbor = NULL;
+
+    if (mParent.MatchesFilter(aFilter) &&
+        ((aAddress.IsShort() && (mParent.GetRloc16() == aAddress.GetShort())) ||
+         (aAddress.IsExtended() && mParent.GetExtAddress() == aAddress.GetExtended())))
+    {
+        neighbor = &mParent;
+    }
+    else if (mParentCandidate.IsStateValid() && mParentCandidate.MatchesFilter(aFilter) &&
+             ((aAddress.IsShort() && (mParentCandidate.GetRloc16() == aAddress.GetShort())) ||
+              (aAddress.IsExtended() && mParentCandidate.GetExtAddress() == aAddress.GetExtended())))
+    {
+        // Parent candidate is considered only when it is in valid state.
+
+        neighbor = &mParentCandidate;
+    }
+
+    return neighbor;
+}
+
 uint16_t Mle::GetNextHop(uint16_t aDestination) const
 {
     OT_UNUSED_VARIABLE(aDestination);
