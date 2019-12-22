@@ -97,6 +97,11 @@ public:
         return NULL;
     }
 
+    Neighbor *FindNeighbor(const Mac::Address &aAddress, Neighbor::StateFilter aFilter)
+    {
+        return Mle::FindNeighbor(aAddress, aFilter);
+    }
+
     otError GetNextNeighborInfo(otNeighborInfoIterator &, otNeighborInfo &) { return OT_ERROR_NOT_IMPLEMENTED; }
 
     static int ComparePartitions(bool, const LeaderDataTlv &, bool, const LeaderDataTlv &) { return 0; }

@@ -405,6 +405,22 @@ public:
     Neighbor *GetRxOnlyNeighborRouter(const Mac::Address &aAddress);
 
     /**
+     * This method searches for a neighbor with a given MAC address matching a given state filter.
+     *
+     * This method searches within child table, router table (independent of the current role of device), and also
+     * between parent and parent candidate for a neighbor matching a MAC address and a state filter. The behavior
+     * of this method is different from `GetNeighbor()` which is limited to neighbors in valid or restoring states and
+     * searches within child and router tables only when device is in router or leader roles.
+     *
+     * @param[in]  aAddress   A MAC address.
+     * @param[in]  aFilter    A neighbor state filter.
+     *
+     * @returns A pointer to the neighbor matching the address and the state filter if one is found, NULL otherwise.
+     *
+     */
+    Neighbor *FindNeighbor(const Mac::Address &aAddress, Neighbor::StateFilter aFilter);
+
+    /**
      * This method retains diagnostic information for an attached child by Child ID or RLOC16.
      *
      * @param[in]   aChildId    The Child ID or RLOC16 for an attached child.
