@@ -3512,6 +3512,37 @@ exit:
     return rval;
 }
 
+Neighbor *MleRouter::FindNeighbor(const Mac::Address &aAddress, Neighbor::StateFilter aFilter)
+{
+    Neighbor *neighbor = NULL;
+
+    VerifyOrExit(!aAddress.IsNone() && !aAddress.IsBroadcast(), OT_NOOP);
+
+    neighbor = Get<ChildTable>().FindChild(aAddress, aFilter);
+    VerifyOrExit(neighbor == NULL, OT_NOOP);
+
+    if (aAddress.IsShort())
+    {
+        neighbor = Get<RouterTable>().GetNeighbor(aAddress.GetShort());
+    }
+    else
+    {
+        neighbor = Get<RouterTable>().GetNeighbor(aAddress.GetExtended());
+    }
+
+    if ((neighbor != NULL) && !neighbor->MatchesFilter(aFilter))
+    {
+        neighbor = NULL;
+    }
+
+    VerifyOrExit(neighbor == NULL, OT_NOOP);
+
+    neighbor = Mle::FindNeighbor(aAddress, aFilter);
+
+exit:
+    return neighbor;
+}
+
 uint16_t MleRouter::GetNextHop(uint16_t aDestination)
 {
     uint8_t       destinationId = RouterIdFromRloc16(aDestination);

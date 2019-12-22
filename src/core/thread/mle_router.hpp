@@ -424,6 +424,22 @@ public:
     Neighbor *GetRxOnlyNeighborRouter(const Mac::Address &aAddress);
 
     /**
+     * This method searches for a neighbor with a given MAC address matching a given state filter.
+     *
+     * This method searches within child table, router table (independent of the current role of device), and also
+     * between parent and parent candidate for a neighbor matching a MAC address and a state filter. The behavior
+     * of this method is different from `GetNeighbor()` which is limited to neighbors in valid or restoring states and
+     * searches within child and router tables only when device is in router or leader roles.
+     *
+     * @param[in]  aAddress   A MAC address.
+     * @param[in]  aFilter    A neighbor state filter.
+     *
+     * @returns A pointer to the neighbor matching the address and the state filter if one is found, NULL otherwise.
+     *
+     */
+    Neighbor *FindNeighbor(const Mac::Address &aAddress, Neighbor::StateFilter aFilter);
+
+    /**
      * This method retains diagnostic information for an attached child by Child ID or RLOC16.
      *
      * @param[in]   aChildId    The Child ID or RLOC16 for an attached child.
@@ -886,6 +902,11 @@ public:
 
     Neighbor *GetNeighbor(const Mac::ExtAddress &aAddress) { return Mle::GetNeighbor(aAddress); }
     Neighbor *GetNeighbor(const Mac::Address &aAddress) { return Mle::GetNeighbor(aAddress); }
+
+    Neighbor *FindNeighbor(const Mac::Address &aAddress, Neighbor::StateFilter aFilter)
+    {
+        return Mle::FindNeighbor(aAddress, aFilter);
+    }
 
     otError GetNextNeighborInfo(otNeighborInfoIterator &, otNeighborInfo &) { return OT_ERROR_NOT_IMPLEMENTED; }
 
