@@ -159,6 +159,22 @@ void Neighbor::GenerateChallenge(void)
         Random::Crypto::FillBuffer(mValidPending.mPending.mChallenge, sizeof(mValidPending.mPending.mChallenge)));
 }
 
+const char *Neighbor::StateToString(State aState)
+{
+    static const char *kStateStrings[] = {
+        "Invalid",        // kStateInvalid
+        "Restored",       // kStateRestored
+        "ParentReq",      // kStateParentRequest
+        "ParentRes",      // kStateParentResponse
+        "ChildIdReq",     // kStateChildIdRequest
+        "LinkReq",        // kStateLinkRequest
+        "ChildUpdateReq", // kStateChildUpdateRequest
+        "Valid",          // kStateValid
+    };
+
+    return static_cast<uint8_t>(aState) < OT_ARRAY_LENGTH(kStateStrings) ? kStateStrings[aState] : "Unknown";
+}
+
 void Child::Info::SetFrom(const Child &aChild)
 {
     Clear();
