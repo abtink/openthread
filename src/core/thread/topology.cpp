@@ -103,6 +103,41 @@ void Neighbor::GenerateChallenge(void)
     Random::Crypto::FillBuffer(mValidPending.mPending.mChallenge, sizeof(mValidPending.mPending.mChallenge));
 }
 
+const char *Neighbor::StateToString(State aState)
+{
+    const char *str = "Unknown";
+
+    switch (aState)
+    {
+    case kStateInvalid:
+        str = "Invalid";
+        break;
+    case kStateRestored:
+        str = "Restored";
+        break;
+    case kStateParentRequest:
+        str = "ParentReq";
+        break;
+    case kStateParentResponse:
+        str = "ParentRes";
+        break;
+    case kStateChildIdRequest:
+        str = "ChildIdReq";
+        break;
+    case kStateLinkRequest:
+        str = "LinkReq";
+        break;
+    case kStateChildUpdateRequest:
+        str = "ChildUpdateReq";
+        break;
+    case kStateValid:
+        str = "Valid";
+        break;
+    }
+
+    return str;
+}
+
 void Child::Clear(void)
 {
     memset(reinterpret_cast<void *>(this), 0, sizeof(Child));
