@@ -420,6 +420,16 @@ public:
     void SetTimeSyncEnabled(bool aEnabled) { mTimeSyncEnabled = aEnabled; }
 #endif
 
+    /**
+     * This method converts a given `State` to a human-readable string.
+     *
+     * @param[in] aState   A neighbor state.
+     *
+     * @returns A string representation of given state.
+     *
+     */
+    static const char *StateToString(State aState);
+
 private:
     Mac::ExtAddress mMacAddr;   ///< The IEEE 802.15.4 Extended Address
     TimeMilli       mLastHeard; ///< Time when last heard.
