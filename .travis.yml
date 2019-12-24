@@ -178,11 +178,23 @@ jobs:
       os: linux
       compiler: gcc
       script: .travis/script.sh
-    - env: BUILD_TARGET="toranj-test-framework" VERBOSE=1
+    - env: BUILD_TARGET="toranj-test-framework" TORANJ_RADIO="15.4" VERBOSE=1
+      os: linux
+      compiler: gcc
+      script: .travis/script.sh
+    - env: BUILD_TARGET="toranj-test-framework" TORANJ_RADIO="trel" VERBOSE=1
+      os: linux
+      compiler: gcc
+      script: .travis/script.sh
+    - env: BUILD_TARGET="toranj-test-framework" TORANJ_RADIO="15.4+trel" TREL_PSR="65" VERBOSE=1
       os: linux
       compiler: gcc
       script: .travis/script.sh
     - env: BUILD_TARGET="toranj-test-framework" VERBOSE=1 TORANJ_POSIX_APP_RCP_MODEL=1
+      os: linux
+      compiler: gcc
+      script: .travis/script.sh
+    - env: BUILD_TARGET="toranj-test-framework" VERBOSE=1 TORANJ_POSIX_APP_RCP_MODEL=1 TORANJ_RADIO="trel"
       os: linux
       compiler: gcc
       script: .travis/script.sh
