@@ -557,6 +557,74 @@ build_samr21() {
         --disable-tests                     \
         --with-ncp-vendor-hook-source=./src/ncp/example_vendor_hook.cpp || die
     make -j 8 || die
+
+    # TREL radio link only
+    export CPPFLAGS="                                             \
+        -DOPENTHREAD_CONFIG_NCP_UART_ENABLE=1                     \
+        -DOPENTHREAD_CONFIG_LOG_LEVEL=OT_LOG_LEVEL_DEBG           \
+        -DOPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE=0     \
+        -DOPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE=1              \
+        -DOPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE=0"
+
+    git checkout -- . || die
+    git clean -xfd || die
+    ./bootstrap || die
+    ./configure                             \
+        --enable-ncp                        \
+        --enable-ftd                        \
+        --enable-mtd                        \
+        --with-examples=posix               \
+        --disable-docs                      \
+        --disable-tests
+    make -j 8 || die
+
+    # Multi radio (15.4 and TREL)
+    export CPPFLAGS="                                             \
+        -DOPENTHREAD_CONFIG_NCP_UART_ENABLE=1                     \
+        -DOPENTHREAD_CONFIG_DIAG_ENABLE=1                         \
+        -DOPENTHREAD_CONFIG_LINK_RAW_ENABLE=1                     \
+        -DOPENTHREAD_CONFIG_LOG_LEVEL_DYNAMIC_ENABLE=1            \
+        -DOPENTHREAD_CONFIG_LOG_LEVEL=OT_LOG_LEVEL_DEBG           \
+        -DOPENTHREAD_CONFIG_MAC_FILTER_ENABLE=1                   \
+        -DOPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE=1     \
+        -DOPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE=1              \
+        -DOPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE=0"
+
+    git checkout -- . || die
+    git clean -xfd || die
+    ./bootstrap || die
+    ./configure                             \
+        --enable-ncp                        \
+        --enable-ftd                        \
+        --enable-mtd                        \
+        --with-examples=posix               \
+        --disable-docs                      \
+        --disable-tests
+    make -j 8 || die
+
+    # Multi radio (15.4, TREL, and ToBLE)
+    export CPPFLAGS="                                             \
+        -DOPENTHREAD_CONFIG_NCP_UART_ENABLE=1                     \
+        -DOPENTHREAD_CONFIG_DIAG_ENABLE=1                         \
+        -DOPENTHREAD_CONFIG_LINK_RAW_ENABLE=1                     \
+        -DOPENTHREAD_CONFIG_LOG_LEVEL_DYNAMIC_ENABLE=1            \
+        -DOPENTHREAD_CONFIG_LOG_LEVEL=OT_LOG_LEVEL_DEBG           \
+        -DOPENTHREAD_CONFIG_MAC_FILTER_ENABLE=1                   \
+        -DOPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE=1     \
+        -DOPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE=1              \
+        -DOPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE=1"
+
+    git checkout -- . || die
+    git clean -xfd || die
+    ./bootstrap || die
+    ./configure                             \
+        --enable-ncp                        \
+        --enable-ftd                        \
+        --enable-mtd                        \
+        --with-examples=posix               \
+        --disable-docs                      \
+        --disable-tests
+    make -j 8 || die
 }
 
 [ $BUILD_TARGET != posix-distcheck ] || {
