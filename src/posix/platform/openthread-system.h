@@ -96,6 +96,7 @@ typedef struct otPlatformConfig
     const char *mRadioFile;     ///< Radio file path.
     const char *mRadioConfig;   ///< Radio configurations.
     bool        mResetRadio;    ///< Whether to reset RCP when initializing.
+    const char *mTrelInterface; ///< Interface name used by TREL radio link (can be NULL to use default).
 } otPlatformConfig;
 
 /**

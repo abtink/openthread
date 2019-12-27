@@ -98,6 +98,7 @@ static const struct option kOptions[] = {{"debug-level", required_argument, NULL
                                          {"radio-version", no_argument, NULL, 0},
                                          {"time-speed", required_argument, NULL, 's'},
                                          {"verbose", no_argument, NULL, 'v'},
+                                         {"trel-interface", required_argument, NULL, 't'},
                                          {0, 0, 0, 0}};
 
 static void PrintUsage(const char *aProgramName, FILE *aStream, int aExitCode)
@@ -112,6 +113,7 @@ static void PrintUsage(const char *aProgramName, FILE *aStream, int aExitCode)
             "        --no-reset              Do not reset RCP on initialization\n"
             "        --radio-version         Print radio firmware version\n"
             "    -s  --time-speed factor     Time speed up factor.\n"
+            "    -t  --trel-interface name   Interface name for TREL platform (e.g., wlan0 netif).\n"
             "    -v  --verbose               Also log to stderr.\n"
             "    -h  --help                  Display this usage information.\n",
             aProgramName);
@@ -131,7 +133,7 @@ static void ParseArg(int aArgCount, char *aArgVector[], PosixConfig *aConfig)
     while (true)
     {
         int index  = 0;
-        int option = getopt_long(aArgCount, aArgVector, "d:hI:ns:v", kOptions, &index);
+        int option = getopt_long(aArgCount, aArgVector, "d:hI:t:ns:v", kOptions, &index);
 
         if (option == -1)
         {
@@ -148,6 +150,9 @@ static void ParseArg(int aArgCount, char *aArgVector[], PosixConfig *aConfig)
             break;
         case 'I':
             aConfig->mPlatformConfig.mInterfaceName = optarg;
+            break;
+        case 't':
+            aConfig->mPlatformConfig.mTrelInterface = optarg;
             break;
         case 'n':
             aConfig->mIsDryRun = true;
