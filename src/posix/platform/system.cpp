@@ -59,6 +59,9 @@ otInstance *otSysInit(otPlatformConfig *aPlatformConfig)
     VerifyOrDie(args.GetPath() != NULL, OT_EXIT_INVALID_ARGUMENTS);
     platformAlarmInit(aPlatformConfig->mSpeedUpFactor);
     platformRadioInit(&args);
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    platformTrelInit(aPlatformConfig->mTrelInterface);
+#endif
     platformRandomInit();
 
     instance = otInstanceInitSingle();
@@ -81,6 +84,9 @@ void otSysDeinit(void)
     platformRadioDeinit();
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
     platformNetifDeinit();
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    platformTrelDeinit();
 #endif
     IgnoreError(otPlatUartDisable());
 }
@@ -135,6 +141,9 @@ void otSysMainloopUpdate(otInstance *aInstance, otSysMainloopContext *aMainloop)
                            &aMainloop->mTimeout);
 #else
     platformRadioUpdateFdSet(&aMainloop->mReadFdSet, &aMainloop->mWriteFdSet, &aMainloop->mMaxFd, &aMainloop->mTimeout);
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    platformTrelUpdateFdSet(&aMainloop->mReadFdSet, &aMainloop->mWriteFdSet, &aMainloop->mMaxFd, &aMainloop->mTimeout);
 #endif
 
     if (otTaskletsArePending(aInstance))
@@ -193,6 +202,9 @@ void otSysMainloopProcess(otInstance *aInstance, const otSysMainloopContext *aMa
     virtualTimeProcess(aInstance, &aMainloop->mReadFdSet, &aMainloop->mWriteFdSet, &aMainloop->mErrorFdSet);
 #else
     platformRadioProcess(aInstance, &aMainloop->mReadFdSet, &aMainloop->mWriteFdSet);
+#endif
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    platformTrelProcess(aInstance, &aMainloop->mReadFdSet, &aMainloop->mWriteFdSet);
 #endif
     platformUartProcess(&aMainloop->mReadFdSet, &aMainloop->mWriteFdSet, &aMainloop->mErrorFdSet);
     platformAlarmProcess(aInstance);

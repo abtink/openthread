@@ -79,6 +79,7 @@ typedef struct otPlatformConfig
     uint32_t    mSpeedUpFactor; ///< Speed up factor.
     const char *mInterfaceName; ///< Thread network interface name.
     const char *mRadioUrl;      ///< Radio url.
+    const char *mTrelInterface; ///< Interface name used by TREL radio link (can be NULL to use default).
 } otPlatformConfig;
 
 /**

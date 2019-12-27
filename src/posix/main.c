@@ -107,6 +107,7 @@ enum
     OT_POSIX_OPT_DRY_RUN        = 'n',
     OT_POSIX_OPT_HELP           = 'h',
     OT_POSIX_OPT_INTERFACE_NAME = 'I',
+    OT_POSIX_OPT_TREL_INTERFACE = 't',
     OT_POSIX_OPT_TIME_SPEED     = 's',
     OT_POSIX_OPT_VERBOSE        = 'v',
 
@@ -121,6 +122,7 @@ static const struct option kOptions[] = {{"debug-level", required_argument, NULL
                                          {"interface-name", required_argument, NULL, OT_POSIX_OPT_INTERFACE_NAME},
                                          {"radio-version", no_argument, NULL, OT_POSIX_OPT_RADIO_VERSION},
                                          {"time-speed", required_argument, NULL, OT_POSIX_OPT_TIME_SPEED},
+                                         {"trel-interface", required_argument, NULL, OT_POSIX_OPT_TREL_INTERFACE},
                                          {"verbose", no_argument, NULL, OT_POSIX_OPT_VERBOSE},
                                          {0, 0, 0, 0}};
 
@@ -136,6 +138,7 @@ static void PrintUsage(const char *aProgramName, FILE *aStream, int aExitCode)
             "    -n  --dry-run                 Just verify if arguments is valid and radio spinel is compatible.\n"
             "        --radio-version           Print radio firmware version.\n"
             "    -s  --time-speed factor       Time speed up factor.\n"
+            "    -t  --trel-interface name   Interface name for TREL platform (e.g., wlan0 netif).\n"
             "    -v  --verbose                 Also log to stderr.\n",
             aProgramName);
     fprintf(aStream, "%s", otSysGetRadioUrlHelpString());
@@ -154,7 +157,7 @@ static void ParseArg(int aArgCount, char *aArgVector[], PosixConfig *aConfig)
     while (true)
     {
         int index  = 0;
-        int option = getopt_long(aArgCount, aArgVector, "d:hI:ns:v", kOptions, &index);
+        int option = getopt_long(aArgCount, aArgVector, "d:hI:t:ns:v", kOptions, &index);
 
         if (option == -1)
         {
@@ -171,6 +174,9 @@ static void ParseArg(int aArgCount, char *aArgVector[], PosixConfig *aConfig)
             break;
         case OT_POSIX_OPT_INTERFACE_NAME:
             aConfig->mPlatformConfig.mInterfaceName = optarg;
+            break;
+        case OT_POSIX_OPT_TREL_INTERFACE:
+            aConfig->mPlatformConfig.mTrelInterface = optarg;
             break;
         case OT_POSIX_OPT_DRY_RUN:
             aConfig->mIsDryRun = true;
