@@ -52,6 +52,7 @@ add_library(openthread-posix
     settings.cpp
     sim.c
     system.c
+    trel_udp6.c
     uart.c
     udp.cpp
 )
