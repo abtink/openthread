@@ -134,18 +134,4 @@ exit:
     return;
 }
 
-// These are added so that we can compile posix-app ok
-OT_TOOL_WEAK void otPlatTrelUdp6Init(otInstance *, const otIp6Address *, uint16_t)
-{
-}
-
-OT_TOOL_WEAK void otPlatTrelUdp6SubscribeMulticastAddress(otInstance *, const otIp6Address *)
-{
-}
-
-OT_TOOL_WEAK otError otPlatTrelUdp6SendTo(otInstance *, const uint8_t *, uint16_t, const otIp6Address *)
-{
-    return OT_ERROR_NONE;
-}
-
 #endif // #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE

@@ -52,6 +52,7 @@ libopenthread_posix_a_SOURCES             = \
     settings.cpp                            \
     sim.c                                   \
     system.c                                \
+    trel_udp6.c                             \
     uart.c                                  \
     udp.cpp                                 \
     $(NULL)
