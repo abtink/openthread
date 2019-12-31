@@ -36,10 +36,16 @@ display_usage() {
     echo ""
     echo "Usage: $(basename $0) [options] <config>"
     echo "    <config> can be:"
-    echo "        ncp        : Build OpenThread NCP FTD mode with POSIX platform"
-    echo "        rcp        : Build OpenThread RCP (NCP in radio mode) with POSIX platform"
-    echo "        posix-app  : Build OpenThread POSIX App NCP"
-    echo "        cmake      : Configure and build OpenThread using cmake/ninja (RCP and NCP) only"
+    echo "        ncp                  : Build OpenThread NCP FTD mode with POSIX platform"
+    echo "        ncp-15.4             : Build OpenThread NCP FTD mode with POSIX platform - 15.4 radio"
+    echo "        ncp-trel             : Build OpenThread NCP FTD mode with POSIX platform - TREL radio "
+    echo "        ncp-15.4+trel        : Build OpenThread NCP FTD mode with POSIX platform - multi radio (15.4+TREL)"
+    echo "        rcp                  : Build OpenThread RCP (NCP in radio mode) with POSIX platform"
+    echo "        posix-app            : Build OpenThread POSIX App NCP"
+    echo "        posix-app            : Build OpenThread POSIX App NCP - 15.4 radio"
+    echo "        posix-app-trel       : Build OpenThread POSIX App NCP - TREL radio "
+    echo "        posix-app-15.4_trel  : Build OpenThread POSIX App NCP - multi radio (15.4+TREL)"
+    echo "        cmake                : Configure and build OpenThread using cmake/ninja (RCP and NCP) only"
     echo ""
     echo "Options:"
     echo "        -c/--enable-coverage  Enable code coverage"
@@ -92,10 +98,55 @@ configure_options="                \
 cppflags_config='-DOPENTHREAD_PROJECT_CORE_CONFIG_FILE=\"../tests/toranj/openthread-core-toranj-config.h\"'
 
 case ${build_config} in
-    ncp)
+    ncp|ncp-)
         echo "==================================================================================================="
-        echo "Building OpenThread NCP FTD mode with POSIX platform"
+        echo "Building OpenThread NCP FTD mode with POSIX platform (radios determined by config)"
         echo "==================================================================================================="
+        ./bootstrap || die
+        ./configure                             \
+            CPPFLAGS="$cppflags_config"         \
+            --with-examples=posix               \
+            $configure_options || die
+        make -j 8 || die
+        ;;
+
+    ncp-15.4)
+        echo "==================================================================================================="
+        echo "Building OpenThread NCP FTD mode with POSIX platform - 15.4 radio"
+        echo "==================================================================================================="
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE=1"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE=0"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE=0"
+        ./bootstrap || die
+        ./configure                             \
+            CPPFLAGS="$cppflags_config"         \
+            --with-examples=posix               \
+            $configure_options || die
+        make -j 8 || die
+        ;;
+
+    ncp-trel)
+        echo "==================================================================================================="
+        echo "Building OpenThread NCP FTD mode with POSIX platform - TREL radio"
+        echo "==================================================================================================="
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE=0"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE=1"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE=0"
+        ./bootstrap || die
+        ./configure                             \
+            CPPFLAGS="$cppflags_config"         \
+            --with-examples=posix               \
+            $configure_options || die
+        make -j 8 || die
+        ;;
+
+    ncp-15.4+trel|ncp-trel+15.4)
+        echo "==================================================================================================="
+        echo "Building OpenThread NCP FTD mode with POSIX platform - multi radio (15.4 + TREL)"
+        echo "==================================================================================================="
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE=1"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE=1"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE=0"
         ./bootstrap || die
         ./configure                             \
             CPPFLAGS="$cppflags_config"         \
@@ -120,10 +171,55 @@ case ${build_config} in
         make -j 8 || die
         ;;
 
-    posix-app|posixapp)
+    posix-app|posix-app-|posixapp|posixapp-)
         echo "===================================================================================================="
-        echo "Building OpenThread POSIX App NCP"
+        echo "Building OpenThread POSIX App NCP (radios determined by config)"
         echo "===================================================================================================="
+        ./bootstrap || die
+        ./configure                             \
+            CPPFLAGS="$cppflags_config -DOPENTHREAD_CONFIG_POSIX_APP_ENABLE_PTY_DEVICE=1" \
+            --enable-posix-app                  \
+            $configure_options || die
+        make -j 8 || die
+        ;;
+
+    posix-app-15.4|posixapp-15.4)
+        echo "===================================================================================================="
+        echo "Building OpenThread POSIX App NCP - 15.4 radio"
+        echo "===================================================================================================="
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE=1"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE=0"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE=0"
+        ./bootstrap || die
+        ./configure                             \
+            CPPFLAGS="$cppflags_config -DOPENTHREAD_CONFIG_POSIX_APP_ENABLE_PTY_DEVICE=1" \
+            --enable-posix-app                  \
+            $configure_options || die
+        make -j 8 || die
+        ;;
+
+    posix-app-trel|posixapp-trel)
+        echo "===================================================================================================="
+        echo "Building OpenThread POSIX App NCP - TREL radio"
+        echo "===================================================================================================="
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE=0"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE=1"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE=0"
+        ./bootstrap || die
+        ./configure                             \
+            CPPFLAGS="$cppflags_config -DOPENTHREAD_CONFIG_POSIX_APP_ENABLE_PTY_DEVICE=1" \
+            --enable-posix-app                  \
+            $configure_options || die
+        make -j 8 || die
+        ;;
+
+    posix-app-trel+15.4|posixapp-trel+15.4|posix-app-15.4+trel|posixapp-15.4+trel)
+        echo "===================================================================================================="
+        echo "Building OpenThread POSIX App NCP - multi radio link (15.4 + TREL)"
+        echo "===================================================================================================="
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE=1"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE=1"
+        cppflags_config="${cppflags_config} -DOPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE=0"
         ./bootstrap || die
         ./configure                             \
             CPPFLAGS="$cppflags_config -DOPENTHREAD_CONFIG_POSIX_APP_ENABLE_PTY_DEVICE=1" \
