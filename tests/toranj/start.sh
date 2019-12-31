@@ -46,7 +46,22 @@ cleanup() {
         sudo ip link delete $interface > /dev/null 2>&1
     done
 
+    sudo ip address flush trel
+
     sleep 0.3
+}
+
+prepare_trel_link() {
+    # Prepares a netif "trel" as virtual eth to use for
+    # testing "TREL" radio link in POSIX App mode.
+
+    echo "Preparing trel netif"
+    sudo ip link delete trel
+    sudo ip link add trel type veth peer name trel-peer || die
+    sudo ip link set trel multicast on || die
+    sudo ip link set trel up || die
+    sudo ip link set trel-peer multicast on || die
+    sudo ip link set trel-peer up || die
 }
 
 run() {
@@ -94,11 +109,15 @@ case $TORANJ_POSIX_APP_RCP_MODEL in
 esac
 
 if [ "$use_posix_app_with_rcp" = "no" ]; then
-    ./build.sh ${coverage_option} ncp || die
+    ./build.sh ${coverage_option} ncp-${TORANJ_RADIO} || die
 
 else
     ./build.sh ${coverage_option} rcp || die
-    ./build.sh ${coverage_option} posix-app || die
+    ./build.sh ${coverage_option} posix-app-${TORANJ_RADIO} || die
+
+    if [ "$TORANJ_RADIO" = "trel" ]; then
+        prepare_trel_link
+    fi
 fi
 
 cleanup
@@ -144,7 +163,14 @@ run test-038-clear-address-cache-for-sed.py
 run test-100-mcu-power-state.py
 run test-600-channel-manager-properties.py
 run test-601-channel-manager-channel-change.py
-run test-602-channel-manager-channel-select.py
+
+# Skip the "channel-select" test on a TREL only radio link, since it
+# requires energy scan which is not supported in this case.
+
+if [ "$TORANJ_RADIO" != "trel" ]; then
+    run test-602-channel-manager-channel-select.py
+fi
+
 run test-603-channel-manager-announce-recovery.py
 
 exit 0
