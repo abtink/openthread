@@ -333,8 +333,10 @@ public:
 private:
     enum
     {
-        kStateUpdatePeriod  = 1000,                     ///< State update period in milliseconds.
-        kDefaultMsgPriority = Message::kPriorityNormal, ///< Default message priority.
+        kStateUpdatePeriod      = 1000,                     ///< State update period in milliseconds.
+        kDefaultMsgPriority     = Message::kPriorityNormal, ///< Default message priority.
+        kMeshHeaderFrameMtu     = OT_RADIO_FRAME_MAX_SIZE,  ///< Max. MTU allowed when generating a Mesh Header frame.
+        kMeshHeaderFrameFcsSize = sizeof(uint16_t),         ///< Frame FCS size for Mesh Header frame.
 
         /**
          * The number of fragment priority entries.
