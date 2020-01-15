@@ -105,6 +105,8 @@ void RadioSelector::UpdateOnSendDone(Mac::TxFrame &aFrame, otError aTxError)
     Mac::Address   macDest;
     Neighbor *     neighbor;
 
+    VerifyOrExit(aFrame.GetAckRequest());
+
     aFrame.GetDstAddr(macDest);
     neighbor = Get<Mle::MleRouter>().FindNeighbor(macDest, Neighbor::kInStateAnyExceptInvalid);
     VerifyOrExit(neighbor != NULL);
