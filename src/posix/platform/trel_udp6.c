@@ -253,11 +253,21 @@ static otError SendPacket(const uint8_t *aBuffer, uint16_t aLength, const otIp6A
 
     ret = sendto(sSocket, aBuffer, aLength, 0, (struct sockaddr *)&sockAddr, sizeof(sockAddr));
 
-    otLogDebgPlat("[trel-plat] SendPacket() -- sendto returned %d (%d)", ret, (ret == -1) ? errno : 0);
-
     if (ret != aLength)
     {
-        error = OT_ERROR_INVALID_STATE;
+        otLogDebgPlat("[trel-plat] SendPacket() -- sendto() failed errno %d", errno);
+
+        switch (errno)
+        {
+        case ENETUNREACH:
+        case ENETDOWN:
+        case EHOSTUNREACH:
+            error = OT_ERROR_ABORT;
+            break;
+
+        default:
+            error = OT_ERROR_INVALID_STATE;
+        }
     }
 
 exit:
@@ -315,8 +325,9 @@ static void SendQueuedPackets(void)
     {
         TxPacket *packet = sTxPacketQueueTail->mNext; // tail->mNext is the head of the list.
 
-        if (SendPacket(packet->mBuffer, packet->mLength, &packet->mDestAddress) != OT_ERROR_NONE)
+        if (SendPacket(packet->mBuffer, packet->mLength, &packet->mDestAddress) == OT_ERROR_INVALID_STATE)
         {
+            otLogDebgPlat("[trel-plat] SendQueuedPackets() - SendPacket() would block");
             break;
         }
 
@@ -456,19 +467,33 @@ otError otPlatTrelUdp6SendTo(otInstance *        aInstance,
 {
     OT_UNUSED_VARIABLE(aInstance);
 
+    otError error = OT_ERROR_NONE;
+
     assert(aLength <= TREL_MAX_PACKET_SIZE);
 
     otLogDebgPlat("[trel-plat] otPlatTrelUdp6SendTo(%s) %s", Ip6AddrToString(aDestAddress),
                   BufferToString(aBuffer, aLength));
 
-    // We try to send the packet immediately. If it could not be sent
-    // (e.g., socket is not yet ready or the `sendto()` would block),
-    // we enqueue the packet to send it when socket becomes ready.
+    // We try to send the packet immediately. If it fails (e.g.,
+    // network is down) `SendPacket()` returns `OT_ERROR_ABORT`. If
+    // the send operation would block (e.g., socket is not yet ready
+    // or is out of buffer) we get `OT_ERROR_INVALID_STATE`. In that
+    // case we enqueue the packet to send it later when socket becomes
+    // ready.
 
-    return ((SendPacket(aBuffer, aLength, aDestAddress) == OT_ERROR_NONE) ||
-            (EnqueuePacket(aBuffer, aLength, aDestAddress) == OT_ERROR_NONE))
-               ? OT_ERROR_NONE
-               : OT_ERROR_ABORT;
+    error = SendPacket(aBuffer, aLength, aDestAddress);
+
+    if (error == OT_ERROR_INVALID_STATE)
+    {
+        error = EnqueuePacket(aBuffer, aLength, aDestAddress);
+
+        if (error != OT_ERROR_NONE)
+        {
+            error = OT_ERROR_ABORT;
+        }
+    }
+
+    return error;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
