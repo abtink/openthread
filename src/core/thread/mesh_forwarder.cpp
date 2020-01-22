@@ -838,26 +838,34 @@ Neighbor *MeshForwarder::UpdateNeighborOnSentFrame(Mac::TxFrame &aFrame, otError
 
     VerifyOrExit(aFrame.GetAckRequest());
 
-    if (aError == OT_ERROR_NONE)
-    {
-        neighbor->ResetLinkFailures();
-    }
-    else if (aError == OT_ERROR_NO_ACK)
-    {
-        neighbor->IncrementLinkFailures();
-        VerifyOrExit(Mle::Mle::IsActiveRouter(neighbor->GetRloc16()));
-
-        if (neighbor->GetLinkFailures() >= Mle::kFailedRouterTransmissions)
-        {
-            Get<Mle::MleRouter>().RemoveNeighbor(*neighbor);
-        }
-    }
+    UpdateNeighborOnTxFrameAckStatus(*neighbor, aError);
 
 exit:
     return neighbor;
 }
 
-void MeshForwarder::HandleSentFrame(Mac::TxFrame &aFrame, otError aError)
+void MeshForwarder::UpdateNeighborOnTxFrameAckStatus(Neighbor &aNeighbor, otError aError)
+{
+    if (aError == OT_ERROR_NONE)
+    {
+        aNeighbor.ResetLinkFailures();
+    }
+    else if (aError == OT_ERROR_NO_ACK)
+    {
+        aNeighbor.IncrementLinkFailures();
+        VerifyOrExit(Mle::Mle::IsActiveRouter(aNeighbor.GetRloc16()));
+
+        if (aNeighbor.GetLinkFailures() >= Mle::kFailedRouterTransmissions)
+        {
+            Get<Mle::MleRouter>().RemoveNeighbor(aNeighbor);
+        }
+    }
+
+exit:
+    return;
+}
+
+void MeshForwarder::HandleSentFrame(Mac::TxFrame &aFrame, otError aError, bool aAckDeferred)
 {
     Neighbor *   neighbor = NULL;
     Mac::Address macDest;
@@ -884,7 +892,14 @@ void MeshForwarder::HandleSentFrame(Mac::TxFrame &aFrame, otError aError)
             ExitNow();
         }
 #endif
-        neighbor = UpdateNeighborOnSentFrame(aFrame, aError, macDest);
+        if (!aAckDeferred)
+        {
+            neighbor = UpdateNeighborOnSentFrame(aFrame, aError, macDest);
+        }
+        else
+        {
+            neighbor = Get<Mle::MleRouter>().GetNeighbor(macDest);
+        }
     }
 
     UpdateSendMessage(aError, macDest, neighbor);

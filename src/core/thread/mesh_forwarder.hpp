@@ -403,7 +403,8 @@ private:
     void          HandleReceivedFrame(Mac::RxFrame &aFrame);
     Mac::TxFrame *HandleFrameRequest(Mac::TxFrames &aTxFrames);
     Neighbor *    UpdateNeighborOnSentFrame(Mac::TxFrame &aFrame, otError aError, const Mac::Address &aMacDest);
-    void          HandleSentFrame(Mac::TxFrame &aFrame, otError aError);
+    void          UpdateNeighborOnTxFrameAckStatus(Neighbor &aNeighbor, otError aError);
+    void          HandleSentFrame(Mac::TxFrame &aFrame, otError aError, bool aAckDeferred);
     void          UpdateSendMessage(otError aFrameTxError, Mac::Address &aMacDest, Neighbor *aNeighbor);
 
     static void HandleDiscoverTimer(Timer &aTimer);

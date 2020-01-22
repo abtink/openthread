@@ -1249,6 +1249,8 @@ exit:
 
 void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, otError aError)
 {
+    bool ackDeffered;
+
 #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
     if (!aFrame.IsEmpty()
 #if OPENTHREAD_CONFIG_MULTI_RADIO
@@ -1364,7 +1366,9 @@ void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, otError aError
 
         otDumpDebgMac("TX", aFrame.GetHeader(), aFrame.GetLength());
         FinishOperation();
-        Get<MeshForwarder>().HandleSentFrame(aFrame, aError);
+        ackDeffered = !aFrame.IsEmpty() && aFrame.GetAckRequest() && aFrame.IsDefferedAckAllowed() &&
+                      (aError == OT_ERROR_NONE) && (aAckFrame == NULL);
+        Get<MeshForwarder>().HandleSentFrame(aFrame, aError, ackDeffered);
         PerformNextOperation();
         break;
 

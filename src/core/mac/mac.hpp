@@ -493,7 +493,7 @@ public:
      * This method is called to handle transmit events.
      *
      * @param[in]  aFrame      The frame that was transmitted.
-     * @param[in]  aAckFrame   A pointer to the ACK frame, NULL if no ACK was received.
+     * @param[in]  aAckFrame   A pointer to the ACK frame, NULL if no ACK was received or ACK was deferred.
      * @param[in]  aError      OT_ERROR_NONE when the frame was transmitted successfully,
      *                         OT_ERROR_NO_ACK when the frame was transmitted but no ACK was received,
      *                         OT_ERROR_CHANNEL_ACCESS_FAILURE when the tx failed due to activity on the channel,
@@ -501,6 +501,10 @@ public:
      *
      */
     void HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, otError aError);
+
+    // Indicates a deferred ack was received for a neighbor (or deferred ack timed out if aAckFrame is NULL)
+    // This is called only after a tx frame ack is deferred.
+    void HandleDeferedAck(Neighbor &aNeighbor, RxFrame *aAckFrame);
 
     /**
      * This method returns if an active scan is in progress.

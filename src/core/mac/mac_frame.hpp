@@ -1098,6 +1098,9 @@ public:
      */
     void SetCsmaCaEnabled(bool aCsmaCaEnabled) { mInfo.mTxInfo.mCsmaCaEnabled = aCsmaCaEnabled; }
 
+    bool IsDefferedAckAllowed(void) const { return mInfo.mTxInfo.mInteralFlag; }
+    void SetDefferedAckAllowed(bool aAllowDeferredAck) { mInfo.mTxInfo.mInteralFlag = aAllowDeferredAck; }
+
     /**
      * This method returns the key used for frame encryption and authentication (AES CCM).
      *

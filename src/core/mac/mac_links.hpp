@@ -132,12 +132,15 @@ public:
     {
 #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
         mTxFrame802154.SetLength(0);
+        mTxFrame802154.SetDefferedAckAllowed(false);
 #endif
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
         mTxFrameTrel.SetLength(0);
+        mTxFrameTrel.SetDefferedAckAllowed(false);
 #endif
 #if OPENTHREAD_CONFIG_RADIO_LINK_TOBLE_ENABLE
         mTxFrameToble.SetLength(0);
+        mTxFrameToble.SetDefferedAckAllowed(false);
 #endif
     }
 
