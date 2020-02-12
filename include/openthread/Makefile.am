@@ -69,6 +69,7 @@ openthread_headers                      = \
     link_raw.h                            \
     logging.h                             \
     message.h                             \
+    multi_radio.h                         \
     ncp.h                                 \
     netdata.h                             \
     netdiag.h                             \
