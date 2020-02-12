@@ -76,6 +76,8 @@
  *
  * @}
  *
+ * @defgroup api-multi-radio Multi Radio Link
+ *
  * @defgroup api-message Message
  *
  * @defgroup api-thread Thread
