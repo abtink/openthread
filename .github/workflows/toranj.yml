@@ -165,3 +165,35 @@ jobs:
       uses: codecov/codecov-action@v1
       with:
         fail_ci_if_error: true
+
+  toranj-ncp-multi-radio:
+    runs-on: ubuntu-18.04
+    env:
+      COVERAGE: 1
+      TORANJ_RADIO : multi
+    steps:
+    - uses: actions/checkout@v2
+    - name: Bootstrap
+      run: |
+        sudo apt update
+        sudo apt --no-install-recommends install -y dbus libdbus-1-dev
+        sudo apt --no-install-recommends install -y autoconf-archive
+        sudo apt --no-install-recommends install -y bsdtar
+        sudo apt --no-install-recommends install -y libtool
+        sudo apt --no-install-recommends install -y libglib2.0-dev
+        sudo apt --no-install-recommends install -y libboost-dev libboost-signals-dev
+
+        git clone --depth=1 --branch=master https://github.com/openthread/wpantund.git
+        cd wpantund
+        ./bootstrap.sh
+        ./configure
+        sudo make -j2
+        sudo make install
+    - name: Build & Run
+      run: |
+        top_builddir=$(pwd)/build/toranj ./tests/toranj/start.sh
+    - name: Codecov
+      uses: codecov/codecov-action@v1
+      with:
+        fail_ci_if_error: true
+
