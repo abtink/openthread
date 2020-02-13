@@ -73,9 +73,9 @@ run() {
             return
         fi
 
-        # On Travis, we allow a failed test to be retried up to 3 attempts.
+        # On Travis, we allow a failed test to be retried up to 5 attempts.
         if [ "$BUILD_TARGET" = "toranj-test-framework" ]; then
-            if [ "$counter" -lt 2 ]; then
+            if [ "$counter" -lt 4 ]; then
                 counter=$((counter+1))
                 echo Attempt $counter running "$1" failed. Trying again.
                 cleanup
@@ -91,6 +91,10 @@ run() {
 }
 
 cd $(dirname $0)
+
+if [ -z "${top_builddir}" ]; then
+    top_builddir=.
+fi
 
 if [ "$COVERAGE" = 1 ]; then
     coverage_option="--enable-coverage"
@@ -108,7 +112,17 @@ case $TORANJ_POSIX_APP_RCP_MODEL in
 esac
 
 if [ "$use_posix_app_with_rcp" = "no" ]; then
-    ./build.sh ${coverage_option} ncp-${TORANJ_RADIO} || die
+    if [ "$TORANJ_RADIO" = "multi" ]; then
+        # Build all combinations
+        ./build.sh ${coverage_option} ncp-15.4 || die
+        (cd ${top_builddir} && make clean) || die
+        ./build.sh ${coverage_option} ncp-trel || die
+        (cd ${top_builddir} && make clean) || die
+        ./build.sh ${coverage_option} ncp-15.4+trel || die
+        (cd ${top_builddir} && make clean) || die
+    else
+        ./build.sh ${coverage_option} ncp-${TORANJ_RADIO} || die
+    fi
 
 else
     ./build.sh ${coverage_option} rcp || die
@@ -121,55 +135,65 @@ fi
 
 cleanup
 
-run test-001-get-set.py
-run test-002-form.py
-run test-003-join.py
-run test-004-scan.py
-run test-005-discover-scan.py
-run test-006-traffic-router-end-device.py
-run test-007-traffic-router-sleepy.py
-run test-008-permit-join.py
-run test-009-insecure-traffic-join.py
-run test-010-on-mesh-prefix-config-gateway.py
-run test-011-child-table.py
-run test-012-multi-hop-traffic.py
-run test-013-off-mesh-route-traffic.py
-run test-014-ip6-address-add.py
-run test-015-same-prefix-on-multiple-nodes.py
-run test-016-neighbor-table.py
-run test-017-parent-reset-child-recovery.py
-run test-018-child-supervision.py
-run test-019-inform-previous-parent.py
-run test-020-router-table.py
-run test-021-address-cache-table.py
-run test-022-multicast-ip6-address.py
-run test-023-multicast-traffic.py
-run test-024-partition-merge.py
-run test-025-network-data-timeout.py
-run test-026-slaac-address-wpantund.py
-run test-027-child-mode-change.py
-run test-028-router-leader-reset-recovery.py
-run test-029-data-poll-interval.py
-run test-030-slaac-address-ncp.py
-run test-031-meshcop-joiner-commissioner.py
-run test-032-child-attach-with-multiple-ip-addresses.py
-run test-033-mesh-local-prefix-change.py
-run test-034-poor-link-parent-child-attach.py
-run test-035-child-timeout-large-data-poll.py
-run test-036-wpantund-host-route-management.py
-run test-037-wpantund-auto-add-route-for-on-mesh-prefix.py
-run test-038-clear-address-cache-for-sed.py
-run test-100-mcu-power-state.py
-run test-600-channel-manager-properties.py
-run test-601-channel-manager-channel-change.py
+if [ "$TORANJ_RADIO" = "multi" ]; then
+    run test-700-multi-radio-join.py
+    run test-701-multi-radio-probe.py
+    run test-702-multi-radio-discovery-by-rx.py
+    run test-703-multi-radio-mesh-header-msg.py
+    run test-704-multi-radio-scan.py
+    run test-705-multi-radio-discover-scan.py
 
-# Skip the "channel-select" test on a TREL only radio link, since it
-# requires energy scan which is not supported in this case.
+else
+    run test-001-get-set.py
+    run test-002-form.py
+    run test-003-join.py
+    run test-004-scan.py
+    run test-005-discover-scan.py
+    run test-006-traffic-router-end-device.py
+    run test-007-traffic-router-sleepy.py
+    run test-008-permit-join.py
+    run test-009-insecure-traffic-join.py
+    run test-010-on-mesh-prefix-config-gateway.py
+    run test-011-child-table.py
+    run test-012-multi-hop-traffic.py
+    run test-013-off-mesh-route-traffic.py
+    run test-014-ip6-address-add.py
+    run test-015-same-prefix-on-multiple-nodes.py
+    run test-016-neighbor-table.py
+    run test-017-parent-reset-child-recovery.py
+    run test-018-child-supervision.py
+    run test-019-inform-previous-parent.py
+    run test-020-router-table.py
+    run test-021-address-cache-table.py
+    run test-022-multicast-ip6-address.py
+    run test-023-multicast-traffic.py
+    run test-024-partition-merge.py
+    run test-025-network-data-timeout.py
+    run test-026-slaac-address-wpantund.py
+    run test-027-child-mode-change.py
+    run test-028-router-leader-reset-recovery.py
+    run test-029-data-poll-interval.py
+    run test-030-slaac-address-ncp.py
+    run test-031-meshcop-joiner-commissioner.py
+    run test-032-child-attach-with-multiple-ip-addresses.py
+    run test-033-mesh-local-prefix-change.py
+    run test-034-poor-link-parent-child-attach.py
+    run test-035-child-timeout-large-data-poll.py
+    run test-036-wpantund-host-route-management.py
+    run test-037-wpantund-auto-add-route-for-on-mesh-prefix.py
+    run test-038-clear-address-cache-for-sed.py
+    run test-100-mcu-power-state.py
+    run test-600-channel-manager-properties.py
+    run test-601-channel-manager-channel-change.py
 
-if [ "$TORANJ_RADIO" != "trel" ]; then
-    run test-602-channel-manager-channel-select.py
+    # Skip the "channel-select" test on a TREL only radio link, since it
+    # requires energy scan which is not supported in this case.
+
+    if [ "$TORANJ_RADIO" != "trel" ]; then
+        run test-602-channel-manager-channel-select.py
+    fi
+
+    run test-603-channel-manager-announce-recovery.py
 fi
-
-run test-603-channel-manager-announce-recovery.py
 
 exit 0
