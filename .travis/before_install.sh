@@ -172,7 +172,8 @@ cd /tmp || die
         sudo apt-get install libboost-signals-dev || die
 
         # clone and build wpantund
-        git clone --depth=1 --branch=master https://github.com/openthread/wpantund.git
+        #git clone --depth=1 --branch=master https://github.com/openthread/wpantund.git
+        git clone --depth=1 --branch=multi-radio-props https://github.com/abtink/wpantund.git
         cd wpantund || die
         ./bootstrap.sh || die
         ./configure || die
