@@ -183,7 +183,8 @@ jobs:
         sudo apt --no-install-recommends install -y libglib2.0-dev
         sudo apt --no-install-recommends install -y libboost-dev libboost-signals-dev
 
-        git clone --depth=1 --branch=master https://github.com/openthread/wpantund.git
+        #git clone --depth=1 --branch=master https://github.com/openthread/wpantund.git
+        git clone --depth=1 --branch=multi-radio-props-2 https://github.com/abtink/wpantund.git
         cd wpantund
         ./bootstrap.sh
         ./configure
