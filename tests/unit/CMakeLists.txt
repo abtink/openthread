@@ -183,6 +183,33 @@ target_link_libraries(test-heap
 
 add_test(NAME test-heap COMMAND test-heap)
 
+add_executable(test-hkdf-sha256
+    ${COMMON_SOURCES}
+    test_hkdf_sha256.cpp
+)
+
+target_include_directories(test-hkdf-sha256
+    PRIVATE
+        ${COMMON_INCLUDES}
+)
+
+target_compile_definitions(test-hkdf-sha256
+    PRIVATE
+        ${OT_PRIVATE_DEFINES}
+)
+
+target_compile_options(test-hkdf-sha256
+    PRIVATE
+        ${COMMON_COMPILE_OPTIONS}
+)
+
+target_link_libraries(test-hkdf-sha256
+    PRIVATE
+        ${COMMON_LIBS}
+)
+
+add_test(NAME test-hkdf-sha256 COMMAND test-hkdf-sha256)
+
 add_executable(test-hmac-sha256
     ${COMMON_SOURCES}
     test_hmac_sha256.cpp
@@ -582,7 +609,7 @@ target_link_libraries(test-timer
 add_test(NAME test-timer COMMAND test-timer)
 
 set_target_properties(
-    test-aes test-checksum test-child test-child-table test-flash test-heap test-hmac-sha256 test-ip6-address test-link-quality test-linked-list test-lowpan test-mac-frame test-message test-message-queue test-multicast-listeners-table test-ndproxy-table test-netif test-network-data test-pool test-priority-queue test-pskc test-steering-data test-string test-timer
+    test-aes test-checksum test-child test-child-table test-flash test-heap test-hkdf-sha256 test-hmac-sha256 test-ip6-address test-link-quality test-linked-list test-lowpan test-mac-frame test-message test-message-queue test-multicast-listeners-table test-ndproxy-table test-netif test-network-data test-pool test-priority-queue test-pskc test-steering-data test-string test-timer
     PROPERTIES
         C_STANDARD 99
         CXX_STANDARD 11
