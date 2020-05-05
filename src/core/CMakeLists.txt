@@ -93,6 +93,7 @@ set(COMMON_SOURCES
     crypto/aes_ccm.cpp
     crypto/aes_ecb.cpp
     crypto/ecdsa.cpp
+    crypto/hkdf_sha256.cpp
     crypto/hmac_sha256.cpp
     crypto/mbedtls.cpp
     crypto/pbkdf2_cmac.cpp
