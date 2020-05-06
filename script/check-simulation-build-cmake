@@ -42,6 +42,8 @@ reset_source()
 
 build_all_features()
 {
+
+    echo "build_all_features()"
     local options=("${OT_COMMON_OPTIONS[@]}")
 
     options+=(
@@ -91,7 +93,7 @@ build_toranj()
 main()
 {
     build_all_features
-    build_toranj
+    #build_toranj
 }
 
 main "$@"

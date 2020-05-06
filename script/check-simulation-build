@@ -31,7 +31,8 @@ set -euxo pipefail
 
 main()
 {
-    "$(dirname "$0")"/check-simulation-build-autotools
+    #"$(dirname "$0")"/check-simulation-build-autotools
+    echo "GOT HERE IN THE TEST"
     "$(dirname "$0")"/check-simulation-build-cmake
 }
 
