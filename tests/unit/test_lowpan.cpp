@@ -133,7 +133,7 @@ static void Init(void)
 
     SuccessOrQuit(message->Append(mockNetworkData, sizeof(mockNetworkData)), "6lo: Message::Append failed");
 
-    IgnoreError(sInstance->Get<NetworkData::Leader>().SetNetworkData(0, 0, true, *message, 0));
+    sInstance->Get<NetworkData::Leader>().SetNetworkData(0, 0, true, *message, 0);
 }
 
 /**

@@ -68,13 +68,13 @@ void TestMacBeaconFrame(void)
     VerifyOrQuit(instance != NULL, "Null OpenThread instance");
 
     aesCcm.SetKey(key, sizeof(key));
-    SuccessOrQuit(aesCcm.Init(headerLength, payloadLength, tagLength, nonce, sizeof(nonce)), "AesCcm::Init() failed");
+    aesCcm.Init(headerLength, payloadLength, tagLength, nonce, sizeof(nonce));
     aesCcm.Header(test, headerLength);
     aesCcm.Finalize(test + headerLength, &tagLength);
 
     VerifyOrQuit(memcmp(test, encrypted, sizeof(encrypted)) == 0, "TestMacBeaconFrame encrypt failed");
 
-    SuccessOrQuit(aesCcm.Init(headerLength, payloadLength, tagLength, nonce, sizeof(nonce)), "AesCcm::Init() failed");
+    aesCcm.Init(headerLength, payloadLength, tagLength, nonce, sizeof(nonce));
     aesCcm.Header(test, headerLength);
     aesCcm.Finalize(test + headerLength, &tagLength);
 
@@ -119,18 +119,18 @@ void TestMacCommandFrame()
 
     ot::Crypto::AesCcm aesCcm;
     aesCcm.SetKey(key, sizeof(key));
-    SuccessOrQuit(aesCcm.Init(headerLength, payloadLength, tagLength, nonce, sizeof(nonce)), "AesCcm::Init() failed");
+    aesCcm.Init(headerLength, payloadLength, tagLength, nonce, sizeof(nonce));
     aesCcm.Header(test, headerLength);
     aesCcm.Payload(test + headerLength, test + headerLength, payloadLength, true);
     aesCcm.Finalize(test + headerLength + payloadLength, &tagLength);
-    VerifyOrQuit(memcmp(test, encrypted, sizeof(encrypted)) == 0, "TestMacCommandFrame encrypt failed");
+    VerifyOrQuit(memcmp(test, encrypted, sizeof(encrypted)) == 0, "TestMacCommandFrame encrypt failed\n");
 
-    SuccessOrQuit(aesCcm.Init(headerLength, payloadLength, tagLength, nonce, sizeof(nonce)), "AesCcm::Init() failed");
+    aesCcm.Init(headerLength, payloadLength, tagLength, nonce, sizeof(nonce));
     aesCcm.Header(test, headerLength);
     aesCcm.Payload(test + headerLength, test + headerLength, payloadLength, false);
     aesCcm.Finalize(test + headerLength + payloadLength, &tagLength);
 
-    VerifyOrQuit(memcmp(test, decrypted, sizeof(decrypted)) == 0, "TestMacCommandFrame decrypt failed");
+    VerifyOrQuit(memcmp(test, decrypted, sizeof(decrypted)) == 0, "TestMacCommandFrame decrypt failed\n");
 }
 
 int main(void)

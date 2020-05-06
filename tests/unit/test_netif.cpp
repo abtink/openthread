@@ -32,7 +32,6 @@
 
 #include <openthread/config.h>
 
-#include "common/code_utils.hpp"
 #include "common/debug.hpp"
 #include "common/instance.hpp"
 #include "net/netif.hpp"
@@ -105,14 +104,14 @@ void TestNetifMulticastAddresses(void)
     const char *kTestAddress2         = "ff03::114";
     const char *kTestAddress3         = "ff04::114";
 
-    IgnoreError(addresses[0].FromString(kLinkLocalAllRouters));
-    IgnoreError(addresses[1].FromString(kRealmLocalAllRouters));
-    IgnoreError(addresses[2].FromString(kLinkLocalAllNodes));
-    IgnoreError(addresses[3].FromString(kRealmLocalAllNodes));
-    IgnoreError(addresses[4].FromString(kRealmLocalAllMpl));
-    IgnoreError(addresses[5].FromString(kTestAddress1));
-    IgnoreError(addresses[6].FromString(kTestAddress2));
-    IgnoreError(addresses[7].FromString(kTestAddress3));
+    addresses[0].FromString(kLinkLocalAllRouters);
+    addresses[1].FromString(kRealmLocalAllRouters);
+    addresses[2].FromString(kLinkLocalAllNodes);
+    addresses[3].FromString(kRealmLocalAllNodes);
+    addresses[4].FromString(kRealmLocalAllMpl);
+    addresses[5].FromString(kTestAddress1);
+    addresses[6].FromString(kTestAddress2);
+    addresses[7].FromString(kTestAddress3);
 
     VerifyMulticastAddressList(netif, addresses, 0);
 
@@ -135,7 +134,7 @@ void TestNetifMulticastAddresses(void)
     VerifyOrQuit(netif.UnsubscribeAllRoutersMulticast() == OT_ERROR_NOT_FOUND,
                  "UnsubscribeAllRoutersMulticast() did not fail when not subscribed");
 
-    IgnoreError(netifAddress.GetAddress().FromString(kTestAddress1));
+    netifAddress.GetAddress().FromString(kTestAddress1);
     SuccessOrQuit(netif.SubscribeMulticast(netifAddress), "SubscribeMulticast() failed");
     VerifyMulticastAddressList(netif, &addresses[2], 4);
 
@@ -148,7 +147,7 @@ void TestNetifMulticastAddresses(void)
     VerifyOrQuit(netif.UnsubscribeAllNodesMulticast() == OT_ERROR_NOT_FOUND,
                  "UnsubscribeAllNodesMulticast() did not fail when not subscribed");
 
-    IgnoreError(address.FromString(kTestAddress2));
+    address.FromString(kTestAddress2);
     SuccessOrQuit(netif.SubscribeExternalMulticast(address), "SubscribeExternalMulticast() failed");
     VerifyMulticastAddressList(netif, &addresses[5], 2);
 
@@ -164,15 +163,15 @@ void TestNetifMulticastAddresses(void)
     VerifyOrQuit(netif.SubscribeAllRoutersMulticast() == OT_ERROR_ALREADY,
                  "SubscribeAllRoutersMulticast() did not fail when already subscribed");
 
-    IgnoreError(address.FromString(kTestAddress3));
+    address.FromString(kTestAddress3);
     SuccessOrQuit(netif.SubscribeExternalMulticast(address), "SubscribeExternalMulticast() failed");
     VerifyMulticastAddressList(netif, &addresses[0], 8);
 
-    IgnoreError(address.FromString(kTestAddress1)); // same as netifAddress (internal)
+    address.FromString(kTestAddress1); // same as netifAddress (internal)
     VerifyOrQuit(netif.UnsubscribeExternalMulticast(address) == OT_ERROR_INVALID_ARGS,
                  "UnsubscribeExternalMulticast() did not fail when address was not external");
 
-    IgnoreError(address.FromString(kRealmLocalAllMpl));
+    address.FromString(kRealmLocalAllMpl);
     VerifyOrQuit(netif.UnsubscribeExternalMulticast(address) == OT_ERROR_INVALID_ARGS,
                  "UnsubscribeExternalMulticast() did not fail when address was fixed address");
 

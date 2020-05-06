@@ -1886,7 +1886,7 @@ void MleRouter::HandleStateUpdateTimer(void)
                 if (age < Time::SecToMsec(kMaxNeighborAge) + kMaxTransmissionCount * kUnicastRetransmissionDelay)
                 {
                     otLogInfoMle("Router timeout expired");
-                    IgnoreError(SendLinkRequest(&router));
+                    SendLinkRequest(&router);
                 }
                 else
                 {
