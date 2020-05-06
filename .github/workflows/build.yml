@@ -56,6 +56,21 @@ jobs:
       run: |
         script/make-pretty check
 
+  macos:
+    runs-on: macos-10.15
+    env:
+      CC: clang
+      CXX: clang++
+    steps:
+    - uses: actions/checkout@v2
+    - name: Bootstrap
+      run: |
+        brew install automake ninja llvm
+    - name: Build
+      run: |
+        script/check-posix-build
+        script/check-simulation-build
+
   clang-m32:
     name: clang-m32-${{ matrix.clang_ver }}
     runs-on: ubuntu-18.04
