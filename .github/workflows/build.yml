@@ -157,6 +157,7 @@ jobs:
           sudo apt --no-install-recommends install -y clang-${{ matrix.clang_ver }} clang++-${{ matrix.clang_ver }} g++-multilib ninja-build
       - name: Build
         run: |
+          script/check-simulation-build
           script/check-posix-build
 
   gn:
