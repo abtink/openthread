@@ -74,6 +74,7 @@ jobs:
         run: |
           sudo apt update
           sudo apt --no-install-recommends install -y clang-${{ matrix.clang_ver }} clang++-${{ matrix.clang_ver }} g++-multilib gcc-multilib ninja-build
+          sudo apt --no-install-recommends install -y gcc-7 g++-7
       - name: Build
         run: |
           script/check-simulation-build
