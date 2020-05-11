@@ -487,8 +487,8 @@ private:
 #else
     uint8_t mLinkFailures; ///< Consecutive link failure count
 #endif
-    uint8_t         mVersion;  ///< The MLE version
     LinkQualityInfo mLinkInfo; ///< Link quality info (contains average RSS, link margin and link quality)
+    uint8_t         mVersion;  ///< The MLE version
 };
 
 /**
