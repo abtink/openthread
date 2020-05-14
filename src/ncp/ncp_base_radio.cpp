@@ -435,25 +435,29 @@ template <> otError NcpBase::HandlePropertySet<SPINEL_PROP_RCP_MAC_KEY>(void)
     uint8_t        keyIdMode;
     uint8_t        keyId;
     uint16_t       keySize;
-    const uint8_t *prevKey;
-    const uint8_t *currKey;
-    const uint8_t *nextKey;
+    const uint8_t *key;
+    otMacKey       prevKey;
+    otMacKey       currKey;
+    otMacKey       nextKey;
 
     SuccessOrExit(error = mDecoder.ReadUint8(keyIdMode));
     VerifyOrExit(keyIdMode == Mac::Frame::kKeyIdMode1, error = OT_ERROR_INVALID_ARGS);
 
     SuccessOrExit(error = mDecoder.ReadUint8(keyId));
 
-    SuccessOrExit(error = mDecoder.ReadDataWithLen(prevKey, keySize));
-    VerifyOrExit(keySize == Mac::SubMac::kMacKeySize, error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = mDecoder.ReadDataWithLen(key, keySize));
+    VerifyOrExit(keySize == sizeof(otMacKey), error = OT_ERROR_INVALID_ARGS);
+    memcpy(prevKey.m8, key, sizeof(otMacKey));
 
-    SuccessOrExit(error = mDecoder.ReadDataWithLen(currKey, keySize));
-    VerifyOrExit(keySize == Mac::SubMac::kMacKeySize, error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = mDecoder.ReadDataWithLen(key, keySize));
+    VerifyOrExit(keySize == sizeof(otMacKey), error = OT_ERROR_INVALID_ARGS);
+    memcpy(currKey.m8, key, sizeof(otMacKey));
 
-    SuccessOrExit(error = mDecoder.ReadDataWithLen(nextKey, keySize));
-    VerifyOrExit(keySize == Mac::SubMac::kMacKeySize, error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = mDecoder.ReadDataWithLen(key, keySize));
+    VerifyOrExit(keySize == sizeof(otMacKey), error = OT_ERROR_INVALID_ARGS);
+    memcpy(nextKey.m8, key, sizeof(otMacKey));
 
-    error = otLinkRawSetMacKey(mInstance, keyIdMode, keyId, prevKey, currKey, nextKey);
+    error = otLinkRawSetMacKey(mInstance, keyIdMode, keyId, &prevKey, &currKey, &nextKey);
 
 exit:
     return error;

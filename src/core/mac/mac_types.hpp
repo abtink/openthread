@@ -443,6 +443,63 @@ private:
 };
 
 /**
+ * This class represents a MAC key.
+ *
+ */
+class Key : public otMacKey
+{
+public:
+    enum
+    {
+        kSize = OT_MAC_KEY_SIZE, // Key size in bytes.
+    };
+
+    /**
+     * This method clears the key (set all bytes to zero).
+     *
+     */
+    void Clear(void) { memset(m8, 0, kSize); }
+
+    /**
+     * This method gets a pointer to the buffer containing the key.
+     *
+     * @returns A pointer to the buffer containing the key.
+     *
+     */
+    const uint8_t *GetKey(void) const { return m8; }
+
+    /**
+     * This method sets the key from a given buffer.
+     *
+     * @param[in] aKey   A buffer containing the key (must contain `kSize` bytes).
+     *
+     */
+    void SetKey(const uint8_t *aKey);
+
+    /**
+     * This method evaluates whether or not two keys match.
+     *
+     * @param[in]  aOtherKey  The key to compare with.
+     *
+     * @retval TRUE   If the key matches the @p aOtherKey.
+     * @retval FALSE  If the key does not match the @p aOtherKey.
+     *
+     */
+    bool operator==(const Key &aOtherKey) const;
+
+    /**
+     * This method evaluates whether or not two keys match.
+     *
+     * @param[in]  aOtherKey  The key to compare with.
+     *
+     * @retval TRUE   If the key does not match @p aOtherKey.
+     * @retval FALSE  If the key does match @p aOtherKey.
+     *
+     */
+    bool operator!=(const Key &aOtherKey) const { return !(*this == aOtherKey); }
+};
+
+/**
  * This structure represents an IEEE 802.15.4 Extended PAN Identifier.
  *
  */
