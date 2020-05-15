@@ -102,11 +102,6 @@ void Key::SetKey(const uint8_t *aKey)
     memcpy(m8, aKey, kSize);
 }
 
-bool Key::operator==(const Key &aOtherKey) const
-{
-    return memcmp(m8, aOtherKey.m8, sizeof(Key)) == 0;
-}
-
 bool ExtendedPanId::operator==(const ExtendedPanId &aOther) const
 {
     return memcmp(m8, aOther.m8, sizeof(ExtendedPanId)) == 0;

@@ -485,7 +485,7 @@ public:
      * @retval FALSE  If the key does not match the @p aOtherKey.
      *
      */
-    bool operator==(const Key &aOtherKey) const;
+    bool operator==(const Key &aOtherKey) const { return memcmp(m8, aOtherKey.m8, kSize) == 0; }
 
     /**
      * This method evaluates whether or not two keys match.
