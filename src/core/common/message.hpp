@@ -47,6 +47,14 @@
 #include "mac/mac_types.hpp"
 #include "thread/link_quality.hpp"
 
+/**
+ * This struct represents an opaque (and empty) type corresponding to an OpenThread message.
+ *
+ */
+typedef struct otMessage
+{
+} otMessage;
+
 namespace ot {
 
 /**
@@ -121,7 +129,7 @@ struct MessageInfo
  * This class represents a Message buffer.
  *
  */
-class Buffer : public ::otMessage
+class Buffer : public otMessage
 {
     friend class Message;
 
@@ -132,13 +140,15 @@ public:
      * @returns A pointer to the next message buffer.
      *
      */
-    class Buffer *GetNextBuffer(void) const { return static_cast<Buffer *>(mNext); }
+    Buffer *GetNextBuffer(void) const { return mNext; }
 
     /**
      * This method sets the pointer to the next message buffer.
      *
+     * @param[in] aNextBuffer   A pointer to the next buffer.
+     *
      */
-    void SetNextBuffer(class Buffer *buf) { mNext = static_cast<otMessage *>(buf); }
+    void SetNextBuffer(Buffer *aNextBuffer) { mNext = aNextBuffer; }
 
 private:
     /**
@@ -175,11 +185,12 @@ private:
 
     enum
     {
-        kBufferDataSize     = kBufferSize - sizeof(struct otMessage),
-        kHeadBufferDataSize = kBufferDataSize - sizeof(struct MessageInfo),
+        kBufferDataSize     = kBufferSize - sizeof(Buffer *),
+        kHeadBufferDataSize = kBufferDataSize - sizeof(MessageInfo),
     };
 
 protected:
+    Buffer *mNext;
     union
     {
         struct
