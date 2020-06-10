@@ -127,10 +127,9 @@ public:
      * If there is no ongoing Discover Scan, calling this method would perform no action.
      *
      */
-    void Stop(void) { SignalScanCompleted(); }
+    void Stop(void);
 
 private:
-
     // Methods used by `MeshForwarder`
     otError PrepareDiscoveryRequestFrame(const Message &aMessage, Mac::TxFrame &aFrame);
     void    HandleDiscoveryRequestFrameTxDone(Message &aMessage);
@@ -138,7 +137,6 @@ private:
     // Methods used from `Mle`
     void HandleDiscoveryResponse(const Message &aMessage, const Ip6::MessageInfo &aMessageInfo) const;
 
-    void        SignalScanCompleted(void);
     static void HandleTimer(Timer &aTimer);
     void        HandleTimer(void);
 

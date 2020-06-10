@@ -135,26 +135,32 @@ exit:
     return error;
 }
 
+void DiscoverScanner::Stop(void)
+{
+    if (IsInProgress())
+    {
+        mTimer.Stop();
+        mScanChannels.Clear();
+        HandleTimer();
+
+        // Note that `HandleTimer()` with an empty `mScanChannels`
+        // will signal end of scan.
+    }
+}
+
 otError DiscoverScanner::PrepareDiscoveryRequestFrame(const Message &aMessage, Mac::TxFrame &aFrame)
 {
     otError error = OT_ERROR_NONE;
     uint8_t channel;
 
     // This callback may be called with a message corresponding to
-    // a canceled previous scan. We first verify that `aMessage`
+    // a stopped previous scan. We first verify that `aMessage`
     // matches the current Discovery Scan.
 
     VerifyOrExit(&aMessage == mRequestMessage, error = OT_ERROR_ABORT);
 
-    // We go to next scan channel in the `mScanChannels` mask, if
-    // all channels are covered, we return `OT_ERROR_ABORT` to
-    // abort the current frame tx. The end of scan is then signaled
-    // from `HandleDiscoveryRequestFrameTxDone()`.
-
-    VerifyOrExit(!mScanChannels.IsEmpty(), error = OT_ERROR_ABORT);
-
     channel = Mac::ChannelMask::kChannelIteratorFirst;
-    IgnoreError(mScanChannels.GetNextChannel(channel));
+    VerifyOrExit(mScanChannels.GetNextChannel(channel) == OT_ERROR_NONE, error = OT_ERROR_ABORT);
 
     aFrame.SetChannel(channel);
     IgnoreError(Get<Mac::Mac>().SetTemporaryChannel(channel));
@@ -169,55 +175,30 @@ void DiscoverScanner::HandleDiscoveryRequestFrameTxDone(Message &aMessage)
 
     VerifyOrExit(&aMessage == mRequestMessage, OT_NOOP);
 
-    if (mScanChannels.IsEmpty())
-    {
-        SignalScanCompleted();
-        ExitNow();
+    // Remove the first channel from the `mScanChannels` mask.
 
-        // Note that `aMessage` will be dequeued and freed upon return
-        // from callback by `MessageForwarder`
+    channel = Mac::ChannelMask::kChannelIteratorFirst;
+
+    if (mScanChannels.GetNextChannel(channel) == OT_ERROR_NONE)
+    {
+        mScanChannels.RemoveChannel(channel);
     }
 
-    // Remove the channel from the `mScanChannels` mask.
-    channel = Mac::ChannelMask::kChannelIteratorFirst;
-    IgnoreError(mScanChannels.GetNextChannel(channel));
-    mScanChannels.RemoveChannel(channel);
+    if (!mScanChannels.IsEmpty())
+    {
+        // If there are more channels to scan, mark the Discovery
+        // Request message for direct transmission to ensure it will not
+        // be dequeued and freed (by `MeshForwarder`) and is ready for
+        // tx on the next scan channel.
 
-    // Mark the Discovery Request message for direct transmission
-    // so that it will not be dequeued and freed and is ready for
-    // tx on the next scan channel. Also pause transmissions on
-    // `MeshForwarder` while listening for MLE Discovery Response
-    // messages.
+        aMessage.SetDirectTransmission();
+    }
 
-    aMessage.SetDirectTransmission();
+    // Pause transmissions on `MeshForwarder` while listening for MLE
+    // Discovery Response messages.
+
     Get<MeshForwarder>().PuaseMessageTransmissions();
     mTimer.Start(kDefaultScanDuration);
-
-exit:
-    return;
-}
-
-void DiscoverScanner::SignalScanCompleted(void)
-{
-    VerifyOrExit(IsInProgress(), OT_NOOP);
-
-    mTimer.Stop();
-    Get<Mac::Mac>().ClearTemporaryChannel();
-    Get<MeshForwarder>().ResumeMessageTransmissions();
-
-    if (mShouldRestorePanId)
-    {
-        Get<Mac::Mac>().SetPanId(Mac::kPanIdBroadcast);
-        mShouldRestorePanId = false;
-    }
-
-    mEnableFiltering = false;
-    mRequestMessage  = NULL;
-
-    if (mHandler)
-    {
-        mHandler(NULL, mHandlerContext);
-    }
 
 exit:
     return;
@@ -231,10 +212,32 @@ void DiscoverScanner::HandleTimer(Timer &aTimer)
 void DiscoverScanner::HandleTimer(void)
 {
     // When timer expires, we resume message transmissions on
-    // `MeshForwarder` This will in turn prepare the MLE Discovery
-    // Request message for the next channel.
+    // `MeshForwarder`. If there are more channels to scan,
+    // and MLE Discovery Request message is still in the queue
+    // it will trigger it to be prepared for the next scan channel.
 
     Get<MeshForwarder>().ResumeMessageTransmissions();
+
+    if (mScanChannels.IsEmpty())
+    {
+        // Signal scan is completed.
+
+        Get<Mac::Mac>().ClearTemporaryChannel();
+
+        if (mShouldRestorePanId)
+        {
+            Get<Mac::Mac>().SetPanId(Mac::kPanIdBroadcast);
+            mShouldRestorePanId = false;
+        }
+
+        mEnableFiltering = false;
+        mRequestMessage  = NULL;
+
+        if (mHandler)
+        {
+            mHandler(NULL, mHandlerContext);
+        }
+    }
 }
 
 void DiscoverScanner::HandleDiscoveryResponse(const Message &aMessage, const Ip6::MessageInfo &aMessageInfo) const
