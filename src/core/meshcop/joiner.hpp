@@ -102,12 +102,36 @@ public:
     otJoinerState GetState(void) const { return mState; }
 
     /**
-     * This method retrieves the Joiner ID.
+     * This method gets the Joiner ID.
      *
-     * @param[out]  aJoinerId  The Joiner ID.
+     * @returns The Joiner ID.
      *
      */
-    void GetJoinerId(Mac::ExtAddress &aJoinerId) const;
+    const Mac::ExtAddress &GetJoinerId(void) const { return mJoinerId; }
+
+    /**
+     * This method sets the Joiner ID from a given MAC Extended Address.
+     *
+     * Joiner ID is derived as the first 64 bits of the result of computing SHA-256 over @p aAddress.
+     *
+     * @param[in]   aAddress  A MAC Extended Address from which to derive the Joiner ID.
+     *
+     * @retval OT_ERROR_NONE             The Joiner ID was successfully updated.
+     * @retval OT_ERROR_INVALID_STATE    Joining process is ongoing so cannot change the Joiner ID.
+     *
+     */
+    otError SetJoinerIdFromAddress(const Mac::ExtAddress &aAddress);
+
+    /**
+     * This method sets the Joiner ID from device's factory assigned EUI64
+     *
+     * Joiner ID is derived as the first 64 bits of the result of computing SHA-256 over factory assigned EUI64.
+     *
+     * @retval OT_ERROR_NONE             The Joiner ID was successfully updated.
+     * @retval OT_ERROR_INVALID_STATE    Joining process is ongoing so cannot change the Joiner ID.
+     *
+     */
+    otError SetJoinerIdFromIeeeEui64(void);
 
 private:
     enum
@@ -170,6 +194,7 @@ private:
 
     otJoinerCallback mCallback;
     void *           mContext;
+    Mac::ExtAddress  mJoinerId;
 
     JoinerRouter mJoinerRouters[OPENTHREAD_CONFIG_JOINER_MAX_CANDIDATES];
     uint16_t     mJoinerRouterIndex;

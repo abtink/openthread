@@ -75,6 +75,6 @@ void otJoinerGetId(otInstance *aInstance, otExtAddress *aJoinerId)
 {
     Instance &instance = *static_cast<Instance *>(aInstance);
 
-    instance.Get<MeshCoP::Joiner>().GetJoinerId(*static_cast<Mac::ExtAddress *>(aJoinerId));
+    *aJoinerId = instance.Get<MeshCoP::Joiner>().GetJoinerId();
 }
 #endif // OPENTHREAD_CONFIG_JOINER_ENABLE

@@ -65,14 +65,29 @@ Joiner::Joiner(Instance &aInstance)
     , mTimer(aInstance, Joiner::HandleTimer, this)
     , mJoinerEntrust(OT_URI_PATH_JOINER_ENTRUST, &Joiner::HandleJoinerEntrust, this)
 {
+    IgnoreError(SetJoinerIdFromIeeeEui64());
     memset(mJoinerRouters, 0, sizeof(mJoinerRouters));
     Get<Coap::Coap>().AddResource(mJoinerEntrust);
 }
 
-void Joiner::GetJoinerId(Mac::ExtAddress &aJoinerId) const
+otError Joiner::SetJoinerIdFromAddress(const Mac::ExtAddress &aAddress)
 {
-    Get<Radio>().GetIeeeEui64(aJoinerId);
-    ComputeJoinerId(aJoinerId, aJoinerId);
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(mState == OT_JOINER_STATE_IDLE, error = OT_ERROR_INVALID_STATE);
+    ComputeJoinerId(aAddress, mJoinerId);
+
+exit:
+    return error;
+}
+
+otError Joiner::SetJoinerIdFromIeeeEui64(void)
+{
+    Mac::ExtAddress eui64;
+
+    Get<Radio>().GetIeeeEui64(eui64);
+
+    return SetJoinerIdFromAddress(eui64);
 }
 
 void Joiner::SetState(otJoinerState aState)
@@ -124,8 +139,7 @@ otError Joiner::Start(const char *     aPskd,
 
     SuccessOrExit(error = Get<Mle::DiscoverScanner>().Discover(Mac::ChannelMask(0), Get<Mac::Mac>().GetPanId(),
                                                                /* aJoiner */ true, /* aEnableFiltering */ true,
-                                                               /* aFilterId (use hash of factory EUI64) */ NULL,
-                                                               HandleDiscoverResult, this));
+                                                               &mJoinerId, HandleDiscoverResult, this));
     mCallback = aCallback;
     mContext  = aContext;
 
@@ -226,8 +240,6 @@ void Joiner::HandleDiscoverResult(otActiveScanResult *aResult, void *aContext)
 
 void Joiner::HandleDiscoverResult(otActiveScanResult *aResult)
 {
-    Mac::ExtAddress joinerId;
-
     VerifyOrExit(mState == OT_JOINER_STATE_DISCOVER, OT_NOOP);
 
     if (aResult != NULL)
@@ -236,9 +248,7 @@ void Joiner::HandleDiscoverResult(otActiveScanResult *aResult)
     }
     else
     {
-        // Use extended address based on factory-assigned IEEE EUI-64
-        GetJoinerId(joinerId);
-        Get<Mac::Mac>().SetExtAddress(joinerId);
+        Get<Mac::Mac>().SetExtAddress(GetJoinerId());
         Get<Mle::MleRouter>().UpdateLinkLocalAddress();
 
         mJoinerRouterIndex = 0;
