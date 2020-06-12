@@ -96,7 +96,10 @@ public:
      * @param[in]  aScanChannels      Channel mask listing channels to scan (if empty, use all supported channels).
      * @param[in]  aPanId             The PAN ID filter (set to Broadcast PAN to disable filter).
      * @param[in]  aJoiner            Value of the Joiner Flag in the Discovery Request TLV.
-     * @param[in]  aEnableFiltering   Enable filtering MLE Discovery Responses that don't match our factory EUI64.
+     * @param[in]  aEnableFiltering   Enable filtering MLE Discovery Responses with steering data not containing a
+     *                                given ID.
+     * @param[in]  aFilterId          A pointer to an Extended Address to use as the ID for filtering (when enabled).
+     *                                If set to NULL, hash of factory-assigned EUI64 is used.
      * @param[in]  aHandler           A pointer to a function that is called on receiving an MLE Discovery Response.
      * @param[in]  aContext           A pointer to arbitrary context information.
      *
@@ -109,6 +112,7 @@ public:
                      Mac::PanId              aPanId,
                      bool                    aJoiner,
                      bool                    aEnableFiltering,
+                     const Mac::ExtAddress * aFilterId,
                      Handler                 aHandler,
                      void *                  aContext);
 

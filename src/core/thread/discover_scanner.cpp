@@ -62,6 +62,7 @@ otError DiscoverScanner::Discover(const Mac::ChannelMask &aScanChannels,
                                   uint16_t                aPanId,
                                   bool                    aJoiner,
                                   bool                    aEnableFiltering,
+                                  const Mac::ExtAddress * aFilterId,
                                   Handler                 aCallback,
                                   void *                  aContext)
 {
@@ -78,10 +79,14 @@ otError DiscoverScanner::Discover(const Mac::ChannelMask &aScanChannels,
     {
         Mac::ExtAddress extAddress;
 
-        Get<Radio>().GetIeeeEui64(extAddress);
-        MeshCoP::ComputeJoinerId(extAddress, extAddress);
+        if (aFilterId == NULL)
+        {
+            Get<Radio>().GetIeeeEui64(extAddress);
+            MeshCoP::ComputeJoinerId(extAddress, extAddress);
+            aFilterId = &extAddress;
+        }
 
-        MeshCoP::SteeringData::CalculateHashBitIndexes(extAddress, mFilterIndexes);
+        MeshCoP::SteeringData::CalculateHashBitIndexes(*aFilterId, mFilterIndexes);
     }
 
     mHandler            = aCallback;
