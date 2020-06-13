@@ -41,6 +41,7 @@
 using namespace ot;
 
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
+
 otError otJoinerStart(otInstance *     aInstance,
                       const char *     aPskd,
                       const char *     aProvisioningUrl,
@@ -71,10 +72,20 @@ otJoinerState otJoinerGetState(otInstance *aInstance)
     return instance.Get<MeshCoP::Joiner>().GetState();
 }
 
-void otJoinerGetId(otInstance *aInstance, otExtAddress *aJoinerId)
+const otExtAddress *otJoinerGetId(otInstance *aInstance)
 {
     Instance &instance = *static_cast<Instance *>(aInstance);
 
-    *aJoinerId = instance.Get<MeshCoP::Joiner>().GetJoinerId();
+    return &instance.Get<MeshCoP::Joiner>().GetJoinerId();
 }
+
+otError otJoinerSetId(otInstance *aInstance, const otExtAddress *aAddress)
+{
+    Instance &       instance = *static_cast<Instance *>(aInstance);
+    MeshCoP::Joiner &joiner   = instance.Get<MeshCoP::Joiner>();
+
+    return (aAddress != NULL) ? joiner.SetJoinerIdFromAddress(*static_cast<const Mac::ExtAddress *>(aAddress))
+                              : joiner.SetJoinerIdFromIeeeEui64();
+}
+
 #endif // OPENTHREAD_CONFIG_JOINER_ENABLE

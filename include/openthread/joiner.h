@@ -132,16 +132,32 @@ void otJoinerStop(otInstance *aInstance);
 otJoinerState otJoinerGetState(otInstance *aInstance);
 
 /**
- * Get the Joiner ID.
+ * This function gets the Joiner ID.
  *
- * Joiner ID is the first 64 bits of the result of computing SHA-256 over factory-assigned
- * IEEE EUI-64, which is used as IEEE 802.15.4 Extended Address during commissioning process.
- *
+ * If the Joiner ID is not explicitly set, by default the SHA-256 hash of factory-assigned IEEE EUI-64 is used.
+
  * @param[in]   aInstance  A pointer to the OpenThread instance.
- * @param[out]  aJoinerId  A pointer to where the Joiner ID is placed.
+ *
+ * @returns A pointer to the Joiner ID.
  *
  */
-void otJoinerGetId(otInstance *aInstance, otExtAddress *aJoinerId);
+const otExtAddress *otJoinerGetId(otInstance *aInstance);
+
+/**
+ * This function sets the Joiner ID.
+ *
+ * Joiner ID is derived as the first 64 bits of the result of computing SHA-256 over @p aAddress. If @p aAddress is NULL
+ * then factory-assigned IEEE EUI-64 is used (i.e. Joiner ID is derived as hash of factory-assigned EUI-64).
+ *
+ * @param[in] aInstance         A pointer to the OpenThread instance.
+ * @param[in] aAddress          A pointer to an Extended Address from which to derive the Joiner ID. If NULL
+ *                              factory-assigned IEEE EUI-64 is used.
+ *
+ * @retval OT_ERROR_NONE             The Joiner ID was successfully updated.
+ * @retval OT_ERROR_INVALID_STATE    Joining process is ongoing so cannot change the Joiner ID.
+ *
+ */
+otError otJoinerSetId(otInstance *aInstance, const otExtAddress *aAddress);
 
 /**
  * @}
