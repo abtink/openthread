@@ -59,16 +59,6 @@ class Commissioner : public InstanceLocator
 {
 public:
     /**
-     * Joiner operation flags.
-     *
-     */
-    enum JoinerOpFlag
-    {
-        kJoinerOpFlagDefault         = 0,      ///< The default flags
-        kJoinerOpFlagNotNotifyLeader = 1 << 0, ///< Do not notify Leader
-    };
-
-    /**
      * This constructor initializes the Commissioner object.
      *
      * @param[in]  aInstance     A reference to the OpenThread instance.
@@ -140,15 +130,13 @@ public:
      *
      * @param[in]  aEui64         A pointer to the Joiner's IEEE EUI-64 or NULL for any Joiner.
      * @param[in]  aDelay         The delay to remove Joiner (in seconds).
-     * @param[in]  aFlags         The flags for removing the Joiner.
      *
      * @retval OT_ERROR_NONE           Successfully added the Joiner.
      * @retval OT_ERROR_NOT_FOUND      The Joiner specified by @p aEui64 was not found.
      * @retval OT_ERROR_INVALID_STATE  Commissioner service is not started.
      *
-     * @sa JoinerOpFlag
      */
-    otError RemoveJoiner(const Mac::ExtAddress *aEui64, uint32_t aDelay, JoinerOpFlag aFlags = kJoinerOpFlagDefault);
+    otError RemoveJoiner(const Mac::ExtAddress *aEui64, uint32_t aDelay);
 
     /**
      * This method gets the Provisioning URL.
@@ -274,6 +262,21 @@ private:
         kRemoveJoinerDelay    = 20, ///< Delay to remove successfully joined joiner
     };
 
+    struct Joiner
+    {
+        Mac::ExtAddress mEui64;
+        TimeMilli       mExpirationTime;
+        char            mPsk[Dtls::kPskMaxLength + 1];
+        bool            mValid : 1;
+        bool            mAny : 1;
+    };
+
+    Joiner *AllocateJoinerEntry(void);
+    Joiner *FindJoinerEntry(const Mac::ExtAddress &aEui64);
+    Joiner *FindJoinerAnyEntry(void);
+    Joiner *FindBestMatchingJoinerEntry(const Mac::ExtAddress &aRxJoinerId);
+    void    RemoveJoinerEntry(Joiner &aJoiner);
+
     void AddCoapResources(void);
     void RemoveCoapResources(void);
 
@@ -337,14 +340,6 @@ private:
 
     static const char *StateToString(otCommissionerState aState);
 
-    struct Joiner
-    {
-        Mac::ExtAddress mEui64;
-        TimeMilli       mExpirationTime;
-        char            mPsk[Dtls::kPskMaxLength + 1];
-        bool            mValid : 1;
-        bool            mAny : 1;
-    };
     Joiner mJoiners[OPENTHREAD_CONFIG_COMMISSIONER_MAX_JOINER_ENTRIES];
 
     uint8_t    mJoinerIid[Ip6::Address::kInterfaceIdentifierSize];
