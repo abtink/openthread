@@ -37,6 +37,7 @@
 
 #include <openthread/dataset.h>
 #include <openthread/ip6.h>
+#include <openthread/joiner.h>
 #include <openthread/platform/radio.h>
 #include <openthread/platform/toolchain.h>
 

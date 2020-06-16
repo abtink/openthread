@@ -40,6 +40,7 @@
 #include <limits.h>
 
 #include <openthread/instance.h>
+#include <openthread/joiner.h>
 
 #include "coap/coap.hpp"
 #include "common/message.hpp"
@@ -55,6 +56,81 @@ namespace MeshCoP {
 enum
 {
     kBorderAgentUdpPort = 49191, ///< UDP port of border agent service.
+};
+
+/**
+ * This type represents a Joiner Discriminator.
+ *
+ */
+class JoinerDiscriminator : public otJoinerDiscriminator
+{
+    friend class SteeringData;
+
+public:
+    enum
+    {
+        kMaxLength = OT_JOINER_MAX_DISCRIMINATOR_LENGTH, ///< Maximum length of a Joiner Discriminator in bits.
+    };
+
+    /**
+     * This method clears the Joiner Discriminator.
+     *
+     */
+    void Clear(void) { mLength = 0; }
+
+    /**
+     * This method indicates whether the Joiner Discriminator is empty (no value set).
+     *
+     * @returns TRUE if empty, FALSE otherwise.
+     *
+     */
+    bool IsEmpty(void) const { return mLength == 0; }
+
+    /**
+     * This method gets the Joiner Discriminator's value.
+     *
+     * @returns The Joiner Discriminator value.
+     *
+     */
+    uint64_t GetValue(void) const { return mValue; }
+
+    /**
+     * This method gets the Joiner Discriminator's length (in bits).
+     *
+     * @return The Joiner Discriminator length.
+     *
+     */
+    uint8_t GetLength(void) const { return mLength; }
+
+    /**
+     * This method indicates whether the Joiner Discriminator is valid (i.e. it not empty and its length is within
+     * valid range).
+     *
+     * @returns TRUE if Joiner Discriminator is valid, FALSE otherwise.
+     *
+     */
+    bool IsValid(void) const { return (0 < mLength) && (mLength <= kMaxLength); }
+
+    /**
+     * This method generates a Joiner ID from the Discriminator.
+     *
+     * @param[out] aJoinerId   A reference to `Mac::ExtAddress` to output the generated Joiner ID.
+     *
+     */
+    void GenerateJoinerId(Mac::ExtAddress &aJoinerId) const;
+
+    /**
+     * This method indicates whether a given Joiner ID matches the Discriminator.
+     *
+     * @param[in] aJoiner  A Joiner ID to match with the Discriminator.
+     *
+     * @returns TRUE if the Joiner ID matches the Discriminator, FALSE otherwise.
+     *
+     */
+    bool Matches(const Mac::ExtAddress &aJoinerId) const;
+
+private:
+    void CopyTo(Mac::ExtAddress &aExtAddress) const;
 };
 
 /**
@@ -142,6 +218,14 @@ public:
     void UpdateBloomFilter(const Mac::ExtAddress &aJoinerId);
 
     /**
+     * This method updates the bloom filter adding a given Joiner Discriminator.
+     *
+     * @param[in]  aDiscriminator  The Joiner Discriminator to add to bloom filter.
+     *
+     */
+    void UpdateBloomFilter(const JoinerDiscriminator &aDiscriminator);
+
+    /**
      * This method indicates whether the bloom filter is empty (all the bits are cleared).
      *
      * @returns TRUE if the bloom filter is empty, FALSE otherwise.
@@ -160,12 +244,22 @@ public:
     /**
      * This method indicates whether the bloom filter contains a given Joiner ID.
      *
-     * @param[in] aJoinderId  A Joiner ID.
+     * @param[in] aJoinerId  A Joiner ID.
      *
      * @returns TRUE if the bloom filter contains @p aJoinerId, FALSE otherwise.
      *
      */
     bool Contains(const Mac::ExtAddress &aJoinerId) const;
+
+    /**
+     * This method indicates whether the bloom filter contains a given Joiner Discriminator.
+     *
+     * @param[in] aDiscriminator   A Joiner Discriminator.
+     *
+     * @returns TRUE if the bloom filter contains @p aDiscriminator, FALSE otherwise.
+     *
+     */
+    bool Contains(const JoinerDiscriminator &aDiscriminator) const;
 
     /**
      * This method indicates whether the bloom filter contains the hash bit indexes (derived from a Joiner ID).
@@ -188,6 +282,17 @@ public:
      */
     static void CalculateHashBitIndexes(const Mac::ExtAddress &aJoinerId, HashBitIndexes &aIndexes);
 
+    /**
+     * This static method calculates the bloom filter hash bit indexes from a given Joiner Discriminator.
+     *
+     * The first hash bit index is derived using CRC16-CCITT and second one using CRC16-ANSI.
+     *
+     * @param[in]  aDiscriminator The Joiner Discriminator to calculate the hash bit indexes.
+     * @param[out] aIndexes       A reference to a `HashBitIndexes` structure to output the calculated index values.
+     *
+     */
+    static void CalculateHashBitIndexes(const JoinerDiscriminator &aDiscriminator, HashBitIndexes &aIndexes);
+
 private:
     enum
     {
@@ -204,6 +309,7 @@ private:
     void ClearBit(uint8_t aBit) { m8[BitIndex(aBit)] &= ~BitFlag(aBit); }
 
     bool DoesAllMatch(uint8_t aMatch) const;
+    void UpdateBloomFilter(const HashBitIndexes &aIndexes);
 };
 
 /**

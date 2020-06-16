@@ -71,10 +71,35 @@ otJoinerState otJoinerGetState(otInstance *aInstance)
     return instance.Get<MeshCoP::Joiner>().GetState();
 }
 
-void otJoinerGetId(otInstance *aInstance, otExtAddress *aJoinerId)
+const otExtAddress *otJoinerGetId(otInstance *aInstance)
 {
     Instance &instance = *static_cast<Instance *>(aInstance);
 
-    instance.Get<MeshCoP::Joiner>().GetJoinerId(*static_cast<Mac::ExtAddress *>(aJoinerId));
+    return &instance.Get<MeshCoP::Joiner>().GetId();
 }
+
+otError otJoinerSetDiscriminator(otInstance *aInstance, otJoinerDiscriminator *aDiscriminator)
+{
+    otError          error  = OT_ERROR_NONE;
+    MeshCoP::Joiner &joiner = static_cast<Instance *>(aInstance)->Get<MeshCoP::Joiner>();
+
+    if (aDiscriminator != NULL)
+    {
+        error = joiner.SetDiscriminator(*static_cast<const MeshCoP::JoinerDiscriminator *>(aDiscriminator));
+    }
+    else
+    {
+        error = joiner.ClearDiscriminator();
+    }
+
+    return error;
+}
+
+const otJoinerDiscriminator *otJoinerGetDiscriminator(otInstance *aInstance)
+{
+    Instance &instance = *static_cast<Instance *>(aInstance);
+
+    return instance.Get<MeshCoP::Joiner>().GetDiscriminator();
+}
+
 #endif // OPENTHREAD_CONFIG_JOINER_ENABLE

@@ -50,6 +50,59 @@ enum
     kPskdMaxLength = 32, ///< Maximum PSKd Length.
 };
 
+void JoinerDiscriminator::GenerateJoinerId(Mac::ExtAddress &aJoinerId) const
+{
+    aJoinerId.GenerateRandom();
+    CopyTo(aJoinerId);
+    aJoinerId.SetLocal(true);
+}
+
+bool JoinerDiscriminator::Matches(const Mac::ExtAddress &aJoinerId) const
+{
+    uint64_t mask;
+
+    OT_ASSERT(IsValid());
+
+    mask = (static_cast<uint64_t>(1ULL) << mLength) - 1;
+
+    return (Encoding::BigEndian::ReadUint64(aJoinerId.m8) & mask) == (mValue & mask);
+}
+
+void JoinerDiscriminator::CopyTo(Mac::ExtAddress &aExtAddress) const
+{
+    // Copies the discriminator value up to its bit length to `aExtAddress`
+    // array, assuming big-endian encoding (i.e., the discriminator lowest bits
+    // are copied at end of `aExtAddress.m8[]` array). Any initial/remaining
+    // bits of `aExtAddress` array remain unchanged.
+
+    uint8_t *cur       = &aExtAddress.m8[sizeof(Mac::ExtAddress) - 1];
+    uint8_t  reminaing = mLength;
+    uint64_t value     = mValue;
+
+    OT_ASSERT(IsValid());
+
+    // Write full bytes
+    while (reminaing >= CHAR_BIT)
+    {
+        *cur = static_cast<uint8_t>(value & 0xff);
+        value >>= 8;
+        cur--;
+        reminaing -= CHAR_BIT;
+    }
+
+    // Write any remaining bits (not a full byte)
+    if (reminaing != 0)
+    {
+        uint8_t mask = static_cast<uint8_t>((1U << reminaing) - 1);
+
+        // `mask` has it lower (lsb) `remaining` bits as `1` and rest as `0`.
+        // Example with `remaining = 3` -> (1 << 3) - 1 = 0b1000 - 1 = 0b0111.
+
+        *cur &= ~mask;
+        *cur |= static_cast<uint8_t>(value & mask);
+    }
+}
+
 void SteeringData::Init(uint8_t aLength)
 {
     OT_ASSERT(aLength <= kMaxLength);
@@ -67,12 +120,24 @@ void SteeringData::UpdateBloomFilter(const Mac::ExtAddress &aJoinerId)
 {
     HashBitIndexes indexes;
 
+    CalculateHashBitIndexes(aJoinerId, indexes);
+    UpdateBloomFilter(indexes);
+}
+
+void SteeringData::UpdateBloomFilter(const JoinerDiscriminator &aDiscriminator)
+{
+    HashBitIndexes indexes;
+
+    CalculateHashBitIndexes(aDiscriminator, indexes);
+    UpdateBloomFilter(indexes);
+}
+
+void SteeringData::UpdateBloomFilter(const HashBitIndexes &aIndexes)
+{
     OT_ASSERT((mLength > 0) && (mLength <= kMaxLength));
 
-    CalculateHashBitIndexes(aJoinerId, indexes);
-
-    SetBit(indexes.mIndex[0] % GetNumBits());
-    SetBit(indexes.mIndex[1] % GetNumBits());
+    SetBit(aIndexes.mIndex[0] % GetNumBits());
+    SetBit(aIndexes.mIndex[1] % GetNumBits());
 }
 
 bool SteeringData::Contains(const Mac::ExtAddress &aJoinerId) const
@@ -80,6 +145,15 @@ bool SteeringData::Contains(const Mac::ExtAddress &aJoinerId) const
     HashBitIndexes indexes;
 
     CalculateHashBitIndexes(aJoinerId, indexes);
+
+    return Contains(indexes);
+}
+
+bool SteeringData::Contains(const JoinerDiscriminator &aDiscriminator) const
+{
+    HashBitIndexes indexes;
+
+    CalculateHashBitIndexes(aDiscriminator, indexes);
 
     return Contains(indexes);
 }
@@ -102,6 +176,16 @@ void SteeringData::CalculateHashBitIndexes(const Mac::ExtAddress &aJoinerId, Has
 
     aIndexes.mIndex[0] = ccitt.Get();
     aIndexes.mIndex[1] = ansi.Get();
+}
+
+void SteeringData::CalculateHashBitIndexes(const JoinerDiscriminator &aDiscriminator, HashBitIndexes &aIndexes)
+{
+    Mac::ExtAddress address;
+
+    address.Clear();
+    aDiscriminator.CopyTo(address);
+
+    CalculateHashBitIndexes(address, aIndexes);
 }
 
 bool SteeringData::DoesAllMatch(uint8_t aMatch) const

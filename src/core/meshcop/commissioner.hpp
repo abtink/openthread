@@ -115,6 +115,20 @@ public:
     otError AddJoiner(const Mac::ExtAddress *aEui64, const char *aPskd, uint32_t aTimeout);
 
     /**
+     * This method adds a Joiner entry with a Joiner Discriminator.
+     *
+     * @param[in]  aDiscriminator  A Joiner Discriminator.
+     * @param[in]  aPskd           A pointer to the PSKd.
+     * @param[in]  aTimeout        A time after which a Joiner is automatically removed, in seconds.
+     *
+     * @retval OT_ERROR_NONE           Successfully added the Joiner.
+     * @retval OT_ERROR_NO_BUFS        No buffers available to add the Joiner.
+     * @retval OT_ERROR_INVALID_STATE  Commissioner service is not started.
+     *
+     */
+    otError AddJoiner(const JoinerDiscriminator &aDiscriminator, const char *aPskd, uint32_t aTimeout);
+
+    /**
      * This method get joiner info at aIterator position.
      *
      * @param[inout]    aIterator   A iterator to the index of the joiner.
@@ -265,11 +279,16 @@ private:
 
     struct Joiner
     {
-        Mac::ExtAddress mEui64;
-        TimeMilli       mExpirationTime;
-        char            mPsk[Dtls::kPskMaxLength + 1];
-        bool            mValid : 1;
-        bool            mAny : 1;
+        TimeMilli mExpirationTime;
+        char      mPsk[Dtls::kPskMaxLength + 1];
+        union
+        {
+            Mac::ExtAddress     mEui64;
+            JoinerDiscriminator mDiscriminator;
+        };
+        bool mValid : 1;
+        bool mAny : 1;
+        bool mUseDiscriminator : 1;
     };
 
     Joiner *GetUnusedJoinerEntry(void);

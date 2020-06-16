@@ -57,6 +57,8 @@ namespace MeshCoP {
 
 Joiner::Joiner(Instance &aInstance)
     : InstanceLocator(aInstance)
+    , mId()
+    , mDiscriminator()
     , mState(OT_JOINER_STATE_IDLE)
     , mCallback(NULL)
     , mContext(NULL)
@@ -65,14 +67,51 @@ Joiner::Joiner(Instance &aInstance)
     , mTimer(aInstance, Joiner::HandleTimer, this)
     , mJoinerEntrust(OT_URI_PATH_JOINER_ENTRUST, &Joiner::HandleJoinerEntrust, this)
 {
+    SetIdFromIeeeEui64();
+    mDiscriminator.Clear();
     memset(mJoinerRouters, 0, sizeof(mJoinerRouters));
     Get<Coap::Coap>().AddResource(mJoinerEntrust);
 }
 
-void Joiner::GetJoinerId(Mac::ExtAddress &aJoinerId) const
+void Joiner::SetIdFromIeeeEui64(void)
 {
-    Get<Radio>().GetIeeeEui64(aJoinerId);
-    ComputeJoinerId(aJoinerId, aJoinerId);
+    Mac::ExtAddress eui64;
+
+    Get<Radio>().GetIeeeEui64(eui64);
+    ComputeJoinerId(eui64, mId);
+}
+
+const JoinerDiscriminator *Joiner::GetDiscriminator(void) const
+{
+    return mDiscriminator.IsEmpty() ? NULL : &mDiscriminator;
+}
+
+otError Joiner::SetDiscriminator(const JoinerDiscriminator &aDiscriminator)
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(aDiscriminator.IsValid(), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(mState == OT_JOINER_STATE_IDLE, error = OT_ERROR_INVALID_STATE);
+
+    mDiscriminator = aDiscriminator;
+    mDiscriminator.GenerateJoinerId(mId);
+
+exit:
+    return error;
+}
+
+otError Joiner::ClearDiscriminator(void)
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(mState == OT_JOINER_STATE_IDLE, error = OT_ERROR_INVALID_STATE);
+    VerifyOrExit(!mDiscriminator.IsEmpty(), OT_NOOP);
+
+    mDiscriminator.Clear();
+    SetIdFromIeeeEui64();
+
+exit:
+    return error;
 }
 
 void Joiner::SetState(otJoinerState aState)
@@ -96,8 +135,9 @@ otError Joiner::Start(const char *     aPskd,
                       otJoinerCallback aCallback,
                       void *           aContext)
 {
-    otError         error;
-    Mac::ExtAddress randomAddress;
+    otError                      error;
+    Mac::ExtAddress              randomAddress;
+    SteeringData::HashBitIndexes filterIndexes;
 
     otLogInfoMeshCoP("Joiner starting");
 
@@ -122,10 +162,18 @@ otError Joiner::Start(const char *     aPskd,
     SuccessOrExit(error = PrepareJoinerFinalizeMessage(aProvisioningUrl, aVendorName, aVendorModel, aVendorSwVersion,
                                                        aVendorData));
 
+    if (!mDiscriminator.IsEmpty())
+    {
+        SteeringData::CalculateHashBitIndexes(mDiscriminator, filterIndexes);
+    }
+    else
+    {
+        SteeringData::CalculateHashBitIndexes(mId, filterIndexes);
+    }
+
     SuccessOrExit(error = Get<Mle::DiscoverScanner>().Discover(Mac::ChannelMask(0), Get<Mac::Mac>().GetPanId(),
                                                                /* aJoiner */ true, /* aEnableFiltering */ true,
-                                                               /* aFilterIndexes (use hash of factory EUI64) */ NULL,
-                                                               HandleDiscoverResult, this));
+                                                               &filterIndexes, HandleDiscoverResult, this));
     mCallback = aCallback;
     mContext  = aContext;
 
@@ -226,8 +274,6 @@ void Joiner::HandleDiscoverResult(otActiveScanResult *aResult, void *aContext)
 
 void Joiner::HandleDiscoverResult(otActiveScanResult *aResult)
 {
-    Mac::ExtAddress joinerId;
-
     VerifyOrExit(mState == OT_JOINER_STATE_DISCOVER, OT_NOOP);
 
     if (aResult != NULL)
@@ -236,9 +282,7 @@ void Joiner::HandleDiscoverResult(otActiveScanResult *aResult)
     }
     else
     {
-        // Use extended address based on factory-assigned IEEE EUI-64
-        GetJoinerId(joinerId);
-        Get<Mac::Mac>().SetExtAddress(joinerId);
+        Get<Mac::Mac>().SetExtAddress(mId);
         Get<Mle::MleRouter>().UpdateLinkLocalAddress();
 
         mJoinerRouterIndex = 0;

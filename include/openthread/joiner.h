@@ -69,6 +69,18 @@ typedef enum otJoinerState
     OT_JOINER_STATE_JOINED    = 5,
 } otJoinerState;
 
+#define OT_JOINER_MAX_DISCRIMINATOR_LENGTH 64 ///< Maximum length of a Joiner Discriminator in bits.
+
+/**
+ * This structure represents a Joiner Discriminator.
+ *
+ */
+typedef struct otJoinerDiscriminator
+{
+    uint64_t mValue;  ///< Discriminator value (the lowest `mLength` bits specify the discriminator).
+    uint8_t  mLength; ///< Length (number of bits) - must be non-zero and at most `OT_JOINER_MAX_DISCRIMINATOR_LENGTH`.
+} otJoinerDiscriminator;
+
 /**
  * This function pointer is called to notify the completion of a join operation.
  *
@@ -132,16 +144,48 @@ void otJoinerStop(otInstance *aInstance);
 otJoinerState otJoinerGetState(otInstance *aInstance);
 
 /**
- * Get the Joiner ID.
+ * This method gets the Joiner ID.
  *
- * Joiner ID is the first 64 bits of the result of computing SHA-256 over factory-assigned
- * IEEE EUI-64, which is used as IEEE 802.15.4 Extended Address during commissioning process.
+ * If a Joiner Discriminator is not set, Joiner ID is the first 64 bits of the result of computing SHA-256 over
+ * factory-assigned IEEE EUI-64. Otherwise the Joiner ID is calculated from the Joiner Discriminator value.
+ *
+ * The Joiner ID is also used as the device's IEEE 802.15.4 Extended Address during commissioning process.
  *
  * @param[in]   aInstance  A pointer to the OpenThread instance.
- * @param[out]  aJoinerId  A pointer to where the Joiner ID is placed.
+ *
+ * @returns A pointer to the Joiner ID.
  *
  */
-void otJoinerGetId(otInstance *aInstance, otExtAddress *aJoinerId);
+const otExtAddress *otJoinerGetId(otInstance *aInstance);
+
+/**
+ * This method sets the Joiner Discriminator.
+ *
+ * The Joiner Discriminator is used to calculate the Joiner ID used during commissioning/joining process.
+ *
+ * By default (when a discriminator is not provided or set to NULL), Joiner ID is derived as first 64 bits of the result
+ * of computing SHA-256 over factory-assigned IEEE EUI-64. Note that this is the main behavior expected by Thread
+ * specification.
+ *
+ * @param[in]   aInstance       A pointer to the OpenThread instance.
+ * @param[in]   aDiscriminator  A pointer to a Joiner Discriminator. If NULL clears any previously set discriminator.
+ *
+ * @retval OT_ERROR_NONE           The Joiner Discriminator updated successfully.
+ * @retval OT_ERROR_INVALID_ARGS   @p aDisciminrator is not valid (specified length is not within valid range).
+ * @retval OT_ERROR_INVALID_STATE  There is an ongoing Joining process so Joiner Discriminator could not be changed.
+ *
+ */
+otError otJoinerSetDiscriminator(otInstance *aInstance, otJoinerDiscriminator *aDiscriminator);
+
+/**
+ * This method gets the Joiner Discriminator.
+ *
+ * @param[in]   aInstance       A pointer to the OpenThread instance.
+ *
+ * @returns A pointer to Joiner Discriminator or NULL if none is set.
+ *
+ */
+const otJoinerDiscriminator *otJoinerGetDiscriminator(otInstance *aInstance);
 
 /**
  * @}
