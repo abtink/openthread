@@ -274,32 +274,20 @@ void Commissioner::ClearJoiners(void)
     IgnoreError(SendCommissionerSet());
 }
 
-Commissioner::Joiner *Commissioner::AllocateJoinerEntry(void)
+Commissioner::Joiner *Commissioner::FindJoinerEntry(const Mac::ExtAddress *aEui64, bool aAllocateNew)
 {
+    Joiner *newEntry = nullptr;
     Joiner *joiner;
 
     for (joiner = &mJoiners[0]; joiner < OT_ARRAY_END(mJoiners); joiner++)
     {
         if (!joiner->mValid)
         {
-            ExitNow();
-        }
-    }
+            if (aAllocateNew)
+            {
+                newEntry = joiner;
+            }
 
-    joiner = NULL;
-
-exit:
-    return joiner;
-}
-
-Commissioner::Joiner *Commissioner::FindJoinerEntry(const Mac::ExtAddress *aEui64)
-{
-    Joiner *joiner;
-
-    for (joiner = &mJoiners[0]; joiner < OT_ARRAY_END(mJoiners); joiner++)
-    {
-        if (!joiner->mValid)
-        {
             continue;
         }
 
@@ -318,6 +306,8 @@ Commissioner::Joiner *Commissioner::FindJoinerEntry(const Mac::ExtAddress *aEui6
             }
         }
     }
+
+    joiner = newEntry;
 
 exit:
     return joiner;
@@ -380,16 +370,11 @@ otError Commissioner::AddJoiner(const Mac::ExtAddress *aEui64, const char *aPskd
     VerifyOrExit(mState == OT_COMMISSIONER_STATE_ACTIVE, error = OT_ERROR_INVALID_STATE);
     VerifyOrExit(IsPskdValid(aPskd), error = OT_ERROR_INVALID_ARGS);
 
-    joiner = FindJoinerEntry(aEui64);
+    joiner = FindJoinerEntry(aEui64, /* aAllocateNew */ true);
 
-    if (joiner == NULL)
-    {
-        joiner = AllocateJoinerEntry();
-    }
+    VerifyOrExit(joiner != nullptr, error = OT_ERROR_NO_BUFS);
 
-    VerifyOrExit(joiner != NULL, error = OT_ERROR_NO_BUFS);
-
-    if (aEui64 != NULL)
+    if (aEui64 != nullptr)
     {
         joiner->mAny   = false;
         joiner->mEui64 = *aEui64;
@@ -448,8 +433,8 @@ otError Commissioner::RemoveJoiner(const Mac::ExtAddress *aEui64, uint32_t aDela
 
     VerifyOrExit(mState == OT_COMMISSIONER_STATE_ACTIVE, error = OT_ERROR_INVALID_STATE);
 
-    joiner = FindJoinerEntry(aEui64);
-    VerifyOrExit(joiner != NULL, error = OT_ERROR_NOT_FOUND);
+    joiner = FindJoinerEntry(aEui64, /* aAllocateNew */ false);
+    VerifyOrExit(joiner != nullptr, error = OT_ERROR_NOT_FOUND);
 
     if (aDelay > 0)
     {

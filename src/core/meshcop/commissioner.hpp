@@ -271,8 +271,7 @@ private:
         bool            mAny : 1;
     };
 
-    Joiner *AllocateJoinerEntry(void);
-    Joiner *FindJoinerEntry(const Mac::ExtAddress *aEui64);
+    Joiner *FindJoinerEntry(const Mac::ExtAddress *aEui64, bool aAllocateNew);
     Joiner *FindBestMatchingJoinerEntry(const Mac::ExtAddress &aRxJoinerId);
     void    RemoveJoinerEntry(Joiner &aJoiner);
 
