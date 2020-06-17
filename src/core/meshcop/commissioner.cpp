@@ -292,37 +292,32 @@ exit:
     return joiner;
 }
 
-Commissioner::Joiner *Commissioner::FindJoinerEntry(const Mac::ExtAddress &aEui64)
+Commissioner::Joiner *Commissioner::FindJoinerEntry(const Mac::ExtAddress *aEui64)
 {
     Joiner *joiner;
 
     for (joiner = &mJoiners[0]; joiner < OT_ARRAY_END(mJoiners); joiner++)
     {
-        if (joiner->mValid && !joiner->mAny && (joiner->mEui64 == aEui64))
+        if (!joiner->mValid)
         {
-            ExitNow();
+            continue;
+        }
+
+        if (aEui64 == nullptr)
+        {
+            if (joiner->mAny)
+            {
+                ExitNow();
+            }
+        }
+        else
+        {
+            if (!joiner->mAny && (joiner->mEui64 == *aEui64))
+            {
+                ExitNow();
+            }
         }
     }
-
-    joiner = NULL;
-
-exit:
-    return joiner;
-}
-
-Commissioner::Joiner *Commissioner::FindJoinerAnyEntry(void)
-{
-    Joiner *joiner;
-
-    for (joiner = &mJoiners[0]; joiner < OT_ARRAY_END(mJoiners); joiner++)
-    {
-        if (joiner->mValid && joiner->mAny)
-        {
-            ExitNow();
-        }
-    }
-
-    joiner = NULL;
 
 exit:
     return joiner;
@@ -330,32 +325,37 @@ exit:
 
 Commissioner::Joiner *Commissioner::FindBestMatchingJoinerEntry(const Mac::ExtAddress &aReceivedJoinerId)
 {
-    Joiner *joiner;
+    Joiner *best = nullptr;
 
-    // Prefer a full Joiner ID match, if not found then check
-    // for the entry accepting any joiner.
+    // Prefer a full Joiner ID match, if not found use the entry
+    // accepting any joiner.
 
-    for (joiner = &mJoiners[0]; joiner < OT_ARRAY_END(mJoiners); joiner++)
+    for (Joiner *joiner = &mJoiners[0]; joiner < OT_ARRAY_END(mJoiners); joiner++)
     {
-        Mac::ExtAddress joinerId;
-
-        if (!joiner->mValid || joiner->mAny)
+        if (!joiner->mValid)
         {
             continue;
         }
 
-        ComputeJoinerId(joiner->mEui64, joinerId);
-
-        if (joinerId == aReceivedJoinerId)
+        if (!joiner->mAny)
         {
-            ExitNow();
+            Mac::ExtAddress joinerId;
+
+            ComputeJoinerId(joiner->mEui64, joinerId);
+
+            if (joinerId == aReceivedJoinerId)
+            {
+                ExitNow(best = joiner);
+            }
+        }
+        else
+        {
+            best = joiner;
         }
     }
 
-    joiner = FindJoinerAnyEntry();
-
 exit:
-    return joiner;
+    return best;
 }
 
 void Commissioner::RemoveJoinerEntry(Commissioner::Joiner &aJoiner)
@@ -380,7 +380,7 @@ otError Commissioner::AddJoiner(const Mac::ExtAddress *aEui64, const char *aPskd
     VerifyOrExit(mState == OT_COMMISSIONER_STATE_ACTIVE, error = OT_ERROR_INVALID_STATE);
     VerifyOrExit(IsPskdValid(aPskd), error = OT_ERROR_INVALID_ARGS);
 
-    joiner = (aEui64 == NULL) ? FindJoinerAnyEntry() : FindJoinerEntry(*aEui64);
+    joiner = FindJoinerEntry(aEui64);
 
     if (joiner == NULL)
     {
@@ -448,7 +448,7 @@ otError Commissioner::RemoveJoiner(const Mac::ExtAddress *aEui64, uint32_t aDela
 
     VerifyOrExit(mState == OT_COMMISSIONER_STATE_ACTIVE, error = OT_ERROR_INVALID_STATE);
 
-    joiner = (aEui64 == NULL) ? FindJoinerAnyEntry() : FindJoinerEntry(*aEui64);
+    joiner = FindJoinerEntry(aEui64);
     VerifyOrExit(joiner != NULL, error = OT_ERROR_NOT_FOUND);
 
     if (aDelay > 0)
