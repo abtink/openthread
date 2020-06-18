@@ -154,6 +154,19 @@ public:
     otError RemoveJoiner(const Mac::ExtAddress *aEui64, uint32_t aDelay);
 
     /**
+     * This method removes a Joiner entry.
+     *
+     * @param[in]  aDiscriminator A Joiner Discriminator.
+     * @param[in]  aDelay         The delay to remove Joiner (in seconds).
+     *
+     * @retval OT_ERROR_NONE           Successfully added the Joiner.
+     * @retval OT_ERROR_NOT_FOUND      The Joiner specified by @p aEui64 was not found.
+     * @retval OT_ERROR_INVALID_STATE  Commissioner service is not started.
+     *
+     */
+    otError RemoveJoiner(const JoinerDiscriminator &aDiscriminator, uint32_t aDelay);
+
+    /**
      * This method gets the Provisioning URL.
      *
      * @returns A pointer to char buffer containing the URL string.
