@@ -292,13 +292,25 @@ private:
 
     struct Joiner
     {
+        enum Type
+        {
+            kTypeUnused = 0, // Need to be 0 to ensure memset clears all `Joiners`
+            kTypeAny,
+            kTypeEui64,
+            kTypeDiscriminator,
+        };
+
         TimeMilli mExpirationTime;
-        char      mPsk[Dtls::kPskMaxLength + 1];
+
         union
         {
             Mac::ExtAddress     mEui64;
             JoinerDiscriminator mDiscriminator;
-        };
+        } mSharedId;
+
+        char mPsk[Dtls::kPskMaxLength + 1];
+        Type mType;
+
         bool mValid : 1;
         bool mAny : 1;
         bool mUseDiscriminator : 1;
