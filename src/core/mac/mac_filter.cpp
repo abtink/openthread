@@ -44,44 +44,40 @@ Filter::Filter(void)
     : mAddressMode(OT_MAC_FILTER_ADDRESS_MODE_DISABLED)
     , mDefaultRssIn(kFixedRssDisabled)
 {
-    for (FilterEntry *entry = &mFilterEntries[0]; entry < OT_ARRAY_END(mFilterEntries); entry++)
+    for (FilterEntry &entry : mFilterEntries)
     {
-        entry->mFiltered = false;
-        entry->mRssIn    = kFixedRssDisabled;
+        entry.mFiltered = false;
+        entry.mRssIn    = kFixedRssDisabled;
     }
 }
 
 Filter::FilterEntry *Filter::FindEntry(const ExtAddress &aExtAddress)
 {
-    FilterEntry *entry;
+    FilterEntry *rval = nullptr;
 
-    for (entry = &mFilterEntries[0]; entry < OT_ARRAY_END(mFilterEntries); entry++)
+    for (FilterEntry &entry : mFilterEntries)
     {
-        if (entry->IsInUse() && (aExtAddress == entry->mExtAddress))
+        if (entry.IsInUse() && (aExtAddress == entry.mExtAddress))
         {
-            ExitNow();
+            ExitNow(rval = &entry);
         }
     }
 
-    entry = nullptr;
-
 exit:
-    return entry;
+    return rval;
 }
 
 Filter::FilterEntry *Filter::FindAvailableEntry(void)
 {
-    FilterEntry *entry;
+    FilterEntry *rval = nullptr;
 
-    for (entry = &mFilterEntries[0]; entry < OT_ARRAY_END(mFilterEntries); entry++)
+    for (FilterEntry &entry : mFilterEntries)
     {
-        VerifyOrExit(entry->IsInUse(), OT_NOOP);
+        VerifyOrExit(entry.IsInUse(), rval = &entry);
     }
 
-    entry = nullptr;
-
 exit:
-    return entry;
+    return rval;
 }
 
 otError Filter::SetAddressMode(otMacFilterAddressMode aMode)
@@ -134,9 +130,9 @@ exit:
 
 void Filter::ClearAddresses(void)
 {
-    for (FilterEntry *entry = &mFilterEntries[0]; entry < OT_ARRAY_END(mFilterEntries); entry++)
+    for (FilterEntry &entry : mFilterEntries)
     {
-        entry->mFiltered = false;
+        entry.mFiltered = false;
     }
 }
 
@@ -203,9 +199,9 @@ exit:
 
 void Filter::ClearRssIn(void)
 {
-    for (FilterEntry *entry = &mFilterEntries[0]; entry < OT_ARRAY_END(mFilterEntries); entry++)
+    for (FilterEntry &entry : mFilterEntries)
     {
-        entry->mRssIn = kFixedRssDisabled;
+        entry.mRssIn = kFixedRssDisabled;
     }
 
     mDefaultRssIn = kFixedRssDisabled;

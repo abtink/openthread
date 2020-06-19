@@ -65,10 +65,10 @@ AddressResolver::AddressResolver(Instance &aInstance)
     , mIcmpHandler(&AddressResolver::HandleIcmpReceive, this)
     , mTimer(aInstance, AddressResolver::HandleTimer, this)
 {
-    for (CacheEntry *entry = &mCacheEntries[0]; entry < OT_ARRAY_END(mCacheEntries); entry++)
+    for (CacheEntry &entry : mCacheEntries)
     {
-        entry->Init(GetInstance());
-        mUnusedList.Push(*entry);
+        entry.Init(GetInstance());
+        mUnusedList.Push(entry);
     }
 
     Get<Coap::Coap>().AddResource(mAddressError);
@@ -82,10 +82,9 @@ void AddressResolver::Clear(void)
 {
     CacheEntryList *lists[] = {&mCachedList, &mSnoopedList, &mQueryList, &mQueryRetryList};
 
-    for (size_t index = 0; index < OT_ARRAY_LENGTH(lists); index++)
+    for (CacheEntryList *list : lists)
     {
-        CacheEntryList *list = lists[index];
-        CacheEntry *    entry;
+        CacheEntry *entry;
 
         while ((entry = list->Pop()) != nullptr)
         {
@@ -198,11 +197,10 @@ void AddressResolver::Remove(Mac::ShortAddress aRloc16, bool aMatchRouterId)
 {
     CacheEntryList *lists[] = {&mCachedList, &mSnoopedList};
 
-    for (size_t index = 0; index < OT_ARRAY_LENGTH(lists); index++)
+    for (CacheEntryList *list : lists)
     {
-        CacheEntryList *list = lists[index];
-        CacheEntry *    prev = nullptr;
-        CacheEntry *    entry;
+        CacheEntry *prev = nullptr;
+        CacheEntry *entry;
 
         while ((entry = GetEntryAfter(prev, *list)) != nullptr)
         {
@@ -248,9 +246,9 @@ AddressResolver::CacheEntry *AddressResolver::FindCacheEntry(const Ip6::Address 
     CacheEntry *    entry   = nullptr;
     CacheEntryList *lists[] = {&mCachedList, &mSnoopedList, &mQueryList, &mQueryRetryList};
 
-    for (size_t index = 0; index < OT_ARRAY_LENGTH(lists); index++)
+    for (CacheEntryList *list : lists)
     {
-        aList = lists[index];
+        aList = list;
         entry = FindCacheEntryInList(*aList, aEid, aPrevEntry);
         VerifyOrExit(entry == nullptr, OT_NOOP);
     }
@@ -300,12 +298,11 @@ AddressResolver::CacheEntry *AddressResolver::NewCacheEntry(bool aSnoopedEntry)
     newEntry = mUnusedList.Pop();
     VerifyOrExit(newEntry == nullptr, OT_NOOP);
 
-    for (size_t index = 0; index < OT_ARRAY_LENGTH(lists); index++)
+    for (CacheEntryList *list : lists)
     {
-        CacheEntryList *list = lists[index];
-        CacheEntry *    prev;
-        CacheEntry *    entry;
-        uint16_t        numNonEvictable = 0;
+        CacheEntry *prev;
+        CacheEntry *entry;
+        uint16_t    numNonEvictable = 0;
 
         for (prev = nullptr; (entry = GetEntryAfter(prev, *list)) != nullptr; prev = entry)
         {

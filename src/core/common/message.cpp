@@ -52,9 +52,9 @@ MessagePool::MessagePool(Instance &aInstance)
 #if !OPENTHREAD_CONFIG_PLATFORM_MESSAGE_MANAGEMENT
     memset(mBuffers, 0, sizeof(mBuffers));
 
-    for (Buffer *cur = &mBuffers[0]; cur < OT_ARRAY_END(mBuffers); cur++)
+    for (Buffer &cur : mBuffers)
     {
-        mFreeBuffers.Push(*cur);
+        mFreeBuffers.Push(cur);
     }
 #else
     otPlatMessagePoolInit(&GetInstance(), kNumBuffers, sizeof(Buffer));

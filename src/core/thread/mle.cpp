@@ -139,16 +139,16 @@ Mle::Mle(Instance &aInstance)
 #if OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
 
     // Service Alocs
-    for (size_t i = 0; i < OT_ARRAY_LENGTH(mServiceAlocs); i++)
+    for (Ip6::NetifUnicastAddress &address : mServiceAlocs)
     {
-        mServiceAlocs[i].Clear();
-        mServiceAlocs[i].mPrefixLength       = MeshLocalPrefix::kLength;
-        mServiceAlocs[i].mAddressOrigin      = OT_ADDRESS_ORIGIN_THREAD;
-        mServiceAlocs[i].mPreferred          = true;
-        mServiceAlocs[i].mValid              = true;
-        mServiceAlocs[i].mScopeOverride      = Ip6::Address::kRealmLocalScope;
-        mServiceAlocs[i].mScopeOverrideValid = true;
-        mServiceAlocs[i].GetAddress().SetLocator(Mac::kShortAddrInvalid);
+        address.Clear();
+        address.mPrefixLength       = MeshLocalPrefix::kLength;
+        address.mAddressOrigin      = OT_ADDRESS_ORIGIN_THREAD;
+        address.mPreferred          = true;
+        address.mValid              = true;
+        address.mScopeOverride      = Ip6::Address::kRealmLocalScope;
+        address.mScopeOverrideValid = true;
+        address.GetAddress().SetLocator(Mac::kShortAddrInvalid);
     }
 
 #endif
@@ -885,13 +885,13 @@ void Mle::ApplyMeshLocalPrefix(void)
 
 #if OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
 
-    for (size_t i = 0; i < OT_ARRAY_LENGTH(mServiceAlocs); i++)
+    for (Ip6::NetifUnicastAddress &address : mServiceAlocs)
     {
-        if (mServiceAlocs[i].GetAddress().GetLocator() != Mac::kShortAddrInvalid)
+        if (address.GetAddress().GetLocator() != Mac::kShortAddrInvalid)
         {
-            Get<ThreadNetif>().RemoveUnicastAddress(mServiceAlocs[i]);
-            mServiceAlocs[i].GetAddress().SetPrefix(GetMeshLocalPrefix());
-            Get<ThreadNetif>().AddUnicastAddress(mServiceAlocs[i]);
+            Get<ThreadNetif>().RemoveUnicastAddress(address);
+            address.GetAddress().SetPrefix(GetMeshLocalPrefix());
+            Get<ThreadNetif>().AddUnicastAddress(address);
         }
     }
 
@@ -1541,52 +1541,53 @@ exit:
 #if OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
 void Mle::UpdateServiceAlocs(void)
 {
-    uint16_t              rloc               = GetRloc16();
-    uint16_t              serviceAloc        = 0;
-    uint8_t               serviceId          = 0;
-    NetworkData::Iterator serviceIterator    = NetworkData::kIteratorInit;
-    size_t                serviceAlocsLength = OT_ARRAY_LENGTH(mServiceAlocs);
-    size_t                i                  = 0;
+    uint16_t              rloc            = GetRloc16();
+    uint16_t              serviceAloc     = 0;
+    uint8_t               serviceId       = 0;
+    NetworkData::Iterator serviceIterator = NetworkData::kIteratorInit;
 
     VerifyOrExit(!IsDisabled(), OT_NOOP);
 
     // First remove all alocs which are no longer necessary, to free up space in mServiceAlocs
-    for (i = 0; i < serviceAlocsLength; i++)
+    for (Ip6::NetifUnicastAddress &address : mServiceAlocs)
     {
-        serviceAloc = mServiceAlocs[i].GetAddress().GetLocator();
+        serviceAloc = address.GetAddress().GetLocator();
 
         if ((serviceAloc != Mac::kShortAddrInvalid) &&
             (!Get<NetworkData::Leader>().ContainsService(Mle::ServiceIdFromAloc(serviceAloc), rloc)))
         {
-            Get<ThreadNetif>().RemoveUnicastAddress(mServiceAlocs[i]);
-            mServiceAlocs[i].GetAddress().SetLocator(Mac::kShortAddrInvalid);
+            Get<ThreadNetif>().RemoveUnicastAddress(address);
+            address.GetAddress().SetLocator(Mac::kShortAddrInvalid);
         }
     }
 
     // Now add any missing service alocs which should be there, if there is enough space in mServiceAlocs
     while (Get<NetworkData::Leader>().GetNextServiceId(serviceIterator, rloc, serviceId) == OT_ERROR_NONE)
     {
-        for (i = 0; i < serviceAlocsLength; i++)
+        bool found = false;
+
+        for (Ip6::NetifUnicastAddress &address : mServiceAlocs)
         {
-            serviceAloc = mServiceAlocs[i].GetAddress().GetLocator();
+            serviceAloc = address.GetAddress().GetLocator();
 
             if ((serviceAloc != Mac::kShortAddrInvalid) && (Mle::ServiceIdFromAloc(serviceAloc) == serviceId))
             {
+                found = true;
                 break;
             }
         }
 
-        if (i >= serviceAlocsLength)
+        if (!found)
         {
             // Service Aloc is not there, but it should be. Lets add it into first empty space
-            for (i = 0; i < serviceAlocsLength; i++)
+            for (Ip6::NetifUnicastAddress &address : mServiceAlocs)
             {
-                serviceAloc = mServiceAlocs[i].GetAddress().GetLocator();
+                serviceAloc = address.GetAddress().GetLocator();
 
                 if (serviceAloc == Mac::kShortAddrInvalid)
                 {
-                    SuccessOrExit(GetServiceAloc(serviceId, mServiceAlocs[i].GetAddress()));
-                    Get<ThreadNetif>().AddUnicastAddress(mServiceAlocs[i]);
+                    SuccessOrExit(GetServiceAloc(serviceId, address.GetAddress()));
+                    Get<ThreadNetif>().AddUnicastAddress(address);
                     break;
                 }
             }
