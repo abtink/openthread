@@ -1085,11 +1085,26 @@ exit:
     return error;
 }
 
-otError MleRouter::ProcessRouteTlv(const RouteTlv &aRoute)
+otError MleRouter::ProcessRouteTlv(const RouteTlv &aRoute, Router *&aRouter)
 {
     otError error = OT_ERROR_NONE;
 
     mRouterTable.UpdateRouterIdSet(aRoute.GetRouterIdSequence(), aRoute.GetRouterIdMask());
+
+    if (IsRouter() && !mRouterTable.IsAllocated(mRouterId))
+    {
+        IgnoreError(BecomeDetached());
+        error = OT_ERROR_NO_ROUTE;
+    }
+
+    return error;
+}
+
+otError MleRouter::ProcessRouteTlv(const RouteTlv &aRouteTlv)
+{
+    otError error = OT_ERROR_NONE;
+
+    mRouterTable.UpdateRouterIdSet(aRouteTlv.GetRouterIdSequence(), aRouteTlv.GetRouterIdMask());
 
     if (IsRouter() && !mRouterTable.IsAllocated(mRouterId))
     {
