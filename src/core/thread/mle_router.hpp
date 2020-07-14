@@ -755,7 +755,8 @@ private:
     void HandleTimeSync(const Message &aMessage, const Ip6::MessageInfo &aMessageInfo, const Neighbor *aNeighbor);
 #endif
 
-    otError ProcessRouteTlv(const RouteTlv &aRoute);
+    otError ProcessRouteTlv(const RouteTlv &aRouteTlv, Router *&aRouter);
+    otError ProcessRouteTlv(const RouteTlv &aRouteTlv, Neighbor *&aNeighbor);
     void    StopAdvertiseTimer(void);
     otError SendAddressSolicit(ThreadStatusTlv::Status aStatus);
     void    SendAddressRelease(void);

@@ -2826,7 +2826,7 @@ void Mle::HandleAdvertisement(const Message &aMessage, const Ip6::MessageInfo &a
                 if ((Tlv::FindTlv(aMessage, Tlv::kRoute, sizeof(route), route) == OT_ERROR_NONE) && route.IsValid())
                 {
                     // Overwrite Route Data
-                    IgnoreError(Get<MleRouter>().ProcessRouteTlv(route));
+                    IgnoreError(Get<MleRouter>().ProcessRouteTlv(route, aNeighbor));
                 }
             }
 #endif
@@ -3439,10 +3439,11 @@ void Mle::HandleChildIdResponse(const Message &         aMessage,
     if (IsFullThreadDevice())
     {
         RouteTlv route;
+        Router * router = nullptr;
 
         if (Tlv::FindTlv(aMessage, Tlv::kRoute, sizeof(route), route) == OT_ERROR_NONE)
         {
-            SuccessOrExit(error = Get<MleRouter>().ProcessRouteTlv(route));
+            SuccessOrExit(error = Get<MleRouter>().ProcessRouteTlv(route, router));
         }
     }
 #endif

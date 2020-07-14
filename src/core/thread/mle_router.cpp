@@ -927,8 +927,7 @@ otError MleRouter::HandleLinkAccept(const Message &         aMessage,
         SuccessOrExit(error = Tlv::FindTlv(aMessage, Tlv::kRoute, sizeof(route), route));
         VerifyOrExit(route.IsValid(), error = OT_ERROR_PARSE);
         mRouterTable.Clear();
-        SuccessOrExit(error = ProcessRouteTlv(route));
-        router = mRouterTable.GetRouter(routerId);
+        SuccessOrExit(error = ProcessRouteTlv(route, router));
         VerifyOrExit(router != nullptr, OT_NOOP);
 
         if (mLeaderData.GetLeaderRouterId() == RouterIdFromRloc16(GetRloc16()))
@@ -970,11 +969,10 @@ otError MleRouter::HandleLinkAccept(const Message &         aMessage,
         if (Tlv::FindTlv(aMessage, Tlv::kRoute, sizeof(route), route) == OT_ERROR_NONE)
         {
             VerifyOrExit(route.IsValid(), error = OT_ERROR_PARSE);
-            SuccessOrExit(error = ProcessRouteTlv(route));
-            UpdateRoutes(route, routerId);
-            // need to update router after ProcessRouteTlv
-            router = mRouterTable.GetRouter(routerId);
+            SuccessOrExit(error = ProcessRouteTlv(route, router));
             OT_ASSERT(router != nullptr);
+
+            UpdateRoutes(route, routerId);
         }
 
         // update routing table
@@ -1085,33 +1083,55 @@ exit:
     return error;
 }
 
-otError MleRouter::ProcessRouteTlv(const RouteTlv &aRoute, Router *&aRouter)
+otError MleRouter::ProcessRouteTlv(const RouteTlv &aRouteTlv, Router *&aRouter)
 {
-    otError error = OT_ERROR_NONE;
+    // This method processes a given `RouterTlv` which can shift/move
+    // the `Router` entries in the router table (causing pointers to
+    // router entries to become invalid). This method ensures the
+    // `aRouter` pointer (if not null) is updated such that it points
+    // to the same router entry as before.
 
-    mRouterTable.UpdateRouterIdSet(aRoute.GetRouterIdSequence(), aRoute.GetRouterIdMask());
+    otError  error    = OT_ERROR_NONE;
+    uint8_t routerId = kInvalidRouterId;
 
-    if (IsRouter() && !mRouterTable.IsAllocated(mRouterId))
+    if (aRouter != nullptr)
     {
-        IgnoreError(BecomeDetached());
-        error = OT_ERROR_NO_ROUTE;
+        routerId = aRouter->GetRouterId();
     }
-
-    return error;
-}
-
-otError MleRouter::ProcessRouteTlv(const RouteTlv &aRouteTlv)
-{
-    otError error = OT_ERROR_NONE;
 
     mRouterTable.UpdateRouterIdSet(aRouteTlv.GetRouterIdSequence(), aRouteTlv.GetRouterIdMask());
 
     if (IsRouter() && !mRouterTable.IsAllocated(mRouterId))
     {
         IgnoreError(BecomeDetached());
-        error = OT_ERROR_NO_ROUTE;
+        ExitNow(error = OT_ERROR_NO_ROUTE);
     }
 
+    VerifyOrExit(routerId != kInvalidRouterId, OT_NOOP);
+
+    aRouter = mRouterTable.GetRouter(routerId);
+
+exit:
+    return error;
+}
+
+otError MleRouter::ProcessRouteTlv(const RouteTlv &aRouteTlv, Neighbor *&aNeighbor)
+{
+    otError error;
+    Router *router = nullptr;
+
+    if ((aNeighbor != nullptr) && mRouterTable.Contains(*aNeighbor))
+    {
+        router = static_cast<Router *>(aNeighbor);
+        SuccessOrExit(error = ProcessRouteTlv(aRouteTlv, router));
+        aNeighbor = router;
+    }
+    else
+    {
+        error = ProcessRouteTlv(aRouteTlv, router);
+    }
+
+exit:
     return error;
 }
 
@@ -1307,11 +1327,7 @@ otError MleRouter::HandleAdvertisement(const Message &         aMessage,
 
         if (processRouteTlv)
         {
-            SuccessOrExit(error = ProcessRouteTlv(route));
-            if (Get<RouterTable>().Contains(*aNeighbor))
-            {
-                aNeighbor = nullptr; // aNeighbor is no longer valid after `ProcessRouteTlv`
-            }
+            SuccessOrExit(error = ProcessRouteTlv(route, aNeighbor));
         }
     }
 
