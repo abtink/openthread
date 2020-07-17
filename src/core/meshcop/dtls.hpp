@@ -62,6 +62,57 @@
 
 namespace ot {
 
+#if 0
+template <typename HandlerType>
+class Callback
+{
+public:
+    typedef HandlerType Handler;
+
+    Callback(Handler aHanlder, void *aContext)
+        : mHandler(aHanlder)
+        , mContext(aContext)
+    {}
+
+    Handler GetHandler(void) const { return mHandler; }
+    void *  GetContext(void) const { return mContext; }
+
+protected:
+    Handler mHandler;
+    void *  mContext;
+};
+
+typedef void (&MyHandler)(void *aContext, bool aConnected);
+
+typedef Callback<MyHandler> MyCallback;
+#endif
+
+template <typename... ArgTypes>
+class Callback
+{
+public:
+    typedef void (&Handler)(ArgTypes..., void *aContext);
+
+    Callback(Handler aHanlder, void *aContext)
+        : mHandler(aHanlder)
+        , mContext(aContext)
+    {}
+
+    Handler GetHandler(void) const { return mHandler; }
+    void *  GetContext(void) const { return mContext; }
+
+    void Invoke(ArgTypes... aArgs) { mHandler(aArgs..., mContext); }
+
+protected:
+    Handler mHandler;
+    void *  mContext;
+};
+
+typedef Callback<Message *> MyCallback;
+typedef Callback<> VoidCallback;
+typedef Callback<uint16_t, Message *> MultiParamCallback;
+
+
 namespace MeshCoP {
 
 class Dtls : public InstanceLocator
@@ -71,6 +122,10 @@ public:
     {
         kPskMaxLength = 32, ///< Maximum PSK length.
     };
+
+    MyCallback mMyCallback;
+    VoidCallback mVoidCallback;
+    MultiParamCallback mMultiParamCallback;
 
     /**
      * This constructor initializes the DTLS object.
@@ -196,7 +251,8 @@ public:
     /**
      * This method sets the PSK.
      *
-     * @param[in]  aPsk  A pointer to the PSK.
+     * @param[in]  aPsk        A pointer to the PSK.
+     * @param[in]  aPskLength  The PSK length.
      *
      * @retval OT_ERROR_NONE          Successfully set the PSK.
      * @retval OT_ERROR_INVALID_ARGS  The PSK is invalid.

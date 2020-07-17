@@ -53,6 +53,25 @@
 #if OPENTHREAD_CONFIG_DTLS_ENABLE
 
 namespace ot {
+
+static void HandleCallback(Message *aMessage, void *aContext)
+{
+    (void)aContext;
+    (void)aMessage;
+}
+
+static void HandleVoidCallback(void *aContext)
+{
+    (void)aContext;
+}
+
+static void HandleMultiParamCallback(uint16_t aInt,  Message *aMessage, void *aContext)
+{
+    (void)aContext;
+    (void)aMessage;
+    (void)aInt;
+}
+
 namespace MeshCoP {
 
 const mbedtls_ecp_group_id Dtls::sCurves[] = {MBEDTLS_ECP_DP_SECP256R1, MBEDTLS_ECP_DP_NONE};
@@ -62,6 +81,9 @@ const int Dtls::sHashes[] = {MBEDTLS_MD_NONE};
 
 Dtls::Dtls(Instance &aInstance, bool aLayerTwoSecurity)
     : InstanceLocator(aInstance)
+    , mMyCallback(HandleCallback, this)
+    , mVoidCallback(HandleVoidCallback, this)
+    , mMultiParamCallback(HandleMultiParamCallback, this)
     , mState(kStateClosed)
     , mPskLength(0)
     , mVerifyPeerCertificate(true)
@@ -79,6 +101,12 @@ Dtls::Dtls(Instance &aInstance, bool aLayerTwoSecurity)
     , mMessageSubType(Message::kSubTypeNone)
     , mMessageDefaultSubType(Message::kSubTypeNone)
 {
+
+    ot::Message *msg = nullptr;
+    mMyCallback.Invoke(msg);
+    mVoidCallback.Invoke();
+    mMultiParamCallback.Invoke(12, msg);
+
 #if OPENTHREAD_CONFIG_COAP_SECURE_API_ENABLE
 #ifdef MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
     mPreSharedKey         = nullptr;
