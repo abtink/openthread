@@ -497,6 +497,8 @@ private:
  */
 class Child : public Neighbor, public IndirectSender::ChildInfo, public DataPollHandler::ChildInfo
 {
+    class AddressIteratorBuilder;
+
 public:
     enum
     {
@@ -504,53 +506,154 @@ public:
     };
 
     /**
-     * This class defines an iterator used by `GetNextIp6Address()` to go through IPv6 address entries of a child.
+     * This class defines an iterator used to go through IPv6 address entries of a child.
      *
      */
-    class Ip6AddressIterator
+    class AddressIterator
     {
-        friend class Child;
+        friend class AddressIteratorBuilder;
 
     public:
         /**
-         * This constructor initializes the iterator object.
+         * This constructor initializes the iterator associated with a given `Child` starting from beginning of the
+         * IPv6 address list.
          *
-         * After initialization a call to `GetNextIp6Address()` would start at the first IPv6 address entry in the list.
+         * @param[in]  aChild  A reference to the child entry associated with the i
+         *
          *
          */
-        Ip6AddressIterator(void)
-            : mIndex(0)
+        AddressIterator(const Child &aChild)
+            : mChild(aChild)
         {
+            Update(kInit);
         }
 
         /**
-         * This method resets the iterator.
+         * This constructor initializes the iterator associated with a given `Child` starting from a given index
          *
-         * After reset the next call to `GetNextIp6Address()` would start at the first IPv6 address entry in the list.
+         * @param[in]  aChild          A reference to the child entry associated with the iterator.
+         * @param[in]  aIteratorIndex  An  index (`otChildIp6AddressIterator`) with which to initialize the iterator.
          *
          */
-        void Reset(void) { mIndex = 0; }
+        AddressIterator(const Child &aChild, otChildIp6AddressIterator aIteratorIndex);
 
         /**
-         * This method sets the iterator from an `otChildIp6AddressIterator`
+         * This method gets the `Child` entry with which the iterator is associated with.
          *
-         * @param[in]   aChildAddressIterator  A child address iterator
+         * @returns The associated child entry.
          *
          */
-        void Set(otChildIp6AddressIterator aChildAddressIterator) { mIndex = aChildAddressIterator; }
+        const Child &GetChild(void) const { return mChild; }
 
         /**
-         * This method returns the iterator as an `otChildIp6AddressIterator`
+         * This method gets the current `Child` IPv6 Address to which the iterator is pointing.
          *
-         * @returns The iterator as an `otChildIp6AddressIterator`
+         * @returns  A pointer to the associated IPv6 Address, or nullptr if iterator is done.
          *
          */
-        otChildIp6AddressIterator Get(void) const { return mIndex; }
+        const Ip6::Address *GetAddress(void) const { return mAddress; }
+
+        /**
+         * This method indicates whether the iterator has reached end of the list.
+         *
+         * @retval TRUE   There are no more entries in the list (reached end of the list).
+         * @retval FALSE  The current entry is valid.
+         *
+         */
+        bool IsDone(void) const { return (mAddress == nullptr); }
+
+        /**
+         * This method converts the iterator into an index.
+         *
+         * @returns An `otChildIp6AddressIterator` index corresponding to the iterator.
+         *
+         */
+        otChildIp6AddressIterator ConvertToChildIp6AddressIterator(void) const;
+
+        /**
+         * This method overloads `++` operator (pre-increment) to advance the iterator.
+         *
+         * The iterator is moved to point to the next `Address` entry.  If there are no more `Address` entries
+         *  `IsDone()` returns `true`).
+         *
+         */
+        void operator++(void) { Update(kAdvance); }
+
+        /**
+         * This method overloads `++` operator (post-increment) to advance the iterator.
+         *
+         * The iterator is moved to point to the next `Address` entry.  If there are no more `Address` entries
+         *  `IsDone()` returns `true`).
+         *
+         */
+        void operator++(int) { Update(kAdvance); }
+
+        /**
+         * This method overloads the `*` dereference operator and gets a reference to `Ip6::Address` to which the
+         * iterator is currently pointing.
+         *
+         * This method MUST be used when the iterator is not empty/finished (i.e., `IsDone()` returns `false`).
+         *
+         * @returns A reference to the `Ip6::Address` entry currently pointed by the iterator.
+         *
+         */
+        const Ip6::Address &operator*(void)const { return *mAddress; }
+
+        /**
+         * This method overloads operator `==` to evaluate whether or not two `Iterator` instances are equal.
+         *
+         * This method MUST be used when the two iterators are associated with the same `Child` entry.
+         *
+         * @param[in]  aOther  The other `Iterator` to compare with.
+         *
+         * @retval TRUE   If the two `Iterator` objects are equal.
+         * @retval FALSE  If the two `Iterator` objects are not equal.
+         *
+         */
+        bool operator==(const AddressIterator &aOther) const
+        {
+            OT_ASSERT(&mChild == &aOther.mChild);
+            return (IsMeshLocalAddress() && aOther.IsMeshLocalAddress()) || (mAddress == aOther.mAddress);
+        }
+
+        /**
+         * This method overloads operator `!=` to evaluate whether or not two `Iterator` instances are unequal.
+         *
+         * This method MUST be used when the two iterators are associated with the same `Child` entry.
+         *
+         * @param[in]  aOther  The other `Iterator` to compare with.
+         *
+         * @retval TRUE   If the two `Iterator` objects are unequal.
+         * @retval FALSE  If the two `Iterator` objects are not unequal.
+         *
+         */
+        bool operator!=(const AddressIterator &aOther) const { return !(*this == aOther); }
 
     private:
-        void Increment(void) { mIndex++; }
+        enum Action : uint8_t
+        {
+            kInit,
+            kAdvance,
+            kCheck,
+        };
 
-        otChildIp6AddressIterator mIndex;
+        enum IteratorType : uint8_t
+        {
+            kEndIterator,
+        };
+
+        AddressIterator(const Child &aChild, IteratorType)
+            : mChild(aChild)
+            , mAddress(nullptr)
+        {
+        }
+
+        void Update(Action aAction);
+        bool IsMeshLocalAddress(void) const { return (mAddress == &mMeshLocalAddress); }
+
+        const Child &       mChild;
+        const Ip6::Address *mAddress;
+        Ip6::Address        mMeshLocalAddress;
     };
 
     /**
@@ -593,16 +696,16 @@ public:
     const Ip6::InterfaceIdentifier &GetMeshLocalIid(void) const { return mMeshLocalIid; }
 
     /**
-     * This method gets the next IPv6 address in the list.
+     * This method enables range-based `for` loop iteration over all IPv6 Addresses.
      *
-     * @param[inout] aIterator           A reference to an IPv6 address iterator.
-     * @param[out]   aAddress            A reference to an IPv6 address to provide the next address (if any).
+     * This method should be used as follows:
      *
-     * @retval       OT_ERROR_NONE       Successfully found the next address and updated @p aAddress and @p aIterator.
-     * @retval       OT_ERROR_NOT_FOUND  No subsequent IPv6 address exists in the IPv6 address list.
+     *     for (const Ip6::Address &address : child.IterateOverIp6Addresses()) { ... }
+     *
+     * @returns An IteratorBuilder instance.
      *
      */
-    otError GetNextIp6Address(Ip6AddressIterator &aIterator, Ip6::Address &aAddress) const;
+    AddressIteratorBuilder IterateOverIp6Addresses(void) const { return AddressIteratorBuilder(*this); }
 
     /**
      * This method adds an IPv6 address to the list.
@@ -751,6 +854,21 @@ private:
     enum
     {
         kNumIp6Addresses = OPENTHREAD_CONFIG_MLE_IP_ADDRS_PER_CHILD - 1,
+    };
+
+    class AddressIteratorBuilder
+    {
+    public:
+        AddressIteratorBuilder(const Child &aChild)
+            : mChild(aChild)
+        {
+        }
+
+        AddressIterator begin(void) { return AddressIterator(mChild); }
+        AddressIterator end(void) { return AddressIterator(mChild, AddressIterator::kEndIterator); }
+
+    private:
+        const Child &mChild;
     };
 
     uint8_t                  mNetworkDataVersion;           ///< Current Network Data version

@@ -46,11 +46,9 @@ enum
 
 void VerifyChildIp6Addresses(const Child &aChild, uint8_t aAddressListLength, const Ip6::Address aAddressList[])
 {
-    Child::Ip6AddressIterator iterator;
-    Ip6::Address              address;
-    bool                      addressObserved[kMaxChildIp6Addresses];
-    bool                      addressIsMeshLocal[kMaxChildIp6Addresses];
-    bool                      hasMeshLocal = false;
+    bool addressObserved[kMaxChildIp6Addresses];
+    bool addressIsMeshLocal[kMaxChildIp6Addresses];
+    bool hasMeshLocal = false;
 
     for (uint8_t index = 0; index < aAddressListLength; index++)
     {
@@ -67,7 +65,7 @@ void VerifyChildIp6Addresses(const Child &aChild, uint8_t aAddressListLength, co
         }
     }
 
-    while (aChild.GetNextIp6Address(iterator, address) == OT_ERROR_NONE)
+    for (const Ip6::Address &address : aChild.IterateOverIp6Addresses())
     {
         bool addressIsInList = false;
 
@@ -86,6 +84,8 @@ void VerifyChildIp6Addresses(const Child &aChild, uint8_t aAddressListLength, co
 
     for (uint8_t index = 0; index < aAddressListLength; index++)
     {
+        Ip6::Address address;
+
         VerifyOrQuit(addressObserved[index], "Child::GetNextIp6Address() missed an entry from the expected list");
 
         if (sInstance->Get<Mle::MleRouter>().IsMeshLocalAddress(aAddressList[index]))
@@ -98,8 +98,53 @@ void VerifyChildIp6Addresses(const Child &aChild, uint8_t aAddressListLength, co
 
     if (!hasMeshLocal)
     {
+        Ip6::Address address;
+
         VerifyOrQuit(aChild.GetMeshLocalIp6Address(address) == OT_ERROR_NOT_FOUND,
                      "Child::GetMeshLocalIp6Address() returned an address not in the expected list");
+    }
+
+    {
+        Child::AddressIterator    iter1(aChild);
+        Child::AddressIterator    iter2(aChild);
+        otChildIp6AddressIterator iterIndex;
+
+        for (const Ip6::Address &address : aChild.IterateOverIp6Addresses())
+        {
+            VerifyOrQuit(iter1 == iter2, "AddressIterator:operator== failed");
+            VerifyOrQuit(!iter1.IsDone(), "AddressIterator::IsDone() failed");
+            VerifyOrQuit(*iter1.GetAddress() == address, "AddressIterator::GetAddress() failed");
+            VerifyOrQuit(*iter1.GetAddress() == *iter2.GetAddress(), "AddressIterator::GetAddress() failed");
+
+            iterIndex = iter1.ConvertToChildIp6AddressIterator();
+            VerifyOrQuit(iter2.ConvertToChildIp6AddressIterator() == iterIndex,
+                         "AddressIterator: ConvertToChildIp6AddressIterator() failed");
+
+            {
+                Child::AddressIterator iter3(aChild, iterIndex);
+                VerifyOrQuit(iter3 == iter1, "AddressIterator(iterIndex) failed");
+
+                iter3++;
+                VerifyOrQuit(iter3 != iter1, "AddressIterator(iterIndex) failed");
+            }
+
+            iter1++;
+            VerifyOrQuit(iter1 != iter2, "AddressIterator:operator!= failed");
+            iter2++;
+        }
+
+        VerifyOrQuit(iter1.IsDone(), "AddressIterator::IsDone() failed");
+        VerifyOrQuit(iter2.IsDone(), "AddressIterator::IsDone() failed");
+        VerifyOrQuit(iter1 == iter2, "AddressIterator:operator== failed");
+
+        iterIndex = iter1.ConvertToChildIp6AddressIterator();
+        VerifyOrQuit(iter2.ConvertToChildIp6AddressIterator() == iterIndex,
+                     "AddressIterator: ConvertToChildIp6AddressIterator() failed");
+
+        {
+            Child::AddressIterator iter3(aChild, iterIndex);
+            VerifyOrQuit(iter3 == iter1, "AddressIterator(iterIndex) failed");
+        }
     }
 }
 

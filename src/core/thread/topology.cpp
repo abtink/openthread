@@ -111,6 +111,84 @@ void Neighbor::GenerateChallenge(void)
         Random::Crypto::FillBuffer(mValidPending.mPending.mChallenge, sizeof(mValidPending.mPending.mChallenge)));
 }
 
+Child::AddressIterator::AddressIterator(const Child &aChild, otChildIp6AddressIterator aIterIndex)
+    : mChild(aChild)
+{
+    // `aIterIndex` value of zero indicates start or mesh-local IPv6
+    // address Non-zero value specifies the index into address array
+    // starting from one for first element (i.e, `aIterIndex - 1` gives
+    // the array index).
+
+    if (aIterIndex == OT_CHILD_IP6_ADDRESS_ITERATOR_INIT)
+    {
+        Update(kInit);
+    }
+    else
+    {
+        mAddress = &mChild.mIp6Address[aIterIndex - 1];
+        Update(kCheck);
+    }
+}
+
+otChildIp6AddressIterator Child::AddressIterator::ConvertToChildIp6AddressIterator(void) const
+{
+    otChildIp6AddressIterator iterIndex;
+
+    if (IsMeshLocalAddress())
+    {
+        iterIndex = 0;
+    }
+    else
+    {
+        if (mAddress != nullptr)
+        {
+            iterIndex = static_cast<uint16_t>(mAddress - mChild.mIp6Address) + 1;
+        }
+        else
+        {
+            iterIndex = kNumIp6Addresses + 1;
+        }
+    }
+
+    return iterIndex;
+}
+
+void Child::AddressIterator::Update(Action aAction)
+{
+    switch (aAction)
+    {
+    case kInit:
+        mAddress = &mMeshLocalAddress;
+
+        if (mChild.GetMeshLocalIp6Address(mMeshLocalAddress) == OT_ERROR_NONE)
+        {
+            break;
+        }
+
+        // Fall through
+
+    case kAdvance:
+        if (IsMeshLocalAddress())
+        {
+            mAddress = &mChild.mIp6Address[0];
+        }
+        else
+        {
+            mAddress++;
+        }
+
+        // Fall through
+
+    case kCheck:
+        if ((mAddress >= OT_ARRAY_END(mChild.mIp6Address)) || mAddress->IsUnspecified())
+        {
+            mAddress = nullptr;
+        }
+
+        break;
+    }
+}
+
 void Child::Clear(void)
 {
     Instance &instance = GetInstance();
@@ -133,31 +211,6 @@ otError Child::GetMeshLocalIp6Address(Ip6::Address &aAddress) const
 
     aAddress.SetPrefix(Get<Mle::MleRouter>().GetMeshLocalPrefix());
     aAddress.SetIid(mMeshLocalIid);
-
-exit:
-    return error;
-}
-
-otError Child::GetNextIp6Address(Ip6AddressIterator &aIterator, Ip6::Address &aAddress) const
-{
-    otError                   error = OT_ERROR_NONE;
-    otChildIp6AddressIterator index;
-
-    // Index zero corresponds to the Mesh Local IPv6 address (if any).
-
-    if (aIterator.Get() == 0)
-    {
-        aIterator.Increment();
-        VerifyOrExit(GetMeshLocalIp6Address(aAddress) == OT_ERROR_NOT_FOUND, OT_NOOP);
-    }
-
-    index = aIterator.Get() - 1;
-
-    VerifyOrExit(index < kNumIp6Addresses, error = OT_ERROR_NOT_FOUND);
-
-    VerifyOrExit(!mIp6Address[index].IsUnspecified(), error = OT_ERROR_NOT_FOUND);
-    aAddress = mIp6Address[index];
-    aIterator.Increment();
 
 exit:
     return error;
