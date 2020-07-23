@@ -35,12 +35,7 @@
 
 #include "test_util.h"
 
-struct EntryBase
-{
-    EntryBase *mNext;
-};
-
-struct Entry : public EntryBase, ot::LinkedListEntry<Entry>
+struct Entry
 {
 public:
     Entry(void)
@@ -61,7 +56,8 @@ enum : uint16_t
     kPoolSize = 11,
 };
 
-typedef ot::Pool<Entry, kPoolSize> EntryPool;
+typedef ot::Pool<Entry, kPoolSize>     EntryPool;
+typedef ot::PoolInit<Entry, kPoolSize> EntryPoolInit;
 
 static Entry sNonPoolEntry;
 
@@ -80,7 +76,7 @@ void VerifyEntry(EntryPool &aPool, const Entry &aEntry, bool aInitWithInstance)
     VerifyOrQuit(aEntry.IsInitializedWithInstance() == aInitWithInstance, "Pool did not correctly Init() entry");
 }
 
-void TestPool(EntryPool &aPool, bool aInitWithInstance)
+template <class PoolType> void TestPool(PoolType &aPool, bool aInitWithInstance)
 {
     Entry *entries[kPoolSize];
 
@@ -119,11 +115,11 @@ void TestPool(EntryPool &aPool, bool aInitWithInstance)
 void TestPool(void)
 {
     ot::Instance *instance = testInitInstance();
-    EntryPool     pool1;
-    EntryPool     pool2(*instance);
+    EntryPool     pool;
+    EntryPoolInit poolInit(*instance);
 
-    TestPool(pool1, /* aInitWithInstance */ false);
-    TestPool(pool2, /* aInitWithInstance */ true);
+    TestPool<EntryPool>(pool, /* aInitWithInstance */ false);
+    TestPool<EntryPoolInit>(poolInit, /* aInitWithInstance */ true);
 
     testFreeInstance(instance);
 }

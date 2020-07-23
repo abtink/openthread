@@ -249,8 +249,8 @@ private:
         } mInfo;
     };
 
-    typedef Pool<CacheEntry, kCacheEntries> CacheEntryPool;
-    typedef LinkedList<CacheEntry>          CacheEntryList;
+    typedef PoolInit<CacheEntry, kCacheEntries> CacheEntryPool;
+    typedef LinkedList<CacheEntry>              CacheEntryList;
 
     enum EntryChange
     {
