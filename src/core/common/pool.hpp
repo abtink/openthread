@@ -37,6 +37,7 @@
 #include "openthread-core-config.h"
 
 #include "common/linked_list.hpp"
+#include "common/locator.hpp"
 #include "common/non_copyable.hpp"
 
 namespace ot {
@@ -56,8 +57,7 @@ class Instance;
 /**
  * This template class represents an object pool.
  *
- * @tparam Type         The object type. Type should provide `GetNext() and `SetNext()` so that it can be added to a
- *                      linked list.
+ * @tparam Type         The object type.
  * @tparam kPoolSize    Specifies the pool size (maximum number of objects in the pool).
  *
  */
@@ -71,28 +71,9 @@ public:
     Pool(void)
         : mFreeList()
     {
-        for (Type &entry : mPool)
+        for (Item &item : mPool)
         {
-            mFreeList.Push(entry);
-        }
-    }
-
-    /**
-     * This constructor initializes the pool.
-     *
-     * This constructor version requires the `Type` class to provide method `void Init(Instance &)` to initialize
-     * each `Type` entry object. This can be realized by the `Type` class inheriting from `InstaceLocatorInit()`.
-     *
-     * @param[in] aInstance   A reference to the OpenThread instance.
-     *
-     */
-    Pool(Instance &aInstance)
-        : mFreeList()
-    {
-        for (Type &entry : mPool)
-        {
-            entry.Init(aInstance);
-            mFreeList.Push(entry);
+            mFreeList.Push(item);
         }
     }
 
@@ -102,7 +83,11 @@ public:
      * @returns A pointer to the newly allocated object, or nullptr if all entries from the pool are already allocated.
      *
      */
-    Type *Allocate(void) { return mFreeList.Pop(); }
+    Type *Allocate(void)
+    {
+        Item *item = mFreeList.Pop();
+        return (item != nullptr) ? &item->mEntry : nullptr;
+    }
 
     /**
      * This method frees a previously allocated object.
@@ -113,7 +98,7 @@ public:
      * @param[in]  aEntry   The pool object entry to free.
      *
      */
-    void Free(Type &aEntry) { mFreeList.Push(aEntry); }
+    void Free(Type &aEntry) { mFreeList.Push(Item::FromEntry(aEntry)); }
 
     /**
      * This method returns the pool size.
@@ -132,7 +117,12 @@ public:
      * @retval FALSE if @p aObject is not from the pool.
      *
      */
-    bool IsPoolEntry(const Type &aObject) const { return (&mPool[0] <= &aObject) && (&aObject < OT_ARRAY_END(mPool)); }
+    bool IsPoolEntry(const Type &aObject) const
+    {
+        const Item &item = Item::FromEntry(aObject);
+
+        return (&mPool[0] <= &item) && (&item < OT_ARRAY_END(mPool));
+    }
 
     /**
      * This method returns the associated index of a given entry from the pool.
@@ -144,7 +134,7 @@ public:
      * @returns The associated index of @p aEntry.
      *
      */
-    uint16_t GetIndexOf(const Type &aEntry) const { return static_cast<uint16_t>(&aEntry - mPool); }
+    uint16_t GetIndexOf(const Type &aEntry) const { return static_cast<uint16_t>(&Item::FromEntry(aEntry) - mPool); }
 
     /**
      * This method retrieves a pool entry at a given index.
@@ -156,7 +146,7 @@ public:
      * @returns A reference to entry at index @p aIndex.
      *
      */
-    Type &GetEntryAt(uint16_t aIndex) { return mPool[aIndex]; }
+    Type &GetEntryAt(uint16_t aIndex) { return mPool[aIndex].mEntry; }
 
     /**
      * This method retrieves a pool entry at a given index.
@@ -168,11 +158,71 @@ public:
      * @returns A reference to entry at index @p aIndex.
      *
      */
-    const Type &GetEntryAt(uint16_t aIndex) const { return mPool[aIndex]; }
+    const Type &GetEntryAt(uint16_t aIndex) const { return mPool[aIndex].mEntry; }
 
 private:
-    LinkedList<Type> mFreeList;
-    Type             mPool[kPoolSize];
+    union Item
+    {
+        Type  mEntry;
+        Item *mNext;
+
+        Item(void)
+            : mEntry()
+        {
+        }
+
+        Item *      GetNext(void) { return mNext; }
+        const Item *GetNext(void) const { return mNext; }
+        void        SetNext(Item *aNext) { mNext = aNext; }
+
+        static Item &      FromEntry(Type &aEntry) { return reinterpret_cast<Item &>(aEntry); }
+        static const Item &FromEntry(const Type &aEntry) { return reinterpret_cast<const Item &>(aEntry); }
+    };
+
+    LinkedList<Item> mFreeList;
+    Item             mPool[kPoolSize];
+};
+
+/**
+ * This template class represents an object pool with the pool entries being initialize.
+ *
+ * @tparam Type         The object type. The `Type` must provide `Init(Instance &)` method to initialize the object
+ *                      As example, this can be realized by the `Type` class inheriting from `InstaceLocatorInit()`.
+ * @tparam kPoolSize    Specifies the pool size (maximum number of objects in the pool).
+ *
+ */
+template <class Type, uint16_t kPoolSize> class PoolInit : public Pool<Type, kPoolSize>, public InstanceLocator
+{
+public:
+    /**
+     * This constructor initializes the pool.
+     *
+     * @param[in] aInstance   A reference to the OpenThread instance.
+     *
+     */
+    PoolInit(Instance &aInstance)
+        : Pool<Type, kPoolSize>()
+        , InstanceLocator(aInstance)
+    {
+    }
+
+    /**
+     * This method allocates a new object from the pool and initializes it.
+     *
+     * @returns A pointer to the newly allocated object, or nullptr if all entries from the pool are already allocated.
+     *
+     */
+    Type *Allocate(void)
+    {
+        Type *entry = Pool<Type, kPoolSize>::Allocate();
+
+        if (entry != nullptr)
+        {
+            entry->Init(GetInstance());
+        }
+
+        return entry;
+    }
 };
 
 /**
