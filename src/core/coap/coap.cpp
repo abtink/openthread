@@ -1021,11 +1021,11 @@ Coap::Coap(Instance &aInstance)
 otError Coap::Start(uint16_t aPort)
 {
     otError       error;
-    Ip6::SockAddr sockaddr;
+    Ip6::SockAddr sockAddr;
 
-    sockaddr.mPort = aPort;
+    sockAddr.SetPort(aPort);
     SuccessOrExit(error = mSocket.Open(&Coap::HandleUdpReceive, this));
-    VerifyOrExit((error = mSocket.Bind(sockaddr)) == OT_ERROR_NONE, IgnoreError(mSocket.Close()));
+    VerifyOrExit((error = mSocket.Bind(sockAddr)) == OT_ERROR_NONE, IgnoreError(mSocket.Close()));
 
 exit:
     return error;

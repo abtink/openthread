@@ -37,6 +37,7 @@
 #include "openthread-core-config.h"
 
 #include "common/clearable.hpp"
+#include "common/equatable.hpp"
 #include "net/ip6_address.hpp"
 
 namespace ot {
@@ -48,6 +49,60 @@ namespace Ip6 {
  * @{
  *
  */
+
+/**
+ * This class implements a socket address.
+ *
+ */
+class SockAddr : public otSockAddr, public Clearable<SockAddr>, public Equatable<SockAddr>
+{
+public:
+    /**
+     * This constructor initializes the object.
+     *
+     */
+    SockAddr(void) { Clear(); }
+
+    /**
+     * This method returns a reference to the IPv6 address.
+     *
+     * @returns A reference to the IPv6 address.
+     *
+     */
+    Address &GetAddress(void) { return *static_cast<Address *>(&mAddress); }
+
+    /**
+     * This method returns a reference to the IPv6 address.
+     *
+     * @returns A reference to the IPv6 address.
+     *
+     */
+    const Address &GetAddress(void) const { return *static_cast<const Address *>(&mAddress); }
+
+    /**
+     * This method sets the IPv6 address.
+     *
+     * @param[in] aAddress   An IPv6 address.
+     *
+     */
+    void SetAddress(const Address &aAddress) { mAddress = aAddress; }
+
+    /**
+     * This method gets the transport-layer port number.
+     *
+     * @returns The transport-layer port.
+     *
+     */
+    uint16_t GetPort(void) const { return mPort; }
+
+    /**
+     * This method gets the transport-layer port number.
+     *
+     * @param[in] aPort   A transport-layer port.
+     *
+     */
+    void SetPort(uint16_t aPort) { mPort = aPort; }
+};
 
 /**
  * This class implements message information for an IPv6 message.
@@ -199,36 +254,6 @@ public:
      *
      */
     void SetIsHostInterface(bool aIsHost) { mIsHostInterface = aIsHost; }
-};
-
-/**
- * This class implements a socket address.
- *
- */
-class SockAddr : public otSockAddr, public Clearable<SockAddr>
-{
-public:
-    /**
-     * This constructor initializes the object.
-     *
-     */
-    SockAddr(void) { Clear(); }
-
-    /**
-     * This method returns a reference to the IPv6 address.
-     *
-     * @returns A reference to the IPv6 address.
-     *
-     */
-    Address &GetAddress(void) { return *static_cast<Address *>(&mAddress); }
-
-    /**
-     * This method returns a reference to the IPv6 address.
-     *
-     * @returns A reference to the IPv6 address.
-     *
-     */
-    const Address &GetAddress(void) const { return *static_cast<const Address *>(&mAddress); }
 };
 
 /**

@@ -150,7 +150,7 @@ otError Dtls::Connect(const Ip6::SockAddr &aSockAddr)
     VerifyOrExit(mState == kStateOpen, error = OT_ERROR_INVALID_STATE);
 
     mMessageInfo.SetPeerAddr(aSockAddr.GetAddress());
-    mMessageInfo.SetPeerPort(aSockAddr.mPort);
+    mMessageInfo.SetPeerPort(aSockAddr.GetPort());
 
     error = Setup(true);
 
@@ -175,8 +175,8 @@ void Dtls::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageI
     {
         Ip6::SockAddr sockAddr;
 
-        sockAddr.mAddress = aMessageInfo.GetPeerAddr();
-        sockAddr.mPort    = aMessageInfo.GetPeerPort();
+        sockAddr.SetAddress(aMessageInfo.GetPeerAddr());
+        sockAddr.SetPort(aMessageInfo.GetPeerPort());
         IgnoreError(mSocket.Connect(sockAddr));
 
         mMessageInfo.SetPeerAddr(aMessageInfo.GetPeerAddr());
@@ -218,13 +218,13 @@ exit:
 otError Dtls::Bind(uint16_t aPort)
 {
     otError       error;
-    Ip6::SockAddr sockaddr;
+    Ip6::SockAddr sockAddr;
 
     VerifyOrExit(mState == kStateOpen, error = OT_ERROR_INVALID_STATE);
     VerifyOrExit(mTransportCallback == nullptr, error = OT_ERROR_ALREADY);
 
-    sockaddr.mPort = aPort;
-    SuccessOrExit(error = mSocket.Bind(sockaddr));
+    sockAddr.SetPort(aPort);
+    SuccessOrExit(error = mSocket.Bind(sockAddr));
 
 exit:
     return error;
@@ -895,20 +895,20 @@ void Dtls::HandleMbedtlsDebug(int aLevel, const char *aFile, int aLine, const ch
     switch (aLevel)
     {
     case 1:
-        otLogCritMbedTls("[%hu] %s", mSocket.GetSockName().mPort, aStr);
+        otLogCritMbedTls("[%hu] %s", mSocket.GetSockName().GetPort(), aStr);
         break;
 
     case 2:
-        otLogWarnMbedTls("[%hu] %s", mSocket.GetSockName().mPort, aStr);
+        otLogWarnMbedTls("[%hu] %s", mSocket.GetSockName().GetPort(), aStr);
         break;
 
     case 3:
-        otLogInfoMbedTls("[%hu] %s", mSocket.GetSockName().mPort, aStr);
+        otLogInfoMbedTls("[%hu] %s", mSocket.GetSockName().GetPort(), aStr);
         break;
 
     case 4:
     default:
-        otLogDebgMbedTls("[%hu] %s", mSocket.GetSockName().mPort, aStr);
+        otLogDebgMbedTls("[%hu] %s", mSocket.GetSockName().GetPort(), aStr);
         break;
     }
 }

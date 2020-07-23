@@ -171,13 +171,13 @@ void Dhcp6Client::UpdateAddresses(void)
 
 void Dhcp6Client::Start(void)
 {
-    Ip6::SockAddr sockaddr;
+    Ip6::SockAddr sockAddr;
 
     VerifyOrExit(!mSocket.IsBound(), OT_NOOP);
 
-    sockaddr.mPort = kDhcpClientPort;
+    sockAddr.SetPort(kDhcpClientPort);
     IgnoreError(mSocket.Open(&Dhcp6Client::HandleUdpReceive, this));
-    IgnoreError(mSocket.Bind(sockaddr));
+    IgnoreError(mSocket.Bind(sockAddr));
 
     ProcessNextIdentityAssociation();
 

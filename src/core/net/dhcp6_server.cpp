@@ -132,11 +132,11 @@ otError Dhcp6Server::UpdateService(void)
 
 void Dhcp6Server::Start(void)
 {
-    Ip6::SockAddr sockaddr;
+    Ip6::SockAddr sockAddr;
 
-    sockaddr.mPort = kDhcpServerPort;
+    sockAddr.SetPort(kDhcpServerPort);
     IgnoreError(mSocket.Open(&Dhcp6Server::HandleUdpReceive, this));
-    IgnoreError(mSocket.Bind(sockaddr));
+    IgnoreError(mSocket.Bind(sockAddr));
 }
 
 void Dhcp6Server::Stop(void)
