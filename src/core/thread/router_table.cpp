@@ -378,6 +378,27 @@ exit:
     return router;
 }
 
+Router *RouterTable::GetNeighbor(const Mac::Address &aMacAddress)
+{
+    Router *router = nullptr;
+
+    switch (aMacAddress.GetType())
+    {
+    case Mac::Address::kTypeShort:
+        router = GetNeighbor(aMacAddress.GetShort());
+        break;
+
+    case Mac::Address::kTypeExtended:
+        router = GetNeighbor(aMacAddress.GetExtended());
+        break;
+
+    default:
+        break;
+    }
+
+    return router;
+}
+
 const Router *RouterTable::GetRouter(uint8_t aRouterId) const
 {
     const Router *router = nullptr;
