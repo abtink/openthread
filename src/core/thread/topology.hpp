@@ -91,6 +91,43 @@ public:
         kInStateAnyExceptValidOrRestoring, ///< Accept child in any state except `IsStateValidOrRestoring()`.
     };
 
+    class AddressMatcher
+    {
+    public:
+        AddressMatcher(Mac::ShortAddress aShortAddress, StateFilter aStateFilter)
+            : mStateFilter(aStateFilter)
+            , mShortAddress(aShortAddress)
+            , mExtAddress(nullptr)
+        {
+        }
+
+        AddressMatcher(const Mac::ExtAddress &aExtAddress, StateFilter aStateFilter)
+            : mStateFilter(aStateFilter)
+            , mShortAddress(Mac::kShortAddrInvalid)
+            , mExtAddress(&aExtAddress)
+        {
+        }
+
+        AddressMatcher(const Mac::Address &aMacAddress, StateFilter aStateFilter)
+            : mStateFilter(aStateFilter)
+            , mShortAddress(aMacAddress.IsShort() ? aMacAddress.GetShort() : Mac::kShortAddrInvalid)
+            , mExtAddress(aMacAddress.IsExtended() ? &aMacAddress.GetExtended() : nullptr)
+        {
+        }
+
+        explicit AddressMatcher(StateFilter aStateFilter)
+            : AddressMatcher(Mac::kShortAddrInvalid, aStateFilter)
+        {
+        }
+
+        bool Matches(const Neighbor &aNeighbor) const;
+
+    private:
+        StateFilter            mStateFilter;
+        Mac::ShortAddress      mShortAddress;
+        const Mac::ExtAddress *mExtAddress;
+    };
+
     /**
      * This type represents diagnostic information for a neighboring node.
      *
@@ -209,6 +246,8 @@ public:
      *
      */
     bool MatchesFilter(StateFilter aFilter) const;
+
+    bool Matches(const AddressMatcher &aMacther) const { return aMacther.Matches(*this); }
 
     /**
      * This method gets the device mode flags.
