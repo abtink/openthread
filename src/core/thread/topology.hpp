@@ -110,7 +110,8 @@ public:
 
         AddressMatcher(const Mac::Address &aMacAddress, StateFilter aStateFilter)
             : mStateFilter(aStateFilter)
-            , mShortAddress(aMacAddress.IsShort() ? aMacAddress.GetShort() : Mac::kShortAddrInvalid)
+            , mShortAddress(aMacAddress.IsShort() ? aMacAddress.GetShort()
+                                                  : static_cast<Mac::ShortAddress>(Mac::kShortAddrInvalid))
             , mExtAddress(aMacAddress.IsExtended() ? &aMacAddress.GetExtended() : nullptr)
         {
         }
