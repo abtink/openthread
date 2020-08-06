@@ -99,6 +99,10 @@ static bool StateMatchesFilter(Child::State aState, Child::StateFilter aFilter)
     case Child::kInStateAnyExceptValidOrRestoring:
         rval = !child.IsStateValidOrRestoring();
         break;
+
+    case Child::kInStateAny:
+        rval = true;
+        break;
     }
 
     return rval;
