@@ -508,6 +508,30 @@ public:
     };
 
     /**
+     * Unicast IPv6 Address Flags.
+     *
+     */
+    enum class Flags : uint8_t
+    {
+        kNone,              ///< No flags
+        kValid,             ///< Valid flag only
+        kPreferred,         ///< Preferred flag only
+        kValidAndPreferred, ///< Valid and preferred flags
+    };
+
+    /**
+     * IPv6 Address origin.
+     *
+     */
+    enum class Origin : uint8_t
+    {
+        kThread = OT_ADDRESS_ORIGIN_THREAD, ///< Thread assigned address (ALOC, RLOC, MLEID, etc)
+        kSlaac  = OT_ADDRESS_ORIGIN_SLAAC,  ///< SLAAC assigned address
+        kDhcp6  = OT_ADDRESS_ORIGIN_DHCPV6, ///< DHCPv6 assigned address
+        kManual = OT_ADDRESS_ORIGIN_MANUAL, ///< Manually assigned address
+    };
+
+    /**
      * This enumeration defines IPv6 address type filter.
      *
      */

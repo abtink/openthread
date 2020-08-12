@@ -59,14 +59,8 @@ Local::Local(Instance &aInstance)
     mDomainPrefixConfig.GetPrefix().SetLength(0);
 
     // Primary Backbone Router Aloc
-    mBackboneRouterPrimaryAloc.Clear();
-
-    mBackboneRouterPrimaryAloc.mPrefixLength       = Mle::MeshLocalPrefix::kLength;
-    mBackboneRouterPrimaryAloc.mAddressOrigin      = OT_ADDRESS_ORIGIN_THREAD;
-    mBackboneRouterPrimaryAloc.mPreferred          = true;
-    mBackboneRouterPrimaryAloc.mValid              = true;
-    mBackboneRouterPrimaryAloc.mScopeOverride      = Ip6::Address::kRealmLocalScope;
-    mBackboneRouterPrimaryAloc.mScopeOverrideValid = true;
+    mBackboneRouterPrimaryAloc.Init(Ip6::NetworkPrefix::kLength, Ip6::Address::Flags::kValidAndPreferred,
+                                    Ip6::Address::Origin::kThread, Ip6::Address::kRealmLocalScope);
     mBackboneRouterPrimaryAloc.GetAddress().GetIid().SetLocator(Mle::kAloc16BackboneRouterPrimary);
 
     // All Network Backbone Routers Multicast Address.

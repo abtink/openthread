@@ -165,11 +165,9 @@ private:
         {
             mPrefix = aPrefix;
 
+            mAloc.Init(Mle::MeshLocalPrefix::kLength, Ip6::Address::Flags::kValidAndPreferred,
+                       Ip6::Address::Origin::kThread);
             mAloc.GetAddress().SetToAnycastLocator(aMeshLocalPrefix, (Ip6::Address::kAloc16Mask << 8) + aContextId);
-            mAloc.mPrefixLength  = OT_IP6_PREFIX_BITSIZE;
-            mAloc.mAddressOrigin = OT_ADDRESS_ORIGIN_THREAD;
-            mAloc.mPreferred     = true;
-            mAloc.mValid         = true;
         }
 
     private:

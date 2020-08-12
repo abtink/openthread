@@ -352,13 +352,8 @@ BorderAgent::BorderAgent(Instance &aInstance)
     , mTimer(aInstance, HandleTimeout, this)
     , mState(OT_BORDER_AGENT_STATE_STOPPED)
 {
-    mCommissionerAloc.Clear();
-    mCommissionerAloc.mPrefixLength       = 64;
-    mCommissionerAloc.mAddressOrigin      = OT_ADDRESS_ORIGIN_THREAD;
-    mCommissionerAloc.mPreferred          = true;
-    mCommissionerAloc.mValid              = true;
-    mCommissionerAloc.mScopeOverride      = Ip6::Address::kRealmLocalScope;
-    mCommissionerAloc.mScopeOverrideValid = true;
+    mCommissionerAloc.Init(Mle::MeshLocalPrefix::kLength, Ip6::Address::Flags::kValidAndPreferred,
+                           Ip6::Address::Origin::kThread, Ip6::Address::kRealmLocalScope);
 }
 
 void BorderAgent::HandleNotifierEvents(Events aEvents)
