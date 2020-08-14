@@ -1502,7 +1502,7 @@ void Mle::UpdateServiceAlocs(void)
         serviceAloc = mServiceAlocs[i].GetAddress().GetIid().GetLocator();
 
         if ((serviceAloc != Mac::kShortAddrInvalid) &&
-            (!Get<NetworkData::Leader>().ContainsService(Mle::ServiceIdFromAloc(serviceAloc), rloc)))
+            (!Get<NetworkData::Leader>().ContainsService(ServiceIdFromAloc(serviceAloc), rloc)))
         {
             Get<ThreadNetif>().RemoveUnicastAddress(mServiceAlocs[i]);
             mServiceAlocs[i].GetAddress().GetIid().SetLocator(Mac::kShortAddrInvalid);
@@ -1512,11 +1512,17 @@ void Mle::UpdateServiceAlocs(void)
     // Now add any missing service alocs which should be there, if there is enough space in mServiceAlocs
     while (Get<NetworkData::Leader>().GetNextServiceId(serviceIterator, rloc, serviceId) == OT_ERROR_NONE)
     {
+        Ip6::NetifUnicastAddress *unusedEntry = nullptr;
+
         for (i = 0; i < serviceAlocsLength; i++)
         {
             serviceAloc = mServiceAlocs[i].GetAddress().GetIid().GetLocator();
 
-            if ((serviceAloc != Mac::kShortAddrInvalid) && (Mle::ServiceIdFromAloc(serviceAloc) == serviceId))
+            if (serviceAloc == Mac::kShortAddrInvalid)
+            {
+                unusedEntry = &mServiceAlocs[i];
+            }
+            else if (ServiceIdFromAloc(serviceAloc) == serviceId)
             {
                 break;
             }
@@ -1524,18 +1530,9 @@ void Mle::UpdateServiceAlocs(void)
 
         if (i >= serviceAlocsLength)
         {
-            // Service Aloc is not there, but it should be. Lets add it into first empty space
-            for (i = 0; i < serviceAlocsLength; i++)
-            {
-                serviceAloc = mServiceAlocs[i].GetAddress().GetIid().GetLocator();
-
-                if (serviceAloc == Mac::kShortAddrInvalid)
-                {
-                    SuccessOrExit(GetServiceAloc(serviceId, mServiceAlocs[i].GetAddress()));
-                    Get<ThreadNetif>().AddUnicastAddress(mServiceAlocs[i]);
-                    break;
-                }
-            }
+            VerifyOrExit(unusedEntry != nullptr, OT_NOOP);
+            SuccessOrExit(GetServiceAloc(serviceId, unusedEntry->GetAddress()));
+            Get<ThreadNetif>().AddUnicastAddress(*unusedEntry);
         }
     }
 
