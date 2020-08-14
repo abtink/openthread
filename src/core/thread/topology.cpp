@@ -71,11 +71,11 @@ void Neighbor::Info::SetFrom(const Neighbor &aNeighbor)
     mRloc16            = aNeighbor.GetRloc16();
     mLinkFrameCounter  = aNeighbor.GetLinkFrameCounter();
     mMleFrameCounter   = aNeighbor.GetMleFrameCounter();
-    mLinkQualityIn     = aNeighbor.GetLinkInfo().GetLinkQuality();
-    mAverageRssi       = aNeighbor.GetLinkInfo().GetAverageRss();
-    mLastRssi          = aNeighbor.GetLinkInfo().GetLastRss();
-    mFrameErrorRate    = aNeighbor.GetLinkInfo().GetFrameErrorRate();
-    mMessageErrorRate  = aNeighbor.GetLinkInfo().GetMessageErrorRate();
+    mLinkQualityIn     = aNeighbor.GetLinkQualityInfo().GetLinkQuality();
+    mAverageRssi       = aNeighbor.GetLinkQualityInfo().GetAverageRss();
+    mLastRssi          = aNeighbor.GetLinkQualityInfo().GetLastRss();
+    mFrameErrorRate    = aNeighbor.GetLinkQualityInfo().GetFrameErrorRate();
+    mMessageErrorRate  = aNeighbor.GetLinkQualityInfo().GetMessageErrorRate();
     mRxOnWhenIdle      = aNeighbor.IsRxOnWhenIdle();
     mSecureDataRequest = aNeighbor.IsSecureDataRequest();
     mFullThreadDevice  = aNeighbor.IsFullThreadDevice();
@@ -85,7 +85,7 @@ void Neighbor::Info::SetFrom(const Neighbor &aNeighbor)
 void Neighbor::Init(Instance &aInstance)
 {
     InstanceLocatorInit::Init(aInstance);
-    mLinkInfo.Init(aInstance);
+    mLinkQualityInfo.Init(aInstance);
     SetState(kStateInvalid);
 }
 
@@ -169,11 +169,11 @@ void Child::Info::SetFrom(const Child &aChild)
     mChildId            = Mle::Mle::ChildIdFromRloc16(aChild.GetRloc16());
     mNetworkDataVersion = aChild.GetNetworkDataVersion();
     mAge                = Time::MsecToSec(TimerMilli::GetNow() - aChild.GetLastHeard());
-    mLinkQualityIn      = aChild.GetLinkInfo().GetLinkQuality();
-    mAverageRssi        = aChild.GetLinkInfo().GetAverageRss();
-    mLastRssi           = aChild.GetLinkInfo().GetLastRss();
-    mFrameErrorRate     = aChild.GetLinkInfo().GetFrameErrorRate();
-    mMessageErrorRate   = aChild.GetLinkInfo().GetMessageErrorRate();
+    mLinkQualityIn      = aChild.GetLinkQualityInfo().GetLinkQuality();
+    mAverageRssi        = aChild.GetLinkQualityInfo().GetAverageRss();
+    mLastRssi           = aChild.GetLinkQualityInfo().GetLastRss();
+    mFrameErrorRate     = aChild.GetLinkQualityInfo().GetFrameErrorRate();
+    mMessageErrorRate   = aChild.GetLinkQualityInfo().GetMessageErrorRate();
     mRxOnWhenIdle       = aChild.IsRxOnWhenIdle();
     mSecureDataRequest  = aChild.IsSecureDataRequest();
     mFullThreadDevice   = aChild.IsFullThreadDevice();
@@ -423,7 +423,7 @@ void Router::Info::SetFrom(const Router &aRouter)
     mNextHop         = aRouter.GetNextHop();
     mLinkEstablished = aRouter.IsStateValid();
     mPathCost        = aRouter.GetCost();
-    mLinkQualityIn   = aRouter.GetLinkInfo().GetLinkQuality();
+    mLinkQualityIn   = aRouter.GetLinkQualityInfo().GetLinkQuality();
     mLinkQualityOut  = aRouter.GetLinkQualityOut();
     mAge             = static_cast<uint8_t>(Time::MsecToSec(TimerMilli::GetNow() - aRouter.GetLastHeard()));
 }

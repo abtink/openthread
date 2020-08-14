@@ -924,7 +924,7 @@ otError MeshForwarder::GetDestinationRlocByServiceAloc(uint16_t aServiceAloc, ui
                     {
                         // Cost calculated only from Link Quality In as the parent only maintains
                         // one-direction link info.
-                        cost = Mle::MleRouter::LinkQualityToCost(neighbor->GetLinkInfo().GetLinkQuality());
+                        cost = Mle::MleRouter::LinkQualityToCost(neighbor->GetLinkQualityInfo().GetLinkQuality());
                     }
                     else
                     {

@@ -521,7 +521,7 @@ public:
      * @returns The LinkQualityInfo object.
      *
      */
-    LinkQualityInfo &GetLinkInfo(void) { return mLinkInfo; }
+    LinkQualityInfo &GetLinkQualityInfo(void) { return mLinkQualityInfo; }
 
     /**
      * This method returns the LinkQualityInfo object.
@@ -529,7 +529,7 @@ public:
      * @returns The LinkQualityInfo object.
      *
      */
-    const LinkQualityInfo &GetLinkInfo(void) const { return mLinkInfo; }
+    const LinkQualityInfo &GetLinkQualityInfo(void) const { return mLinkQualityInfo; }
 
     /**
      * This method generates a new challenge value for MLE Link Request/Response exchanges.
@@ -606,8 +606,8 @@ private:
 #else
     uint8_t mLinkFailures; ///< Consecutive link failure count
 #endif
-    uint8_t         mVersion;  ///< The MLE version
-    LinkQualityInfo mLinkInfo; ///< Link quality info (contains average RSS, link margin and link quality)
+    uint8_t         mVersion;         ///< The MLE version
+    LinkQualityInfo mLinkQualityInfo; ///< Link quality info (contains average RSS, link margin and link quality)
 };
 
 /**

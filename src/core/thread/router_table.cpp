@@ -455,7 +455,7 @@ uint8_t RouterTable::GetLinkCost(Router &aRouter)
 
     VerifyOrExit(aRouter.GetRloc16() != Get<Mle::MleRouter>().GetRloc16() && aRouter.IsStateValid(), OT_NOOP);
 
-    rval = aRouter.GetLinkInfo().GetLinkQuality();
+    rval = aRouter.GetLinkQualityInfo().GetLinkQuality();
 
     if (rval > aRouter.GetLinkQualityOut())
     {

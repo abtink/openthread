@@ -625,8 +625,8 @@ void MleRouter::HandleLinkRequest(const Message &aMessage, const Ip6::MessageInf
                 const otThreadLinkInfo *linkInfo = static_cast<const otThreadLinkInfo *>(aMessageInfo.GetLinkInfo());
 
                 neighbor->SetExtAddress(extAddr);
-                neighbor->GetLinkInfo().Clear();
-                neighbor->GetLinkInfo().AddRss(linkInfo->mRss);
+                neighbor->GetLinkQualityInfo().Clear();
+                neighbor->GetLinkQualityInfo().AddRss(linkInfo->mRss);
                 neighbor->ResetLinkFailures();
                 neighbor->SetLastHeard(TimerMilli::GetNow());
                 neighbor->SetState(Neighbor::kStateLinkRequest);
@@ -996,8 +996,8 @@ otError MleRouter::HandleLinkAccept(const Message &         aMessage,
     router->SetLastHeard(TimerMilli::GetNow());
     router->SetDeviceMode(DeviceMode(DeviceMode::kModeFullThreadDevice | DeviceMode::kModeRxOnWhenIdle |
                                      DeviceMode::kModeFullNetworkData));
-    router->GetLinkInfo().Clear();
-    router->GetLinkInfo().AddRss(linkInfo->mRss);
+    router->GetLinkQualityInfo().Clear();
+    router->GetLinkQualityInfo().AddRss(linkInfo->mRss);
     router->SetLinkQualityOut(LinkQualityInfo::ConvertLinkMarginToLinkQuality(linkMargin));
     router->ResetLinkFailures();
     router->SetState(Neighbor::kStateValid);
@@ -1373,8 +1373,8 @@ otError MleRouter::HandleAdvertisement(const Message &         aMessage,
                 (mRouterTable.GetActiveLinkCount() < OPENTHREAD_CONFIG_MLE_CHILD_ROUTER_LINKS))
             {
                 router->SetExtAddress(extAddr);
-                router->GetLinkInfo().Clear();
-                router->GetLinkInfo().AddRss(linkInfo->mRss);
+                router->GetLinkQualityInfo().Clear();
+                router->GetLinkQualityInfo().AddRss(linkInfo->mRss);
                 router->ResetLinkFailures();
                 router->SetLastHeard(TimerMilli::GetNow());
                 router->SetState(Neighbor::kStateLinkRequest);
@@ -1420,8 +1420,8 @@ otError MleRouter::HandleAdvertisement(const Message &         aMessage,
             (linkMargin >= OPENTHREAD_CONFIG_MLE_LINK_REQUEST_MARGIN_MIN))
         {
             router->SetExtAddress(extAddr);
-            router->GetLinkInfo().Clear();
-            router->GetLinkInfo().AddRss(linkInfo->mRss);
+            router->GetLinkQualityInfo().Clear();
+            router->GetLinkQualityInfo().AddRss(linkInfo->mRss);
             router->ResetLinkFailures();
             router->SetLastHeard(TimerMilli::GetNow());
             router->SetState(Neighbor::kStateLinkRequest);
@@ -1546,7 +1546,7 @@ void MleRouter::UpdateRoutes(const RouteTlv &aRoute, uint8_t aRouterId)
     {
         otLogInfoMle("    %04x -> %04x, cost:%d %d, lqin:%d, lqout:%d, link:%s", router.GetRloc16(),
                      (router.GetNextHop() == kInvalidRouterId) ? 0xffff : Rloc16FromRouterId(router.GetNextHop()),
-                     router.GetCost(), mRouterTable.GetLinkCost(router), router.GetLinkInfo().GetLinkQuality(),
+                     router.GetCost(), mRouterTable.GetLinkCost(router), router.GetLinkQualityInfo().GetLinkQuality(),
                      router.GetLinkQualityOut(),
                      router.GetRloc16() == GetRloc16() ? "device" : (router.IsStateValid() ? "yes" : "no"));
     }
@@ -1678,8 +1678,8 @@ void MleRouter::HandleParentRequest(const Message &aMessage, const Ip6::MessageI
 
         // MAC Address
         child->SetExtAddress(extAddr);
-        child->GetLinkInfo().Clear();
-        child->GetLinkInfo().AddRss(linkInfo->mRss);
+        child->GetLinkQualityInfo().Clear();
+        child->GetLinkQualityInfo().AddRss(linkInfo->mRss);
         child->ResetLinkFailures();
         child->SetState(Neighbor::kStateParentRequest);
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
@@ -1972,7 +1972,7 @@ void MleRouter::SendParentResponse(Child *aChild, const Challenge &aChallenge, b
     aChild->GenerateChallenge();
 
     SuccessOrExit(error = AppendChallenge(*message, aChild->GetChallenge(), aChild->GetChallengeSize()));
-    error = AppendLinkMargin(*message, aChild->GetLinkInfo().GetLinkMargin());
+    error = AppendLinkMargin(*message, aChild->GetLinkQualityInfo().GetLinkMargin());
     SuccessOrExit(error);
 
     SuccessOrExit(error = AppendConnectivity(*message));
@@ -2342,7 +2342,7 @@ void MleRouter::HandleChildIdRequest(const Message &         aMessage,
     child->SetKeySequence(aKeySequence);
     child->SetDeviceMode(mode);
     child->SetVersion(static_cast<uint8_t>(version));
-    child->GetLinkInfo().AddRss(linkInfo->mRss);
+    child->GetLinkQualityInfo().AddRss(linkInfo->mRss);
     child->SetTimeout(timeout);
 
     if (mode.IsFullNetworkData())
@@ -2704,7 +2704,7 @@ void MleRouter::HandleChildUpdateResponse(const Message &         aMessage,
     SetChildStateToValid(*child);
     child->SetLastHeard(TimerMilli::GetNow());
     child->SetKeySequence(aKeySequence);
-    child->GetLinkInfo().AddRss(linkInfo->mRss);
+    child->GetLinkQualityInfo().AddRss(linkInfo->mRss);
 
 exit:
 
@@ -3433,7 +3433,7 @@ void MleRouter::RemoveNeighbor(Neighbor &aNeighbor)
         mRouterTable.RemoveRouterLink(static_cast<Router &>(aNeighbor));
     }
 
-    aNeighbor.GetLinkInfo().Clear();
+    aNeighbor.GetLinkQualityInfo().Clear();
     aNeighbor.SetState(Neighbor::kStateInvalid);
 
 exit:
@@ -4003,7 +4003,7 @@ void MleRouter::FillConnectivityTlv(ConnectivityTlv &aTlv)
         break;
 
     case kRoleChild:
-        switch (mParent.GetLinkInfo().GetLinkQuality())
+        switch (mParent.GetLinkQualityInfo().GetLinkQuality())
         {
         case 1:
             aTlv.SetLinkQuality1(aTlv.GetLinkQuality1() + 1);
@@ -4018,7 +4018,7 @@ void MleRouter::FillConnectivityTlv(ConnectivityTlv &aTlv)
             break;
         }
 
-        cost += LinkQualityToCost(mParent.GetLinkInfo().GetLinkQuality());
+        cost += LinkQualityToCost(mParent.GetLinkQualityInfo().GetLinkQuality());
         break;
 
     case kRoleRouter:
@@ -4057,7 +4057,7 @@ void MleRouter::FillConnectivityTlv(ConnectivityTlv &aTlv)
             continue;
         }
 
-        linkQuality = router.GetLinkInfo().GetLinkQuality();
+        linkQuality = router.GetLinkQualityInfo().GetLinkQuality();
 
         if (linkQuality > router.GetLinkQualityOut())
         {
@@ -4230,7 +4230,7 @@ void MleRouter::FillRouteTlv(RouteTlv &aTlv, Neighbor *aNeighbor)
 
             aTlv.SetRouteCost(routerCount, routeCost);
             aTlv.SetLinkQualityOut(routerCount, router.GetLinkQualityOut());
-            aTlv.SetLinkQualityIn(routerCount, router.GetLinkInfo().GetLinkQuality());
+            aTlv.SetLinkQualityIn(routerCount, router.GetLinkQualityInfo().GetLinkQuality());
         }
 
         routerCount++;
@@ -4271,7 +4271,7 @@ bool MleRouter::HasMinDowngradeNeighborRouters(void)
             continue;
         }
 
-        linkQuality = router.GetLinkInfo().GetLinkQuality();
+        linkQuality = router.GetLinkQualityInfo().GetLinkQuality();
 
         if (linkQuality > router.GetLinkQualityOut())
         {
@@ -4314,7 +4314,7 @@ bool MleRouter::HasOneNeighborWithComparableConnectivity(const RouteTlv &aRoute,
                 continue;
             }
 
-            localLinkQuality = router.GetLinkInfo().GetLinkQuality();
+            localLinkQuality = router.GetLinkQualityInfo().GetLinkQuality();
 
             if (localLinkQuality > router.GetLinkQualityOut())
             {

@@ -485,7 +485,7 @@ void IndirectSender::HandleSentFrameToChild(const Mac::TxFrame &aFrame,
         Mac::Address macDest;
 
         aChild.SetIndirectMessage(nullptr);
-        aChild.GetLinkInfo().AddMessageTxStatus(aChild.GetIndirectTxSuccess());
+        aChild.GetLinkQualityInfo().AddMessageTxStatus(aChild.GetIndirectTxSuccess());
 
         // Enable short source address matching after the first indirect
         // message transmission attempt to the child. We intentionally do

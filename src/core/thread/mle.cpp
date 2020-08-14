@@ -1559,7 +1559,7 @@ void Mle::HandleAttachTimer(void)
     {
         uint8_t linkQuality;
 
-        linkQuality = mParentCandidate.GetLinkInfo().GetLinkQuality();
+        linkQuality = mParentCandidate.GetLinkQualityInfo().GetLinkQuality();
 
         if (linkQuality > mParentCandidate.GetLinkQualityOut())
         {
@@ -2990,7 +2990,7 @@ bool Mle::IsBetterParent(uint16_t               aRloc16,
 {
     bool rval = false;
 
-    uint8_t candidateLinkQualityIn     = mParentCandidate.GetLinkInfo().GetLinkQuality();
+    uint8_t candidateLinkQualityIn     = mParentCandidate.GetLinkQualityInfo().GetLinkQuality();
     uint8_t candidateTwoWayLinkQuality = (candidateLinkQualityIn < mParentCandidate.GetLinkQualityOut())
                                              ? candidateLinkQualityIn
                                              : mParentCandidate.GetLinkQualityOut();
@@ -3230,8 +3230,8 @@ void Mle::HandleParentResponse(const Message &aMessage, const Ip6::MessageInfo &
     mParentCandidate.SetVersion(static_cast<uint8_t>(version));
     mParentCandidate.SetDeviceMode(DeviceMode(DeviceMode::kModeFullThreadDevice | DeviceMode::kModeRxOnWhenIdle |
                                               DeviceMode::kModeFullNetworkData | DeviceMode::kModeSecureDataRequest));
-    mParentCandidate.GetLinkInfo().Clear();
-    mParentCandidate.GetLinkInfo().AddRss(linkInfo->mRss);
+    mParentCandidate.GetLinkQualityInfo().Clear();
+    mParentCandidate.GetLinkQualityInfo().AddRss(linkInfo->mRss);
     mParentCandidate.ResetLinkFailures();
     mParentCandidate.SetLinkQualityOut(LinkQualityInfo::ConvertLinkMarginToLinkQuality(linkMarginFromTlv));
     mParentCandidate.SetState(Neighbor::kStateParentResponse);
@@ -3799,7 +3799,7 @@ void Mle::HandleParentSearchTimer(void)
 
     VerifyOrExit(IsChild(), OT_NOOP);
 
-    parentRss = GetParent().GetLinkInfo().GetAverageRss();
+    parentRss = GetParent().GetLinkQualityInfo().GetAverageRss();
     otLogInfoMle("PeriodicParentSearch: Parent RSS %d", parentRss);
     VerifyOrExit(parentRss != OT_RADIO_RSSI_INVALID, OT_NOOP);
 

@@ -240,7 +240,7 @@ void ChildTable::Restore(void)
         child->Clear();
 
         child->SetExtAddress(childInfo.GetExtAddress());
-        child->GetLinkInfo().Clear();
+        child->GetLinkQualityInfo().Clear();
         child->SetRloc16(childInfo.GetRloc16());
         child->SetTimeout(childInfo.GetTimeout());
         child->SetDeviceMode(Mle::DeviceMode(childInfo.GetMode()));

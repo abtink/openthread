@@ -376,7 +376,7 @@ otError otThreadGetParentInfo(otInstance *aInstance, otRouterInfo *aParentInfo)
     aParentInfo->mRouterId       = Mle::Mle::RouterIdFromRloc16(parent->GetRloc16());
     aParentInfo->mNextHop        = parent->GetNextHop();
     aParentInfo->mPathCost       = parent->GetCost();
-    aParentInfo->mLinkQualityIn  = parent->GetLinkInfo().GetLinkQuality();
+    aParentInfo->mLinkQualityIn  = parent->GetLinkQualityInfo().GetLinkQuality();
     aParentInfo->mLinkQualityOut = parent->GetLinkQualityOut();
     aParentInfo->mAge            = static_cast<uint8_t>(Time::MsecToSec(TimerMilli::GetNow() - parent->GetLastHeard()));
     aParentInfo->mAllocated      = true;
@@ -395,7 +395,7 @@ otError otThreadGetParentAverageRssi(otInstance *aInstance, int8_t *aParentRssi)
 
     OT_ASSERT(aParentRssi != nullptr);
 
-    *aParentRssi = instance.Get<Mle::MleRouter>().GetParent().GetLinkInfo().GetAverageRss();
+    *aParentRssi = instance.Get<Mle::MleRouter>().GetParent().GetLinkQualityInfo().GetAverageRss();
 
     VerifyOrExit(*aParentRssi != OT_RADIO_RSSI_INVALID, error = OT_ERROR_FAILED);
 
@@ -410,7 +410,7 @@ otError otThreadGetParentLastRssi(otInstance *aInstance, int8_t *aLastRssi)
 
     OT_ASSERT(aLastRssi != nullptr);
 
-    *aLastRssi = instance.Get<Mle::MleRouter>().GetParent().GetLinkInfo().GetLastRss();
+    *aLastRssi = instance.Get<Mle::MleRouter>().GetParent().GetLinkQualityInfo().GetLastRss();
 
     VerifyOrExit(*aLastRssi != OT_RADIO_RSSI_INVALID, error = OT_ERROR_FAILED);
 

@@ -1172,7 +1172,7 @@ void Mac::RecordFrameTransmitStatus(const TxFrame &aFrame,
             // Fall through
 
         case OT_ERROR_NONE:
-            neighbor->GetLinkInfo().AddFrameTxStatus(frameTxSuccess);
+            neighbor->GetLinkQualityInfo().AddFrameTxStatus(frameTxSuccess);
             break;
 
         default:
@@ -1203,7 +1203,7 @@ void Mac::RecordFrameTransmitStatus(const TxFrame &aFrame,
 
     if ((aError == OT_ERROR_NONE) && ackRequested && (aAckFrame != nullptr) && (neighbor != nullptr))
     {
-        neighbor->GetLinkInfo().AddRss(aAckFrame->GetRssi());
+        neighbor->GetLinkQualityInfo().AddRss(aAckFrame->GetRssi());
     }
 
     // Update MAC counters.
@@ -1630,7 +1630,7 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, otError aError)
                 // value takes effect quickly.
                 if (neighbor != nullptr)
                 {
-                    neighbor->GetLinkInfo().Clear();
+                    neighbor->GetLinkQualityInfo().Clear();
                 }
             }
         }
@@ -1682,7 +1682,7 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, otError aError)
 
     if (neighbor != nullptr)
     {
-        neighbor->GetLinkInfo().AddRss(aFrame->GetRssi());
+        neighbor->GetLinkQualityInfo().AddRss(aFrame->GetRssi());
 
         if (aFrame->GetSecurityEnabled())
         {

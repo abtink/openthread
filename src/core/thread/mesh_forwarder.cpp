@@ -815,7 +815,7 @@ void MeshForwarder::HandleSentFrame(Mac::TxFrame &aFrame, otError aError)
 
         if (neighbor != nullptr)
         {
-            neighbor->GetLinkInfo().AddMessageTxStatus(mSendMessage->GetTxSuccess());
+            neighbor->GetLinkQualityInfo().AddMessageTxStatus(mSendMessage->GetTxSuccess());
         }
 
 #if !OPENTHREAD_CONFIG_DROP_MESSAGE_ON_FRAGMENT_TX_FAILURE
