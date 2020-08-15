@@ -635,26 +635,6 @@ exit:
     return messageCopy;
 }
 
-bool Message::GetChildMask(uint16_t aChildIndex) const
-{
-    return GetMetadata().mChildMask.Get(aChildIndex);
-}
-
-void Message::ClearChildMask(uint16_t aChildIndex)
-{
-    GetMetadata().mChildMask.Set(aChildIndex, false);
-}
-
-void Message::SetChildMask(uint16_t aChildIndex)
-{
-    GetMetadata().mChildMask.Set(aChildIndex, true);
-}
-
-bool Message::IsChildPending(void) const
-{
-    return GetMetadata().mChildMask.HasAny();
-}
-
 uint16_t Message::UpdateChecksum(uint16_t aChecksum, uint16_t aValue)
 {
     uint16_t result = aChecksum + aValue;

@@ -590,7 +590,7 @@ public:
      * @retval FALSE  If the message is not scheduled to be forwarded to the child.
      *
      */
-    bool GetChildMask(uint16_t aChildIndex) const;
+    bool GetChildMask(uint16_t aChildIndex) const { return GetMetadata().mChildMask.Get(aChildIndex); }
 
     /**
      * This method unschedules forwarding of the message to the child.
@@ -598,7 +598,7 @@ public:
      * @param[in]  aChildIndex  The index into the child table.
      *
      */
-    void ClearChildMask(uint16_t aChildIndex);
+    void ClearChildMask(uint16_t aChildIndex) { GetMetadata().mChildMask.Set(aChildIndex, false); }
 
     /**
      * This method schedules forwarding of the message to the child.
@@ -606,7 +606,7 @@ public:
      * @param[in]  aChildIndex  The index into the child table.
      *
      */
-    void SetChildMask(uint16_t aChildIndex);
+    void SetChildMask(uint16_t aChildIndex) { GetMetadata().mChildMask.Set(aChildIndex, true); }
 
     /**
      * This method returns whether or not the message forwarding is scheduled for at least one child.
@@ -615,7 +615,7 @@ public:
      * @retval FALSE  If message forwarding is not scheduled for any child.
      *
      */
-    bool IsChildPending(void) const;
+    bool IsChildPending(void) const { return GetMetadata().mChildMask.HasAny(); }
 
     /**
      * This method returns the RLOC16 of the mesh destination.
