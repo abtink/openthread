@@ -1284,7 +1284,7 @@ otError Ip6::HandleDatagram(Message &aMessage, Netif *aNetif, const void *aLinkM
         else
         {
             hopLimit = header.GetHopLimit();
-            aMessage.Write(Header::GetHopLimitOffset(), Header::GetHopLimitSize(), &hopLimit);
+            aMessage.Write(Header::kHopLimitFieldOffset, sizeof(hopLimit), &hopLimit);
 
 #if OPENTHREAD_CONFIG_UNSECURE_TRAFFIC_MANAGED_BY_STACK_ENABLE
             // check whether source port is an unsecure port
