@@ -361,6 +361,7 @@ public:
      * This method returns the number of bytes in the message.
      *
      * @returns The number of bytes in the message.
+     *
      */
     uint16_t GetLength(void) const { return GetMetadata().mLength; }
 
@@ -1010,6 +1011,42 @@ private:
      *
      */
     otError ResizeMessage(uint16_t aLength);
+
+private:
+    class Chunk
+    {
+        friend class Message;
+
+    public:
+        Chunk(void)
+            : mData(nullptr)
+            , mLength(0)
+            , mBuffer(nullptr)
+        {
+        }
+
+        const uint8_t *GetData(void) const { return mData; }
+        uint8_t *      GetData(void) { return const_cast<uint8_t *>(mData); }
+        uint16_t       GetLength(void) const { return mLength; }
+
+    private:
+        mutable const uint8_t *mData;
+        mutable uint16_t       mLength;
+        mutable const Buffer * mBuffer;
+    };
+
+    void GetFirstChunk(uint16_t aOffset, uint16_t &aLength, const Chunk &aChunk) const;
+    void GetNextChunk(uint16_t &aLength, const Chunk &aChunk) const;
+
+    void GetFirstChunk(uint16_t aOffset, uint16_t &aLength, Chunk &aChunk)
+    {
+        return const_cast<const Message *>(this)->GetFirstChunk(aOffset, aLength, const_cast<const Chunk &>(aChunk));
+    }
+
+    void GetNextChunk(uint16_t &aLength, Chunk &aChunk)
+    {
+        return const_cast<const Message *>(this)->GetNextChunk(aLength, const_cast<const Chunk &>(aChunk));
+    }
 };
 
 /**
