@@ -189,6 +189,59 @@ Message::Settings::Settings(const otMessageSettings *aSettings)
 {
 }
 
+void Message::Checksum::Clear(void)
+{
+    mValue      = 0;
+    mAtOddIndex = false;
+}
+
+void Message::Checksum::ComputePseudoheader(const Ip6::Address &aSource,
+                                            const Ip6::Address &aDestination,
+                                            uint16_t            aLength,
+                                            uint8_t             aProto)
+{
+    Clear();
+
+    Update(aLength);
+    Update(aProto);
+    Update(aSource.GetBytes(), sizeof(aSource));
+    Update(aDestination.GetBytes(), sizeof(aDestination));
+}
+
+void Message::Checksum::Update(uint8_t aUint8)
+{
+    uint16_t newValue = mValue;
+
+    // BitEndian encoding: Even index is MSBm and odd index is LSB.
+
+    newValue += mAtOddIndex ? aUint8 : (static_cast<uint16_t>(aUint8) << 8);
+
+    // Calculate one's complement sum.
+
+    if (newValue < mValue)
+    {
+        newValue++;
+    }
+
+    mValue      = newValue;
+    mAtOddIndex = !mAtOddIndex;
+}
+
+void Message::Checksum::Update(uint16_t aUint16)
+{
+    // Assume BigEndian encoding
+    Update(static_cast<uint8_t>(aUint16 >> 8));
+    Update(static_cast<uint8_t>(aUint16 & 0xff));
+}
+
+void Message::Checksum::Update(const uint8_t *aBuffer, uint16_t aLength)
+{
+    for (uint16_t i = 0; i < aLength; i++)
+    {
+        Update(aBuffer[i]);
+    }
+}
+
 otError Message::ResizeMessage(uint16_t aLength)
 {
     otError error = OT_ERROR_NONE;
@@ -666,6 +719,19 @@ void Message::SetLinkInfo(const ThreadLinkInfo &aLinkInfo)
 #endif
 }
 
+void Message::WriteChecksum(uint16_t aOffset, const Checksum &aChecksum)
+{
+    uint16_t checksum = aChecksum.GetValue();
+
+    if (checksum != 0xffff)
+    {
+        checksum = ~checksum;
+    }
+
+    checksum = HostSwap16(checksum);
+    Write(aOffset, sizeof(checksum), &checksum);
+}
+
 uint16_t Message::UpdateChecksum(uint16_t aChecksum, uint16_t aValue)
 {
     uint16_t result = aChecksum + aValue;
@@ -749,6 +815,71 @@ uint16_t Message::UpdateChecksum(uint16_t aChecksum, uint16_t aOffset, uint16_t 
     }
 
     return aChecksum;
+}
+
+void Message::UpdateChecksum(Checksum &aChecksum, uint16_t aOffset, uint16_t aLength) const
+{
+    const Buffer *curBuffer;
+    uint16_t      bytesCovered = 0;
+    uint16_t      bytesToCover;
+
+    OT_ASSERT(aOffset + aLength <= GetLength());
+
+    aOffset += GetReserved();
+
+    // special case first buffer
+    if (aOffset < kHeadBufferDataSize)
+    {
+        bytesToCover = kHeadBufferDataSize - aOffset;
+
+        if (bytesToCover > aLength)
+        {
+            bytesToCover = aLength;
+        }
+
+        aChecksum.Update(GetFirstData() + aOffset, bytesToCover);
+
+        aLength -= bytesToCover;
+        bytesCovered += bytesToCover;
+
+        aOffset = 0;
+    }
+    else
+    {
+        aOffset -= kHeadBufferDataSize;
+    }
+
+    // advance to offset
+    curBuffer = GetNextBuffer();
+
+    while (aOffset >= kBufferDataSize)
+    {
+        OT_ASSERT(curBuffer != nullptr);
+
+        curBuffer = curBuffer->GetNextBuffer();
+        aOffset -= kBufferDataSize;
+    }
+
+    // begin copy
+    while (aLength > 0)
+    {
+        OT_ASSERT(curBuffer != nullptr);
+
+        bytesToCover = kBufferDataSize - aOffset;
+
+        if (bytesToCover > aLength)
+        {
+            bytesToCover = aLength;
+        }
+
+        aChecksum.Update(curBuffer->GetData() + aOffset, bytesToCover);
+
+        aLength -= bytesToCover;
+        bytesCovered += bytesToCover;
+
+        curBuffer = curBuffer->GetNextBuffer();
+        aOffset   = 0;
+    }
 }
 
 bool Message::IsTimeSync(void) const

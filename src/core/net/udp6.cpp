@@ -353,10 +353,10 @@ exit:
 
 otError Udp::HandleMessage(Message &aMessage, MessageInfo &aMessageInfo)
 {
-    otError  error = OT_ERROR_NONE;
-    Header   udpHeader;
-    uint16_t payloadLength;
-    uint16_t checksum;
+    otError           error = OT_ERROR_NONE;
+    Header            udpHeader;
+    uint16_t          payloadLength;
+    Message::Checksum checksum;
 
     payloadLength = aMessage.GetLength() - aMessage.GetOffset();
 
@@ -364,12 +364,11 @@ otError Udp::HandleMessage(Message &aMessage, MessageInfo &aMessageInfo)
     VerifyOrExit(payloadLength >= sizeof(Header), error = OT_ERROR_PARSE);
 
     // verify checksum
-    checksum = Ip6::ComputePseudoheaderChecksum(aMessageInfo.GetPeerAddr(), aMessageInfo.GetSockAddr(), payloadLength,
-                                                kProtoUdp);
-    checksum = aMessage.UpdateChecksum(checksum, aMessage.GetOffset(), payloadLength);
+    checksum.ComputePseudoheader(aMessageInfo.GetPeerAddr(), aMessageInfo.GetSockAddr(), payloadLength, kProtoUdp);
+    aMessage.UpdateChecksum(checksum, aMessage.GetOffset(), payloadLength);
 
 #ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-    VerifyOrExit(checksum == 0xffff, error = OT_ERROR_DROP);
+    VerifyOrExit(checksum.GetValue() == 0xffff, error = OT_ERROR_DROP);
 #endif
 
     VerifyOrExit(aMessage.Read(aMessage.GetOffset(), sizeof(udpHeader), &udpHeader) == sizeof(udpHeader),

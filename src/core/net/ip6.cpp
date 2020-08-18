@@ -458,10 +458,10 @@ void Ip6::EnqueueDatagram(Message &aMessage)
 
 otError Ip6::SendDatagram(Message &aMessage, MessageInfo &aMessageInfo, uint8_t aIpProto)
 {
-    otError                    error = OT_ERROR_NONE;
-    Header                     header;
-    uint16_t                   payloadLength = aMessage.GetLength();
-    uint16_t                   checksum;
+    otError  error = OT_ERROR_NONE;
+    Header   header;
+    uint16_t payloadLength = aMessage.GetLength();
+    ;
     const NetifUnicastAddress *source;
 
     header.Init();
@@ -497,21 +497,16 @@ otError Ip6::SendDatagram(Message &aMessage, MessageInfo &aMessageInfo, uint8_t 
 
     SuccessOrExit(error = aMessage.Prepend(&header, sizeof(header)));
 
-    // compute checksum
-    checksum = ComputePseudoheaderChecksum(header.GetSource(), header.GetDestination(), payloadLength, aIpProto);
-
-    switch (aIpProto)
+    if ((aIpProto == kProtoUdp) || (aIpProto == kProtoIcmp6))
     {
-    case kProtoUdp:
-        mUdp.UpdateChecksum(aMessage, checksum);
-        break;
+        Message::Checksum checksum;
+        uint8_t           offset = aMessage.GetOffset();
 
-    case kProtoIcmp6:
-        mIcmp.UpdateChecksum(aMessage, checksum);
-        break;
+        checksum.ComputePseudoheader(header.GetSource(), header.GetDestination(), payloadLength, aIpProto);
+        aMessage.UpdateChecksum(checksum, offset, aMessage.GetLength() - offset);
 
-    default:
-        break;
+        offset += (aIpProto == kProtoUdp) ? Udp::Header::kChecksumFieldOffset : Icmp::Header::kChecksumFieldOffset;
+        aMessage.WriteChecksum(offset, checksum);
     }
 
     if (aMessageInfo.GetPeerAddr().IsMulticastLargerThanRealmLocal())

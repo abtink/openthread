@@ -48,6 +48,7 @@
 #include "common/non_copyable.hpp"
 #include "common/pool.hpp"
 #include "mac/mac_types.hpp"
+#include "net/ip6_address.hpp"
 #include "thread/child_mask.hpp"
 #include "thread/link_quality.hpp"
 
@@ -341,6 +342,32 @@ public:
 
         bool     mLinkSecurityEnabled;
         Priority mPriority;
+    };
+
+    class Checksum
+    {
+    public:
+        Checksum(void)
+            : mValue(0)
+            , mAtOddIndex(false)
+        {
+        }
+
+        void Clear(void);
+
+        void ComputePseudoheader(const Ip6::Address &aSource,
+                                 const Ip6::Address &aDestination,
+                                 uint16_t            aLength,
+                                 uint8_t             aProto);
+
+        uint16_t GetValue(void) const { return mValue; }
+        void     Update(uint8_t aUint8);
+        void     Update(uint16_t aUint16);
+        void     Update(const uint8_t *aBuffer, uint16_t aLength);
+
+    private:
+        uint16_t mValue;
+        bool     mAtOddIndex;
     };
 
     /**
@@ -809,6 +836,15 @@ public:
     void SetLinkInfo(const ThreadLinkInfo &aLinkInfo);
 
     /**
+     * This method writes a given checksum at a given offset in the message.
+     *
+     * @param[in]  aOffset    Byte offset within the message to write at.
+     * @param[in]  aChecksum  The checksum to write.
+     *
+     */
+    void WriteChecksum(uint16_t aOffset, const Checksum &aChecksum);
+
+    /**
      * This static method updates a checksum.
      *
      * @param[in]  aChecksum  The checksum value to update.
@@ -842,6 +878,18 @@ public:
      *
      */
     uint16_t UpdateChecksum(uint16_t aChecksum, uint16_t aOffset, uint16_t aLength) const;
+
+    /**
+     * This method is used to update a checksum value.
+     *
+     * @param[in]  aChecksum  Initial checksum value.
+     * @param[in]  aOffset    Byte offset within the message to begin checksum computation.
+     * @param[in]  aLength    Number of bytes to compute the checksum over.
+     *
+     * @retval The updated checksum value.
+     *
+     */
+    void UpdateChecksum(Checksum &aChecksum, uint16_t aOffset, uint16_t aLength) const;
 
     /**
      * This method returns a pointer to the message queue (if any) where this message is queued.
