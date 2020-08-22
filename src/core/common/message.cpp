@@ -550,9 +550,10 @@ int Message::Write(uint16_t aOffset, uint16_t aLength, const void *aBuf)
     return static_cast<int>(bufPtr - reinterpret_cast<const uint8_t *>(aBuf));
 }
 
-int Message::CopyTo(uint16_t aSourceOffset, uint16_t aDestinationOffset, uint16_t aLength, Message &aMessage) const
+uint16_t Message::CopyTo(uint16_t aSourceOffset, uint16_t aDestinationOffset, uint16_t aLength, Message &aMessage) const
 {
     uint16_t bytesCopied = 0;
+    uint16_t bytesRead;
     uint16_t bytesToCopy;
     uint8_t  buf[16];
 
@@ -560,13 +561,18 @@ int Message::CopyTo(uint16_t aSourceOffset, uint16_t aDestinationOffset, uint16_
     {
         bytesToCopy = (aLength < sizeof(buf)) ? aLength : sizeof(buf);
 
-        Read(aSourceOffset, bytesToCopy, buf);
-        aMessage.Write(aDestinationOffset, bytesToCopy, buf);
+        bytesRead = Read(aSourceOffset, bytesToCopy, buf);
+        aMessage.Write(aDestinationOffset, bytesRead, buf);
 
-        aSourceOffset += bytesToCopy;
-        aDestinationOffset += bytesToCopy;
-        aLength -= bytesToCopy;
-        bytesCopied += bytesToCopy;
+        aSourceOffset += bytesRead;
+        aDestinationOffset += bytesRead;
+        aLength -= bytesRead;
+        bytesCopied += bytesRead;
+
+        if (bytesRead < bytesToCopy)
+        {
+            break;
+        }
     }
 
     return bytesCopied;
