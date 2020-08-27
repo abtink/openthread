@@ -2864,7 +2864,7 @@ void Mle::HandleAdvertisement(const Message &aMessage, const Ip6::MessageInfo &a
                 if ((Tlv::FindTlv(aMessage, route) == OT_ERROR_NONE) && route.IsValid())
                 {
                     // Overwrite Route Data
-                    IgnoreError(Get<MleRouter>().ProcessRouteTlv(route));
+                    IgnoreError(Get<MleRouter>().ProcessRouteTlv(route, aNeighbor));
                 }
             }
 #endif
@@ -3461,7 +3461,7 @@ void Mle::HandleChildIdResponse(const Message &         aMessage,
 
         if (Tlv::FindTlv(aMessage, route) == OT_ERROR_NONE)
         {
-            SuccessOrExit(error = Get<MleRouter>().ProcessRouteTlv(route));
+            SuccessOrExit(error = Get<MleRouter>().ProcessRouteTlv(route, aNeighbor));
         }
     }
 #endif
