@@ -197,7 +197,7 @@ enum
  * This type represents a Thread device role.
  *
  */
-enum DeviceRole
+enum DeviceRole : uint8_t
 {
     kRoleDisabled = OT_DEVICE_ROLE_DISABLED, ///< The Thread stack is disabled.
     kRoleDetached = OT_DEVICE_ROLE_DETACHED, ///< Not currently participating in a Thread network/partition.
@@ -210,7 +210,7 @@ enum DeviceRole
  * MLE Attach modes
  *
  */
-enum AttachMode
+enum AttachMode : uint8_t
 {
     kAttachAny           = 0, ///< Attach to any Thread partition.
     kAttachSame1         = 1, ///< Attach to the same Thread partition (attempt 1 when losing connectivity).

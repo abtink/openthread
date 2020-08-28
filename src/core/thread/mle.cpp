@@ -3949,35 +3949,31 @@ void Mle::LogMleMessage(const char *aLogString, const Ip6::Address &aAddress, ui
     otLogInfoMle("%s (%s,0x%04x)", aLogString, aAddress.ToString().AsCString(), aRloc);
 }
 
+#if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_NOTE)
 const char *Mle::RoleToString(DeviceRole aRole)
 {
-    const char *roleString = "Unknown";
+    static const char *const kRoleStrings[] = {
+        "Disabled", // (0) kRoleDisabled
+        "Detached", // (1) kRoleDetached
+        "Child",    // (2) kRoleChild
+        "Router",   // (3) kRoleRouter
+        "Leader",   // (4) kRoleLeader
+    };
 
-    switch (aRole)
-    {
-    case kRoleDisabled:
-        roleString = "Disabled";
-        break;
+    static_assert(0 == kRoleDisabled, "Incorrect kRoleDisabled value");
+    static_assert(1 == kRoleDetached, "Incorrect kRoleDetached value");
+    static_assert(2 == kRoleChild, "Incorrect kRoleChild value");
+    static_assert(3 == kRoleRouter, "Incorrect kRoleRouter value");
+    static_assert(4 == kRoleLeader, "Incorrect kRoleLeader value");
 
-    case kRoleDetached:
-        roleString = "Detached";
-        break;
-
-    case kRoleChild:
-        roleString = "Child";
-        break;
-
-    case kRoleRouter:
-        roleString = "Router";
-        break;
-
-    case kRoleLeader:
-        roleString = "Leader";
-        break;
-    }
-
-    return roleString;
+    return (aRole < OT_ARRAY_LENGTH(kRoleStrings)) ? kRoleStrings[aRole] : "unknown";
 }
+#else
+const char *Mle::RoleToString(DeviceRole)
+{
+    return "";
+}
+#endif
 
 // LCOV_EXCL_START
 
@@ -3985,32 +3981,21 @@ const char *Mle::RoleToString(DeviceRole aRole)
 
 const char *Mle::AttachModeToString(AttachMode aMode)
 {
-    const char *str = "unknown";
+    static const char *const kAttachModeStrings[] = {
+        "any-partition",           // (0) kAttachAny
+        "same-partition-try-1",    // (1) kAttachSame1
+        "same-partition-try-2",    // (2) kAttachSame2
+        "better-partition",        // (3) kAttachBetter
+        "same-partition-downgrade",// (4) kAttachSameDowngrade
+    };
 
-    switch (aMode)
-    {
-    case kAttachAny:
-        str = "any-partition";
-        break;
+    static_assert(0 == kAttachAny, "Incorrect kAttachAny value");
+    static_assert(1 == kAttachSame1, "Incorrect kAttachSame1 value");
+    static_assert(2 == kAttachSame2, "Incorrect kAttachSame2 value");
+    static_assert(3 == kAttachBetter, "Incorrect kAttachBetter value");
+    static_assert(4 == kAttachSameDowngrade, "Incorrect kAttachSameDowngrade value");
 
-    case kAttachSame1:
-        str = "same-partition-try-1";
-        break;
-
-    case kAttachSame2:
-        str = "same-partition-try-2";
-        break;
-
-    case kAttachBetter:
-        str = "better-partition";
-        break;
-
-    case kAttachSameDowngrade:
-        str = "same-partition-downgrade";
-        break;
-    }
-
-    return str;
+    return (aMode < OT_ARRAY_LENGTH(kAttachModeStrings)) ? kAttachModeStrings[aMode] : "unknown";
 }
 
 const char *Mle::AttachStateToString(AttachState aState)
