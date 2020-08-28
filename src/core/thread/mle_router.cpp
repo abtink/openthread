@@ -465,12 +465,7 @@ void MleRouter::SendAdvertisement(void)
     Log("Send Advertisement", destination);
 
 exit:
-
-    if ((error != OT_ERROR_NONE) && (message != nullptr))
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     LogSendError("Advertisement", error);
 }
 
@@ -555,12 +550,7 @@ otError MleRouter::SendLinkRequest(Neighbor *aNeighbor)
     Log("Send Link Request", destination);
 
 exit:
-
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     return error;
 }
 
@@ -761,12 +751,7 @@ otError MleRouter::SendLinkAccept(const Ip6::MessageInfo &aMessageInfo,
     }
 
 exit:
-
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     return error;
 }
 
@@ -1974,12 +1959,7 @@ void MleRouter::SendParentResponse(Child *aChild, const Challenge &aChallenge, b
     Log("Delay Parent Response", destination);
 
 exit:
-
-    if ((error != OT_ERROR_NONE) && (message != nullptr))
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     LogSendError("Parent Response", error);
 }
 
@@ -3000,13 +2980,9 @@ otError MleRouter::SendDiscoveryResponse(const Ip6::Address &aDestination, uint1
     Log("Delay Discovery Response", aDestination);
 
 exit:
-
-    if ((error != OT_ERROR_NONE) && (message != nullptr))
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     LogProcessError("Discovery Response", error);
+
     return error;
 }
 
@@ -3097,12 +3073,7 @@ otError MleRouter::SendChildIdResponse(Child &aChild)
     Log("Send Child ID Response", destination, aChild.GetRloc16());
 
 exit:
-
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     return error;
 }
 
@@ -3163,12 +3134,7 @@ otError MleRouter::SendChildUpdateRequest(Child &aChild)
     Log("Send Child Update Request to child", destination, aChild.GetRloc16());
 
 exit:
-
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     return error;
 }
 
@@ -3244,11 +3210,7 @@ void MleRouter::SendChildUpdateResponse(Child *                 aChild,
     }
 
 exit:
-
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
+    FreeMessageOnError(message, error);
 }
 
 void MleRouter::SendDataResponse(const Ip6::Address &aDestination,
@@ -3313,12 +3275,7 @@ void MleRouter::SendDataResponse(const Ip6::Address &aDestination,
     }
 
 exit:
-
-    if ((error != OT_ERROR_NONE) && (message != nullptr))
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     LogSendError("Data Response", error);
 }
 
@@ -3608,12 +3565,7 @@ otError MleRouter::SendAddressSolicit(ThreadStatusTlv::Status aStatus)
     Log("Send Address Solicit", messageInfo.GetPeerAddr());
 
 exit:
-
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     return error;
 }
 
@@ -3641,12 +3593,7 @@ void MleRouter::SendAddressRelease(void)
     Log("Send Address Release", messageInfo.GetPeerAddr());
 
 exit:
-
-    if ((error != OT_ERROR_NONE) && (message != nullptr))
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     LogSendError("Address Release", error);
 }
 
@@ -3884,11 +3831,7 @@ void MleRouter::SendAddressSolicitResponse(const Coap::Message &   aRequest,
     Log("Send Address Reply", aMessageInfo.GetPeerAddr());
 
 exit:
-
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
+    FreeMessageOnError(message, error);
 }
 
 void MleRouter::HandleAddressRelease(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
@@ -4437,12 +4380,7 @@ otError MleRouter::SendTimeSync(void)
     Log("Send Time Sync", destination);
 
 exit:
-
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     return error;
 }
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE

@@ -176,11 +176,7 @@ static void SendErrorMessage(Coap::CoapSecure &aCoapSecure, ForwardContext &aFor
 exit:
     if (error != OT_ERROR_NONE)
     {
-        if (message != nullptr)
-        {
-            message->Free();
-        }
-
+        FreeMessage(message);
         otLogWarnMeshCoP("Failed to send error CoAP message: %s", otThreadErrorToString(error));
     }
 }
@@ -216,11 +212,7 @@ static void SendErrorMessage(Coap::CoapSecure &   aCoapSecure,
 exit:
     if (error != OT_ERROR_NONE)
     {
-        if (message != nullptr)
-        {
-            message->Free();
-        }
-
+        FreeMessage(message);
         otLogWarnMeshCoP("Failed to send error CoAP message: %s", otThreadErrorToString(error));
     }
 }
@@ -273,11 +265,7 @@ void BorderAgent::HandleCoapResponse(void *               aContext,
 exit:
     if (error != OT_ERROR_NONE)
     {
-        if (message != nullptr)
-        {
-            message->Free();
-        }
-
+        FreeMessage(message);
         otLogWarnMeshCoP("Commissioner request[%hu] failed: %s", forwardContext.GetMessageId(),
                          otThreadErrorToString(error));
 
@@ -410,11 +398,7 @@ exit:
     if (error != OT_ERROR_NONE)
     {
         otLogWarnMeshCoP("Failed to send proxy stream: %s", otThreadErrorToString(error));
-
-        if (message != nullptr)
-        {
-            message->Free();
-        }
+        FreeMessage(message);
     }
 }
 
@@ -487,10 +471,7 @@ void BorderAgent::HandleRelayReceive(const Coap::Message &aMessage)
     otLogInfoMeshCoP("Sent to commissioner on %s", UriPath::kRelayRx);
 
 exit:
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
+    FreeMessageOnError(message, error);
 }
 
 otError BorderAgent::ForwardToCommissioner(Coap::Message &aForwardMessage, const Message &aMessage)
@@ -564,10 +545,7 @@ exit:
     {
         otLogWarnMeshCoP("Failed to sent to joiner router request %s: %s", UriPath::kRelayTx,
                          otThreadErrorToString(error));
-        if (message != nullptr)
-        {
-            message->Free();
-        }
+        FreeMessage(message);
     }
 }
 
@@ -627,10 +605,7 @@ exit:
             GetInstance().HeapFree(forwardContext);
         }
 
-        if (message != nullptr)
-        {
-            message->Free();
-        }
+        FreeMessage(message);
 
         otLogWarnMeshCoP("Failed to forward to leader: %s", otThreadErrorToString(error));
 

@@ -76,15 +76,13 @@ Message *Ip6::NewMessage(uint16_t aReserved, const Message::Settings &aSettings)
 
 Message *Ip6::NewMessage(const uint8_t *aData, uint16_t aDataLength, const Message::Settings &aSettings)
 {
+    otError  error;
     Message *message = Get<MessagePool>().New(Message::kTypeIp6, 0, aSettings);
 
     VerifyOrExit(message != nullptr, OT_NOOP);
 
-    if (message->Append(aData, aDataLength) != OT_ERROR_NONE)
-    {
-        message->Free();
-        message = nullptr;
-    }
+    error = message->Append(aData, aDataLength);
+    FreeAndNullMessageOnError(message, error);
 
 exit:
     return message;
@@ -669,10 +667,7 @@ exit:
         otLogWarnIp6("No buffer for Ip6 fragmentation");
     }
 
-    if (error != OT_ERROR_NONE && fragment != nullptr)
-    {
-        fragment->Free();
-    }
+    FreeMessageOnError(fragment, error);
 
     return error;
 }
