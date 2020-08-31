@@ -293,7 +293,7 @@ otError Message::SetToken(uint8_t aTokenLength)
 
 otError Message::SetDefaultResponseHeader(const Message &aRequest)
 {
-    Init(OT_COAP_TYPE_ACKNOWLEDGMENT, OT_COAP_CODE_CHANGED);
+    Init(kTypeAck, kCodeChanged);
 
     SetMessageId(aRequest.GetMessageId());
 
@@ -315,97 +315,100 @@ exit:
 #if OPENTHREAD_CONFIG_COAP_API_ENABLE
 const char *Message::CodeToString(void) const
 {
-    const char *codeString;
+    const char *string;
 
     switch (GetCode())
     {
-    case OT_COAP_CODE_INTERNAL_ERROR:
-        codeString = "InternalError";
+    case kCodeEmpty:
+        string = "Empty";
         break;
-    case OT_COAP_CODE_METHOD_NOT_ALLOWED:
-        codeString = "MethodNotAllowed";
+    case kCodeGet:
+        string = "Get";
         break;
-    case OT_COAP_CODE_CONTENT:
-        codeString = "Content";
+    case kCodePost:
+        string = "Post";
         break;
-    case OT_COAP_CODE_EMPTY:
-        codeString = "Empty";
+    case kCodePut:
+        string = "Put";
         break;
-    case OT_COAP_CODE_GET:
-        codeString = "Get";
+    case kCodeDelete:
+        string = "Delete";
         break;
-    case OT_COAP_CODE_POST:
-        codeString = "Post";
+    case kCodeCreated:
+        string = "Created";
         break;
-    case OT_COAP_CODE_PUT:
-        codeString = "Put";
+    case kCodeDeleted:
+        string = "Deleted";
         break;
-    case OT_COAP_CODE_DELETE:
-        codeString = "Delete";
+    case kCodeValid:
+        string = "Valid";
         break;
-    case OT_COAP_CODE_NOT_FOUND:
-        codeString = "NotFound";
+    case kCodeChanged:
+        string = "Changed";
         break;
-    case OT_COAP_CODE_UNSUPPORTED_FORMAT:
-        codeString = "UnsupportedFormat";
+    case kCodeContent:
+        string = "Content";
         break;
-    case OT_COAP_CODE_RESPONSE_MIN:
-        codeString = "ResponseMin";
+    case kCodeContinue:
+        string = "Continue";
         break;
-    case OT_COAP_CODE_CREATED:
-        codeString = "Created";
+    case kCodeBadRequest:
+        string = "BadRequest";
         break;
-    case OT_COAP_CODE_DELETED:
-        codeString = "Deleted";
+    case kCodeUnauthorized:
+        string = "Unauthorized";
         break;
-    case OT_COAP_CODE_VALID:
-        codeString = "Valid";
+    case kCodeBadOption:
+        string = "BadOption";
         break;
-    case OT_COAP_CODE_CHANGED:
-        codeString = "Changed";
+    case kCodeForbidden:
+        string = "Forbidden";
         break;
-    case OT_COAP_CODE_BAD_REQUEST:
-        codeString = "BadRequest";
+    case kCodeNotFound:
+        string = "NotFound";
         break;
-    case OT_COAP_CODE_UNAUTHORIZED:
-        codeString = "Unauthorized";
+    case kCodeMethodNotAllowed:
+        string = "MethodNotAllowed";
         break;
-    case OT_COAP_CODE_BAD_OPTION:
-        codeString = "BadOption";
+    case kCodeNotAcceptable:
+        string = "NotAcceptable";
         break;
-    case OT_COAP_CODE_FORBIDDEN:
-        codeString = "Forbidden";
+    case kCodeRequestIncomplete:
+        string = "RequestIncomplete";
         break;
-    case OT_COAP_CODE_NOT_ACCEPTABLE:
-        codeString = "NotAcceptable";
+    case kCodePreconditionFailed:
+        string = "PreconditionFailed";
         break;
-    case OT_COAP_CODE_PRECONDITION_FAILED:
-        codeString = "PreconditionFailed";
+    case kCodeRequestTooLarge:
+        string = "RequestTooLarge";
         break;
-    case OT_COAP_CODE_REQUEST_TOO_LARGE:
-        codeString = "RequestTooLarge";
+    case kCodeUnsupportedFormat:
+        string = "UnsupportedFormat";
         break;
-    case OT_COAP_CODE_NOT_IMPLEMENTED:
-        codeString = "NotImplemented";
+    case kCodeInternalError:
+        string = "InternalError";
         break;
-    case OT_COAP_CODE_BAD_GATEWAY:
-        codeString = "BadGateway";
+    case kCodeNotImplemented:
+        string = "NotImplemented";
         break;
-    case OT_COAP_CODE_SERVICE_UNAVAILABLE:
-        codeString = "ServiceUnavailable";
+    case kCodeBadGateway:
+        string = "BadGateway";
         break;
-    case OT_COAP_CODE_GATEWAY_TIMEOUT:
-        codeString = "GatewayTimeout";
+    case kCodeServiceUnavailable:
+        string = "ServiceUnavailable";
         break;
-    case OT_COAP_CODE_PROXY_NOT_SUPPORTED:
-        codeString = "ProxyNotSupported";
+    case kCodeGatewayTimeout:
+        string = "GatewayTimeout";
+        break;
+    case kCodeProxyNotSupported:
+        string = "ProxyNotSupported";
         break;
     default:
-        codeString = "Unknown";
+        string = "Unknown";
         break;
     }
 
-    return codeString;
+    return string;
 }
 #endif // OPENTHREAD_CONFIG_COAP_API_ENABLE
 

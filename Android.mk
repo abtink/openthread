@@ -274,6 +274,7 @@ LOCAL_SRC_FILES                                          := \
     src/core/thread/thread_netif.cpp                        \
     src/core/thread/tmf.cpp                                 \
     src/core/thread/topology.cpp                            \
+    src/core/thread/uri_paths.hpp                           \
     src/core/utils/channel_manager.cpp                      \
     src/core/utils/channel_monitor.cpp                      \
     src/core/utils/child_supervision.cpp                    \

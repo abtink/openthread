@@ -68,6 +68,65 @@ using ot::Encoding::BigEndian::HostSwap16;
 class OptionIterator;
 
 /**
+ * CoAP Type values.
+ *
+ */
+enum Type : uint8_t
+{
+    kTypeConfirmable    = OT_COAP_TYPE_CONFIRMABLE,     ///< Confirmable type.
+    kTypeNonConfirmable = OT_COAP_TYPE_NON_CONFIRMABLE, ///< Non-confirmable type.
+    kTypeAck            = OT_COAP_TYPE_ACKNOWLEDGMENT,  ///< Acknowledgment type.
+    kTypeReset          = OT_COAP_TYPE_RESET,           ///< Reset type.
+};
+
+/**
+ * CoAP Code values.
+ *
+ */
+enum Code : uint8_t
+{
+    // Request Codes
+
+    kCodeEmpty  = OT_COAP_CODE_EMPTY,  ///< Empty message code
+    kCodeGet    = OT_COAP_CODE_GET,    ///< Get
+    kCodePost   = OT_COAP_CODE_POST,   ///< Post
+    kCodePut    = OT_COAP_CODE_PUT,    ///< Put
+    kCodeDelete = OT_COAP_CODE_DELETE, ///< Delete
+
+    // Response Codes
+
+    kCodeCreated  = OT_COAP_CODE_CREATED,  ///< Created
+    kCodeDeleted  = OT_COAP_CODE_DELETED,  ///< Deleted
+    kCodeValid    = OT_COAP_CODE_VALID,    ///< Valid
+    kCodeChanged  = OT_COAP_CODE_CHANGED,  ///< Changed
+    kCodeContent  = OT_COAP_CODE_CONTENT,  ///< Content
+    kCodeContinue = OT_COAP_CODE_CONTINUE, ///< RFC7959 Continue
+
+    // Client Error Codes
+
+    kCodeBadRequest         = OT_COAP_CODE_BAD_REQUEST,         ///< Bad Request
+    kCodeUnauthorized       = OT_COAP_CODE_UNAUTHORIZED,        ///< Unauthorized
+    kCodeBadOption          = OT_COAP_CODE_BAD_OPTION,          ///< Bad Option
+    kCodeForbidden          = OT_COAP_CODE_FORBIDDEN,           ///< Forbidden
+    kCodeNotFound           = OT_COAP_CODE_NOT_FOUND,           ///< Not Found
+    kCodeMethodNotAllowed   = OT_COAP_CODE_METHOD_NOT_ALLOWED,  ///< Method Not Allowed
+    kCodeNotAcceptable      = OT_COAP_CODE_NOT_ACCEPTABLE,      ///< Not Acceptable
+    kCodeRequestIncomplete  = OT_COAP_CODE_REQUEST_INCOMPLETE,  ///< RFC7959 Request Entity Incomplete
+    kCodePreconditionFailed = OT_COAP_CODE_PRECONDITION_FAILED, ///< Precondition Failed
+    kCodeRequestTooLarge    = OT_COAP_CODE_REQUEST_TOO_LARGE,   ///< Request Entity Too Large
+    kCodeUnsupportedFormat  = OT_COAP_CODE_UNSUPPORTED_FORMAT,  ///< Unsupported Content-Format
+
+    // Server Error Codes
+
+    kCodeInternalError      = OT_COAP_CODE_INTERNAL_ERROR,      ///< Internal Server Error
+    kCodeNotImplemented     = OT_COAP_CODE_NOT_IMPLEMENTED,     ///< Not Implemented
+    kCodeBadGateway         = OT_COAP_CODE_BAD_GATEWAY,         ///< Bad Gateway
+    kCodeServiceUnavailable = OT_COAP_CODE_SERVICE_UNAVAILABLE, ///< Service Unavailable
+    kCodeGatewayTimeout     = OT_COAP_CODE_GATEWAY_TIMEOUT,     ///< Gateway Timeout
+    kCodeProxyNotSupported  = OT_COAP_CODE_PROXY_NOT_SUPPORTED, ///< Proxying Not Supported
+};
+
+/**
  * This class implements CoAP message generation and parsing.
  *
  */
@@ -85,17 +144,8 @@ public:
         kTypeOffset         = 4,   ///< The type offset in the first byte of a CoAP header
     };
 
-    /**
-     * CoAP Type values.
-     *
-     */
-    typedef otCoapType Type;
-
-    /**
-     * CoAP Code values.
-     *
-     */
-    typedef otCoapCode Code;
+    typedef ot::Coap::Type Type; ///< CoAP Type.
+    typedef ot::Coap::Code Code; ///< CoAP Code.
 
     /**
      * CoAP Block1/Block2 Types
@@ -175,7 +225,7 @@ public:
      * @returns The Type value.
      *
      */
-    Type GetType(void) const { return static_cast<Type>(GetHelpData().mHeader.mVersionTypeToken & kTypeMask); }
+    uint8_t GetType(void) const { return GetHelpData().mHeader.mVersionTypeToken & kTypeMask; }
 
     /**
      * This method sets the Type value.
@@ -186,7 +236,7 @@ public:
     void SetType(Type aType)
     {
         GetHelpData().mHeader.mVersionTypeToken &= ~kTypeMask;
-        GetHelpData().mHeader.mVersionTypeToken |= aType;
+        GetHelpData().mHeader.mVersionTypeToken |= static_cast<uint8_t>(aType);
     }
 
     /**
@@ -195,7 +245,7 @@ public:
      * @returns The Code value.
      *
      */
-    Code GetCode(void) const { return static_cast<Code>(GetHelpData().mHeader.mCode); }
+    uint8_t GetCode(void) const { return static_cast<Code>(GetHelpData().mHeader.mCode); }
 
     /**
      * This method sets the Code value.
@@ -457,7 +507,7 @@ public:
      * @retval FALSE  Message is not an empty message header.
      *
      */
-    bool IsEmpty(void) const { return (GetCode() == 0); }
+    bool IsEmpty(void) const { return (GetCode() == kCodeEmpty); }
 
     /**
      * This method checks if a header is a request header.
@@ -466,7 +516,43 @@ public:
      * @retval FALSE  Message is not a request header.
      *
      */
-    bool IsRequest(void) const { return (GetCode() >= OT_COAP_CODE_GET && GetCode() <= OT_COAP_CODE_DELETE); }
+    bool IsRequest(void) const { return (GetCode() >= kCodeGet) && (GetCode() <= kCodeDelete); }
+
+    /**
+     * This method indicates whether or not the CoAP code in header is "Get" request.
+     *
+     * @retval TRUE   Message is a Get request.
+     * @retval FALSE  Message is not a Get request.
+     *
+     */
+    bool IsGetRequest(void) const { return GetCode() == kCodeGet; }
+
+    /**
+     * This method indicates whether or not the CoAP code in header is "Post" request.
+     *
+     * @retval TRUE   Message is a Post request.
+     * @retval FALSE  Message is not a Post request.
+     *
+     */
+    bool IsPostRequest(void) const { return GetCode() == kCodePost; }
+
+    /**
+     * This method indicates whether or not the CoAP code in header is "Put" request.
+     *
+     * @retval TRUE   Message is a Put request.
+     * @retval FALSE  Message is not a Put request.
+     *
+     */
+    bool IsPutRequest(void) const { return GetCode() == kCodePut; }
+
+    /**
+     * This method indicates whether or not the CoAP code in header is "Delete" request.
+     *
+     * @retval TRUE   Message is a Delete request.
+     * @retval FALSE  Message is not a Delete request.
+     *
+     */
+    bool IsDeleteRequest(void) const { return GetCode() == kCodeDelete; }
 
     /**
      * This method checks if a header is a response header.
@@ -475,7 +561,7 @@ public:
      * @retval FALSE  Message is not a response header.
      *
      */
-    bool IsResponse(void) const { return (GetCode() >= OT_COAP_CODE_RESPONSE_MIN); }
+    bool IsResponse(void) const { return GetCode() >= OT_COAP_CODE_RESPONSE_MIN; }
 
     /**
      * This method checks if a header is a CON message header.
@@ -484,7 +570,7 @@ public:
      * @retval FALSE  Message is not is a CON message header.
      *
      */
-    bool IsConfirmable(void) const { return (GetType() == OT_COAP_TYPE_CONFIRMABLE); }
+    bool IsConfirmable(void) const { return (GetType() == kTypeConfirmable); }
 
     /**
      * This method checks if a header is a NON message header.
@@ -493,7 +579,7 @@ public:
      * @retval FALSE  Message is not is a NON message header.
      *
      */
-    bool IsNonConfirmable(void) const { return (GetType() == OT_COAP_TYPE_NON_CONFIRMABLE); }
+    bool IsNonConfirmable(void) const { return (GetType() == kTypeConfirmable); }
 
     /**
      * This method checks if a header is a ACK message header.
@@ -502,7 +588,7 @@ public:
      * @retval FALSE  Message is not is a ACK message header.
      *
      */
-    bool IsAck(void) const { return (GetType() == OT_COAP_TYPE_ACKNOWLEDGMENT); }
+    bool IsAck(void) const { return (GetType() == kTypeAck); }
 
     /**
      * This method checks if a header is a RST message header.
@@ -511,7 +597,7 @@ public:
      * @retval FALSE  Message is not is a RST message header.
      *
      */
-    bool IsReset(void) const { return (GetType() == OT_COAP_TYPE_RESET); }
+    bool IsReset(void) const { return (GetType() == kTypeReset); }
 
     /**
      * This method creates a copy of this CoAP message.
