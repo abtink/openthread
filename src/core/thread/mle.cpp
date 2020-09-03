@@ -3899,14 +3899,14 @@ void Mle::UpdateParentSearchState(void)
 #if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_INFO) && (OPENTHREAD_CONFIG_LOG_MLE == 1)
 void Mle::Log(MessageAction aAction, MessageType aType, const Ip6::Address &aAddress)
 {
-    otLogInfoMle("%s %s (%s)", MessageActionToString(aAction), MessageTypeToString(aType, aAction),
-                 aAddress.ToString().AsCString());
+    otLogInfoMle("%s %s%s (%s)", MessageActionToString(aAction), MessageTypeToString(aType),
+                 MessageTypeActionToSuffixString(aType, aAction), aAddress.ToString().AsCString());
 }
 
 void Mle::Log(MessageAction aAction, MessageType aType, const Ip6::Address &aAddress, uint16_t aRloc)
 {
-    otLogInfoMle("%s %s (%s,0x%04x)", MessageActionToString(aAction), MessageTypeToString(aType, aAction),
-                 aAddress.ToString().AsCString(), aRloc);
+    otLogInfoMle("%s %s%s (%s,0x%04x)", MessageActionToString(aAction), MessageTypeToString(aType),
+                 MessageTypeActionToSuffixString(aType, aAction), aAddress.ToString().AsCString(), aRloc);
 }
 #endif
 
@@ -3915,8 +3915,8 @@ void Mle::LogProcessError(MessageType aType, otError aError)
 {
     if (aError != OT_ERROR_NONE)
     {
-        otLogWarnMle("Failed to process %s: %s", MessageTypeToString(aType, kMessageReceive),
-                     otThreadErrorToString(aError));
+        otLogWarnMle("Failed to process %s%s: %s", MessageTypeToString(aType),
+                     MessageTypeActionToSuffixString(aType, kMessageReceive), otThreadErrorToString(aError));
     }
 }
 
@@ -3924,7 +3924,8 @@ void Mle::LogSendError(MessageType aType, otError aError)
 {
     if (aError != OT_ERROR_NONE)
     {
-        otLogWarnMle("Failed to send %s: %s", MessageTypeToString(aType, kMessageSend), otThreadErrorToString(aError));
+        otLogWarnMle("Failed to send %s%s: %s", MessageTypeToString(aType),
+                     MessageTypeActionToSuffixString(aType, kMessageSend), otThreadErrorToString(aError));
     }
 }
 
@@ -3951,7 +3952,7 @@ const char *Mle::MessageActionToString(MessageAction aAction)
     return str;
 }
 
-const char *Mle::MessageTypeToString(MessageType aType, MessageAction aAction)
+const char *Mle::MessageTypeToString(MessageType aType)
 {
     const char *str = "Unknown";
 
@@ -3967,16 +3968,21 @@ const char *Mle::MessageTypeToString(MessageType aType, MessageAction aAction)
         str = "Child ID Request";
         break;
     case kTypeChildIdRequestShort:
-        str = "Child ID Request - short";
-        break;
     case kTypeChildIdResponse:
         str = "Child ID Response";
         break;
     case kTypeChildUpdateRequestOfParent:
-        str = (aAction == kMessageReceive) ? "Child Update Request from parent" : "Child Update Request to parent";
+#if OPENTHREAD_FTD
+    case kTypeChildUpdateRequestOfChild:
+#endif
+        str = "Child Update Request";
         break;
     case kTypeChildUpdateResponseOfParent:
-        str = (aAction == kMessageReceive) ? "Child Update Response from parent" : "Child Update Response to parent";
+#if OPENTHREAD_FTD
+    case kTypeChildUpdateResponseOfChild:
+    case kTypeChildUpdateResponseOfUnknownChild:
+#endif
+        str = "Child Update Response";
         break;
     case kTypeDataRequest:
         str = "Data Request";
@@ -3997,11 +4003,7 @@ const char *Mle::MessageTypeToString(MessageType aType, MessageAction aAction)
         str = "UDP";
         break;
     case kTypeParentRequestToRouters:
-        str = "Parent Request To routers";
-        break;
     case kTypeParentRequestToRoutersReeds:
-        str = "Parent Request to routers and REEDs";
-        break;
     case kTypeParentResponse:
         str = "Parent Response";
         break;
@@ -4017,16 +4019,6 @@ const char *Mle::MessageTypeToString(MessageType aType, MessageAction aAction)
         break;
     case kTypeAddressSolicit:
         str = "Address Solicit";
-        break;
-    case kTypeChildUpdateRequestOfChild:
-        str = (aAction == kMessageReceive) ? "Child Update Request from child" : "Child Update Request to child";
-        break;
-    case kTypeChildUpdateResponseOfChild:
-        str = (aAction == kMessageReceive) ? "Child Update Response from child" : "Child Update Response to child";
-        break;
-    case kTypeChildUpdateResponseOfUnknownChild:
-        str = (aAction == kMessageReceive) ? "Child Update Response from unknown child"
-                                           : "Child Update Response to child";
         break;
     case kTypeLinkAccept:
         str = "Link Accept";
@@ -4053,6 +4045,43 @@ const char *Mle::MessageTypeToString(MessageType aType, MessageAction aAction)
 
     return str;
 }
+
+const char *Mle::MessageTypeActionToSuffixString(MessageType aType, MessageAction aAction)
+{
+    const char *str = "";
+
+    switch (aType)
+    {
+    case kTypeChildIdRequestShort:
+        str = " - short";
+        break;
+    case kTypeChildUpdateRequestOfParent:
+    case kTypeChildUpdateResponseOfParent:
+        str = (aAction == kMessageReceive) ? " from parent" : " to parent";
+        break;
+
+    case kTypeParentRequestToRouters:
+        str = " to routers";
+        break;
+    case kTypeParentRequestToRoutersReeds:
+        str = " to routers and REEDs";
+        break;
+#if OPENTHREAD_FTD
+    case kTypeChildUpdateRequestOfChild:
+    case kTypeChildUpdateResponseOfChild:
+        str = (aAction == kMessageReceive) ? " from child" : " to child";
+        break;
+    case kTypeChildUpdateResponseOfUnknownChild:
+        str = (aAction == kMessageReceive) ? " from unknown child" : " to child";
+        break;
+#endif // OPENTHREAD_FTD
+    default:
+        break;
+    }
+
+    return str;
+}
+
 #endif // #if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_WARN) && (OPENTHREAD_CONFIG_LOG_MLE == 1)
 
 const char *Mle::RoleToString(DeviceRole aRole)
