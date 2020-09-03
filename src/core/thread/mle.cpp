@@ -3899,14 +3899,26 @@ void Mle::UpdateParentSearchState(void)
 #if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_INFO) && (OPENTHREAD_CONFIG_LOG_MLE == 1)
 void Mle::Log(MessageAction aAction, MessageType aType, const Ip6::Address &aAddress)
 {
-    otLogInfoMle("%s %s%s (%s)", MessageActionToString(aAction), MessageTypeToString(aType),
-                 MessageTypeActionToSuffixString(aType, aAction), aAddress.ToString().AsCString());
+    Log(aAction, aType, aAddress, Mac::kShortAddrInvalid);
 }
 
 void Mle::Log(MessageAction aAction, MessageType aType, const Ip6::Address &aAddress, uint16_t aRloc)
 {
-    otLogInfoMle("%s %s%s (%s,0x%04x)", MessageActionToString(aAction), MessageTypeToString(aType),
-                 MessageTypeActionToSuffixString(aType, aAction), aAddress.ToString().AsCString(), aRloc);
+    enum : uint8_t
+    {
+        kRlocStringSize = 17,
+    };
+
+    String<kRlocStringSize> rlocString;
+
+    if (aRloc != Mac::kShortAddrInvalid)
+    {
+        IgnoreError(rlocString.Set(",0x%04x", aRloc));
+    }
+
+    otLogInfoMle("%s %s%s (%s%s)", MessageActionToString(aAction), MessageTypeToString(aType),
+                 MessageTypeActionToSuffixString(aType, aAction), aAddress.ToString().AsCString(),
+                 rlocString.AsCString());
 }
 #endif
 
