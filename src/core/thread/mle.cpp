@@ -3925,19 +3925,21 @@ void Mle::Log(MessageAction aAction, MessageType aType, const Ip6::Address &aAdd
 #if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_WARN) && (OPENTHREAD_CONFIG_LOG_MLE == 1)
 void Mle::LogProcessError(MessageType aType, otError aError)
 {
-    if (aError != OT_ERROR_NONE)
-    {
-        otLogWarnMle("Failed to process %s%s: %s", MessageTypeToString(aType),
-                     MessageTypeActionToSuffixString(aType, kMessageReceive), otThreadErrorToString(aError));
-    }
+    LogError(kMessageReceive, aType, aError);
 }
 
 void Mle::LogSendError(MessageType aType, otError aError)
 {
+    LogError(kMessageSend, aType, aError);
+}
+
+void Mle::LogError(MessageAction aAction, MessageType aType, otError aError)
+{
     if (aError != OT_ERROR_NONE)
     {
-        otLogWarnMle("Failed to send %s%s: %s", MessageTypeToString(aType),
-                     MessageTypeActionToSuffixString(aType, kMessageSend), otThreadErrorToString(aError));
+        otLogWarnMle("Failed to %s %s%s: %s", aAction == kMessageSend ? "send" : "process",
+                     MessageTypeToString(aType),
+                     MessageTypeActionToSuffixString(aType, aAction), otThreadErrorToString(aError));
     }
 }
 

@@ -1803,6 +1803,7 @@ private:
 #endif
 
 #if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_WARN) && (OPENTHREAD_CONFIG_LOG_MLE == 1)
+    static void        LogError(MessageAction aAction, MessageType aType, otError aError);
     static const char *MessageActionToString(MessageAction aAction);
     static const char *MessageTypeToString(MessageType aType);
     static const char *MessageTypeActionToSuffixString(MessageType aType, MessageAction aAction);
