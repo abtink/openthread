@@ -112,60 +112,71 @@ void Message::Finish(void)
     Write(0, GetOptionStart(), &GetHelpData().mHeader);
 }
 
+uint8_t Message::EncodeOptionHeaderField(uint16_t aValue, uint8_t *&aBuffer)
+{
+    /*
+     * This method encodes a CoAP Option header field (Option Delta/Length) per
+     * RFC 7252. The returned value is a 4-bit unsigned integer. Extended fields
+     * (if needed) are written into the given buffer `aBuffer` and the pointer
+     * would also be updated.
+     *
+     * If `aValue < 13 (kOption1ByteExtensionOffset)`, it is returned as is
+     * (no extension).
+     *
+     * If `13 <= aValue < 269 (kOption2ByteExtensionOffset)`, one-byte
+     * extension is used, and the value minus 13 is written in `aBuffer` as an
+     * 8-bit unsigned integer, and `13 (kOption1ByteExtension)` is returned.
+     *
+     * If `269 <= aValue`, two-byte extension is used and the value minis 269
+     * is written as a 16-bit unsigned integer and `14 (kOption2ByteExtension)`
+     * is returned.
+     *
+     */
+
+    uint8_t rval;
+
+    if (aValue < kOption1ByteExtensionOffset)
+    {
+        rval = static_cast<uint8_t>(aValue);
+    }
+    else if (aValue < kOption2ByteExtensionOffset)
+    {
+        rval     = kOption1ByteExtension;
+        *aBuffer = static_cast<uint8_t>(aValue - kOption1ByteExtensionOffset);
+        aBuffer += sizeof(uint8_t);
+    }
+    else
+    {
+        rval = kOption2ByteExtension;
+        Encoding::BigEndian::WriteUint16(aValue - kOption2ByteExtensionOffset, aBuffer);
+        aBuffer += sizeof(uint16_t);
+    }
+
+    return rval;
+}
+
 otError Message::AppendOption(uint16_t aNumber, uint16_t aLength, const void *aValue)
 {
-    otError  error       = OT_ERROR_NONE;
-    uint16_t optionDelta = aNumber - GetHelpData().mOptionLast;
-    uint16_t optionLength;
-    uint8_t  buf[kMaxOptionHeaderSize] = {0};
-    uint8_t *cur                       = &buf[1];
+    otError  error = OT_ERROR_NONE;
+    uint16_t delta;
+    uint8_t  header[kMaxOptionHeaderSize];
+    uint16_t headerLength;
+    uint8_t *cur;
 
-    // Assure that no option is inserted out of order.
     VerifyOrExit(aNumber >= GetHelpData().mOptionLast, error = OT_ERROR_INVALID_ARGS);
+    delta = aNumber - GetHelpData().mOptionLast;
 
-    // Calculate the total option size and check the buffers.
-    optionLength = 1 + aLength;
-    optionLength += optionDelta < kOption1ByteExtensionOffset ? 0 : (optionDelta < kOption2ByteExtensionOffset ? 1 : 2);
-    optionLength += aLength < kOption1ByteExtensionOffset ? 0 : (aLength < kOption2ByteExtensionOffset ? 1 : 2);
-    VerifyOrExit(GetLength() + optionLength < kMaxHeaderLength, error = OT_ERROR_NO_BUFS);
+    cur = &header[1];
 
-    // Insert option delta.
-    if (optionDelta < kOption1ByteExtensionOffset)
-    {
-        *buf = (optionDelta << kOptionDeltaOffset) & kOptionDeltaMask;
-    }
-    else if (optionDelta < kOption2ByteExtensionOffset)
-    {
-        *buf |= kOption1ByteExtension << kOptionDeltaOffset;
-        *cur++ = (optionDelta - kOption1ByteExtensionOffset) & 0xff;
-    }
-    else
-    {
-        *buf |= kOption2ByteExtension << kOptionDeltaOffset;
-        optionDelta -= kOption2ByteExtensionOffset;
-        *cur++ = optionDelta >> 8;
-        *cur++ = optionDelta & 0xff;
-    }
+    header[0] = static_cast<uint8_t>(EncodeOptionHeaderField(delta, cur) << kOptionDeltaOffset);
+    header[0] |= static_cast<uint8_t>(EncodeOptionHeaderField(aLength, cur) << kOptionLengthOffset);
 
-    // Insert option length.
-    if (aLength < kOption1ByteExtensionOffset)
-    {
-        *buf |= aLength;
-    }
-    else if (aLength < kOption2ByteExtensionOffset)
-    {
-        *buf |= kOption1ByteExtension;
-        *cur++ = (aLength - kOption1ByteExtensionOffset) & 0xff;
-    }
-    else
-    {
-        *buf |= kOption2ByteExtension;
-        optionLength = aLength - kOption2ByteExtensionOffset;
-        *cur++       = optionLength >> 8;
-        *cur++       = optionLength & 0xff;
-    }
+    headerLength = static_cast<uint16_t>(cur - header);
 
-    SuccessOrExit(error = Append(buf, static_cast<uint16_t>(cur - buf)));
+    VerifyOrExit(static_cast<uint32_t>(GetLength()) + headerLength + aLength < kMaxHeaderLength,
+                 error = OT_ERROR_NO_BUFS);
+
+    SuccessOrExit(error = Append(header, headerLength));
     SuccessOrExit(error = Append(aValue, aLength));
 
     GetHelpData().mOptionLast = aNumber;
@@ -178,13 +189,12 @@ exit:
 
 otError Message::AppendUintOption(uint16_t aNumber, uint32_t aValue)
 {
-    uint16_t length = sizeof(aValue);
-    uint8_t *value;
+    uint8_t        buffer[sizeof(uint32_t)];
+    const uint8_t *value  = &buffer[0];
+    uint16_t       length = sizeof(uint32_t);
 
-    aValue = Encoding::BigEndian::HostSwap32(aValue);
-    value  = reinterpret_cast<uint8_t *>(&aValue);
+    Encoding::BigEndian::WriteUint32(aValue, buffer);
 
-    // skip preceding zeros
     while (value[0] == 0 && length > 0)
     {
         value++;
@@ -197,11 +207,6 @@ otError Message::AppendUintOption(uint16_t aNumber, uint32_t aValue)
 otError Message::AppendStringOption(uint16_t aNumber, const char *aValue)
 {
     return AppendOption(aNumber, static_cast<uint16_t>(strlen(aValue)), aValue);
-}
-
-otError Message::AppendObserveOption(uint32_t aObserve)
-{
-    return AppendUintOption(kOptionObserve, aObserve & 0xFFFFFF);
 }
 
 otError Message::AppendUriPathOptions(const char *aUriPath)
@@ -240,30 +245,10 @@ exit:
     return error;
 }
 
-otError Message::AppendProxyUriOption(const char *aProxyUri)
-{
-    return AppendStringOption(kOptionProxyUri, aProxyUri);
-}
-
-otError Message::AppendContentFormatOption(otCoapOptionContentFormat aContentFormat)
-{
-    return AppendUintOption(kOptionContentFormat, static_cast<uint32_t>(aContentFormat));
-}
-
-otError Message::AppendMaxAgeOption(uint32_t aMaxAge)
-{
-    return AppendUintOption(kOptionMaxAge, aMaxAge);
-}
-
-otError Message::AppendUriQueryOption(const char *aUriQuery)
-{
-    return AppendStringOption(kOptionUriQuery, aUriQuery);
-}
-
 otError Message::SetPayloadMarker(void)
 {
     otError error  = OT_ERROR_NONE;
-    uint8_t marker = 0xff;
+    uint8_t marker = kPayloadMarker;
 
     VerifyOrExit(GetLength() < kMaxHeaderLength, error = OT_ERROR_NO_BUFS);
     SuccessOrExit(error = Append(&marker, sizeof(marker)));
@@ -292,7 +277,7 @@ otError Message::ParseHeader(void)
 
     VerifyOrExit(GetTokenLength() <= kMaxTokenLength, error = OT_ERROR_PARSE);
 
-    SuccessOrExit(error = iterator.Init(this));
+    SuccessOrExit(error = iterator.Init(*this));
     for (const otCoapOption *option = iterator.GetFirstOption(); option != nullptr; option = iterator.GetNextOption())
     {
     }
@@ -325,6 +310,13 @@ otError Message::SetToken(uint8_t aTokenLength)
     IgnoreError(Random::Crypto::FillBuffer(token, aTokenLength));
 
     return SetToken(token, aTokenLength);
+}
+
+bool Message::IsTokenEqual(const Message &aMessage) const
+{
+    uint8_t tokenLength = GetTokenLength();
+
+    return ((tokenLength == aMessage.GetTokenLength()) && (memcmp(GetToken(), aMessage.GetToken(), tokenLength) == 0));
 }
 
 otError Message::SetDefaultResponseHeader(const Message &aRequest)
@@ -448,27 +440,18 @@ const char *Message::CodeToString(void) const
 }
 #endif // OPENTHREAD_CONFIG_COAP_API_ENABLE
 
-otError OptionIterator::Init(const Message *aMessage)
+otError OptionIterator::Init(const Message &aMessage)
 {
-    otError err = OT_ERROR_NONE;
+    otError error = OT_ERROR_NONE;
 
-    /*
-     * Check that:
-     *   Length - Offset: the length of the payload
-     * is greater than:
-     *   Start position of options
-     *
-     * → Check options start before the message ends, or bail ::Init with
-     *   OT_ERROR_PARSE as the reason.
-     */
-    VerifyOrExit(aMessage->GetLength() - aMessage->GetHelpData().mHeaderOffset >= aMessage->GetOptionStart(),
-                 err = OT_ERROR_PARSE);
+    VerifyOrExit(aMessage.GetLength() - aMessage.GetHelpData().mHeaderOffset >= aMessage.GetOptionStart(),
+                 error = OT_ERROR_PARSE);
 
-    mMessage = aMessage;
+    mMessage = &aMessage;
     GetFirstOption();
 
 exit:
-    return err;
+    return error;
 }
 
 const otCoapOption *OptionIterator::GetFirstOptionMatching(uint16_t aOption)
@@ -493,7 +476,7 @@ const otCoapOption *OptionIterator::GetFirstOption(void)
     const otCoapOption *option  = nullptr;
     const Message &     message = GetMessage();
 
-    ClearOption();
+    GetOption().Clear();
 
     mNextOptionOffset = message.GetHelpData().mHeaderOffset + message.GetOptionStart();
 

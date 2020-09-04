@@ -404,16 +404,14 @@ public:
      * @retval FALSE  If Tokens differ in length or value.
      *
      */
-    bool IsTokenEqual(const Message &aMessage) const
-    {
-        return ((GetTokenLength() == aMessage.GetTokenLength()) &&
-                (memcmp(GetToken(), aMessage.GetToken(), GetTokenLength()) == 0));
-    }
+    bool IsTokenEqual(const Message &aMessage) const;
 
     /**
      * This method appends a CoAP option.
      *
-     * @param[in]  aOption  The CoAP Option.
+     * @param[in] aNumber   The CoAP Option number.
+     * @param[in] aLength   The CoAP Option length.
+     * @param[in] aValue    A pointer to the CoAP Option value (@p aLength bytes are used as Option value).
      *
      * @retval OT_ERROR_NONE          Successfully appended the option.
      * @retval OT_ERROR_INVALID_ARGS  The option type is not equal or greater than the last option type.
@@ -423,8 +421,7 @@ public:
     otError AppendOption(uint16_t aNumber, uint16_t aLength, const void *aValue);
 
     /**
-     * This method appends an unsigned integer CoAP option as specified in
-     * https://tools.ietf.org/html/rfc7252#section-3.2
+     * This method appends an unsigned integer CoAP option as specified in RFC-7252 section-3.2
      *
      * @param[in]  aNumber  The CoAP Option number.
      * @param[in]  aValue   The CoAP Option unsigned integer value.
@@ -458,7 +455,7 @@ public:
      * @retval OT_ERROR_INVALID_ARGS  The option type is not equal or greater than the last option type.
      * @retval OT_ERROR_NO_BUFS       The option length exceeds the buffer size.
      */
-    otError AppendObserveOption(uint32_t aObserve);
+    otError AppendObserveOption(uint32_t aObserve) { return AppendUintOption(kOptionObserve, aObserve & kObserveMask); }
 
     /**
      * This method appends a Uri-Path option.
@@ -497,7 +494,7 @@ public:
      * @retval OT_ERROR_NO_BUFS       The option length exceeds the buffer size.
      *
      */
-    otError AppendProxyUriOption(const char *aProxyUri);
+    otError AppendProxyUriOption(const char *aProxyUri) { return AppendStringOption(kOptionProxyUri, aProxyUri); }
 
     /**
      * This method appends a Content-Format option.
@@ -509,7 +506,10 @@ public:
      * @retval OT_ERROR_NO_BUFS       The option length exceeds the buffer size.
      *
      */
-    otError AppendContentFormatOption(otCoapOptionContentFormat aContentFormat);
+    otError AppendContentFormatOption(otCoapOptionContentFormat aContentFormat)
+    {
+        return AppendUintOption(kOptionContentFormat, static_cast<uint32_t>(aContentFormat));
+    }
 
     /**
      * This method appends a Max-Age option.
@@ -520,7 +520,7 @@ public:
      * @retval OT_ERROR_INVALID_ARGS  The option type is not equal or greater than the last option type.
      * @retval OT_ERROR_NO_BUFS       The option length exceeds the buffer size.
      */
-    otError AppendMaxAgeOption(uint32_t aMaxAge);
+    otError AppendMaxAgeOption(uint32_t aMaxAge) { return AppendUintOption(kOptionMaxAge, aMaxAge); }
 
     /**
      * This method appends a single Uri-Query option.
@@ -531,7 +531,7 @@ public:
      * @retval OT_ERROR_INVALID_ARGS  The option type is not equal or greater than the last option type.
      * @retval OT_ERROR_NO_BUFS       The option length exceeds the buffer size.
      */
-    otError AppendUriQueryOption(const char *aUriQuery);
+    otError AppendUriQueryOption(const char *aUriQuery) { return AppendStringOption(kOptionUriQuery, aUriQuery); }
 
     /**
      * This method adds Payload Marker indicating beginning of the payload to the CoAP header.
@@ -789,8 +789,10 @@ private:
         kOptionLengthMask   = 0xf << kOptionLengthOffset,
 
         kMaxOptionHeaderSize  = 5,
-        kOption1ByteExtension = 13, // Indicates a 1 byte extension (RFC 7252).
-        kOption2ByteExtension = 14, // Indicates a 2 byte extension (RFC 7252).
+        kOption1ByteExtension = 13, // Indicates a one-byte extension.
+        kOption2ByteExtension = 14, // Indicates a two-byte extension.
+
+        kPayloadMarker = 0xff,
 
         kHelpDataAlignment = sizeof(uint16_t), ///< Alignment of help data.
     };
@@ -811,9 +813,10 @@ private:
         kBlockNumOffset = 4,
     };
 
-    enum
+    enum : uint32_t
     {
-        kBlockNumMax = 0xFFFFF,
+        kObserveMask = 0xffffff,
+        kBlockNumMax = 0xffff,
     };
 
     /**
@@ -858,6 +861,8 @@ private:
         GetHelpData().mHeader.mVersionTypeToken &= ~kTokenLengthMask;
         GetHelpData().mHeader.mVersionTypeToken |= ((aTokenLength << kTokenLengthOffset) & kTokenLengthMask);
     }
+
+    uint8_t EncodeOptionHeaderField(uint16_t aValue, uint8_t *&aBuffer);
 };
 
 /**
@@ -911,31 +916,73 @@ public:
 };
 
 /**
- * This class acts as an iterator for CoAP options.
+ * This class represents a CoAP option.
  *
  */
-class OptionIterator : public ::otCoapOptionIterator
+class Option : public otCoapOption, public Clearable<Option>
 {
 public:
     /**
-     * Initialize the state of the iterator to iterate over the given message.
+     * This method gets the CoAP Option Number.
      *
-     * @retval  OT_ERROR_NONE   Successfully initialized
-     * @retval  OT_ERROR_PARSE  Message state is inconsistent
+     * @returns The CoAP Option Number.
      *
      */
-    otError Init(const Message *aMessage);
+    uint16_t GetNumber(void) const { return mNumber; }
+
+    /**
+     * This method sets the CoAP Option Number.
+     *
+     * @param[in] aNumber The CoAP Option Number.
+     *
+     */
+    void SetNumber(uint16_t aNumber) { mNumber = aNumber; }
+
+    /**
+     * This method gets the CoAP Option Length (length of Option Value in bytes).
+     *
+     * @returns The CoAP Option Length (in bytes).
+     *
+     */
+    uint16_t GetLength(void) const { return mLength; }
+
+    /**
+     * This method sets the CoAP Option Length (length of Option Value in bytes).
+     *
+     * @param[in] aLength   The CoAP Option Length.
+     *
+     */
+    void SetLength(uint16_t aLength) { mLength = aLength; }
+};
+
+/**
+ * This class acts as an iterator for CoAP options.
+ *
+ */
+class OptionIterator : public otCoapOptionIterator
+{
+public:
+    /**
+     * This method initializes the iterator to iterate over a given message.
+     *
+     * @param[in] aMessage  The CoAP message to iterate.
+     *
+     * @retval  OT_ERROR_NONE   Successfully initialized.
+     * @retval  OT_ERROR_PARSE  CoAP Option header in @p aMessage is not well-formed.
+     *
+     */
+    otError Init(const Message &aMessage);
 
     /**
      * This method returns a pointer to the first option matching the given option number.
      *
-     * The internal option pointer is advanced until matching option is seen, if no matching
-     * option is seen, the iterator will advance to the end of the options block.
+     * The internal option pointer is advanced until matching option is seen, if no matching option is seen, the
+     * iterator will advance to the end of the options block.
      *
-     * @param[in]   aOption         Option number to look for.
+     * @param[in] aOption         Option number to look for.
      *
-     * @returns A pointer to the first matching option. If no option matching @p aOption is seen, nullptr pointer is
-     *          returned.
+     * @returns A pointer to the first matching option, or nullptr if no match is found.
+     *
      */
     const otCoapOption *GetFirstOptionMatching(uint16_t aOption);
 
@@ -992,6 +1039,7 @@ public:
 
 private:
     void           ClearOption(void) { memset(&mOption, 0, sizeof(mOption)); }
+    Option &       GetOption(void) { return static_cast<Option &>(mOption); }
     const Message &GetMessage(void) const { return *static_cast<const Message *>(mMessage); }
 };
 
