@@ -112,7 +112,7 @@ void Message::Finish(void)
     Write(0, GetOptionStart(), &GetHelpData().mHeader);
 }
 
-uint8_t Message::EncodeOptionHeaderField(uint16_t aValue, uint8_t *&aBuffer)
+uint8_t Message::WriteExtendedOptionField(uint16_t aValue, uint8_t *&aBuffer)
 {
     /*
      * This method encodes a CoAP Option header field (Option Delta/Length) per
@@ -168,8 +168,8 @@ otError Message::AppendOption(uint16_t aNumber, uint16_t aLength, const void *aV
 
     cur = &header[1];
 
-    header[0] = static_cast<uint8_t>(EncodeOptionHeaderField(delta, cur) << kOptionDeltaOffset);
-    header[0] |= static_cast<uint8_t>(EncodeOptionHeaderField(aLength, cur) << kOptionLengthOffset);
+    header[0] = static_cast<uint8_t>(WriteExtendedOptionField(delta, cur) << kOptionDeltaOffset);
+    header[0] |= static_cast<uint8_t>(WriteExtendedOptionField(aLength, cur) << kOptionLengthOffset);
 
     headerLength = static_cast<uint16_t>(cur - header);
 
@@ -440,6 +440,169 @@ const char *Message::CodeToString(void) const
 }
 #endif // OPENTHREAD_CONFIG_COAP_API_ENABLE
 
+
+otError Option::Iterator::Init(const Message &aMessage)
+{
+    otError  error = OT_ERROR_PARSE;
+    uint32_t offset;
+
+    GetOption().Clear();
+    mMessage = &aMessage;
+
+    offset = static_cast<uint32_t>(aMessage.GetHelpData().mHeaderOffset) + aMessage.GetOptionStart();
+    VerifyOrExit(offset < aMessage.GetLength(), mNextOptionOffset = 0);
+
+    mNextOptionOffset = static_cast<uint16_t>(offset);
+    error             = Advance();
+
+exit:
+    return error;
+}
+
+otError Option::Iterator::Advance(void)
+{
+    otError  error = OT_ERROR_NONE;
+    uint8_t  headerByte;
+    uint16_t optionDelta;
+    uint16_t optionLength;
+
+    VerifyOrExit(IsDone(), OT_NOOP);
+
+    error = Read(sizeof(uint8_t), &headerByte);
+
+    if ((error != OT_ERROR_NONE) || (headerByte == Message::kPayloadMarker))
+    {
+        // Payload Marker indicates end of options and start of payload.
+        // Absence of a Payload Marker indicates a zero-length payload.
+
+        MarkAsDone();
+
+        if (error == OT_ERROR_NONE)
+        {
+            // The presence of a marker followed by a zero-length payload
+            // MUST be processed as a message format error.
+
+            VerifyOrExit(mNextOptionOffset < GetMessage().GetLength(), error = OT_ERROR_PARSE);
+        }
+
+        ExitNow(error = OT_ERROR_NONE);
+    }
+
+    optionDelta = (headerByte & Message::kOptionDeltaMask) >> Message::kOptionDeltaOffset;
+    SuccessOrExit(error = ReadExtendedOptionField(optionDelta));
+
+    optionLength = (headerByte & Message::kOptionLengthMask) >> Message::kOptionLengthOffset;
+    SuccessOrExit(error = ReadExtendedOptionField(optionLength));
+
+    VerifyOrExit(optionLength <= GetMessage().GetLength() - mNextOptionOffset, error = OT_ERROR_PARSE);
+    mNextOptionOffset += optionLength;
+
+    mOption.mNumber += optionDelta;
+    mOption.mLength = optionLength;
+
+exit:
+    if (error != OT_ERROR_NONE)
+    {
+        mNextOptionOffset = kNextOptionOffsetParseError;
+    }
+
+    return error;
+}
+
+otError Option::Iterator::GetValue(void *aValue) const
+{
+    otError  error = OT_ERROR_NONE;
+    uint16_t bytesRead;
+
+    VerifyOrExit(!IsDone(), error = OT_ERROR_NOT_FOUND);
+    VerifyOrExit(mNextOptionOffset != kNextOptionOffsetParseError, error = OT_ERROR_PARSE);
+
+    bytesRead = GetMessage().Read(mNextOptionOffset - mOption.mLength, mOption.mLength, aValue);
+    VerifyOrExit(bytesRead == mOption.mLength, error = OT_ERROR_PARSE);
+
+exit:
+    return error;
+}
+
+otError Option::Iterator::GetUintValue(uint64_t &aUintValue) const
+{
+    otError error = OT_ERROR_NONE;
+    uint8_t buffer[sizeof(uint64_t)];
+
+    VerifyOrExit(mOption.mLength <= sizeof(uint64_t), error = OT_ERROR_NO_BUFS);
+
+    SuccessOrExit(error = GetValue(buffer));
+
+    aUintValue = 0;
+
+    for (uint16_t pos = 0; pos < mOption.mLength; pos++)
+    {
+        aUintValue <<= CHAR_BIT;
+        aUintValue |= buffer[pos];
+    }
+
+exit:
+    return error;
+}
+
+otError Option::Iterator::Read(uint16_t aLength, void *aBuffer)
+{
+    // Reads `aLength` bytes from the message into `aBuffer` at
+    // `mNextOptionOffset` and updates the `mNextOptionOffset` on a
+    // successful read (i.e., when entire `aLength` bytes can be read).
+
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(GetMessage().Read(mNextOptionOffset, aLength, aBuffer) == aLength, error = OT_ERROR_PARSE);
+    mNextOptionOffset += aLength;
+
+exit:
+    return error;
+}
+
+otError Option::Iterator::ReadExtendedOptionField(uint16_t &aValue)
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(aValue >= Message::kOption1ByteExtension, OT_NOOP);
+
+    if (aValue == Message::kOption1ByteExtension)
+    {
+        uint8_t value8;
+
+        SuccessOrExit(error = Read(sizeof(uint8_t), &value8));
+        aValue = static_cast<uint16_t>(value8) + Message::kOption1ByteExtensionOffset;
+    }
+    else if (aValue == Message::kOption2ByteExtension)
+    {
+        uint16_t value16;
+
+        SuccessOrExit(error = Read(sizeof(uint16_t), &value16));
+        value16 = Encoding::BigEndian::HostSwap16(value16);
+        aValue  = value16 + Message::kOption2ByteExtensionOffset;
+        VerifyOrExit(aValue > value16, error = OT_ERROR_PARSE);
+    }
+    else
+    {
+        error = OT_ERROR_PARSE;
+    }
+
+exit:
+    return error;
+}
+
+otError Option::Iterator::InitOrAdvance(const Message *aMessage, uint16_t aNumber)
+{
+    otError error = (aMessage != nullptr) ? Init(*aMessage) : Advance();
+
+    while ((error == OT_ERROR_NONE) && !IsDone() && (mOption.mNumber != aNumber))
+    {
+        error = Advance();
+    }
+
+    return error;
+}
+
 otError OptionIterator::Init(const Message &aMessage)
 {
     otError error = OT_ERROR_NONE;
@@ -496,7 +659,6 @@ const otCoapOption *OptionIterator::GetNextOptionMatching(uint16_t aOption)
     {
         if (option->mNumber == aOption)
         {
-            // Found, stop searching
             rval = option;
             break;
         }

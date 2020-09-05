@@ -66,6 +66,7 @@ using ot::Encoding::BigEndian::HostSwap16;
  *
  */
 
+class Option;
 class OptionIterator;
 
 /**
@@ -159,6 +160,7 @@ enum : uint16_t
  */
 class Message : public ot::Message
 {
+    friend class Option;
     friend class OptionIterator;
 
 public:
@@ -788,7 +790,8 @@ private:
         kOptionLengthOffset = 0,
         kOptionLengthMask   = 0xf << kOptionLengthOffset,
 
-        kMaxOptionHeaderSize  = 5,
+        kMaxOptionHeaderSize = 5,
+
         kOption1ByteExtension = 13, // Indicates a one-byte extension.
         kOption2ByteExtension = 14, // Indicates a two-byte extension.
 
@@ -862,7 +865,7 @@ private:
         GetHelpData().mHeader.mVersionTypeToken |= ((aTokenLength << kTokenLengthOffset) & kTokenLengthMask);
     }
 
-    uint8_t EncodeOptionHeaderField(uint16_t aValue, uint8_t *&aBuffer);
+    uint8_t WriteExtendedOptionField(uint16_t aValue, uint8_t *&aBuffer);
 };
 
 /**
@@ -922,6 +925,75 @@ public:
 class Option : public otCoapOption, public Clearable<Option>
 {
 public:
+    /**
+     * This class represents an iterator for CoAP options.
+     *
+     */
+    class Iterator : public otCoapOptionIterator
+    {
+    public:
+        /**
+         * This method initializes the iterator to iterate over a given message.
+         *
+         * @param[in] aMessage  The CoAP message to iterate.
+         *
+         * @retval  OT_ERROR_NONE   Successfully initialized.
+         * @retval  OT_ERROR_PARSE  CoAP Option header in @p aMessage is not well-formed.
+         *
+         */
+        otError Init(const Message &aMessage);
+
+        otError Init(const Message &aMessage, uint16_t aNumber) { return InitOrAdvance(&aMessage, aNumber); }
+
+        bool IsDone(void) const { return mOption.mLength == kIteratorDoneLength; }
+
+        otError Advance(void);
+        otError Advance(uint16_t aNumber) { return InitOrAdvance(nullptr, aNumber); }
+
+        const Message &GetMessage(void) const { return *static_cast<const Message *>(mMessage); }
+
+        const Option &GetOption(void) const { return static_cast<const Option &>(mOption); }
+
+        /**
+         * This method reads the current Option Value into @p aValue.
+         *
+         * @param[out]  aValue   The pointer to a buffer to copy the Option Value. The buffer is assumed to be
+         *                       sufficiently large (i.e. at least `GetOption().GetLength()`).
+         *
+         * @retval  OT_ERROR_NONE       Successfully read the Option Value.
+         * @retval  OT_ERROR_NOT_FOUND  No more options, mNextOptionOffset is set to offset of payload.
+         *
+         */
+        otError GetValue(void *aValue) const;
+
+        /**
+         * This function fills current option value into @p aValue.  The option is assumed to be an unsigned integer.
+         *
+         * @param[out]  aValue          Buffer to store the option value.
+         *
+         * @retval  OT_ERROR_NONE       Successfully read the Option value.
+         * @retval  OT_ERROR_NOT_FOUND  No more options, aIterator->mNextOptionOffset is set to offset of payload.
+         * @retval  OT_ERROR_NO_BUFS    Value is too long to fit in a uint64_t.
+         *
+         */
+        otError GetUintValue(uint64_t &aValue) const;
+
+        uint16_t GetPayloadMessageOffset(void) const;
+
+    private:
+        enum : uint16_t
+        {
+            kIteratorDoneLength         = 0xffff, // `mOption.mLength` value to indicate iterator is done.
+            kNextOptionOffsetParseError = 0,      // Special `mNextOptionOffset` value to indicate a parse error.
+        };
+
+        void    MarkAsDone(void) { mOption.mLength = kIteratorDoneLength; }
+        Option &GetOption(void) { return static_cast<Option &>(mOption); }
+        otError Read(uint16_t aLength, void *aBuffer);
+        otError ReadExtendedOptionField(uint16_t &aValue);
+        otError InitOrAdvance(const Message *aMessage, uint16_t aNumber);
+    };
+
     /**
      * This method gets the CoAP Option Number.
      *
