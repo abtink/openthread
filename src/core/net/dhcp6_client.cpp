@@ -290,11 +290,7 @@ exit:
     if (message != nullptr)
     {
         otLogWarnIp6("Failed to send DHCPv6 Solicit: %s", otThreadErrorToString(error));
-
-        if (error != OT_ERROR_NONE)
-        {
-            message->Free();
-        }
+        FreeMessage(message);
     }
 }
 

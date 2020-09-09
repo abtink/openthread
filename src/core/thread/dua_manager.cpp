@@ -507,10 +507,7 @@ exit:
         UpdateCheckDelay(Mle::kNoBufDelay);
     }
 
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
+    FreeMessageOnError(message, error);
 
     otLogInfoDua("Sent DUA.req for DUA %s: %s", dua.ToString().AsCString(), otThreadErrorToString(error));
 }
@@ -678,10 +675,7 @@ exit:
         otLogWarnDua("Sent ADDR_NTF for child %04x DUA %s Error %s", aChild.GetRloc16(),
                      aAddress.ToString().AsCString(), otThreadErrorToString(error));
 
-        if (message != nullptr)
-        {
-            message->Free();
-        }
+        FreeMessage(message);
     }
 }
 

@@ -201,11 +201,7 @@ exit:
     if (error != OT_ERROR_NONE)
     {
         otLogInfoMeshCoP("Failed to send scan results: %s", otThreadErrorToString(error));
-
-        if (message != nullptr)
-        {
-            message->Free();
-        }
+        FreeMessage(message);
     }
 
     mActive = false;

@@ -158,10 +158,7 @@ exit:
 
     if (error != OT_ERROR_NONE)
     {
-        if (message)
-        {
-            message->Free();
-        }
+        FreeMessage(message);
 
         if (messageCopy)
         {
@@ -199,13 +196,7 @@ Message *Client::CopyAndEnqueueMessage(const Message &aMessage, const QueryMetad
     mRetransmissionTimer.FireAtIfEarlier(aQueryMetadata.mTransmissionTime);
 
 exit:
-
-    if (error != OT_ERROR_NONE && messageCopy != nullptr)
-    {
-        messageCopy->Free();
-        messageCopy = nullptr;
-    }
-
+    FreeAndNullMessageOnError(messageCopy, error);
     return messageCopy;
 }
 
@@ -245,11 +236,7 @@ exit:
     if (error != OT_ERROR_NONE)
     {
         otLogWarnIp6("Failed to send SNTP request: %s", otThreadErrorToString(error));
-
-        if (messageCopy != nullptr)
-        {
-            messageCopy->Free();
-        }
+        FreeMessage(messageCopy);
     }
 }
 
