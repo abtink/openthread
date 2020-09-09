@@ -549,12 +549,7 @@ otError AddressResolver::SendAddressQuery(const Ip6::Address &aEid)
 exit:
 
     Get<TimeTicker>().RegisterReceiver(TimeTicker::kAddressResolver);
-
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
-
+    FreeMessageOnError(message, error);
     return error;
 }
 
@@ -666,15 +661,11 @@ void AddressResolver::SendAddressError(const Ip6::Address &            aTarget,
     otLogInfoArp("Sending address error for target %s", aTarget.ToString().AsCString());
 
 exit:
+    FreeMessageOnError(message, error);
 
     if (error != OT_ERROR_NONE)
     {
         otLogInfoArp("Failed to send address error: %s", otThreadErrorToString(error));
-
-        if (message != nullptr)
-        {
-            message->Free();
-        }
     }
 }
 
@@ -827,11 +818,7 @@ void AddressResolver::SendAddressQueryResponse(const Ip6::Address &            a
     otLogInfoArp("Sending address notification for target %s", aTarget.ToString().AsCString());
 
 exit:
-
-    if (error != OT_ERROR_NONE && message != nullptr)
-    {
-        message->Free();
-    }
+    FreeMessageOnError(message, error);
 }
 
 void AddressResolver::HandleTimeTick(void)
