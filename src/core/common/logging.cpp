@@ -50,6 +50,55 @@
 extern "C" {
 #endif
 
+#if OPENTHREAD_CONFIG_LOG_PREPEND_REGION
+const char *const _OT_LOG_REGION_PREFIX[] = {
+    "---------: ", // (0)
+    "-API-----: ", // (1)  OT_LOG_REGION_API
+    "-MLE-----: ", // (2)  OT_LOG_REGION_MLE
+    "-ARP-----: ", // (3)  OT_LOG_REGION_ARP
+    "-N-DATA--: ", // (4)  OT_LOG_REGION_NET_DATA
+    "-ICMP----: ", // (5)  OT_LOG_REGION_ICMP
+    "-IP6-----: ", // (6)  OT_LOG_REGION_IP6
+    "-MAC-----: ", // (7)  OT_LOG_REGION_MAC
+    "-MEM-----: ", // (8)  OT_LOG_REGION_MEM
+    "-NCP-----: ", // (9)  OT_LOG_REGION_NCP
+    "-MESH-CP-: ", // (10) OT_LOG_REGION_MESH_COP
+    "-DIAG----: ", // (11) OT_LOG_REGION_NET_DIAG
+    "-PLAT----: ", // (12) OT_LOG_REGION_PLATFORM
+    "-COAP----: ", // (13) OT_LOG_REGION_COAP
+    "-CLI-----: ", // (14) OT_LOG_REGION_CLI
+    "-CORE----: ", // (15) OT_LOG_REGION_CORE
+    "-UTIL----: ", // (16) OT_LOG_REGION_UTIL
+    "-BBR-----: ", // (17) OT_LOG_REGION_BBR
+    "-MLR-----: ", // (18) OT_LOG_REGION_MLR
+    "-DUA-----: ", // (19) OT_LOG_REGION_DUA
+};
+
+#if OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL
+const char *const _OT_LOG_LEVEL_PREFIX[] = {
+    "[NONE]", // (0) OT_LOG_LEVEL_NONE
+    "[CRIT]", // (1) OT_LOG_LEVEL_CRIT
+    "[WARN]", // (2) OT_LOG_LEVEL_WARN
+    "[NOTE]", // (3) OT_LOG_LEVEL_NOTE
+    "[INFO]", // (4) OT_LOG_LEVEL_INFO
+    "[DEBG]", // (5) OT_LOG_LEVEL_DEBG
+};
+#endif
+
+#else // OPENTHREAD_CONFIG_LOG_PREPEND_REGION
+
+#if OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL
+const char *const _OT_LOG_LEVEL_PREFIX[] = {
+    "[NONE]: ", // (0) OT_LOG_LEVEL_NONE
+    "[CRIT]: ", // (1) OT_LOG_LEVEL_CRIT
+    "[WARN]: ", // (2) OT_LOG_LEVEL_WARN
+    "[NOTE]: ", // (3) OT_LOG_LEVEL_NOTE
+    "[INFO]: ", // (4) OT_LOG_LEVEL_INFO
+    "[DEBG]: ", // (5) OT_LOG_LEVEL_DEBG
+};
+#endif
+#endif // OPENTHREAD_CONFIG_LOG_PREPEND_REGION
+
 #if OPENTHREAD_CONFIG_LOG_PKT_DUMP == 1
 /**
  * This static method outputs a line of the memory dump.
@@ -206,40 +255,6 @@ const char *otThreadErrorToString(otError aError)
     {
         retval = "UnknownErrorType";
     }
-    return retval;
-}
-
-const char *otLogLevelToPrefixString(otLogLevel aLogLevel)
-{
-    const char *retval = "";
-
-    switch (aLogLevel)
-    {
-    case OT_LOG_LEVEL_NONE:
-        retval = _OT_LEVEL_NONE_PREFIX;
-        break;
-
-    case OT_LOG_LEVEL_CRIT:
-        retval = _OT_LEVEL_CRIT_PREFIX;
-        break;
-
-    case OT_LOG_LEVEL_WARN:
-        retval = _OT_LEVEL_WARN_PREFIX;
-        break;
-
-    case OT_LOG_LEVEL_NOTE:
-        retval = _OT_LEVEL_NOTE_PREFIX;
-        break;
-
-    case OT_LOG_LEVEL_INFO:
-        retval = _OT_LEVEL_INFO_PREFIX;
-        break;
-
-    case OT_LOG_LEVEL_DEBG:
-        retval = _OT_LEVEL_DEBG_PREFIX;
-        break;
-    }
-
     return retval;
 }
 

@@ -47,74 +47,6 @@ extern "C" {
 #endif
 
 /**
- * Log level prefix string definitions.
- *
- */
-#if OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL
-#define _OT_LEVEL_NONE_PREFIX "[NONE]"
-#define _OT_LEVEL_CRIT_PREFIX "[CRIT]"
-#define _OT_LEVEL_WARN_PREFIX "[WARN]"
-#define _OT_LEVEL_NOTE_PREFIX "[NOTE]"
-#define _OT_LEVEL_INFO_PREFIX "[INFO]"
-#define _OT_LEVEL_DEBG_PREFIX "[DEBG]"
-#define _OT_REGION_SUFFIX ": "
-#else
-#define _OT_LEVEL_NONE_PREFIX ""
-#define _OT_LEVEL_CRIT_PREFIX ""
-#define _OT_LEVEL_WARN_PREFIX ""
-#define _OT_LEVEL_NOTE_PREFIX ""
-#define _OT_LEVEL_INFO_PREFIX ""
-#define _OT_LEVEL_DEBG_PREFIX ""
-#define _OT_REGION_SUFFIX
-#endif
-
-/**
- * Log region prefix string definitions.
- *
- */
-#if OPENTHREAD_CONFIG_LOG_PREPEND_REGION
-#define _OT_REGION_API_PREFIX "-API-----: "
-#define _OT_REGION_MLE_PREFIX "-MLE-----: "
-#define _OT_REGION_ARP_PREFIX "-ARP-----: "
-#define _OT_REGION_NET_DATA_PREFIX "-N-DATA--: "
-#define _OT_REGION_ICMP_PREFIX "-ICMP----: "
-#define _OT_REGION_IP6_PREFIX "-IP6-----: "
-#define _OT_REGION_MAC_PREFIX "-MAC-----: "
-#define _OT_REGION_MEM_PREFIX "-MEM-----: "
-#define _OT_REGION_NCP_PREFIX "-NCP-----: "
-#define _OT_REGION_MESH_COP_PREFIX "-MESH-CP-: "
-#define _OT_REGION_NET_DIAG_PREFIX "-DIAG----: "
-#define _OT_REGION_PLATFORM_PREFIX "-PLAT----: "
-#define _OT_REGION_COAP_PREFIX "-COAP----: "
-#define _OT_REGION_CLI_PREFIX "-CLI-----: "
-#define _OT_REGION_CORE_PREFIX "-CORE----: "
-#define _OT_REGION_UTIL_PREFIX "-UTIL----: "
-#define _OT_REGION_BBR_PREFIX "-BBR-----: "
-#define _OT_REGION_MLR_PREFIX "-MLR-----: "
-#define _OT_REGION_DUA_PREFIX "-DUA-----: "
-#else
-#define _OT_REGION_API_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_MLE_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_ARP_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_NET_DATA_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_ICMP_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_IP6_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_MAC_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_MEM_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_NCP_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_MESH_COP_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_NET_DIAG_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_PLATFORM_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_COAP_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_CLI_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_CORE_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_UTIL_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_BBR_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_MLR_PREFIX _OT_REGION_SUFFIX
-#define _OT_REGION_DUA_PREFIX _OT_REGION_SUFFIX
-#endif
-
-/**
  * @def otLogCrit
  *
  * Logging at log level critical.
@@ -124,7 +56,7 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_CRIT
-#define otLogCrit(aRegion, ...) _otLogFormatter(OT_LOG_LEVEL_CRIT, aRegion, _OT_LEVEL_CRIT_PREFIX __VA_ARGS__, NULL)
+#define otLogCrit(aRegion, ...) _otLogFormatter(OT_LOG_LEVEL_CRIT, aRegion, __VA_ARGS__, NULL)
 #else
 #define otLogCrit(aRegion, ...)
 #endif
@@ -139,7 +71,7 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_WARN
-#define otLogWarn(aRegion, ...) _otLogFormatter(OT_LOG_LEVEL_WARN, aRegion, _OT_LEVEL_WARN_PREFIX __VA_ARGS__, NULL)
+#define otLogWarn(aRegion, ...) _otLogFormatter(OT_LOG_LEVEL_WARN, aRegion, __VA_ARGS__, NULL)
 #else
 #define otLogWarn(aRegion, ...)
 #endif
@@ -154,7 +86,7 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_NOTE
-#define otLogNote(aRegion, ...) _otLogFormatter(OT_LOG_LEVEL_NOTE, aRegion, _OT_LEVEL_NOTE_PREFIX __VA_ARGS__, NULL)
+#define otLogNote(aRegion, ...) _otLogFormatter(OT_LOG_LEVEL_NOTE, aRegion, __VA_ARGS__, NULL)
 #else
 #define otLogNote(aRegion, ...)
 #endif
@@ -169,7 +101,7 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_INFO
-#define otLogInfo(aRegion, ...) _otLogFormatter(OT_LOG_LEVEL_INFO, aRegion, _OT_LEVEL_INFO_PREFIX __VA_ARGS__, NULL)
+#define otLogInfo(aRegion, ...) _otLogFormatter(OT_LOG_LEVEL_INFO, aRegion, __VA_ARGS__, NULL)
 #else
 #define otLogInfo(aRegion, ...)
 #endif
@@ -184,7 +116,7 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_DEBG
-#define otLogDebg(aRegion, ...) _otLogFormatter(OT_LOG_LEVEL_DEBG, aRegion, _OT_LEVEL_DEBG_PREFIX __VA_ARGS__, NULL)
+#define otLogDebg(aRegion, ...) _otLogFormatter(OT_LOG_LEVEL_DEBG, aRegion, __VA_ARGS__, NULL)
 #else
 #define otLogDebg(aRegion, ...)
 #endif
@@ -234,11 +166,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_API == 1
-#define otLogCritApi(...) otLogCrit(OT_LOG_REGION_API, _OT_REGION_API_PREFIX __VA_ARGS__)
-#define otLogWarnApi(...) otLogWarn(OT_LOG_REGION_API, _OT_REGION_API_PREFIX __VA_ARGS__)
-#define otLogNoteApi(...) otLogNote(OT_LOG_REGION_API, _OT_REGION_API_PREFIX __VA_ARGS__)
-#define otLogInfoApi(...) otLogInfo(OT_LOG_REGION_API, _OT_REGION_API_PREFIX __VA_ARGS__)
-#define otLogDebgApi(...) otLogDebg(OT_LOG_REGION_API, _OT_REGION_API_PREFIX __VA_ARGS__)
+#define otLogCritApi(...) otLogCrit(OT_LOG_REGION_API, __VA_ARGS__)
+#define otLogWarnApi(...) otLogWarn(OT_LOG_REGION_API, __VA_ARGS__)
+#define otLogNoteApi(...) otLogNote(OT_LOG_REGION_API, __VA_ARGS__)
+#define otLogInfoApi(...) otLogInfo(OT_LOG_REGION_API, __VA_ARGS__)
+#define otLogDebgApi(...) otLogDebg(OT_LOG_REGION_API, __VA_ARGS__)
 #else
 #define otLogCritApi(...)
 #define otLogWarnApi(...)
@@ -293,11 +225,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_MESHCOP == 1
-#define otLogCritMeshCoP(...) otLogCrit(OT_LOG_REGION_MESH_COP, _OT_REGION_MESH_COP_PREFIX __VA_ARGS__)
-#define otLogWarnMeshCoP(...) otLogWarn(OT_LOG_REGION_MESH_COP, _OT_REGION_MESH_COP_PREFIX __VA_ARGS__)
-#define otLogNoteMeshCoP(...) otLogNote(OT_LOG_REGION_MESH_COP, _OT_REGION_MESH_COP_PREFIX __VA_ARGS__)
-#define otLogInfoMeshCoP(...) otLogInfo(OT_LOG_REGION_MESH_COP, _OT_REGION_MESH_COP_PREFIX __VA_ARGS__)
-#define otLogDebgMeshCoP(...) otLogDebg(OT_LOG_REGION_MESH_COP, _OT_REGION_MESH_COP_PREFIX __VA_ARGS__)
+#define otLogCritMeshCoP(...) otLogCrit(OT_LOG_REGION_MESH_COP, __VA_ARGS__)
+#define otLogWarnMeshCoP(...) otLogWarn(OT_LOG_REGION_MESH_COP, __VA_ARGS__)
+#define otLogNoteMeshCoP(...) otLogNote(OT_LOG_REGION_MESH_COP, __VA_ARGS__)
+#define otLogInfoMeshCoP(...) otLogInfo(OT_LOG_REGION_MESH_COP, __VA_ARGS__)
+#define otLogDebgMeshCoP(...) otLogDebg(OT_LOG_REGION_MESH_COP, __VA_ARGS__)
 #else
 #define otLogCritMeshCoP(...)
 #define otLogWarnMeshCoP(...)
@@ -358,11 +290,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_MLE == 1
-#define otLogCritMle(...) otLogCrit(OT_LOG_REGION_MLE, _OT_REGION_MLE_PREFIX __VA_ARGS__)
-#define otLogWarnMle(...) otLogWarn(OT_LOG_REGION_MLE, _OT_REGION_MLE_PREFIX __VA_ARGS__)
-#define otLogNoteMle(...) otLogNote(OT_LOG_REGION_MLE, _OT_REGION_MLE_PREFIX __VA_ARGS__)
-#define otLogInfoMle(...) otLogInfo(OT_LOG_REGION_MLE, _OT_REGION_MLE_PREFIX __VA_ARGS__)
-#define otLogDebgMle(...) otLogDebg(OT_LOG_REGION_MLE, _OT_REGION_MLE_PREFIX __VA_ARGS__)
+#define otLogCritMle(...) otLogCrit(OT_LOG_REGION_MLE, __VA_ARGS__)
+#define otLogWarnMle(...) otLogWarn(OT_LOG_REGION_MLE, __VA_ARGS__)
+#define otLogNoteMle(...) otLogNote(OT_LOG_REGION_MLE, __VA_ARGS__)
+#define otLogInfoMle(...) otLogInfo(OT_LOG_REGION_MLE, __VA_ARGS__)
+#define otLogDebgMle(...) otLogDebg(OT_LOG_REGION_MLE, __VA_ARGS__)
 #else
 #define otLogCritMle(...)
 #define otLogWarnMle(...)
@@ -416,11 +348,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_ARP == 1
-#define otLogCritArp(...) otLogCrit(OT_LOG_REGION_ARP, _OT_REGION_ARP_PREFIX __VA_ARGS__)
-#define otLogWarnArp(...) otLogWarn(OT_LOG_REGION_ARP, _OT_REGION_ARP_PREFIX __VA_ARGS__)
-#define otLogNoteArp(...) otLogNote(OT_LOG_REGION_ARP, _OT_REGION_ARP_PREFIX __VA_ARGS__)
-#define otLogInfoArp(...) otLogInfo(OT_LOG_REGION_ARP, _OT_REGION_ARP_PREFIX __VA_ARGS__)
-#define otLogDebgArp(...) otLogDebg(OT_LOG_REGION_ARP, _OT_REGION_ARP_PREFIX __VA_ARGS__)
+#define otLogCritArp(...) otLogCrit(OT_LOG_REGION_ARP, __VA_ARGS__)
+#define otLogWarnArp(...) otLogWarn(OT_LOG_REGION_ARP, __VA_ARGS__)
+#define otLogNoteArp(...) otLogNote(OT_LOG_REGION_ARP, __VA_ARGS__)
+#define otLogInfoArp(...) otLogInfo(OT_LOG_REGION_ARP, __VA_ARGS__)
+#define otLogDebgArp(...) otLogDebg(OT_LOG_REGION_ARP, __VA_ARGS__)
 #else
 #define otLogCritArp(...)
 #define otLogWarnArp(...)
@@ -474,11 +406,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_BBR == 1
-#define otLogCritBbr(...) otLogCrit(OT_LOG_REGION_BBR, _OT_REGION_BBR_PREFIX __VA_ARGS__)
-#define otLogWarnBbr(...) otLogWarn(OT_LOG_REGION_BBR, _OT_REGION_BBR_PREFIX __VA_ARGS__)
-#define otLogNoteBbr(...) otLogNote(OT_LOG_REGION_BBR, _OT_REGION_BBR_PREFIX __VA_ARGS__)
-#define otLogInfoBbr(...) otLogInfo(OT_LOG_REGION_BBR, _OT_REGION_BBR_PREFIX __VA_ARGS__)
-#define otLogDebgBbr(...) otLogDebg(OT_LOG_REGION_BBR, _OT_REGION_BBR_PREFIX __VA_ARGS__)
+#define otLogCritBbr(...) otLogCrit(OT_LOG_REGION_BBR, __VA_ARGS__)
+#define otLogWarnBbr(...) otLogWarn(OT_LOG_REGION_BBR, __VA_ARGS__)
+#define otLogNoteBbr(...) otLogNote(OT_LOG_REGION_BBR, __VA_ARGS__)
+#define otLogInfoBbr(...) otLogInfo(OT_LOG_REGION_BBR, __VA_ARGS__)
+#define otLogDebgBbr(...) otLogDebg(OT_LOG_REGION_BBR, __VA_ARGS__)
 #else
 #define otLogCritBbr(...)
 #define otLogWarnBbr(...)
@@ -532,11 +464,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_MLR == 1
-#define otLogCritMlr(...) otLogCrit(OT_LOG_REGION_MLR, _OT_REGION_MLR_PREFIX __VA_ARGS__)
-#define otLogWarnMlr(...) otLogWarn(OT_LOG_REGION_MLR, _OT_REGION_MLR_PREFIX __VA_ARGS__)
-#define otLogNoteMlr(...) otLogNote(OT_LOG_REGION_MLR, _OT_REGION_MLR_PREFIX __VA_ARGS__)
-#define otLogInfoMlr(...) otLogInfo(OT_LOG_REGION_MLR, _OT_REGION_MLR_PREFIX __VA_ARGS__)
-#define otLogDebgMlr(...) otLogDebg(OT_LOG_REGION_MLR, _OT_REGION_MLR_PREFIX __VA_ARGS__)
+#define otLogCritMlr(...) otLogCrit(OT_LOG_REGION_MLR, __VA_ARGS__)
+#define otLogWarnMlr(...) otLogWarn(OT_LOG_REGION_MLR, __VA_ARGS__)
+#define otLogNoteMlr(...) otLogNote(OT_LOG_REGION_MLR, __VA_ARGS__)
+#define otLogInfoMlr(...) otLogInfo(OT_LOG_REGION_MLR, __VA_ARGS__)
+#define otLogDebgMlr(...) otLogDebg(OT_LOG_REGION_MLR, __VA_ARGS__)
 #else
 #define otLogCritMlr(...)
 #define otLogWarnMlr(...)
@@ -590,11 +522,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_NETDATA == 1
-#define otLogCritNetData(...) otLogCrit(OT_LOG_REGION_NET_DATA, _OT_REGION_NET_DATA_PREFIX __VA_ARGS__)
-#define otLogWarnNetData(...) otLogWarn(OT_LOG_REGION_NET_DATA, _OT_REGION_NET_DATA_PREFIX __VA_ARGS__)
-#define otLogNoteNetData(...) otLogNote(OT_LOG_REGION_NET_DATA, _OT_REGION_NET_DATA_PREFIX __VA_ARGS__)
-#define otLogInfoNetData(...) otLogInfo(OT_LOG_REGION_NET_DATA, _OT_REGION_NET_DATA_PREFIX __VA_ARGS__)
-#define otLogDebgNetData(...) otLogDebg(OT_LOG_REGION_NET_DATA, _OT_REGION_NET_DATA_PREFIX __VA_ARGS__)
+#define otLogCritNetData(...) otLogCrit(OT_LOG_REGION_NET_DATA, __VA_ARGS__)
+#define otLogWarnNetData(...) otLogWarn(OT_LOG_REGION_NET_DATA, __VA_ARGS__)
+#define otLogNoteNetData(...) otLogNote(OT_LOG_REGION_NET_DATA, __VA_ARGS__)
+#define otLogInfoNetData(...) otLogInfo(OT_LOG_REGION_NET_DATA, __VA_ARGS__)
+#define otLogDebgNetData(...) otLogDebg(OT_LOG_REGION_NET_DATA, __VA_ARGS__)
 #else
 #define otLogCritNetData(...)
 #define otLogWarnNetData(...)
@@ -648,11 +580,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_ICMP == 1
-#define otLogCritIcmp(...) otLogCrit(OT_LOG_REGION_ICMP, _OT_REGION_ICMP_PREFIX __VA_ARGS__)
-#define otLogWarnIcmp(...) otLogWarn(OT_LOG_REGION_ICMP, _OT_REGION_ICMP_PREFIX __VA_ARGS__)
-#define otLogNoteIcmp(...) otLogNote(OT_LOG_REGION_ICMP, _OT_REGION_ICMP_PREFIX __VA_ARGS__)
-#define otLogInfoIcmp(...) otLogInfo(OT_LOG_REGION_ICMP, _OT_REGION_ICMP_PREFIX __VA_ARGS__)
-#define otLogDebgIcmp(...) otLogDebg(OT_LOG_REGION_ICMP, _OT_REGION_ICMP_PREFIX __VA_ARGS__)
+#define otLogCritIcmp(...) otLogCrit(OT_LOG_REGION_ICMP, __VA_ARGS__)
+#define otLogWarnIcmp(...) otLogWarn(OT_LOG_REGION_ICMP, __VA_ARGS__)
+#define otLogNoteIcmp(...) otLogNote(OT_LOG_REGION_ICMP, __VA_ARGS__)
+#define otLogInfoIcmp(...) otLogInfo(OT_LOG_REGION_ICMP, __VA_ARGS__)
+#define otLogDebgIcmp(...) otLogDebg(OT_LOG_REGION_ICMP, __VA_ARGS__)
 #else
 #define otLogCritIcmp(...)
 #define otLogWarnIcmp(...)
@@ -706,11 +638,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_IP6 == 1
-#define otLogCritIp6(...) otLogCrit(OT_LOG_REGION_IP6, _OT_REGION_IP6_PREFIX __VA_ARGS__)
-#define otLogWarnIp6(...) otLogWarn(OT_LOG_REGION_IP6, _OT_REGION_IP6_PREFIX __VA_ARGS__)
-#define otLogNoteIp6(...) otLogNote(OT_LOG_REGION_IP6, _OT_REGION_IP6_PREFIX __VA_ARGS__)
-#define otLogInfoIp6(...) otLogInfo(OT_LOG_REGION_IP6, _OT_REGION_IP6_PREFIX __VA_ARGS__)
-#define otLogDebgIp6(...) otLogDebg(OT_LOG_REGION_IP6, _OT_REGION_IP6_PREFIX __VA_ARGS__)
+#define otLogCritIp6(...) otLogCrit(OT_LOG_REGION_IP6, __VA_ARGS__)
+#define otLogWarnIp6(...) otLogWarn(OT_LOG_REGION_IP6, __VA_ARGS__)
+#define otLogNoteIp6(...) otLogNote(OT_LOG_REGION_IP6, __VA_ARGS__)
+#define otLogInfoIp6(...) otLogInfo(OT_LOG_REGION_IP6, __VA_ARGS__)
+#define otLogDebgIp6(...) otLogDebg(OT_LOG_REGION_IP6, __VA_ARGS__)
 #else
 #define otLogCritIp6(...)
 #define otLogWarnIp6(...)
@@ -775,19 +707,18 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_MAC == 1
-#define otLogCritMac(...) otLogCrit(OT_LOG_REGION_MAC, _OT_REGION_MAC_PREFIX __VA_ARGS__)
-#define otLogWarnMac(...) otLogWarn(OT_LOG_REGION_MAC, _OT_REGION_MAC_PREFIX __VA_ARGS__)
-#define otLogNoteMac(...) otLogNote(OT_LOG_REGION_MAC, _OT_REGION_MAC_PREFIX __VA_ARGS__)
-#define otLogInfoMac(...) otLogInfo(OT_LOG_REGION_MAC, _OT_REGION_MAC_PREFIX __VA_ARGS__)
-#define otLogDebgMac(...) otLogDebg(OT_LOG_REGION_MAC, _OT_REGION_MAC_PREFIX __VA_ARGS__)
-#define otLogMac(aLogLevel, aFormat, ...)                                                     \
-    do                                                                                        \
-    {                                                                                         \
-        if (otLoggingGetLevel() >= aLogLevel)                                                 \
-        {                                                                                     \
-            _otLogFormatter(aLogLevel, OT_LOG_REGION_MAC, "%s" _OT_REGION_MAC_PREFIX aFormat, \
-                            otLogLevelToPrefixString(aLogLevel), __VA_ARGS__);                \
-        }                                                                                     \
+#define otLogCritMac(...) otLogCrit(OT_LOG_REGION_MAC, __VA_ARGS__)
+#define otLogWarnMac(...) otLogWarn(OT_LOG_REGION_MAC, __VA_ARGS__)
+#define otLogNoteMac(...) otLogNote(OT_LOG_REGION_MAC, __VA_ARGS__)
+#define otLogInfoMac(...) otLogInfo(OT_LOG_REGION_MAC, __VA_ARGS__)
+#define otLogDebgMac(...) otLogDebg(OT_LOG_REGION_MAC, __VA_ARGS__)
+#define otLogMac(aLogLevel, ...)                                        \
+    do                                                                  \
+    {                                                                   \
+        if (otLoggingGetLevel() >= aLogLevel)                           \
+        {                                                               \
+            _otLogFormatter(aLogLevel, OT_LOG_REGION_MAC, __VA_ARGS__); \
+        }                                                               \
     } while (false)
 
 #else
@@ -844,11 +775,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_CORE == 1
-#define otLogCritCore(...) otLogCrit(OT_LOG_REGION_CORE, _OT_REGION_CORE_PREFIX __VA_ARGS__)
-#define otLogWarnCore(...) otLogWarn(OT_LOG_REGION_CORE, _OT_REGION_CORE_PREFIX __VA_ARGS__)
-#define otLogNoteCore(...) otLogNote(OT_LOG_REGION_CORE, _OT_REGION_CORE_PREFIX __VA_ARGS__)
-#define otLogInfoCore(...) otLogInfo(OT_LOG_REGION_CORE, _OT_REGION_CORE_PREFIX __VA_ARGS__)
-#define otLogDebgCore(...) otLogDebg(OT_LOG_REGION_CORE, _OT_REGION_CORE_PREFIX __VA_ARGS__)
+#define otLogCritCore(...) otLogCrit(OT_LOG_REGION_CORE, __VA_ARGS__)
+#define otLogWarnCore(...) otLogWarn(OT_LOG_REGION_CORE, __VA_ARGS__)
+#define otLogNoteCore(...) otLogNote(OT_LOG_REGION_CORE, __VA_ARGS__)
+#define otLogInfoCore(...) otLogInfo(OT_LOG_REGION_CORE, __VA_ARGS__)
+#define otLogDebgCore(...) otLogDebg(OT_LOG_REGION_CORE, __VA_ARGS__)
 #else
 #define otLogCritCore(...)
 #define otLogWarnCore(...)
@@ -901,11 +832,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_MEM == 1
-#define otLogCritMem(...) otLogCrit(OT_LOG_REGION_MEM, _OT_REGION_MEM_PREFIX __VA_ARGS__)
-#define otLogWarnMem(...) otLogWarn(OT_LOG_REGION_MEM, _OT_REGION_MEM_PREFIX __VA_ARGS__)
-#define otLogNoteMem(...) otLogNote(OT_LOG_REGION_MEM, _OT_REGION_MEM_PREFIX __VA_ARGS__)
-#define otLogInfoMem(...) otLogInfo(OT_LOG_REGION_MEM, _OT_REGION_MEM_PREFIX __VA_ARGS__)
-#define otLogDebgMem(...) otLogDebg(OT_LOG_REGION_MEM, _OT_REGION_MEM_PREFIX __VA_ARGS__)
+#define otLogCritMem(...) otLogCrit(OT_LOG_REGION_MEM, __VA_ARGS__)
+#define otLogWarnMem(...) otLogWarn(OT_LOG_REGION_MEM, __VA_ARGS__)
+#define otLogNoteMem(...) otLogNote(OT_LOG_REGION_MEM, __VA_ARGS__)
+#define otLogInfoMem(...) otLogInfo(OT_LOG_REGION_MEM, __VA_ARGS__)
+#define otLogDebgMem(...) otLogDebg(OT_LOG_REGION_MEM, __VA_ARGS__)
 #else
 #define otLogCritMem(...)
 #define otLogWarnMem(...)
@@ -959,11 +890,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_UTIL == 1
-#define otLogCritUtil(...) otLogCrit(OT_LOG_REGION_UTIL, _OT_REGION_UTIL_PREFIX __VA_ARGS__)
-#define otLogWarnUtil(...) otLogWarn(OT_LOG_REGION_UTIL, _OT_REGION_UTIL_PREFIX __VA_ARGS__)
-#define otLogNoteUtil(...) otLogNote(OT_LOG_REGION_UTIL, _OT_REGION_UTIL_PREFIX __VA_ARGS__)
-#define otLogInfoUtil(...) otLogInfo(OT_LOG_REGION_UTIL, _OT_REGION_UTIL_PREFIX __VA_ARGS__)
-#define otLogDebgUtil(...) otLogDebg(OT_LOG_REGION_UTIL, _OT_REGION_UTIL_PREFIX __VA_ARGS__)
+#define otLogCritUtil(...) otLogCrit(OT_LOG_REGION_UTIL, __VA_ARGS__)
+#define otLogWarnUtil(...) otLogWarn(OT_LOG_REGION_UTIL, __VA_ARGS__)
+#define otLogNoteUtil(...) otLogNote(OT_LOG_REGION_UTIL, __VA_ARGS__)
+#define otLogInfoUtil(...) otLogInfo(OT_LOG_REGION_UTIL, __VA_ARGS__)
+#define otLogDebgUtil(...) otLogDebg(OT_LOG_REGION_UTIL, __VA_ARGS__)
 #else
 #define otLogCritUtil(...)
 #define otLogWarnUtil(...)
@@ -1017,11 +948,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_NETDIAG == 1
-#define otLogCritNetDiag(...) otLogCrit(OT_LOG_REGION_NET_DIAG, _OT_REGION_NET_DIAG_PREFIX __VA_ARGS__)
-#define otLogWarnNetDiag(...) otLogWarn(OT_LOG_REGION_NET_DIAG, _OT_REGION_NET_DIAG_PREFIX __VA_ARGS__)
-#define otLogNoteNetDiag(...) otLogNote(OT_LOG_REGION_NET_DIAG, _OT_REGION_NET_DIAG_PREFIX __VA_ARGS__)
-#define otLogInfoNetDiag(...) otLogInfo(OT_LOG_REGION_NET_DIAG, _OT_REGION_NET_DIAG_PREFIX __VA_ARGS__)
-#define otLogDebgNetDiag(...) otLogDebg(OT_LOG_REGION_NET_DIAG, _OT_REGION_NET_DIAG_PREFIX __VA_ARGS__)
+#define otLogCritNetDiag(...) otLogCrit(OT_LOG_REGION_NET_DIAG, __VA_ARGS__)
+#define otLogWarnNetDiag(...) otLogWarn(OT_LOG_REGION_NET_DIAG, __VA_ARGS__)
+#define otLogNoteNetDiag(...) otLogNote(OT_LOG_REGION_NET_DIAG, __VA_ARGS__)
+#define otLogInfoNetDiag(...) otLogInfo(OT_LOG_REGION_NET_DIAG, __VA_ARGS__)
+#define otLogDebgNetDiag(...) otLogDebg(OT_LOG_REGION_NET_DIAG, __VA_ARGS__)
 #else
 #define otLogCritNetDiag(...)
 #define otLogWarnNetDiag(...)
@@ -1091,11 +1022,11 @@ extern "C" {
  */
 #if OPENTHREAD_CONFIG_LOG_CLI == 1
 
-#define otLogCritCli(...) otLogCrit(OT_LOG_REGION_CLI, _OT_REGION_CLI_PREFIX __VA_ARGS__)
-#define otLogWarnCli(...) otLogWarn(OT_LOG_REGION_CLI, _OT_REGION_CLI_PREFIX __VA_ARGS__)
-#define otLogNoteCli(...) otLogNote(OT_LOG_REGION_CLI, _OT_REGION_CLI_PREFIX __VA_ARGS__)
-#define otLogInfoCli(...) otLogInfo(OT_LOG_REGION_CLI, _OT_REGION_CLI_PREFIX __VA_ARGS__)
-#define otLogDebgCli(...) otLogDebg(OT_LOG_REGION_CLI, _OT_REGION_CLI_PREFIX __VA_ARGS__)
+#define otLogCritCli(...) otLogCrit(OT_LOG_REGION_CLI, __VA_ARGS__)
+#define otLogWarnCli(...) otLogWarn(OT_LOG_REGION_CLI, __VA_ARGS__)
+#define otLogNoteCli(...) otLogNote(OT_LOG_REGION_CLI, __VA_ARGS__)
+#define otLogInfoCli(...) otLogInfo(OT_LOG_REGION_CLI, __VA_ARGS__)
+#define otLogDebgCli(...) otLogDebg(OT_LOG_REGION_CLI, __VA_ARGS__)
 #else
 #define otLogCritCli(...)
 #define otLogWarnCli(...)
@@ -1149,11 +1080,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_COAP == 1
-#define otLogCritCoap(...) otLogCrit(OT_LOG_REGION_COAP, _OT_REGION_COAP_PREFIX __VA_ARGS__)
-#define otLogWarnCoap(...) otLogWarn(OT_LOG_REGION_COAP, _OT_REGION_COAP_PREFIX __VA_ARGS__)
-#define otLogNoteCoap(...) otLogNote(OT_LOG_REGION_COAP, _OT_REGION_COAP_PREFIX __VA_ARGS__)
-#define otLogInfoCoap(...) otLogInfo(OT_LOG_REGION_COAP, _OT_REGION_COAP_PREFIX __VA_ARGS__)
-#define otLogDebgCoap(...) otLogDebg(OT_LOG_REGION_COAP, _OT_REGION_COAP_PREFIX __VA_ARGS__)
+#define otLogCritCoap(...) otLogCrit(OT_LOG_REGION_COAP, __VA_ARGS__)
+#define otLogWarnCoap(...) otLogWarn(OT_LOG_REGION_COAP, __VA_ARGS__)
+#define otLogNoteCoap(...) otLogNote(OT_LOG_REGION_COAP, __VA_ARGS__)
+#define otLogInfoCoap(...) otLogInfo(OT_LOG_REGION_COAP, __VA_ARGS__)
+#define otLogDebgCoap(...) otLogDebg(OT_LOG_REGION_COAP, __VA_ARGS__)
 #else
 #define otLogCritCoap(...)
 #define otLogWarnCoap(...)
@@ -1207,11 +1138,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_DUA == 1
-#define otLogCritDua(...) otLogCrit(OT_LOG_REGION_DUA, _OT_REGION_DUA_PREFIX __VA_ARGS__)
-#define otLogWarnDua(...) otLogWarn(OT_LOG_REGION_DUA, _OT_REGION_DUA_PREFIX __VA_ARGS__)
-#define otLogNoteDua(...) otLogNote(OT_LOG_REGION_DUA, _OT_REGION_DUA_PREFIX __VA_ARGS__)
-#define otLogInfoDua(...) otLogInfo(OT_LOG_REGION_DUA, _OT_REGION_DUA_PREFIX __VA_ARGS__)
-#define otLogDebgDua(...) otLogDebg(OT_LOG_REGION_DUA, _OT_REGION_DUA_PREFIX __VA_ARGS__)
+#define otLogCritDua(...) otLogCrit(OT_LOG_REGION_DUA, __VA_ARGS__)
+#define otLogWarnDua(...) otLogWarn(OT_LOG_REGION_DUA, __VA_ARGS__)
+#define otLogNoteDua(...) otLogNote(OT_LOG_REGION_DUA, __VA_ARGS__)
+#define otLogInfoDua(...) otLogInfo(OT_LOG_REGION_DUA, __VA_ARGS__)
+#define otLogDebgDua(...) otLogDebg(OT_LOG_REGION_DUA, __VA_ARGS__)
 #else
 #define otLogCritDua(...)
 #define otLogWarnDua(...)
@@ -1265,11 +1196,11 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_LOG_PLATFORM == 1
-#define otLogCritPlat(...) otLogCrit(OT_LOG_REGION_PLATFORM, _OT_REGION_PLATFORM_PREFIX __VA_ARGS__)
-#define otLogWarnPlat(...) otLogWarn(OT_LOG_REGION_PLATFORM, _OT_REGION_PLATFORM_PREFIX __VA_ARGS__)
-#define otLogNotePlat(...) otLogNote(OT_LOG_REGION_PLATFORM, _OT_REGION_PLATFORM_PREFIX __VA_ARGS__)
-#define otLogInfoPlat(...) otLogInfo(OT_LOG_REGION_PLATFORM, _OT_REGION_PLATFORM_PREFIX __VA_ARGS__)
-#define otLogDebgPlat(...) otLogDebg(OT_LOG_REGION_PLATFORM, _OT_REGION_PLATFORM_PREFIX __VA_ARGS__)
+#define otLogCritPlat(...) otLogCrit(OT_LOG_REGION_PLATFORM, __VA_ARGS__)
+#define otLogWarnPlat(...) otLogWarn(OT_LOG_REGION_PLATFORM, __VA_ARGS__)
+#define otLogNotePlat(...) otLogNote(OT_LOG_REGION_PLATFORM, __VA_ARGS__)
+#define otLogInfoPlat(...) otLogInfo(OT_LOG_REGION_PLATFORM, __VA_ARGS__)
+#define otLogDebgPlat(...) otLogDebg(OT_LOG_REGION_PLATFORM, __VA_ARGS__)
 #else
 #define otLogCritPlat(...)
 #define otLogWarnPlat(...)
@@ -1288,7 +1219,7 @@ extern "C" {
  *
  */
 #if OPENTHREAD_CONFIG_OTNS_ENABLE
-#define otLogOtns(...) _otLogFormatter(OT_LOG_LEVEL_NONE, OT_LOG_REGION_CORE, _OT_LEVEL_NONE_PREFIX __VA_ARGS__, NULL)
+#define otLogOtns(...) _otLogFormatter(OT_LOG_LEVEL_NONE, OT_LOG_REGION_CORE, __VA_ARGS__, NULL)
 #endif
 
 /**
@@ -2147,21 +2078,41 @@ extern "C" {
  */
 void otDump(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aId, const void *aBuf, size_t aLength);
 
-/**
- * This function converts a log level to a prefix string for appending to log message.
- *
- * @param[in]  aLogLevel    A log level.
- *
- * @returns A C string representing the log level.
- *
- */
-const char *otLogLevelToPrefixString(otLogLevel aLogLevel);
-
-/**
+/*
  * Local/private macro to format the log message
  */
+#if OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL
+
+extern const char *const _OT_LOG_LEVEL_PREFIX[];
+
+#if OPENTHREAD_CONFIG_LOG_PREPEND_REGION
+extern const char *const _OT_LOG_REGION_PREFIX[];
+
+#define _otLogFormatter(aLogLevel, aRegion, aFormat, ...)                                                           \
+    _otDynamicLog(aLogLevel, aRegion, "%s%s" aFormat OPENTHREAD_CONFIG_LOG_SUFFIX, _OT_LOG_LEVEL_PREFIX[aLogLevel], \
+                  _OT_LOG_REGION_PREFIX[aRegion], __VA_ARGS__)
+#else
+#define _otLogFormatter(aLogLevel, aRegion, aFormat, ...)                                                         \
+    _otDynamicLog(aLogLevel, aRegion, "%s" aFormat OPENTHREAD_CONFIG_LOG_SUFFIX, _OT_LOG_LEVEL_PREFIX[aLogLevel], \
+                  __VA_ARGS__)
+#endif
+
+#else
+
+#if OPENTHREAD_CONFIG_LOG_PREPEND_REGION
+
+extern const char *const _OT_LOG_REGION_PREFIX[];
+
+#define _otLogFormatter(aLogLevel, aRegion, aFormat, ...)                                                        \
+    _otDynamicLog(aLogLevel, aRegion, "%s" aFormat OPENTHREAD_CONFIG_LOG_SUFFIX, _OT_LOG_REGION_PREFIX[aRegion], \
+                  __VA_ARGS__)
+
+#else
 #define _otLogFormatter(aLogLevel, aRegion, aFormat, ...) \
     _otDynamicLog(aLogLevel, aRegion, aFormat OPENTHREAD_CONFIG_LOG_SUFFIX, __VA_ARGS__)
+#endif
+
+#endif // OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL
 
 #if OPENTHREAD_CONFIG_LOG_LEVEL_DYNAMIC_ENABLE == 1
 
