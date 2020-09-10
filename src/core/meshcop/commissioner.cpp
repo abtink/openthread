@@ -319,15 +319,12 @@ otError Commissioner::Start(otCommissionerStateCallback  aStateCallback,
     SetState(OT_COMMISSIONER_STATE_PETITION);
 
 exit:
-    if (error != OT_ERROR_NONE)
+    if ((error != OT_ERROR_NONE) && (error != OT_ERROR_ALREADY))
     {
-        otLogWarnMeshCoP("Failed to start commissioner: %s", otThreadErrorToString(error));
-        if (error != OT_ERROR_ALREADY)
-        {
-            Get<Coap::CoapSecure>().Stop();
-        }
+        Get<Coap::CoapSecure>().Stop();
     }
 
+    LogError("start commissioner", error);
     return error;
 }
 
@@ -362,11 +359,7 @@ otError Commissioner::Stop(bool aResign)
     }
 
 exit:
-    if (error != OT_ERROR_NONE)
-    {
-        otLogWarnMeshCoP("Failed to stop Commissioner: %s", otThreadErrorToString(error));
-    }
-
+    LogError("stop commissioner", error);
     return error;
 }
 
@@ -420,10 +413,7 @@ void Commissioner::SendCommissionerSet(void)
     error = SendMgmtCommissionerSetRequest(dataset, nullptr, 0);
 
 exit:
-    if (error != OT_ERROR_NONE)
-    {
-        otLogWarnMeshCoP("Failed to send MGMT_COMMISSIONER_SET.req: %s", otThreadErrorToString(error));
-    }
+    LogError("send MGMT_COMMISSIONER_SET.req", error);
 }
 
 void Commissioner::ClearJoiners(void)
@@ -968,16 +958,12 @@ void Commissioner::SendKeepAlive(uint16_t aSessionId)
     otLogInfoMeshCoP("sent keep alive");
 
 exit:
-
-    if (error != OT_ERROR_NONE)
+    if ((error != OT_ERROR_NONE) && (message != nullptr))
     {
-        otLogWarnMeshCoP("Failed to send keep alive: %s", otThreadErrorToString(error));
-
-        if (message != nullptr)
-        {
-            message->Free();
-        }
+        message->Free();
     }
+
+    LogError("send keep alive", error);
 }
 
 void Commissioner::HandleLeaderKeepAliveResponse(void *               aContext,
