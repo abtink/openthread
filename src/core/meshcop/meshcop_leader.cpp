@@ -149,15 +149,11 @@ void Leader::SendPetitionResponse(const Coap::Message &   aRequest,
     otLogInfoMeshCoP("sent petition response");
 
 exit:
+    FreeMessageOnError(message, error);
 
     if (error != OT_ERROR_NONE)
     {
         otLogInfoMeshCoP("Failed to send petition response: %s", otThreadErrorToString(error));
-
-        if (message != nullptr)
-        {
-            message->Free();
-        }
     }
 }
 
@@ -231,15 +227,11 @@ void Leader::SendKeepAliveResponse(const Coap::Message &   aRequest,
     otLogInfoMeshCoP("sent keep alive response");
 
 exit:
+    FreeMessageOnError(message, error);
 
     if (error != OT_ERROR_NONE)
     {
         otLogWarnMeshCoP("Failed to send keep alive response: %s", otThreadErrorToString(error));
-
-        if (message != nullptr)
-        {
-            message->Free();
-        }
     }
 }
 
@@ -261,15 +253,11 @@ void Leader::SendDatasetChanged(const Ip6::Address &aAddress)
     otLogInfoMeshCoP("sent dataset changed");
 
 exit:
+    FreeMessageOnError(message, error);
 
     if (error != OT_ERROR_NONE)
     {
         otLogWarnMeshCoP("Failed to send dataset changed: %s", otThreadErrorToString(error));
-
-        if (message != nullptr)
-        {
-            message->Free();
-        }
     }
 }
 

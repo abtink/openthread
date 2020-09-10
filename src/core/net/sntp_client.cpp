@@ -199,13 +199,7 @@ Message *Client::CopyAndEnqueueMessage(const Message &aMessage, const QueryMetad
     mRetransmissionTimer.FireAtIfEarlier(aQueryMetadata.mTransmissionTime);
 
 exit:
-
-    if (error != OT_ERROR_NONE && messageCopy != nullptr)
-    {
-        messageCopy->Free();
-        messageCopy = nullptr;
-    }
-
+    FreeAndNullMessageOnError(messageCopy, error);
     return messageCopy;
 }
 
@@ -241,15 +235,11 @@ void Client::SendCopy(const Message &aMessage, const Ip6::MessageInfo &aMessageI
     SuccessOrExit(error = SendMessage(*messageCopy, aMessageInfo));
 
 exit:
+    FreeMessageOnError(messageCopy, error);
 
     if (error != OT_ERROR_NONE)
     {
         otLogWarnIp6("Failed to send SNTP request: %s", otThreadErrorToString(error));
-
-        if (messageCopy != nullptr)
-        {
-            messageCopy->Free();
-        }
     }
 }
 

@@ -286,15 +286,11 @@ void Client::Solicit(uint16_t aRloc16)
     otLogInfoIp6("solicit");
 
 exit:
+    FreeMessageOnError(message, error);
 
-    if (message != nullptr)
+    if (error != OT_ERROR_NONE)
     {
         otLogWarnIp6("Failed to send DHCPv6 Solicit: %s", otThreadErrorToString(error));
-
-        if (error != OT_ERROR_NONE)
-        {
-            message->Free();
-        }
     }
 }
 

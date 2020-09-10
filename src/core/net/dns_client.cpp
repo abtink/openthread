@@ -128,14 +128,10 @@ otError Client::Query(const otDnsQuery *aQuery, otDnsResponseHandler aHandler, v
     SuccessOrExit(error = SendMessage(*message, *messageInfo));
 
 exit:
+    FreeMessageOnError(message, error);
 
     if (error != OT_ERROR_NONE)
     {
-        if (message)
-        {
-            message->Free();
-        }
-
         if (messageCopy)
         {
             DequeueMessage(*messageCopy);
@@ -172,13 +168,7 @@ Message *Client::CopyAndEnqueueMessage(const Message &aMessage, const QueryMetad
     mRetransmissionTimer.FireAtIfEarlier(aQueryMetadata.mTransmissionTime);
 
 exit:
-
-    if (error != OT_ERROR_NONE && messageCopy != nullptr)
-    {
-        messageCopy->Free();
-        messageCopy = nullptr;
-    }
-
+    FreeAndNullMessageOnError(messageCopy, error);
     return messageCopy;
 }
 
@@ -214,15 +204,11 @@ void Client::SendCopy(const Message &aMessage, const Ip6::MessageInfo &aMessageI
     SuccessOrExit(error = SendMessage(*messageCopy, aMessageInfo));
 
 exit:
+    FreeMessageOnError(messageCopy, error);
 
     if (error != OT_ERROR_NONE)
     {
         otLogWarnIp6("Failed to send DNS request: %s", otThreadErrorToString(error));
-
-        if (messageCopy != nullptr)
-        {
-            messageCopy->Free();
-        }
     }
 }
 
