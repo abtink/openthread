@@ -187,7 +187,7 @@ exit:
         FreeJoinerFinalizeMessage();
     }
 
-    LogError("start joiner", error);
+    LogError("start", "joiner", error);
     return error;
 }
 
@@ -395,7 +395,7 @@ otError Joiner::Connect(JoinerRouter &aRouter)
     SetState(OT_JOINER_STATE_CONNECT);
 
 exit:
-    LogError("start secure joiner connection", error);
+    LogError("start", "secure joiner connection", error);
     return error;
 }
 
@@ -591,7 +591,7 @@ void Joiner::HandleJoinerEntrust(Coap::Message &aMessage, const Ip6::MessageInfo
     mTimer.Start(kConfigExtAddressDelay);
 
 exit:
-    LogError("process joiner entrust", error);
+    LogError("process", "joiner entrust", error);
 }
 
 void Joiner::SendJoinerEntrustResponse(const Coap::Message &aRequest, const Ip6::MessageInfo &aRequestInfo)

@@ -258,7 +258,7 @@ exit:
         message->Free();
     }
 
-    LogError("schedule joiner entrust", error);
+    LogError("schedule", "joiner entrust", error);
 }
 
 void JoinerRouter::HandleTimer(Timer &aTimer)

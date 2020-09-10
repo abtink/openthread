@@ -351,11 +351,11 @@ exit:
 #endif // OPENTHREAD_FTD
 
 #if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_WARN) && (OPENTHREAD_CONFIG_LOG_MESHCOP == 1)
-void LogError(const char *aActionText, otError aError)
+void LogError(const char *aAction, const char *aText, otError aError)
 {
     if (aError != OT_ERROR_NONE)
     {
-        otLogWarnMeshCoP("Failed to %s: %s", aActionText, otThreadErrorToString(aError));
+        otLogWarnMeshCoP("Failed to %s %s: %s", aAction, aText, otThreadErrorToString(aError));
     }
 }
 #endif

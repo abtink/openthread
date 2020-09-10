@@ -324,7 +324,7 @@ exit:
         Get<Coap::CoapSecure>().Stop();
     }
 
-    LogError("start commissioner", error);
+    LogError("start", "commissioner", error);
     return error;
 }
 
@@ -359,7 +359,7 @@ otError Commissioner::Stop(bool aResign)
     }
 
 exit:
-    LogError("stop commissioner", error);
+    LogError("stop", "commissioner", error);
     return error;
 }
 
@@ -413,7 +413,7 @@ void Commissioner::SendCommissionerSet(void)
     error = SendMgmtCommissionerSetRequest(dataset, nullptr, 0);
 
 exit:
-    LogError("send MGMT_COMMISSIONER_SET.req", error);
+    LogError("send", "MGMT_COMMISSIONER_SET.req", error);
 }
 
 void Commissioner::ClearJoiners(void)
@@ -963,7 +963,7 @@ exit:
         message->Free();
     }
 
-    LogError("send keep alive", error);
+    LogError("send", "keep alive", error);
 }
 
 void Commissioner::HandleLeaderKeepAliveResponse(void *               aContext,

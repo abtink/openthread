@@ -155,7 +155,7 @@ exit:
         message->Free();
     }
 
-    LogError("send petition response", error);
+    LogError("send", "petition response", error);
 }
 
 void Leader::HandleKeepAlive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
@@ -234,7 +234,7 @@ exit:
         message->Free();
     }
 
-    LogError("send keep alive response", error);
+    LogError("send", "keep alive response", error);
 }
 
 void Leader::SendDatasetChanged(const Ip6::Address &aAddress)
@@ -261,7 +261,7 @@ exit:
         message->Free();
     }
 
-    LogError("send dataset changed", error);
+    LogError("send", "dataset changed", error);
 }
 
 otError Leader::SetDelayTimerMinimal(uint32_t aDelayTimerMinimal)

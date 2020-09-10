@@ -203,7 +203,7 @@ exit:
         message->Free();
     }
 
-    MeshCoP::LogError("send scan results", error);
+    MeshCoP::LogError("send", "scan results", error);
 
     mActive = false;
 }

@@ -179,7 +179,7 @@ exit:
         message->Free();
     }
 
-    LogError("send error CoAP message", error);
+    LogError("send", "error CoAP message", error);
 }
 
 static void SendErrorMessage(Coap::CoapSecure &   aCoapSecure,
@@ -216,7 +216,7 @@ exit:
         message->Free();
     }
 
-    LogError("send error CoAP message", error);
+    LogError("send", "error CoAP message", error);
 }
 
 void BorderAgent::HandleCoapResponse(void *               aContext,
@@ -406,7 +406,7 @@ exit:
         message->Free();
     }
 
-    LogError("send proxy stream", error);
+    LogError("send", "proxy stream", error);
 }
 
 bool BorderAgent::HandleUdpReceive(const Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
@@ -454,7 +454,7 @@ exit:
         message->Free();
     }
 
-    LogError("notify commissioner on ProxyRx (c/ur)", error);
+    LogError("notify", "commissioner on ProxyRx (c/ur)", error);
 
     return error != OT_ERROR_DESTINATION_ADDRESS_FILTERED;
 }
@@ -500,7 +500,7 @@ otError BorderAgent::ForwardToCommissioner(Coap::Message &aForwardMessage, const
     otLogInfoMeshCoP("Sent to commissioner");
 
 exit:
-    LogError("send to commissioner", error);
+    LogError("send", "to commissioner", error);
     return error;
 }
 
@@ -556,7 +556,7 @@ exit:
         }
     }
 
-    LogError("send to joiner router request RelayTx (c/tx)", error);
+    LogError("send", "to joiner router request RelayTx (c/tx)", error);
 }
 
 otError BorderAgent::ForwardToLeader(const Coap::Message &   aMessage,
@@ -608,7 +608,7 @@ otError BorderAgent::ForwardToLeader(const Coap::Message &   aMessage,
     otLogInfoMeshCoP("Forwarded request to leader on %s", aPath);
 
 exit:
-    LogError("forward to leader", error);
+    LogError("forward", "to leader", error);
 
     if (error != OT_ERROR_NONE)
     {

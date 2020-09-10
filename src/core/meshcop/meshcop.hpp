@@ -504,9 +504,9 @@ otError GetBorderAgentRloc(ThreadNetif &aNetIf, uint16_t &aRloc);
  * @param[in] aError        The error in sending the message.
  *
  */
-void LogError(const char *aActionText, otError aError);
+void LogError(const char *aAction, const char *aText, otError aError);
 #else
-inline void LogError(const char *, otError)
+inline void LogError(const char *, const char *, otError)
 {
 }
 #endif
