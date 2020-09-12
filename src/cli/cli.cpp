@@ -98,13 +98,11 @@
 using ot::Encoding::BigEndian::HostSwap16;
 using ot::Encoding::BigEndian::HostSwap32;
 
-#define INDENT_SIZE (4)
-
 namespace ot {
 
 namespace Cli {
 
-const struct Command Interpreter::sCommands[] = {
+const Interpreter::Command Interpreter::sCommands[] = {
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
     {"bbr", &Interpreter::ProcessBackboneRouter},
 #endif
@@ -4425,7 +4423,6 @@ void Interpreter::ProcessLine(char *aBuf, uint16_t aBufLength)
     char *  aArgs[kMaxArgs] = {nullptr};
     char *  cmd;
     uint8_t aArgsLength = 0;
-    size_t  i           = 0;
 
     VerifyOrExit(aBuf != nullptr && StringLength(aBuf, aBufLength + 1) <= aBufLength, OT_NOOP);
 
@@ -4440,33 +4437,26 @@ void Interpreter::ProcessLine(char *aBuf, uint16_t aBufLength)
                  OutputFormat("under diagnostics mode, execute 'diag stop' before running any other commands.\r\n"));
 #endif
 
-    for (i = 0; i < OT_ARRAY_LENGTH(sCommands); i++)
+    for (const Command &command : sCommands)
     {
-        if (strcmp(cmd, sCommands[i].mName) == 0)
+        if (strcmp(cmd, command.mName) == 0)
         {
-            (this->*sCommands[i].mCommand)(aArgsLength - 1, &aArgs[1]);
-            break;
+            (this->*command.mCommand)(aArgsLength - 1, &aArgs[1]);
+            ExitNow();
         }
     }
 
-    // Check user defined commands if built-in command
-    // has not been found
-    if (i == OT_ARRAY_LENGTH(sCommands))
+    // Check user defined commands if built-in command has not been found
+    for (uint8_t i = 0; i < mUserCommandsLength; i++)
     {
-        for (i = 0; i < mUserCommandsLength; i++)
+        if (strcmp(cmd, mUserCommands[i].mName) == 0)
         {
-            if (strcmp(cmd, mUserCommands[i].mName) == 0)
-            {
-                mUserCommands[i].mCommand(aArgsLength - 1, &aArgs[1]);
-                break;
-            }
-        }
-
-        if (i == mUserCommandsLength)
-        {
-            AppendResult(OT_ERROR_INVALID_COMMAND);
+            mUserCommands[i].mCommand(aArgsLength - 1, &aArgs[1]);
+            ExitNow();
         }
     }
+
+    AppendResult(OT_ERROR_INVALID_COMMAND);
 
 exit:
     return;
@@ -4564,22 +4554,22 @@ void Interpreter::HandleDiagnosticGetResponse(const otMessage &aMessage, const I
             break;
         case OT_NETWORK_DIAGNOSTIC_TLV_MODE:
             OutputFormat("Mode:\r\n");
-            OutputMode(diagTlv.mData.mMode, column + INDENT_SIZE);
+            OutputMode(diagTlv.mData.mMode, column + kIndentationSize);
             break;
         case OT_NETWORK_DIAGNOSTIC_TLV_TIMEOUT:
             OutputFormat("Timeout: %u\r\n", diagTlv.mData.mTimeout);
             break;
         case OT_NETWORK_DIAGNOSTIC_TLV_CONNECTIVITY:
             OutputFormat("Connectivity:\r\n");
-            OutputConnectivity(diagTlv.mData.mConnectivity, column + INDENT_SIZE);
+            OutputConnectivity(diagTlv.mData.mConnectivity, column + kIndentationSize);
             break;
         case OT_NETWORK_DIAGNOSTIC_TLV_ROUTE:
             OutputFormat("Route:\r\n");
-            OutputRoute(diagTlv.mData.mRoute, column + INDENT_SIZE);
+            OutputRoute(diagTlv.mData.mRoute, column + kIndentationSize);
             break;
         case OT_NETWORK_DIAGNOSTIC_TLV_LEADER_DATA:
             OutputFormat("Leader Data:\r\n");
-            OutputLeaderData(diagTlv.mData.mLeaderData, column + INDENT_SIZE);
+            OutputLeaderData(diagTlv.mData.mLeaderData, column + kIndentationSize);
             break;
         case OT_NETWORK_DIAGNOSTIC_TLV_NETWORK_DATA:
             OutputFormat("Network Data: '");
@@ -4590,7 +4580,7 @@ void Interpreter::HandleDiagnosticGetResponse(const otMessage &aMessage, const I
             OutputFormat("IP6 Address List:\r\n");
             for (uint16_t i = 0; i < diagTlv.mData.mIp6AddrList.mCount; ++i)
             {
-                OutputSpaces(column + INDENT_SIZE);
+                OutputSpaces(column + kIndentationSize);
                 OutputFormat("- ");
                 OutputIp6Address(diagTlv.mData.mIp6AddrList.mList[i]);
                 OutputFormat("\r\n");
@@ -4598,7 +4588,7 @@ void Interpreter::HandleDiagnosticGetResponse(const otMessage &aMessage, const I
             break;
         case OT_NETWORK_DIAGNOSTIC_TLV_MAC_COUNTERS:
             OutputFormat("MAC Counters:\r\n");
-            OutputNetworkDiagMacCounters(diagTlv.mData.mMacCounters, column + INDENT_SIZE);
+            OutputNetworkDiagMacCounters(diagTlv.mData.mMacCounters, column + kIndentationSize);
             break;
         case OT_NETWORK_DIAGNOSTIC_TLV_BATTERY_LEVEL:
             OutputFormat("Battery Level: %u%%\r\n", diagTlv.mData.mBatteryLevel);
@@ -4610,9 +4600,9 @@ void Interpreter::HandleDiagnosticGetResponse(const otMessage &aMessage, const I
             OutputFormat("Child Table:\r\n");
             for (uint16_t i = 0; i < diagTlv.mData.mChildTable.mCount; ++i)
             {
-                OutputSpaces(column + INDENT_SIZE);
+                OutputSpaces(column + kIndentationSize);
                 OutputFormat("- ");
-                OutputChildTableEntry(diagTlv.mData.mChildTable.mTable[i], column + INDENT_SIZE + 2);
+                OutputChildTableEntry(diagTlv.mData.mChildTable.mTable[i], column + kIndentationSize + 2);
             }
             break;
         case OT_NETWORK_DIAGNOSTIC_TLV_CHANNEL_PAGES:
@@ -4697,7 +4687,7 @@ void Interpreter::OutputRoute(const otNetworkDiagRoute &aRoute, uint16_t aColumn
     OutputSpaces(aColumn);
     OutputFormat("RouteData:\r\n");
 
-    aColumn += INDENT_SIZE;
+    aColumn += kIndentationSize;
     for (uint16_t i = 0; i < aRoute.mRouteCount; ++i)
     {
         OutputSpaces(aColumn);
@@ -4779,7 +4769,7 @@ void Interpreter::OutputChildTableEntry(const otNetworkDiagChildEntry &aChildEnt
     OutputSpaces(aColumn);
     OutputFormat("Mode:\r\n");
 
-    OutputMode(aChildEntry.mMode, aColumn + INDENT_SIZE);
+    OutputMode(aChildEntry.mMode, aColumn + kIndentationSize);
 }
 #endif // OPENTHREAD_FTD || OPENTHREAD_CONFIG_TMF_NETWORK_DIAG_MTD_ENABLE
 
