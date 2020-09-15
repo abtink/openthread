@@ -57,7 +57,7 @@ class CmdLineParser
 {
 public:
     /**
-     * This function parses the command line.
+     * This static method parses the command line.
      *
      * Note: this method may change the input @p aString, it will put a '\0' by the end of each argument,
      *       and @p aArgs will point to the arguments in the input @p aString. Backslash ('\') can be used

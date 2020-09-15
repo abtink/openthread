@@ -44,14 +44,7 @@ using ot::Encoding::BigEndian::HostSwap16;
 namespace ot {
 namespace Cli {
 
-const NetworkData::Command NetworkData::sCommands[] = {
-    {"help", &NetworkData::ProcessHelp},
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
-    {"register", &NetworkData::ProcessRegister},
-#endif
-    {"show", &NetworkData::ProcessShow},
-    {"steeringdata", &NetworkData::ProcessSteeringData},
-};
+constexpr NetworkData::Command NetworkData::sCommands[];
 
 NetworkData::NetworkData(Interpreter &aInterpreter)
     : mInterpreter(aInterpreter)
@@ -180,7 +173,7 @@ otError NetworkData::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
 
     for (const Command &command : sCommands)
     {
-        mInterpreter.OutputLine(command.mName);
+        mInterpreter.OutputLine(command.GetName());
     }
 
     return OT_ERROR_NONE;
@@ -318,24 +311,17 @@ otError NetworkData::ProcessShow(uint8_t aArgsLength, char *aArgs[])
 
 otError NetworkData::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError error = OT_ERROR_INVALID_COMMAND;
+    otError        error = OT_ERROR_INVALID_COMMAND;
+    const Command *command;
 
-    if (aArgsLength < 1)
-    {
-        IgnoreError(ProcessHelp(0, nullptr));
-        error = OT_ERROR_INVALID_ARGS;
-    }
-    else
-    {
-        for (const Command &command : sCommands)
-        {
-            if (strcmp(aArgs[0], command.mName) == 0)
-            {
-                error = (this->*command.mCommand)(aArgsLength - 1, aArgs + 1);
-                break;
-            }
-        }
-    }
+    VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
+
+    command = Utils::LookupTable::Find(aArgs[0], sCommands);
+    VerifyOrExit(command != nullptr, OT_NOOP);
+
+    error = command->InvokeHandler(*this, aArgsLength - 1, aArgs + 1);
+
+exit:
     return error;
 }
 

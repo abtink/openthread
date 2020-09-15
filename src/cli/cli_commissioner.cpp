@@ -40,14 +40,7 @@
 namespace ot {
 namespace Cli {
 
-const Commissioner::Command Commissioner::sCommands[] = {
-    {"help", &Commissioner::ProcessHelp},           {"announce", &Commissioner::ProcessAnnounce},
-    {"energy", &Commissioner::ProcessEnergy},       {"joiner", &Commissioner::ProcessJoiner},
-    {"mgmtget", &Commissioner::ProcessMgmtGet},     {"mgmtset", &Commissioner::ProcessMgmtSet},
-    {"panid", &Commissioner::ProcessPanId},         {"provisioningurl", &Commissioner::ProcessProvisioningUrl},
-    {"sessionid", &Commissioner::ProcessSessionId}, {"start", &Commissioner::ProcessStart},
-    {"state", &Commissioner::ProcessState},         {"stop", &Commissioner::ProcessStop},
-};
+constexpr Commissioner::Command Commissioner::sCommands[];
 
 otError Commissioner::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
 {
@@ -56,7 +49,7 @@ otError Commissioner::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
 
     for (const Command &command : sCommands)
     {
-        mInterpreter.OutputLine(command.mName);
+        mInterpreter.OutputLine(command.GetName());
     }
 
     return OT_ERROR_NONE;
@@ -436,24 +429,17 @@ otError Commissioner::ProcessState(uint8_t aArgsLength, char *aArgs[])
 
 otError Commissioner::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError error = OT_ERROR_INVALID_COMMAND;
+    otError        error = OT_ERROR_INVALID_COMMAND;
+    const Command *command;
 
-    if (aArgsLength < 1)
-    {
-        IgnoreError(ProcessHelp(0, nullptr));
-    }
-    else
-    {
-        for (const Command &command : sCommands)
-        {
-            if (strcmp(aArgs[0], command.mName) == 0)
-            {
-                error = (this->*command.mCommand)(aArgsLength, aArgs);
-                break;
-            }
-        }
-    }
+    VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
 
+    command = Utils::LookupTable::Find(aArgs[0], sCommands);
+    VerifyOrExit(command != nullptr, OT_NOOP);
+
+    error = command->InvokeHandler(*this, aArgsLength, aArgs);
+
+exit:
     return error;
 }
 

@@ -43,24 +43,7 @@
 namespace ot {
 namespace Cli {
 
-const Coap::Command Coap::sCommands[] = {
-    {"help", &Coap::ProcessHelp},
-#if OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE
-    {"cancel", &Coap::ProcessCancel},
-#endif
-    {"delete", &Coap::ProcessRequest},
-    {"get", &Coap::ProcessRequest},
-#if OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE
-    {"observe", &Coap::ProcessRequest},
-#endif
-    {"parameters", &Coap::ProcessParameters},
-    {"post", &Coap::ProcessRequest},
-    {"put", &Coap::ProcessRequest},
-    {"resource", &Coap::ProcessResource},
-    {"set", &Coap::ProcessSet},
-    {"start", &Coap::ProcessStart},
-    {"stop", &Coap::ProcessStop},
-};
+constexpr Coap::Command Coap::sCommands[];
 
 Coap::Coap(Interpreter &aInterpreter)
     : mInterpreter(aInterpreter)
@@ -174,7 +157,7 @@ otError Coap::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
 
     for (const Command &command : sCommands)
     {
-        mInterpreter.OutputLine(command.mName);
+        mInterpreter.OutputLine(command.GetName());
     }
 
     return OT_ERROR_NONE;
@@ -513,25 +496,17 @@ exit:
 
 otError Coap::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError error = OT_ERROR_INVALID_COMMAND;
+    otError        error = OT_ERROR_INVALID_ARGS;
+    const Command *command;
 
-    if (aArgsLength < 1)
-    {
-        IgnoreError(ProcessHelp(0, nullptr));
-        error = OT_ERROR_INVALID_ARGS;
-    }
-    else
-    {
-        for (const Command &command : sCommands)
-        {
-            if (strcmp(aArgs[0], command.mName) == 0)
-            {
-                error = (this->*command.mCommand)(aArgsLength, aArgs);
-                break;
-            }
-        }
-    }
+    VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
 
+    command = Utils::LookupTable::Find(aArgs[0], sCommands);
+    VerifyOrExit(command != nullptr, error = OT_ERROR_INVALID_COMMAND);
+
+    error = command->InvokeHandler(*this, aArgsLength, aArgs);
+
+exit:
     return error;
 }
 
