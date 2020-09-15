@@ -65,14 +65,10 @@ namespace ot {
 namespace FactoryDiags {
 
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
-#if OPENTHREAD_RADIO
 
-const struct Diags::Command Diags::sCommands[] = {
-    {"channel", &Diags::ProcessChannel},
-    {"power", &Diags::ProcessPower},
-    {"start", &Diags::ProcessStart},
-    {"stop", &Diags::ProcessStop},
-};
+constexpr Diags::Command Diags::sCommands[];
+
+#if OPENTHREAD_RADIO
 
 Diags::Diags(Instance &aInstance)
     : InstanceLocator(aInstance)
@@ -142,12 +138,6 @@ extern "C" void otPlatDiagAlarmFired(otInstance *aInstance)
 }
 
 #else // OPENTHREAD_RADIO
-
-const struct Diags::Command Diags::sCommands[] = {
-    {"channel", &Diags::ProcessChannel}, {"power", &Diags::ProcessPower}, {"radio", &Diags::ProcessRadio},
-    {"repeat", &Diags::ProcessRepeat},   {"send", &Diags::ProcessSend},   {"start", &Diags::ProcessStart},
-    {"stats", &Diags::ProcessStats},     {"stop", &Diags::ProcessStop},
-};
 
 Diags::Diags(Instance &aInstance)
     : InstanceLocator(aInstance)
@@ -555,7 +545,8 @@ exit:
 
 otError Diags::ProcessCmd(uint8_t aArgsLength, char *aArgs[], char *aOutput, size_t aOutputMaxLen)
 {
-    otError error = OT_ERROR_NONE;
+    otError        error = OT_ERROR_NONE;
+    const Command *command;
 
     // This `rcp` command is for debugging and testing only, building only when NDEBUG is not defined
     // so that it will be excluded from release build.
@@ -577,14 +568,13 @@ otError Diags::ProcessCmd(uint8_t aArgsLength, char *aArgs[], char *aOutput, siz
         aOutput[0] = '\0';
     }
 
-    for (const Command &command : sCommands)
+    command = Utils::LookupTable::Find(aArgs[0], sCommands);
+
+    if (command != nullptr)
     {
-        if (strcmp(aArgs[0], command.mName) == 0)
-        {
-            error = (this->*command.mCommand)(aArgsLength - 1, (aArgsLength > 1) ? &aArgs[1] : nullptr, aOutput,
-                                              aOutputMaxLen);
-            ExitNow();
-        }
+        error = (this->*command->mCommand)(aArgsLength - 1, (aArgsLength > 1) ? &aArgs[1] : nullptr, aOutput,
+                                           aOutputMaxLen);
+        ExitNow();
     }
 
     // more platform specific features will be processed under platform layer

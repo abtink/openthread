@@ -42,6 +42,7 @@
 
 #include "common/locator.hpp"
 #include "common/non_copyable.hpp"
+#include "utils/lookup_table.hpp"
 
 namespace ot {
 namespace FactoryDiags {
@@ -153,7 +154,22 @@ private:
     static void    AppendErrorResult(otError aError, char *aOutput, size_t aOutputMaxLen);
     static otError ParseLong(char *aString, long &aLong);
 
-    static const struct Command sCommands[];
+    static constexpr Command sCommands[] = {
+        {"channel", &Diags::ProcessChannel},
+        {"power", &Diags::ProcessPower},
+#if !OPENTHREAD_RADIO
+        {"radio", &Diags::ProcessRadio},
+        {"repeat", &Diags::ProcessRepeat},
+        {"send", &Diags::ProcessSend},
+#endif
+        {"start", &Diags::ProcessStart},
+#if !OPENTHREAD_RADIO
+        {"stats", &Diags::ProcessStats},
+#endif
+        {"stop", &Diags::ProcessStop},
+    };
+
+    static_assert(Utils::LookupTable::IsSorted(sCommands), "Command Table is not sorted");
 
 #if !OPENTHREAD_RADIO
     Stats mStats;

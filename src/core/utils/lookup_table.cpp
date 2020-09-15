@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2018, The OpenThread Authors.
+ *  Copyright (c) 2020, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,55 +28,65 @@
 
 /**
  * @file
- *   This file includes definitions for command line parser.
+ *   This file implements the lookup table (binary search) functionality.
  */
 
-#ifndef PARSE_CMD_LINE_HPP_
-#define PARSE_CMD_LINE_HPP_
+#include <string.h>
 
-#include <stdint.h>
-#include <openthread/error.h>
+#include "lookup_table.hpp"
+
+#include "common/code_utils.hpp"
 
 namespace ot {
 namespace Utils {
 
-/**
- * @addtogroup utils-parse-cmd-line
- *
- * @brief
- *   This module includes definitions for command line parser.
- *
- * @{
- */
-
-/**
- * This class implements the command line parser.
- *
- */
-class CmdLineParser
+const void *LookupTable::Find(const char *aName,
+                              const void *aTable,
+                              uint16_t    aLength,
+                              uint16_t    aTableEntrySize,
+                              NameGetter  aNameGetter)
 {
-public:
-    /**
-     * This static method parses the command line.
-     *
-     * Note: this method may change the input @p aString, it will put a '\0' by the end of each argument,
-     *       and @p aArgs will point to the arguments in the input @p aString. Backslash ('\') can be used
-     *       to escape separators (' ', '\t', '\r', '\n') and the backslash itself.
-     *
-     * @param[in]   aString         A null-terminated input string.
-     * @param[out]  aArgsLength     The argument counter of the command line.
-     * @param[out]  aArgs           The argument vector of the command line.
-     * @param[in]   aArgsLengthMax  The maximum argument counter.
-     *
-     */
-    static otError ParseCmd(char *aString, uint8_t &aArgsLength, char *aArgs[], uint8_t aArgsLengthMax);
-};
+    const void *entry;
+    uint16_t    left  = 0;
+    uint16_t    right = aLength;
 
-/**
- * @}
- */
+    while (left < right)
+    {
+        uint16_t middle = (left + right) / 2;
+        int      compare;
+
+        // Note that `aTable` array entry type is not known here and
+        // only its size is given as `aTableEntrySize`. Based on this,
+        // we can calculate the pointer to the table entry at any index
+        // (such as `[middle]`) which is then passed to the given
+        // `aNameGetter` function which knows how to cast the void
+        // pointer to proper entry type and get the enclosed `mName`
+        // field. This model keeps the implementation generic and
+        // re-usable allowing it to be used with any entry type.
+
+        entry = reinterpret_cast<const uint8_t *>(aTable) + aTableEntrySize * middle;
+
+        compare = strcmp(aName, aNameGetter(entry));
+
+        if (compare == 0)
+        {
+            ExitNow();
+        }
+        else if (compare > 0)
+        {
+            left = middle + 1;
+        }
+        else
+        {
+            right = middle;
+        }
+    }
+
+    entry = nullptr;
+
+exit:
+    return entry;
+}
 
 } // namespace Utils
 } // namespace ot
-
-#endif // PARSE_CMD_LINE_HPP_
