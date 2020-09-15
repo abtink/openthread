@@ -40,6 +40,58 @@
 namespace ot {
 namespace Utils {
 
+const LookupTable::Entry *LookupTable::Find(const char *aName,
+                                            const void *aTable,
+                                            uint16_t    aLength,
+                                            uint16_t    aTableEntrySize,
+                                            EntryCaster aEntryCaster)
+{
+    const Entry *entry;
+    uint16_t     left  = 0;
+    uint16_t     right = aLength;
+
+    while (left < right)
+    {
+        uint16_t middle = (left + right) / 2;
+        int      compare;
+
+        // Note that `aTable` array entry type is not known here and
+        // only its size is given as `aTableEntrySize` and it is
+        // required to be a sub-class of `Entry`. Based on this, we
+        // can calculate the pointer to the table entry at any index
+        // (such as `[middle]`) which is then passed to the given
+        // `aEntryCaster` function which knows how to cast the pointer
+        // from the table entry type to an `Entry *`. This model keeps
+        // the implementation generic and re-usable, while allowing it
+        // to be used with any sub-class of `Entry` (even when
+        // sub-class uses multiple inheritance and/or virtual methods
+        // such that the base `Entry` class is not at the beginning of
+        // the sub-class's layout).
+
+        entry = aEntryCaster(reinterpret_cast<const uint8_t *>(aTable) + aTableEntrySize * middle);
+
+        compare = strcmp(aName, entry->GetName());
+
+        if (compare == 0)
+        {
+            ExitNow();
+        }
+        else if (compare > 0)
+        {
+            left = middle + 1;
+        }
+        else
+        {
+            right = middle;
+        }
+    }
+
+    entry = nullptr;
+
+exit:
+    return entry;
+}
+
 static bool IsSeparator(char aChar)
 {
     return (aChar == ' ') || (aChar == '\t') || (aChar == '\r') || (aChar == '\n');

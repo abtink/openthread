@@ -40,6 +40,7 @@
 
 #include "coap/coap_message.hpp"
 #include "coap/coap_secure.hpp"
+#include "utils/parse_cmdline.hpp"
 
 #ifndef CLI_COAP_SECURE_USE_COAP_DEFAULT_HANDLER
 #define CLI_COAP_SECURE_USE_COAP_DEFAULT_HANDLER 0
@@ -83,11 +84,7 @@ private:
         kPskIdMaxLength = 32
     };
 
-    struct Command
-    {
-        const char *mName;
-        otError (CoapSecure::*mCommand)(uint8_t aArgsLength, char *aArgs[]);
-    };
+    typedef Utils::CmdLineParser::TableEntry<CoapSecure> CommandEntry;
 
     void PrintPayload(otMessage *aMessage) const;
 
@@ -118,8 +115,29 @@ private:
     static void HandleConnected(bool aConnected, void *aContext);
     void        HandleConnected(bool aConnected);
 
-    static const Command sCommands[];
-    Interpreter &        mInterpreter;
+    static constexpr CommandEntry sCommandTable[] = {
+        {"connect", &CoapSecure::ProcessConnect},
+        {"delete", &CoapSecure::ProcessRequest},
+        {"disconnect", &CoapSecure::ProcessDisconnect},
+        {"get", &CoapSecure::ProcessRequest},
+        {"help", &CoapSecure::ProcessHelp},
+        {"post", &CoapSecure::ProcessRequest},
+#ifdef MBEDTLS_KEY_EXCHANGE_PSK_ENABLED
+        {"psk", &CoapSecure::ProcessPsk},
+#endif
+        {"put", &CoapSecure::ProcessRequest},
+        {"resource", &CoapSecure::ProcessResource},
+        {"set", &CoapSecure::ProcessSet},
+        {"start", &CoapSecure::ProcessStart},
+        {"stop", &CoapSecure::ProcessStop},
+#ifdef MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
+        {"x509", &CoapSecure::ProcessX509},
+#endif
+    };
+
+    static_assert(Utils::LookupTable::IsSorted(sCommandTable), "Command Table is not sorted");
+
+    Interpreter &mInterpreter;
 
     otCoapResource mResource;
     char           mUriPath[kMaxUriLength];

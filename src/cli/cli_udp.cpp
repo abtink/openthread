@@ -44,13 +44,7 @@ using ot::Encoding::BigEndian::HostSwap16;
 namespace ot {
 namespace Cli {
 
-const struct UdpExample::Command UdpExample::sCommands[] = {{"help", &UdpExample::ProcessHelp},
-                                                            {"bind", &UdpExample::ProcessBind},
-                                                            {"close", &UdpExample::ProcessClose},
-                                                            {"connect", &UdpExample::ProcessConnect},
-                                                            {"linksecurity", &UdpExample::ProcessLinkSecurity},
-                                                            {"open", &UdpExample::ProcessOpen},
-                                                            {"send", &UdpExample::ProcessSend}};
+constexpr UdpExample::CommandEntry UdpExample::sCommandTable[];
 
 UdpExample::UdpExample(Interpreter &aInterpreter)
     : mInterpreter(aInterpreter)
@@ -64,9 +58,9 @@ otError UdpExample::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    for (const Command &command : sCommands)
+    for (const CommandEntry &command : sCommandTable)
     {
-        mInterpreter.OutputLine("%s", command.mName);
+        mInterpreter.OutputLine("%s", command.GetName());
     }
 
     return OT_ERROR_NONE;
@@ -289,24 +283,17 @@ exit:
 
 otError UdpExample::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError error = OT_ERROR_INVALID_COMMAND;
+    otError             error = OT_ERROR_INVALID_ARGS;
+    const CommandEntry *command;
 
-    if (aArgsLength < 1)
-    {
-        IgnoreError(ProcessHelp(0, nullptr));
-        error = OT_ERROR_INVALID_ARGS;
-    }
-    else
-    {
-        for (const Command &command : sCommands)
-        {
-            if (strcmp(aArgs[0], command.mName) == 0)
-            {
-                error = (this->*command.mCommand)(aArgsLength - 1, aArgs + 1);
-                break;
-            }
-        }
-    }
+    VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
+
+    command = Utils::LookupTable::Find(aArgs[0], sCommandTable);
+    VerifyOrExit(command != nullptr, error = OT_ERROR_INVALID_COMMAND);
+
+    error = command->InvokeHandler(*this, aArgsLength - 1, aArgs + 1);
+
+exit:
     return error;
 }
 

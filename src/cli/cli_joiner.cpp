@@ -42,10 +42,7 @@
 namespace ot {
 namespace Cli {
 
-const struct Joiner::Command Joiner::sCommands[] = {
-    {"discerner", &Joiner::ProcessDiscerner}, {"help", &Joiner::ProcessHelp}, {"id", &Joiner::ProcessId},
-    {"start", &Joiner::ProcessStart},         {"stop", &Joiner::ProcessStop},
-};
+constexpr Joiner::CommandEntry Joiner::sCommandTable[];
 
 otError Joiner::ProcessDiscerner(uint8_t aArgsLength, char *aArgs[])
 {
@@ -89,9 +86,9 @@ otError Joiner::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    for (const Command &command : sCommands)
+    for (const CommandEntry &command : sCommandTable)
     {
-        mInterpreter.OutputLine("%s", command.mName);
+        mInterpreter.OutputLine("%s", command.GetName());
     }
 
     return OT_ERROR_NONE;
@@ -143,24 +140,17 @@ otError Joiner::ProcessStop(uint8_t aArgsLength, char *aArgs[])
 
 otError Joiner::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError error = OT_ERROR_INVALID_COMMAND;
+    otError             error = OT_ERROR_INVALID_COMMAND;
+    const CommandEntry *command;
 
-    if (aArgsLength < 1)
-    {
-        IgnoreError(ProcessHelp(0, nullptr));
-    }
-    else
-    {
-        for (const Command &command : sCommands)
-        {
-            if (strcmp(aArgs[0], command.mName) == 0)
-            {
-                error = (this->*command.mCommand)(aArgsLength, aArgs);
-                break;
-            }
-        }
-    }
+    VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
 
+    command = Utils::LookupTable::Find(aArgs[0], sCommandTable);
+    VerifyOrExit(command != nullptr, OT_NOOP);
+
+    error = command->InvokeHandler(*this, aArgsLength, aArgs);
+
+exit:
     return error;
 }
 

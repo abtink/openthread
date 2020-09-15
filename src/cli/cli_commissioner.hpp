@@ -38,6 +38,8 @@
 
 #include <openthread/commissioner.h>
 
+#include "utils/parse_cmdline.hpp"
+
 #if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
 
 namespace ot {
@@ -78,11 +80,7 @@ private:
         kDefaultJoinerTimeout = 120, ///< Default timeout for Joiners, in seconds.
     };
 
-    struct Command
-    {
-        const char *mName;
-        otError (Commissioner::*mCommand)(uint8_t aArgsLength, char *aArgs[]);
-    };
+    typedef Utils::CmdLineParser::TableEntry<Commissioner> CommandEntry;
 
     otError ProcessHelp(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessAnnounce(uint8_t aArgsLength, char *aArgs[]);
@@ -119,8 +117,18 @@ private:
 
     static const char *StateToString(otCommissionerState aState);
 
-    static const Command sCommands[];
-    Interpreter &        mInterpreter;
+    static constexpr CommandEntry sCommandTable[] = {
+        {"announce", &Commissioner::ProcessAnnounce},   {"energy", &Commissioner::ProcessEnergy},
+        {"help", &Commissioner::ProcessHelp},           {"joiner", &Commissioner::ProcessJoiner},
+        {"mgmtget", &Commissioner::ProcessMgmtGet},     {"mgmtset", &Commissioner::ProcessMgmtSet},
+        {"panid", &Commissioner::ProcessPanId},         {"provisioningurl", &Commissioner::ProcessProvisioningUrl},
+        {"sessionid", &Commissioner::ProcessSessionId}, {"start", &Commissioner::ProcessStart},
+        {"state", &Commissioner::ProcessState},         {"stop", &Commissioner::ProcessStop},
+    };
+
+    static_assert(Utils::LookupTable::IsSorted(sCommandTable), "Command Table is not sorted");
+
+    Interpreter &mInterpreter;
 };
 
 } // namespace Cli

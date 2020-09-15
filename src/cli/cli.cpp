@@ -36,7 +36,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "mac/channel_mask.hpp"
-#include "utils/parse_cmdline.hpp"
 
 #include <openthread/icmp6.h>
 #include <openthread/link.h>
@@ -102,7 +101,7 @@ namespace ot {
 
 namespace Cli {
 
-constexpr Interpreter::Command Interpreter::sCommands[];
+constexpr Interpreter::CommandEntry Interpreter::sCommandTable[];
 
 Interpreter *Interpreter::sInterpreter = nullptr;
 
@@ -336,11 +335,9 @@ otError Interpreter::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    static_assert(IsArraySorted(sCommands, OT_ARRAY_LENGTH(sCommands)), "Command list is not sorted");
-
-    for (const Command &command : sCommands)
+    for (const CommandEntry &command : sCommandTable)
     {
-        OutputLine("%s", command.mName);
+        OutputLine("%s", command.GetName());
     }
 
     for (uint8_t i = 0; i < mUserCommandsLength; i++)
@@ -4254,41 +4251,12 @@ otError Interpreter::ProcessDiag(uint8_t aArgsLength, char *aArgs[])
 }
 #endif
 
-const Interpreter::Command *Interpreter::FindCommand(const char *aName) const
-{
-    const Command *rval  = nullptr;
-    uint16_t       left  = 0;
-    uint16_t       right = OT_ARRAY_LENGTH(sCommands);
-
-    while (left < right)
-    {
-        uint16_t middle  = (left + right) / 2;
-        int      compare = strcmp(aName, sCommands[middle].mName);
-
-        if (compare == 0)
-        {
-            rval = &sCommands[middle];
-            break;
-        }
-        else if (compare > 0)
-        {
-            left = middle + 1;
-        }
-        else
-        {
-            right = middle;
-        }
-    }
-
-    return rval;
-}
-
 void Interpreter::ProcessLine(char *aBuf, uint16_t aBufLength)
 {
-    char *         aArgs[kMaxArgs] = {nullptr};
-    char *         cmdName;
-    uint8_t        aArgsLength = 0;
-    const Command *command;
+    char *              aArgs[kMaxArgs] = {nullptr};
+    char *              cmdName;
+    uint8_t             aArgsLength = 0;
+    const CommandEntry *command;
 
     VerifyOrExit(aBuf != nullptr && StringLength(aBuf, aBufLength + 1) <= aBufLength, OT_NOOP);
 
@@ -4303,11 +4271,11 @@ void Interpreter::ProcessLine(char *aBuf, uint16_t aBufLength)
                  OutputLine("under diagnostics mode, execute 'diag stop' before running any other commands."));
 #endif
 
-    command = FindCommand(cmdName);
+    command = Utils::LookupTable::Find(cmdName, sCommandTable);
 
     if (command != nullptr)
     {
-        OutputResult((this->*command->mCommand)(aArgsLength - 1, &aArgs[1]));
+        OutputResult(command->InvokeHandler(*this, aArgsLength - 1, &aArgs[1]));
         ExitNow();
     }
 

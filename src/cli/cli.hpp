@@ -64,6 +64,7 @@
 #include <openthread/sntp.h>
 #include "common/timer.hpp"
 #include "net/icmp6.hpp"
+#include "utils/parse_cmdline.hpp"
 
 namespace ot {
 
@@ -267,13 +268,8 @@ private:
         kMaxLineLength = OPENTHREAD_CONFIG_CLI_MAX_LINE_LENGTH,
     };
 
-    struct Command
-    {
-        const char *mName;
-        otError (Interpreter::*mCommand)(uint8_t aArgsLength, char *aArgs[]);
-    };
+    typedef Utils::CmdLineParser::TableEntry<Interpreter> CommandEntry;
 
-    const Command *FindCommand(const char *aName) const;
     otError        ParsePingInterval(const char *aString, uint32_t &aInterval);
     static otError ParseJoinerDiscerner(char *aString, otJoinerDiscerner &aJoinerDiscerner);
     otError        ProcessHelp(uint8_t aArgsLength, char *aArgs[]);
@@ -528,18 +524,7 @@ private:
     }
     void HandleDiscoveryRequest(const otThreadDiscoveryRequestInfo &aInfo);
 
-    constexpr static bool AreSorted(const char *aFirst, const char *aSecond)
-    {
-        return (*aFirst < *aSecond) ? true : ((*aFirst > *aSecond) ? false : AreSorted(aFirst + 1, aSecond + 1));
-    }
-
-    constexpr static bool IsArraySorted(const Interpreter::Command *aList, uint16_t aLength)
-    {
-        return (aLength <= 1) ? true
-                              : AreSorted(aList[0].mName, aList[1].mName) && IsArraySorted(aList + 1, aLength - 1);
-    }
-
-    static constexpr Command sCommands[] = {
+    static constexpr CommandEntry sCommandTable[] = {
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
         {"bbr", &Interpreter::ProcessBackboneRouter},
 #endif
@@ -693,6 +678,8 @@ private:
         {"unsecureport", &Interpreter::ProcessUnsecurePort},
         {"version", &Interpreter::ProcessVersion},
     };
+
+    static_assert(Utils::LookupTable::IsSorted(sCommandTable), "Command Table is not sorted");
 
     const otCliCommand *mUserCommands;
     uint8_t             mUserCommandsLength;

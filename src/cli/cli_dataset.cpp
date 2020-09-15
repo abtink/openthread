@@ -44,31 +44,8 @@
 namespace ot {
 namespace Cli {
 
-const Dataset::Command Dataset::sCommands[] = {
-    {"help", &Dataset::ProcessHelp},
-    {"active", &Dataset::ProcessActive},
-    {"activetimestamp", &Dataset::ProcessActiveTimestamp},
-    {"channel", &Dataset::ProcessChannel},
-    {"channelmask", &Dataset::ProcessChannelMask},
-    {"clear", &Dataset::ProcessClear},
-    {"commit", &Dataset::ProcessCommit},
-    {"delay", &Dataset::ProcessDelay},
-    {"extpanid", &Dataset::ProcessExtPanId},
-    {"init", &Dataset::ProcessInit},
-    {"masterkey", &Dataset::ProcessMasterKey},
-    {"meshlocalprefix", &Dataset::ProcessMeshLocalPrefix},
-    {"mgmtgetcommand", &Dataset::ProcessMgmtGetCommand},
-    {"mgmtsetcommand", &Dataset::ProcessMgmtSetCommand},
-    {"networkname", &Dataset::ProcessNetworkName},
-    {"panid", &Dataset::ProcessPanId},
-    {"pending", &Dataset::ProcessPending},
-    {"pendingtimestamp", &Dataset::ProcessPendingTimestamp},
-    {"pskc", &Dataset::ProcessPskc},
-    {"securitypolicy", &Dataset::ProcessSecurityPolicy},
-    {"set", &Dataset::ProcessSet},
-};
-
-otOperationalDataset Dataset::sDataset;
+constexpr Dataset::CommandEntry Dataset::sCommandTable[];
+otOperationalDataset            Dataset::sDataset;
 
 void Dataset::OutputBytes(const uint8_t *aBytes, uint8_t aLength)
 {
@@ -183,21 +160,18 @@ otError Dataset::Print(otOperationalDataset &aDataset)
 
 otError Dataset::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError error = OT_ERROR_INVALID_COMMAND;
+    otError             error = OT_ERROR_INVALID_COMMAND;
+    const CommandEntry *command;
 
     if (aArgsLength == 0)
     {
         ExitNow(error = Print(sDataset));
     }
 
-    for (const Command &command : sCommands)
-    {
-        if (strcmp(aArgs[0], command.mName) == 0)
-        {
-            error = (this->*command.mCommand)(aArgsLength - 1, aArgs + 1);
-            break;
-        }
-    }
+    command = Utils::LookupTable::Find(aArgs[0], sCommandTable);
+    VerifyOrExit(command != nullptr, OT_NOOP);
+
+    error = command->InvokeHandler(*this, aArgsLength - 1, aArgs + 1);
 
 exit:
     return error;
@@ -208,9 +182,9 @@ otError Dataset::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    for (const Command &command : sCommands)
+    for (const CommandEntry &command : sCommandTable)
     {
-        mInterpreter.OutputLine("%s", command.mName);
+        mInterpreter.OutputLine("%s", command.GetName());
     }
 
     return OT_ERROR_NONE;

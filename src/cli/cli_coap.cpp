@@ -43,24 +43,7 @@
 namespace ot {
 namespace Cli {
 
-const struct Coap::Command Coap::sCommands[] = {
-    {"help", &Coap::ProcessHelp},
-#if OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE
-    {"cancel", &Coap::ProcessCancel},
-#endif
-    {"delete", &Coap::ProcessRequest},
-    {"get", &Coap::ProcessRequest},
-#if OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE
-    {"observe", &Coap::ProcessRequest},
-#endif
-    {"parameters", &Coap::ProcessParameters},
-    {"post", &Coap::ProcessRequest},
-    {"put", &Coap::ProcessRequest},
-    {"resource", &Coap::ProcessResource},
-    {"set", &Coap::ProcessSet},
-    {"start", &Coap::ProcessStart},
-    {"stop", &Coap::ProcessStop},
-};
+const Coap::CommandEntry Coap::sCommandTable[];
 
 Coap::Coap(Interpreter &aInterpreter)
     : mInterpreter(aInterpreter)
@@ -172,9 +155,9 @@ otError Coap::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    for (const Command &command : sCommands)
+    for (const CommandEntry &command : sCommandTable)
     {
-        mInterpreter.OutputLine("%s", command.mName);
+        mInterpreter.OutputLine("%s", command.GetName());
     }
 
     return OT_ERROR_NONE;
@@ -513,25 +496,17 @@ exit:
 
 otError Coap::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError error = OT_ERROR_INVALID_COMMAND;
+    otError             error = OT_ERROR_INVALID_ARGS;
+    const CommandEntry *command;
 
-    if (aArgsLength < 1)
-    {
-        IgnoreError(ProcessHelp(0, nullptr));
-        error = OT_ERROR_INVALID_ARGS;
-    }
-    else
-    {
-        for (const Command &command : sCommands)
-        {
-            if (strcmp(aArgs[0], command.mName) == 0)
-            {
-                error = (this->*command.mCommand)(aArgsLength, aArgs);
-                break;
-            }
-        }
-    }
+    VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
 
+    command = Utils::LookupTable::Find(aArgs[0], sCommandTable);
+    VerifyOrExit(command != nullptr, error = OT_ERROR_INVALID_COMMAND);
+
+    error = command->InvokeHandler(*this, aArgsLength, aArgs);
+
+exit:
     return error;
 }
 

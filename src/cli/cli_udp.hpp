@@ -38,6 +38,8 @@
 
 #include <openthread/udp.h>
 
+#include "utils/parse_cmdline.hpp"
+
 namespace ot {
 namespace Cli {
 
@@ -68,11 +70,7 @@ public:
     otError Process(uint8_t aArgsLength, char *aArgs[]);
 
 private:
-    struct Command
-    {
-        const char *mName;
-        otError (UdpExample::*mCommand)(uint8_t aArgsLength, char *aArgs[]);
-    };
+    typedef Utils::CmdLineParser::TableEntry<UdpExample> CommandEntry;
 
     enum PayloadType
     {
@@ -93,8 +91,19 @@ private:
     static void HandleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
     void        HandleUdpReceive(otMessage *aMessage, const otMessageInfo *aMessageInfo);
 
-    static const Command sCommands[];
-    Interpreter &        mInterpreter;
+    static constexpr CommandEntry sCommandTable[] = {
+        {"bind", &UdpExample::ProcessBind},
+        {"close", &UdpExample::ProcessClose},
+        {"connect", &UdpExample::ProcessConnect},
+        {"help", &UdpExample::ProcessHelp},
+        {"linksecurity", &UdpExample::ProcessLinkSecurity},
+        {"open", &UdpExample::ProcessOpen},
+        {"send", &UdpExample::ProcessSend},
+    };
+
+    static_assert(Utils::LookupTable::IsSorted(sCommandTable), "Command Table is not sorted");
+
+    Interpreter &mInterpreter;
 
     bool        mLinkSecurityEnabled;
     otUdpSocket mSocket;
