@@ -53,6 +53,119 @@ class Instance;
  *
  */
 
+/**********************************************************************************************************************/
+
+struct SimpleEntry
+{
+    const char *mName;
+    uint16_t    mValue;
+};
+
+class EntryBase
+{
+public:
+    constexpr EntryBase(const char *aName)
+        : mName(aName)
+    {
+    }
+
+    const char *GetName(void) const { return mName; }
+
+private:
+    const char *mName;
+};
+
+class Entry : public EntryBase
+{
+public:
+    constexpr Entry(const char *aName, uint16_t aValue)
+        : EntryBase(aName)
+        , mValue(aValue)
+    {
+    }
+
+    uint16_t GetValue(void) const { return mValue; }
+
+private:
+    uint16_t mValue;
+};
+
+/*
+template <class HandlerProvider> class HandlerEntry : public EntryBase
+{
+public:
+    typedef otError (HandlerProvider::*Handler)(uint8_t aArgsLength, char *aArgs[]);
+
+    constexpr HandlerEntry(const char *aName, Handler aHandler)
+        : EntryBase(aName)
+        , mHandler(aHandler)
+    {
+    }
+
+    otError InvokeHandler(HandlerProvider &aProvider, uint8_t aArgsLength, char *aArgs[]) const
+    {
+        return (aProvider.*mHandler)(aArgsLength, aArgs);
+    }
+
+private:
+    Handler mHandler;
+};
+
+class Test;
+
+typedef HandlerEntry<Test> HandlerEntry2;
+*/
+
+class Test;
+
+class HandlerEntry : public EntryBase
+{
+public:
+    typedef otError (Test::*Handler)(uint8_t aArgsLength, char *aArgs[]);
+
+    constexpr HandlerEntry(const char *aName, Handler aHandler)
+        : EntryBase(aName)
+        , mHandler(aHandler)
+    {
+    }
+
+    otError InvokeHandler(Test &aProvider, uint8_t aArgsLength, char *aArgs[]) const
+    {
+        return (aProvider.*mHandler)(aArgsLength, aArgs);
+    }
+
+private:
+    const Handler mHandler;
+};
+
+class Test
+{
+private:
+    static constexpr SimpleEntry sSimpleArray[] = {
+        {"hello", 1},
+        {"there", 2},
+        {"test", 3},
+    };
+
+    static constexpr Entry sArray[] = {
+        {"hello", 1},
+        {"there", 2},
+        {"test", 3},
+    };
+
+    otError ProcessHelp(uint8_t, char *[]) { return OT_ERROR_NONE; }
+    otError ProcessCmd(uint8_t, char *[]) { return OT_ERROR_NONE; }
+
+    static constexpr HandlerEntry sTable[] = {
+        {"help", &Test::ProcessHelp},
+        {"cmd", &Test::ProcessCmd},
+    };
+
+};
+
+
+/**********************************************************************************************************************/
+
 /**
  * This template class represents an object pool.
  *
