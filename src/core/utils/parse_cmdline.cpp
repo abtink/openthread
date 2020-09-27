@@ -43,19 +43,19 @@
 namespace ot {
 namespace Utils {
 
-bool CmdLineParser::Args::IsEqual(const char *aString)
+bool CmdLineParser::Args::IsNextArgEqual(const char *aString)
 {
     bool matches = (mLength > 0) && (strcmp(mArgs[0], aString) == 0);
 
     if (matches)
     {
-        Advance();
+        AdvanceArg();
     }
 
     return matches;
 }
 
-void CmdLineParser::Args::Advance(void)
+void CmdLineParser::Args::AdvanceArg(void)
 {
     if (mLength > 0)
     {
@@ -64,12 +64,12 @@ void CmdLineParser::Args::Advance(void)
     }
 }
 
-otError CmdLineParser::Args::ParseAsUint8(uint8_t &aUint8)
+otError CmdLineParser::Args::ParseCurArgAsUint8(uint8_t &aUint8)
 {
     otError       error;
     unsigned long value;
 
-    SuccessOrExit(error = ParseAsUnsignedLong(value));
+    SuccessOrExit(error = ParseCurArgAsUnsignedLong(value));
 
     VerifyOrExit(value <= UINT8_MAX, error = OT_ERROR_INVALID_ARGS);
     aUint8 = static_cast<uint8_t>(value);
@@ -78,12 +78,12 @@ exit:
     return error;
 }
 
-otError CmdLineParser::Args::ParseAsUint16(uint16_t &aUint16)
+otError CmdLineParser::Args::ParseCurArgAsUint16(uint16_t &aUint16)
 {
     otError       error;
     unsigned long value;
 
-    SuccessOrExit(error = ParseAsUnsignedLong(value));
+    SuccessOrExit(error = ParseCurArgAsUnsignedLong(value));
 
     VerifyOrExit(value <= UINT16_MAX, error = OT_ERROR_INVALID_ARGS);
     aUint16 = static_cast<uint16_t>(value);
@@ -92,12 +92,12 @@ exit:
     return error;
 }
 
-otError CmdLineParser::Args::ParseAsUint32(uint32_t &aUint32)
+otError CmdLineParser::Args::ParseCurArgAsUint32(uint32_t &aUint32)
 {
     otError       error;
     unsigned long value;
 
-    SuccessOrExit(error = ParseAsUnsignedLong(value));
+    SuccessOrExit(error = ParseCurArgAsUnsignedLong(value));
 
     VerifyOrExit(value <= UINT32_MAX, error = OT_ERROR_INVALID_ARGS);
     aUint32 = static_cast<uint32_t>(value);
@@ -106,7 +106,7 @@ exit:
     return error;
 }
 
-otError CmdLineParser::Args::ParseAsUnsignedLong(unsigned long &aUnsignedLong)
+otError CmdLineParser::Args::ParseCurArgAsUnsignedLong(unsigned long &aUnsignedLong)
 {
     otError error = OT_ERROR_NONE;
     char *  endptr;
@@ -116,18 +116,18 @@ otError CmdLineParser::Args::ParseAsUnsignedLong(unsigned long &aUnsignedLong)
     aUnsignedLong = strtoul(mArgs[0], &endptr, 0);
     VerifyOrExit(*endptr == '\0', error = OT_ERROR_INVALID_ARGS);
 
-    Advance();
+    AdvanceArg();
 
 exit:
     return error;
 }
 
-otError CmdLineParser::Args::ParseAsInt8(int8_t &aInt8)
+otError CmdLineParser::Args::ParseCurArgAsInt8(int8_t &aInt8)
 {
     otError error;
     long    value;
 
-    SuccessOrExit(error = ParseAsLong(value));
+    SuccessOrExit(error = ParseCurArgAsLong(value));
 
     VerifyOrExit((INT8_MIN <= value) && (value <= INT8_MAX), error = OT_ERROR_INVALID_ARGS);
     aInt8 = static_cast<int8_t>(value);
@@ -136,12 +136,12 @@ exit:
     return error;
 }
 
-otError CmdLineParser::Args::ParseAsInt16(int16_t &aInt16)
+otError CmdLineParser::Args::ParseCurArgAsInt16(int16_t &aInt16)
 {
     otError error;
     long    value;
 
-    SuccessOrExit(error = ParseAsLong(value));
+    SuccessOrExit(error = ParseCurArgAsLong(value));
 
     VerifyOrExit((INT16_MIN <= value) && (value <= INT16_MAX), error = OT_ERROR_INVALID_ARGS);
     aInt16 = static_cast<int16_t>(value);
@@ -150,12 +150,12 @@ exit:
     return error;
 }
 
-otError CmdLineParser::Args::ParseAsInt32(int32_t &aInt32)
+otError CmdLineParser::Args::ParseCurArgAsInt32(int32_t &aInt32)
 {
     otError error;
     long    value;
 
-    SuccessOrExit(error = ParseAsLong(value));
+    SuccessOrExit(error = ParseCurArgAsLong(value));
 
     VerifyOrExit((INT32_MIN <= value) && (value <= INT32_MAX), error = OT_ERROR_INVALID_ARGS);
     aInt32 = static_cast<int32_t>(value);
@@ -164,7 +164,7 @@ exit:
     return error;
 }
 
-otError CmdLineParser::Args::ParseAsLong(long &aLong)
+otError CmdLineParser::Args::ParseCurArgAsLong(long &aLong)
 {
     otError error = OT_ERROR_NONE;
     char *  endptr;
@@ -174,18 +174,18 @@ otError CmdLineParser::Args::ParseAsLong(long &aLong)
     aLong = strtol(mArgs[0], &endptr, 0);
     VerifyOrExit(*endptr == '\0', error = OT_ERROR_INVALID_ARGS);
 
-    Advance();
+    AdvanceArg();
 
 exit:
     return error;
 }
 
-otError CmdLineParser::Args::ParseAsBool(bool &aBool)
+otError CmdLineParser::Args::ParseCurArgAsBool(bool &aBool)
 {
     otError  error = OT_ERROR_NONE;
     uint32_t value;
 
-    if (ParseAsUint32(value) == OT_ERROR_NONE)
+    if (ParseCurArgAsUint32(value) == OT_ERROR_NONE)
     {
         ExitNow(aBool = (value != 0));
     }
@@ -196,21 +196,21 @@ exit:
     return error;
 }
 #if OPENTHREAD_FTD || OPENTHREAD_MTD
-otError CmdLineParser::Args::ParseAsIp6Address(otIp6Address &aAddress)
+otError CmdLineParser::Args::ParseCurArgAsIp6Address(otIp6Address &aAddress)
 {
     otError error = OT_ERROR_INVALID_ARGS;
 
     VerifyOrExit(mLength > 0, OT_NOOP);
     SuccessOrExit(static_cast<Ip6::Address &>(aAddress).FromString(mArgs[0]));
 
-    Advance();
+    AdvanceArg();
     error = OT_ERROR_NONE;
 
 exit:
     return error;
 }
 
-otError CmdLineParser::Args::ParseAsIp6Prefix(otIp6Prefix &aPrefix)
+otError CmdLineParser::Args::ParseCurArgAsIp6Prefix(otIp6Prefix &aPrefix)
 {
     otError error = OT_ERROR_INVALID_ARGS;
     char *  prefixLengthStr;
@@ -224,38 +224,38 @@ otError CmdLineParser::Args::ParseAsIp6Prefix(otIp6Prefix &aPrefix)
     SuccessOrExit(static_cast<Ip6::Address &>(aPrefix.mPrefix).FromString(mArgs[0]));
 
     mArgs[0] = prefixLengthStr;
-    error    = ParseAsUint8(aPrefix.mLength);
+    error    = ParseCurArgAsUint8(aPrefix.mLength);
 
 exit:
     return error;
 }
 #endif // #if OPENTHREAD_FTD || OPENTHREAD_MTD
 
-otError CmdLineParser::Args::ParseAsString(char *&aString)
+otError CmdLineParser::Args::ParseCurArgAsString(char *&aString)
 {
     otError error = OT_ERROR_NONE;
 
     VerifyOrExit(mLength > 0, error = OT_ERROR_INVALID_ARGS);
     aString = mArgs[0];
-    Advance();
+    AdvanceArg();
 
 exit:
     return error;
 }
 
-otError CmdLineParser::Args::ParseAsFixedSizeHexString(uint8_t *aBuffer, uint16_t aSize)
+otError CmdLineParser::Args::ParseCurArgAsFixedSizeHexString(uint8_t *aBuffer, uint16_t aSize)
 {
     otError  error;
     uint16_t readSize = aSize;
 
-    SuccessOrExit(error = ParseAsHexString(aBuffer, readSize, kDisallowTruncate));
+    SuccessOrExit(error = ParseCurArgAsHexString(aBuffer, readSize, kDisallowTruncate));
     VerifyOrExit(readSize == aSize, error = OT_ERROR_INVALID_ARGS);
 
 exit:
     return error;
 }
 
-otError CmdLineParser::Args::ParseAsHexString(uint8_t *aBuffer, uint16_t &aSize, HexStringParseMode aMode)
+otError CmdLineParser::Args::ParseCurArgAsHexString(uint8_t *aBuffer, uint16_t &aSize, HexStringParseMode aMode)
 {
     otError     error     = OT_ERROR_NONE;
     uint8_t     byte      = 0;
@@ -320,7 +320,7 @@ otError CmdLineParser::Args::ParseAsHexString(uint8_t *aBuffer, uint16_t &aSize,
     }
 
     aSize = readBytes;
-    Advance();
+    AdvanceArg();
 
 exit:
     return error;
@@ -336,7 +336,7 @@ static bool IsEscapable(char aChar)
     return IsSeparator(aChar) || (aChar == '\\');
 }
 
-otError CmdLineParser::Parse(char *aString, uint16_t aMaxArgsLength, Args &aArgs)
+otError CmdLineParser::ParseCmd2(char *aString, uint16_t aMaxArgsLength, Args &aArgs)
 {
     otError  error  = OT_ERROR_NONE;
     uint16_t length = 0;

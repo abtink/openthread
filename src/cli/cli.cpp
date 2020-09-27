@@ -108,7 +108,8 @@ constexpr Interpreter::Command Interpreter::sCommands[];
 Interpreter *Interpreter::sInterpreter = nullptr;
 
 Interpreter::Interpreter(Instance *aInstance)
-    : mUserCommands(nullptr)
+    : Utils::CmdLineParser::Args()
+    , mUserCommands(nullptr)
     , mUserCommandsLength(0)
     , mPingLength(kDefaultPingLength)
     , mPingCount(kDefaultPingCount)
@@ -333,10 +334,8 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessHelp(Args &aArgs)
+otError Interpreter::ProcessHelp(void)
 {
-    OT_UNUSED_VARIABLE(aArgs);
-
     static_assert(IsArraySorted(sCommands, OT_ARRAY_LENGTH(sCommands)), "Command list is not sorted");
 
     for (const Command &command : sCommands)
@@ -353,12 +352,12 @@ otError Interpreter::ProcessHelp(Args &aArgs)
 }
 
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
-otError Interpreter::ProcessBackboneRouter(Args &aArgs)
+otError Interpreter::ProcessBackboneRouter(void)
 {
     otError                error = OT_ERROR_NONE;
     otBackboneRouterConfig config;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         if (otBackboneRouterGetPrimary(mInstance, &config) == OT_ERROR_NONE)
         {
@@ -378,38 +377,38 @@ otError Interpreter::ProcessBackboneRouter(Args &aArgs)
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
 #if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
-    if (aArgs.IsEqual("mgmt"))
+    if (IsNextArgEqual("mgmt"))
     {
-        if (aArgs.IsEqual("dua"))
+        if (IsNextArgEqual("dua"))
         {
             otIp6InterfaceIdentifier *mlIid = nullptr;
             otIp6InterfaceIdentifier  iid;
-            unsigned long             value;
+            uint8_t status;
 
-            SuccessOrExit(error = aArgs.ParseUnsignedLong(value));
+            SuccessOrExit(error = ParseCurArgAsUint8(status));
 
-            if (!aArgs.IsEmpty())
+            if (!IsArgsEmpty())
             {
-                SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(iid.mFields.m8));
+                SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(iid.mFields.m8));
                 mlIid = &iid;
             }
 
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
-            otBackboneRouterConfigNextDuaRegistrationResponse(mInstance, mlIid, static_cast<uint8_t>(value));
+            otBackboneRouterConfigNextDuaRegistrationResponse(mInstance, mlIid, status);
             ExitNow();
         }
 
-        if (aArgs.IsEqual("mlr"))
+        if (IsNextArgEqual("mlr"))
         {
-            ExitNow(error = ProcessBackboneRouterMgmtMlr(aArgs));
+            ExitNow(error = ProcessBackboneRouterMgmtMlr());
         }
 
         ExitNow(error = OT_ERROR_INVALID_COMMAND);
     }
 #endif // OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
 
-    error = ProcessBackboneRouterLocal(aArgs);
+    error = ProcessBackboneRouterLocal();
 #else
     error = OT_ERROR_INVALID_COMMAND;
 #endif // OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
@@ -421,36 +420,36 @@ exit:
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
 
 #if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
-otError Interpreter::ProcessBackboneRouterMgmtMlr(Args &aArgs)
+otError Interpreter::ProcessBackboneRouterMgmtMlr(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("listener"))
+    if (IsNextArgEqual("listener"))
     {
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             ExitNow(PrintMulticastListenersTable());
         }
 
-        if (aArgs.IsEqual("clear"))
+        if (IsNextArgEqual("clear"))
         {
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(otBackboneRouterMulticastListenerClear(mInstance));
         }
 
-        if (aArgs.IsEqual("add"))
+        if (IsNextArgEqual("add"))
         {
             otIp6Address address;
             uint32_t     timeout = 0;
 
-            SuccessOrExit(error = aArgs.ParseAsIp6Address(address));
+            SuccessOrExit(error = ParseCurArgAsIp6Address(address));
 
-            if (!aArgs.IsEmpty())
+            if (!IsArgsEmpty())
             {
-                SuccessOrExit(error = aArgs.ParseAsUint32(timeout));
+                SuccessOrExit(error = ParseCurArgAsUint32(timeout));
             }
 
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
             ExitNow(error = otBackboneRouterMulticastListenerAdd(mInstance, &address, timeout));
         }
@@ -458,12 +457,12 @@ otError Interpreter::ProcessBackboneRouterMgmtMlr(Args &aArgs)
         ExitNow(error = OT_ERROR_INVALID_COMMAND);
     }
 
-    if (aArgs.IsEqual("response"))
+    if (IsNextArgEqual("response"))
     {
         uint8_t status;
 
-        SuccessOrExit(error = aArgs.ParseAsUint8(status));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsUint8(status));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
         otBackboneRouterConfigNextMulticastListenerRegistrationResponse(mInstance, status);
         ExitNow();
@@ -489,46 +488,46 @@ void Interpreter::PrintMulticastListenersTable(void)
 
 #endif // OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
 
-otError Interpreter::ProcessBackboneRouterLocal(Args &aArgs)
+otError Interpreter::ProcessBackboneRouterLocal(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("disable"))
+    if (IsNextArgEqual("disable"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(otBackboneRouterSetEnabled(mInstance, false));
     }
 
-    if (aArgs.IsEqual("enable"))
+    if (IsNextArgEqual("enable"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(otBackboneRouterSetEnabled(mInstance, true));
     }
 
-    if (aArgs.IsEqual("jitter"))
+    if (IsNextArgEqual("jitter"))
     {
         uint8_t jitter;
 
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             ExitNow(OutputLine("%d", otBackboneRouterGetRegistrationJitter(mInstance)));
         }
 
-        SuccessOrExit(error = aArgs.ParseAsUint8(jitter));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsUint8(jitter));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
         ExitNow(otBackboneRouterSetRegistrationJitter(mInstance, jitter));
     }
 
-    if (aArgs.IsEqual("register"))
+    if (IsNextArgEqual("register"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(error = otBackboneRouterRegister(mInstance));
     }
 
-    if (aArgs.IsEqual("state"))
+    if (IsNextArgEqual("state"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
         switch (otBackboneRouterGetState(mInstance))
         {
@@ -546,13 +545,13 @@ otError Interpreter::ProcessBackboneRouterLocal(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("config"))
+    if (IsNextArgEqual("config"))
     {
         otBackboneRouterConfig config;
 
         otBackboneRouterGetConfig(mInstance, &config);
 
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             OutputLine("seqno:    %d", config.mSequenceNumber);
             OutputLine("delay:    %d secs", config.mReregistrationDelay);
@@ -562,23 +561,23 @@ otError Interpreter::ProcessBackboneRouterLocal(Args &aArgs)
 
         do
         {
-            if (aArgs.IsEqual("seqno"))
+            if (IsNextArgEqual("seqno"))
             {
-                SuccessOrExit(error = aArgs.ParseAsUint8(config.mSequenceNumber));
+                SuccessOrExit(error = ParseCurArgAsUint8(config.mSequenceNumber));
             }
-            else if (aArgs.IsEqual("delay"))
+            else if (IsNextArgEqual("delay"))
             {
-                SuccessOrExit(error = aArgs.ParseAsUint16(config.mReregistrationDelay));
+                SuccessOrExit(error = ParseCurArgAsUint16(config.mReregistrationDelay));
             }
-            else if (aArgs.IsEqual("timeout"))
+            else if (IsNextArgEqual("timeout"))
             {
-                SuccessOrExit(error = aArgs.ParseAsUint32(config.mMlrTimeout));
+                SuccessOrExit(error = ParseCurArgAsUint32(config.mMlrTimeout));
             }
             else
             {
                 ExitNow(error = OT_ERROR_INVALID_ARGS);
             }
-        } while (!aArgs.IsEmpty());
+        } while (!IsArgsEmpty());
 
         ExitNow(error = otBackboneRouterSetConfig(mInstance, &config));
     }
@@ -590,18 +589,18 @@ exit:
 }
 #endif // OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
 
-otError Interpreter::ProcessDomainName(Args &aArgs)
+otError Interpreter::ProcessDomainName(void)
 {
     otError     error = OT_ERROR_NONE;
     char *name;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine(otThreadGetDomainName(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsString(name));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsString(name));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
     error = otThreadSetDomainName(mInstance, name);
 
 exit:
@@ -609,15 +608,15 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_DUA_ENABLE
-otError Interpreter::ProcessDua(Args &aArgs)
+otError Interpreter::ProcessDua(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("iid"))
+    if (IsNextArgEqual("iid"))
     {
         otIp6InterfaceIdentifier iid;
 
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             const otIp6InterfaceIdentifier *duaIid = otThreadGetFixedDuaInterfaceIdentifier(mInstance);
 
@@ -627,13 +626,13 @@ otError Interpreter::ProcessDua(Args &aArgs)
             ExitNow();
         }
 
-        if (aArgs.IsEqual("clear"))
+        if (IsNextArgEqual("clear"))
         {
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(error = otThreadSetFixedDuaInterfaceIdentifier(mInstance, nullptr));
         }
 
-        SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(iid.mFields.m8));
+        SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(iid.mFields.m8));
         ExitNow(error = otThreadSetFixedDuaInterfaceIdentifier(mInstance, &iid));
     }
 
@@ -646,10 +645,8 @@ exit:
 
 #endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
 
-otError Interpreter::ProcessBufferInfo(Args &aArgs)
+otError Interpreter::ProcessBufferInfo(void)
 {
-    OT_UNUSED_VARIABLE(aArgs);
-
     otBufferInfo bufferInfo;
 
     otMessageGetBufferInfo(mInstance, &bufferInfo);
@@ -669,19 +666,19 @@ otError Interpreter::ProcessBufferInfo(Args &aArgs)
     return OT_ERROR_NONE;
 }
 
-otError Interpreter::ProcessCcaThreshold(Args &aArgs)
+otError Interpreter::ProcessCcaThreshold(void)
 {
     otError error = OT_ERROR_NONE;
     int8_t  cca;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         SuccessOrExit(error = otPlatRadioGetCcaEnergyDetectThreshold(mInstance, &cca));
         ExitNow(OutputLine("%d dBm", cca));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsInt8(cca));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsInt8(cca));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otPlatRadioSetCcaEnergyDetectThreshold(mInstance, cca);
 
@@ -689,32 +686,32 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessChannel(Args &aArgs)
+otError Interpreter::ProcessChannel(void)
 {
     otError error = OT_ERROR_NONE;
     uint8_t channel;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otLinkGetChannel(mInstance)));
     }
 
-    if (aArgs.IsEqual("supported"))
+    if (IsNextArgEqual("supported"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(OutputLine("0x%x", otPlatRadioGetSupportedChannelMask(mInstance)));
     }
 
-    if (aArgs.IsEqual("preferred"))
+    if (IsNextArgEqual("preferred"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(OutputLine("0x%x", otPlatRadioGetPreferredChannelMask(mInstance)));
     }
 
 #if OPENTHREAD_CONFIG_CHANNEL_MONITOR_ENABLE
-    if (aArgs.IsEqual("monitor"))
+    if (IsNextArgEqual("monitor"))
     {
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             OutputLine("enabled: %d", otChannelMonitorIsEnabled(mInstance));
 
@@ -750,15 +747,15 @@ otError Interpreter::ProcessChannel(Args &aArgs)
             ExitNow();
         }
 
-        if (aArgs.IsEqual("start"))
+        if (IsNextArgEqual("start"))
         {
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(error = otChannelMonitorSetEnabled(mInstance, true));
         }
 
-        if (aArgs.IsEqual("stop"))
+        if (IsNextArgEqual("stop"))
         {
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(error = otChannelMonitorSetEnabled(mInstance, false));
         }
 
@@ -767,9 +764,9 @@ otError Interpreter::ProcessChannel(Args &aArgs)
 #endif // OPENTHREAD_CONFIG_CHANNEL_MONITOR_ENABLE
 
 #if OPENTHREAD_CONFIG_CHANNEL_MANAGER_ENABLE && OPENTHREAD_FTD
-    if (aArgs.IsEqual("manager"))
+    if (IsNextArgEqual("manager"))
     {
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             OutputLine("channel: %d", otChannelManagerGetRequestedChannel(mInstance));
             OutputLine("auto: %d", otChannelManagerGetAutoChannelSelectionEnabled(mInstance));
@@ -788,66 +785,66 @@ otError Interpreter::ProcessChannel(Args &aArgs)
             ExitNow();
         }
 
-        if (aArgs.IsEqual("change"))
+        if (IsNextArgEqual("change"))
         {
-            SuccessOrExit(error = aArgs.ParseAsUint8(channel));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsUint8(channel));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             otChannelManagerRequestChannelChange(mInstance, channel);
             ExitNow();
         }
 
 #if OPENTHREAD_CONFIG_CHANNEL_MONITOR_ENABLE
-        if (aArgs.IsEqual("select"))
+        if (IsNextArgEqual("select"))
         {
             bool skipQualityCheck;
 
-            SuccessOrExit(error = aArgs.ParseAsBool(skipQualityCheck));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsBool(skipQualityCheck));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(error = otChannelManagerRequestChannelSelect(mInstance, skipQualityCheck));
         }
 #endif
-        if (aArgs.IsEqual("auto"))
+        if (IsNextArgEqual("auto"))
         {
             bool enabled;
 
-            SuccessOrExit(error = aArgs.ParseAsBool(enabled));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsBool(enabled));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(otChannelManagerSetAutoChannelSelectionEnabled(mInstance, enabled));
         }
 
-        if (aArgs.IsEqual("delay"))
+        if (IsNextArgEqual("delay"))
         {
             uint8_t delay;
 
-            SuccessOrExit(error = aArgs.ParseAsUint8(delay));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsUint8(delay));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(error = otChannelManagerSetDelay(mInstance, delay));
         }
 
-        if (aArgs.IsEqual("interval"))
+        if (IsNextArgEqual("interval"))
         {
             uint32_t interval;
 
-            SuccessOrExit(error = aArgs.ParseAsUint32(interval));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsUint32(interval));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(error = otChannelManagerSetAutoChannelSelectionInterval(mInstance, interval));
         }
 
-        if (aArgs.IsEqual("supported"))
+        if (IsNextArgEqual("supported"))
         {
             uint32_t mask;
 
-            SuccessOrExit(error = aArgs.ParseAsUint32(mask));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsUint32(mask));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(otChannelManagerSetSupportedChannels(mInstance, mask));
         }
 
-        else if (aArgs.IsEqual("favored"))
+        else if (IsNextArgEqual("favored"))
         {
             uint32_t mask;
 
-            SuccessOrExit(error = aArgs.ParseAsUint32(mask));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsUint32(mask));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(otChannelManagerSetFavoredChannels(mInstance, mask));
         }
 
@@ -855,8 +852,8 @@ otError Interpreter::ProcessChannel(Args &aArgs)
     }
 #endif // OPENTHREAD_CONFIG_CHANNEL_MANAGER_ENABLE && OPENTHREAD_FTD
 
-    SuccessOrExit(error = aArgs.ParseAsUint8(channel));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint8(channel));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
     error = otLinkSetChannel(mInstance, channel);
 
 exit:
@@ -864,17 +861,17 @@ exit:
 }
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessChild(Args &aArgs)
+otError Interpreter::ProcessChild(void)
 {
     otError     error = OT_ERROR_NONE;
     otChildInfo childInfo;
     uint16_t    id;
 
-    if (aArgs.IsEqual("table"))
+    if (IsNextArgEqual("table"))
     {
         uint16_t maxChildren = otThreadGetMaxAllowedChildren(mInstance);
 
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
         OutputLine("| ID  | RLOC16 | Timeout    | Age        | LQ In | C_VN |R|S|D|N| Extended MAC     |");
         OutputLine("+-----+--------+------------+------------+-------+------+-+-+-+-+------------------+");
@@ -905,11 +902,11 @@ otError Interpreter::ProcessChild(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("list"))
+    if (IsNextArgEqual("list"))
     {
         uint16_t maxChildren = otThreadGetMaxAllowedChildren(mInstance);
 
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
         for (uint16_t i = 0; i < maxChildren; i++)
         {
@@ -925,8 +922,8 @@ otError Interpreter::ProcessChild(Args &aArgs)
         ExitNow();
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint16(id));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint16(id));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     SuccessOrExit(error = otThreadGetChildInfoById(mInstance, id, &childInfo));
 
@@ -969,11 +966,11 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessChildIp(Args &aArgs)
+otError Interpreter::ProcessChildIp(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         uint16_t maxChildren = otThreadGetMaxAllowedChildren(mInstance);
 
@@ -1002,9 +999,9 @@ otError Interpreter::ProcessChildIp(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("max"))
+    if (IsNextArgEqual("max"))
     {
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             ExitNow(OutputLine("%d", otThreadGetMaxChildIpAddresses(mInstance)));
         }
@@ -1013,8 +1010,8 @@ otError Interpreter::ProcessChildIp(Args &aArgs)
         {
             uint8_t maxIpAddresses;
 
-            SuccessOrExit(error = aArgs.ParseAsUint8(maxIpAddresses));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsUint8(maxIpAddresses));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(error = otThreadSetMaxChildIpAddresses(mInstance, maxIpAddresses));
         }
 #else
@@ -1028,18 +1025,18 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessChildMax(Args &aArgs)
+otError Interpreter::ProcessChildMax(void)
 {
     otError  error = OT_ERROR_NONE;
     uint16_t maxChildren;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otThreadGetMaxAllowedChildren(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint16(maxChildren));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint16(maxChildren));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otThreadSetMaxAllowedChildren(mInstance, maxChildren);
 
@@ -1048,18 +1045,18 @@ exit:
 }
 #endif // OPENTHREAD_FTD
 
-otError Interpreter::ProcessChildTimeout(Args &aArgs)
+otError Interpreter::ProcessChildTimeout(void)
 {
     otError  error = OT_ERROR_NONE;
     uint32_t timeout;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otThreadGetChildTimeout(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint32(timeout));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint32(timeout));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     otThreadSetChildTimeout(mInstance, timeout);
 
@@ -1068,43 +1065,43 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_COAP_API_ENABLE
-otError Interpreter::ProcessCoap(Args &aArgs)
+otError Interpreter::ProcessCoap(void)
 {
-    return mCoap.Process(aArgs.GetLength(), aArgs.GetArgs());
+    return mCoap.Process(GetArgsLength(), GetArgs());
 }
 #endif
 
 #if OPENTHREAD_CONFIG_COAP_SECURE_API_ENABLE
-otError Interpreter::ProcessCoapSecure(Args &aArgs)
+otError Interpreter::ProcessCoapSecure(void)
 {
-    return mCoapSecure.Process(aArgs.GetLength(), aArgs.GetArgs());
+    return mCoapSecure.Process(GetArgsLength(), GetArgs());
 }
 #endif
 
 #if OPENTHREAD_CONFIG_PLATFORM_RADIO_COEX_ENABLE
-otError Interpreter::ProcessCoexMetrics(Args &aArgs)
+otError Interpreter::ProcessCoexMetrics(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%s", otPlatRadioIsCoexEnabled(mInstance) ? "Enabled" : "Disabled"));
     }
 
     // All the following sub-command have no argument
-    VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
 
-    if (aArgs.IsEqual("enable"))
+    if (IsNextArgEqual("enable"))
     {
         ExitNow(error = otPlatRadioSetCoexEnabled(mInstance, true));
     }
 
-    if (aArgs.IsEqual("disable"))
+    if (IsNextArgEqual("disable"))
     {
         ExitNow(error = otPlatRadioSetCoexEnabled(mInstance, false));
     }
 
-    if (aArgs.IsEqual("metrics"))
+    if (IsNextArgEqual("metrics"))
     {
         otRadioCoexMetrics metrics;
 
@@ -1142,18 +1139,18 @@ exit:
 #endif // OPENTHREAD_CONFIG_PLATFORM_RADIO_COEX_ENABLE
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessContextIdReuseDelay(Args &aArgs)
+otError Interpreter::ProcessContextIdReuseDelay(void)
 {
     otError  error = OT_ERROR_NONE;
     uint32_t delay;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otThreadGetContextIdReuseDelay(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint32(delay));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint32(delay));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     otThreadSetContextIdReuseDelay(mInstance, delay);
 
@@ -1162,20 +1159,20 @@ exit:
 }
 #endif
 
-otError Interpreter::ProcessCounters(Args &aArgs)
+otError Interpreter::ProcessCounters(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         OutputLine("mac");
         OutputLine("mle");
         ExitNow();
     }
 
-    if (aArgs.IsEqual("mac"))
+    if (IsNextArgEqual("mac"))
     {
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             const otMacCounters *macCounters = otLinkGetCounters(mInstance);
 
@@ -1213,9 +1210,9 @@ otError Interpreter::ProcessCounters(Args &aArgs)
             ExitNow();
         }
 
-        if (aArgs.IsEqual("reset"))
+        if (IsNextArgEqual("reset"))
         {
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             otLinkResetCounters(mInstance);
             ExitNow();
         }
@@ -1223,9 +1220,9 @@ otError Interpreter::ProcessCounters(Args &aArgs)
         ExitNow(error = OT_ERROR_INVALID_ARGS);
     }
 
-    if (aArgs.IsEqual("mle"))
+    if (IsNextArgEqual("mle"))
     {
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             const otMleCounters *mleCounters = otThreadGetMleCounters(mInstance);
 
@@ -1241,9 +1238,9 @@ otError Interpreter::ProcessCounters(Args &aArgs)
             ExitNow();
         }
 
-        if (aArgs.IsEqual("reset"))
+        if (IsNextArgEqual("reset"))
         {
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             otThreadResetMleCounters(mInstance);
             ExitNow();
         }
@@ -1258,11 +1255,11 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
-otError Interpreter::ProcessCsl(Args &aArgs)
+otError Interpreter::ProcessCsl(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         OutputLine("Channel: %u", otLinkCslGetChannel(mInstance));
         OutputLine("Period: %u(in units of 10 symbols), %ums", otLinkCslGetPeriod(mInstance),
@@ -1272,29 +1269,29 @@ otError Interpreter::ProcessCsl(Args &aArgs)
     }
 
     // All sub-command require a single argument.
-    VerifyOrExit(aArgs.GetLength() == 2, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(GetArgsLength() == 2, error = OT_ERROR_INVALID_ARGS);
 
-    if (aArgs.IsEqual("channel"))
+    if (IsNextArgEqual("channel"))
     {
         uint8_t channel;
 
-        SuccessOrExit(error = aArgs.ParseAsUint8(channel));
+        SuccessOrExit(error = ParseCurArgAsUint8(channel));
         ExitNow(error = otLinkCslSetChannel(mInstance, channel));
     }
 
-    if (aArgs.IsEqual("period"))
+    if (IsNextArgEqual("period"))
     {
         uint16_t period;
 
-        SuccessOrExit(error = aArgs.ParseAsUint16(period));
+        SuccessOrExit(error = ParseCurArgAsUint16(period));
         ExitNow(error = otLinkCslSetPeriod(mInstance, period));
     }
 
-    if (aArgs.IsEqual("timeout"))
+    if (IsNextArgEqual("timeout"))
     {
         uint32_t timeout;
 
-        SuccessOrExit(error = aArgs.ParseAsUint32(timeout));
+        SuccessOrExit(error = ParseCurArgAsUint32(timeout));
         ExitNow(error = otLinkCslSetTimeout(mInstance, timeout));
     }
 
@@ -1306,18 +1303,18 @@ exit:
 #endif // OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessDelayTimerMin(Args &aArgs)
+otError Interpreter::ProcessDelayTimerMin(void)
 {
     otError  error = OT_ERROR_NONE;
     uint32_t delayTimerMinimal;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", (otDatasetGetDelayTimerMinimal(mInstance) / 1000)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint32(delayTimerMinimal));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint32(delayTimerMinimal));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otDatasetSetDelayTimerMinimal(mInstance, static_cast<uint32_t>(delayTimerMinimal * 1000));
 
@@ -1326,21 +1323,21 @@ exit:
 }
 #endif
 
-otError Interpreter::ProcessDiscover(Args &aArgs)
+otError Interpreter::ProcessDiscover(void)
 {
     otError  error        = OT_ERROR_NONE;
     uint32_t scanChannels = 0;
 
-    if (aArgs.GetLength() == 1)
+    if (GetArgsLength() == 1)
     {
         uint8_t channel;
 
-        SuccessOrExit(error = aArgs.ParseAsUint8(channel));
+        SuccessOrExit(error = ParseCurArgAsUint8(channel));
         VerifyOrExit((channel < sizeof(scanChannels) * CHAR_BIT), error = OT_ERROR_INVALID_ARGS);
         scanChannels = 1 << channel;
     }
 
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     SuccessOrExit(error = otThreadDiscover(mInstance, scanChannels, OT_PANID_BROADCAST, false, false,
                                            &Interpreter::HandleActiveScanResult, this));
@@ -1354,24 +1351,24 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
-otError Interpreter::ProcessDns(Args &aArgs)
+otError Interpreter::ProcessDns(void)
 {
     otError       error = OT_ERROR_NONE;
     otMessageInfo messageInfo;
     otDnsQuery    query;
 
-    if (aArgs.IsEqual("resolve"))
+    if (IsNextArgEqual("resolve"))
     {
         VerifyOrExit(!mResolvingInProgress, error = OT_ERROR_BUSY);
-        VerifyOrExit(!aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
-        VerifyOrExit(strlen(aArgs.GetCurArg()) < OT_DNS_MAX_HOSTNAME_LENGTH, error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(!IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(strlen(GetCurArg()) < OT_DNS_MAX_HOSTNAME_LENGTH, error = OT_ERROR_INVALID_ARGS);
 
-        strcpy(mResolvingHostname, aArgs.GetCurArg());
-        aArgs.Advance();
+        strcpy(mResolvingHostname, GetCurArg());
+        AdvanceArg();
 
-        if (!aArgs.IsEmpty())
+        if (!IsArgsEmpty())
         {
-            SuccessOrExit(error = aArgs.ParseAsIp6Address(messageInfo.mPeerAddr));
+            SuccessOrExit(error = ParseCurArgAsIp6Address(messageInfo.mPeerAddr));
         }
         else
         {
@@ -1379,10 +1376,10 @@ otError Interpreter::ProcessDns(Args &aArgs)
             SuccessOrExit(error = otIp6AddressFromString(OT_DNS_DEFAULT_SERVER_IP, &messageInfo.mPeerAddr));
         }
 
-        if (!aArgs.IsEmpty())
+        if (!IsArgsEmpty())
         {
-            SuccessOrExit(error = aArgs.ParseAsUint16(messageInfo.mPeerPort));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsUint16(messageInfo.mPeerPort));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         }
         else
         {
@@ -1435,13 +1432,13 @@ void Interpreter::HandleDnsResponse(const char *aHostname, const Ip6::Address *a
 #endif
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessEidCache(Args &aArgs)
+otError Interpreter::ProcessEidCache(void)
 {
     otError              error = OT_ERROR_NONE;
     otCacheEntryIterator iterator;
     otCacheEntryInfo     entry;
 
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     memset(&iterator, 0, sizeof(iterator));
 
@@ -1456,12 +1453,12 @@ exit:
 }
 #endif
 
-otError Interpreter::ProcessEui64(Args &aArgs)
+otError Interpreter::ProcessEui64(void)
 {
     otError      error = OT_ERROR_NONE;
     otExtAddress extAddress;
 
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     otLinkGetFactoryAssignedIeeeEui64(mInstance, &extAddress);
     OutputBytes(extAddress.m8, OT_EXT_ADDRESS_SIZE);
@@ -1471,20 +1468,20 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessExtAddress(Args &aArgs)
+otError Interpreter::ProcessExtAddress(void)
 {
     otError      error = OT_ERROR_NONE;
     otExtAddress extAddress;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         OutputBytes(otLinkGetExtendedAddress(mInstance)->m8, OT_EXT_ADDRESS_SIZE);
         OutputLine("");
         ExitNow();
     }
 
-    SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(extAddress.m8));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(extAddress.m8));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otLinkSetExtendedAddress(mInstance, &extAddress);
 
@@ -1493,23 +1490,21 @@ exit:
 }
 
 #if OPENTHREAD_POSIX
-otError Interpreter::ProcessExit(Args &aArgs)
+otError Interpreter::ProcessExit(void)
 {
-    OT_UNUSED_VARIABLE(aArgs);
-
     exit(EXIT_SUCCESS);
 
     return OT_ERROR_NONE;
 }
 #endif
 
-otError Interpreter::ProcessLog(Args &aArgs)
+otError Interpreter::ProcessLog(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("level"))
+    if (IsNextArgEqual("level"))
     {
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             ExitNow(OutputLine("%d", otLoggingGetLevel()));
         }
@@ -1518,8 +1513,8 @@ otError Interpreter::ProcessLog(Args &aArgs)
         {
             uint8_t logLevel;
 
-            SuccessOrExit(error = aArgs.ParseAsUint8(logLevel));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsUint8(logLevel));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             ExitNow(error = otLoggingSetLevel(static_cast<otLogLevel>(logLevel)));
         }
 #else
@@ -1528,10 +1523,10 @@ otError Interpreter::ProcessLog(Args &aArgs)
     }
 
 #if (OPENTHREAD_CONFIG_LOG_OUTPUT == OPENTHREAD_CONFIG_LOG_OUTPUT_DEBUG_UART) && OPENTHREAD_POSIX
-    if (aArgs.IsEqual("filename"))
+    if (IsNextArgEqual("filename"))
     {
-        VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
-        ExitNow(error = otPlatDebugUart_logfile(aArgs.GetCurArg()));
+        VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
+        ExitNow(error = otPlatDebugUart_logfile(GetCurArg()));
     }
 #endif
 
@@ -1541,20 +1536,20 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessExtPanId(Args &aArgs)
+otError Interpreter::ProcessExtPanId(void)
 {
     otError         error = OT_ERROR_NONE;
     otExtendedPanId extPanId;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         OutputBytes(otThreadGetExtendedPanId(mInstance)->m8, OT_EXT_PAN_ID_SIZE);
         OutputLine("");
         ExitNow();
     }
 
-    SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(extPanId.m8));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(extPanId.m8));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otThreadSetExtendedPanId(mInstance, &extPanId);
 
@@ -1562,28 +1557,26 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessFactoryReset(Args &aArgs)
+otError Interpreter::ProcessFactoryReset(void)
 {
-    OT_UNUSED_VARIABLE(aArgs);
-
     otInstanceFactoryReset(mInstance);
 
     return OT_ERROR_NONE;
 }
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
-otError Interpreter::ProcessFake(Args &aArgs)
+otError Interpreter::ProcessFake(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("/a/an"))
+    if (IsNextArgEqual("/a/an"))
     {
         otIp6Address             destination, target;
         otIp6InterfaceIdentifier mlIid;
 
-        SuccessOrExit(error = aArgs.ParseAsIp6Address(destination));
-        SuccessOrExit(error = aArgs.ParseAsIp6Address(target));
-        SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(mlIid.mFields.m8));
+        SuccessOrExit(error = ParseCurArgAsIp6Address(destination));
+        SuccessOrExit(error = ParseCurArgAsIp6Address(target));
+        SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(mlIid.mFields.m8));
 
         otThreadSendAddressNotification(mInstance, &destination, &target, &mlIid);
         ExitNow();
@@ -1596,24 +1589,24 @@ exit:
 }
 #endif
 
-otError Interpreter::ProcessIfconfig(Args &aArgs)
+otError Interpreter::ProcessIfconfig(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         OutputLine(otIp6IsEnabled(mInstance) ? "up" : "down");
         ExitNow();
     }
 
-    VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
 
-    if (aArgs.IsEqual("up"))
+    if (IsNextArgEqual("up"))
     {
         ExitNow(error = otIp6SetEnabled(mInstance, true));
     }
 
-    if (aArgs.IsEqual("down"))
+    if (IsNextArgEqual("down"))
     {
         ExitNow(error = otIp6SetEnabled(mInstance, false));
     }
@@ -1624,13 +1617,13 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessIpAddrAdd(Args &aArgs)
+otError Interpreter::ProcessIpAddrAdd(void)
 {
     otError        error;
     otNetifAddress address;
 
-    SuccessOrExit(error = aArgs.ParseAsIp6Address(address.mAddress));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsIp6Address(address.mAddress));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     address.mPrefixLength  = 64;
     address.mPreferred     = true;
@@ -1643,13 +1636,13 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessIpAddrDel(Args &aArgs)
+otError Interpreter::ProcessIpAddrDel(void)
 {
     otError      error;
     otIp6Address address;
 
-    SuccessOrExit(error = aArgs.ParseAsIp6Address(address));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsIp6Address(address));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otIp6RemoveUnicastAddress(mInstance, &address);
 
@@ -1657,11 +1650,11 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessIpAddr(Args &aArgs)
+otError Interpreter::ProcessIpAddr(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         for (const otNetifAddress *addr = otIp6GetUnicastAddresses(mInstance); addr; addr = addr->mNext)
         {
@@ -1672,31 +1665,31 @@ otError Interpreter::ProcessIpAddr(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("add"))
+    if (IsNextArgEqual("add"))
     {
-        ExitNow(error = ProcessIpAddrAdd(aArgs));
+        ExitNow(error = ProcessIpAddrAdd());
     }
 
-    if (aArgs.IsEqual("del"))
+    if (IsNextArgEqual("del"))
     {
-        ExitNow(error = ProcessIpAddrDel(aArgs));
+        ExitNow(error = ProcessIpAddrDel());
     }
 
-    if (aArgs.IsEqual("linklocal"))
+    if (IsNextArgEqual("linklocal"))
     {
         OutputIp6Address(*otThreadGetLinkLocalIp6Address(mInstance));
         OutputLine("");
         ExitNow();
     }
 
-    if (aArgs.IsEqual("rloc"))
+    if (IsNextArgEqual("rloc"))
     {
         OutputIp6Address(*otThreadGetRloc(mInstance));
         OutputLine("");
         ExitNow();
     }
 
-    if (aArgs.IsEqual("mleid"))
+    if (IsNextArgEqual("mleid"))
     {
         OutputIp6Address(*otThreadGetMeshLocalEid(mInstance));
         OutputLine("");
@@ -1709,13 +1702,13 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessIpMulticastAddrAdd(Args &aArgs)
+otError Interpreter::ProcessIpMulticastAddrAdd(void)
 {
     otError      error;
     otIp6Address address;
 
-    SuccessOrExit(error = aArgs.ParseAsIp6Address(address));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsIp6Address(address));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otIp6SubscribeMulticastAddress(mInstance, &address);
 
@@ -1723,13 +1716,13 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessIpMulticastAddrDel(Args &aArgs)
+otError Interpreter::ProcessIpMulticastAddrDel(void)
 {
     otError      error;
     otIp6Address address;
 
-    SuccessOrExit(error = aArgs.ParseAsIp6Address(address));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsIp6Address(address));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otIp6UnsubscribeMulticastAddress(mInstance, &address);
 
@@ -1737,23 +1730,23 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessMulticastPromiscuous(Args &aArgs)
+otError Interpreter::ProcessMulticastPromiscuous(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine(otIp6IsMulticastPromiscuousEnabled(mInstance) ? "Enabled" : "Disabled"));
     }
 
-    VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
 
-    if (aArgs.IsEqual("enable"))
+    if (IsNextArgEqual("enable"))
     {
         ExitNow(otIp6SetMulticastPromiscuousEnabled(mInstance, true));
     }
 
-    if (aArgs.IsEqual("disable"))
+    if (IsNextArgEqual("disable"))
     {
         ExitNow(otIp6SetMulticastPromiscuousEnabled(mInstance, false));
     }
@@ -1764,11 +1757,11 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessIpMulticastAddr(Args &aArgs)
+otError Interpreter::ProcessIpMulticastAddr(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         for (const otNetifMulticastAddress *addr = otIp6GetMulticastAddresses(mInstance); addr; addr = addr->mNext)
         {
@@ -1779,19 +1772,19 @@ otError Interpreter::ProcessIpMulticastAddr(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("add"))
+    if (IsNextArgEqual("add"))
     {
-        ExitNow(error = ProcessIpMulticastAddrAdd(aArgs));
+        ExitNow(error = ProcessIpMulticastAddrAdd());
     }
 
-    if (aArgs.IsEqual("del"))
+    if (IsNextArgEqual("del"))
     {
-        ExitNow(error = ProcessIpMulticastAddrDel(aArgs));
+        ExitNow(error = ProcessIpMulticastAddrDel());
     }
 
-    if (aArgs.IsEqual("promiscuous"))
+    if (IsNextArgEqual("promiscuous"))
     {
-        ExitNow(error = ProcessMulticastPromiscuous(aArgs));
+        ExitNow(error = ProcessMulticastPromiscuous());
     }
 
     error = OT_ERROR_INVALID_COMMAND;
@@ -1800,35 +1793,35 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessKeySequence(Args &aArgs)
+otError Interpreter::ProcessKeySequence(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("counter"))
+    if (IsNextArgEqual("counter"))
     {
         uint32_t counter;
 
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             ExitNow(OutputLine("%d", otThreadGetKeySequenceCounter(mInstance)));
         }
 
-        SuccessOrExit(error = aArgs.ParseAsUint32(counter));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsUint32(counter));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(otThreadSetKeySequenceCounter(mInstance, counter));
     }
 
-    if (aArgs.IsEqual("guardtime"))
+    if (IsNextArgEqual("guardtime"))
     {
         uint32_t guardTime;
 
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             ExitNow(OutputLine("%d", otThreadGetKeySwitchGuardTime(mInstance)));
         }
 
-        SuccessOrExit(error = aArgs.ParseAsUint32(guardTime));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsUint32(guardTime));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(otThreadSetKeySwitchGuardTime(mInstance, guardTime));
     }
 
@@ -1838,12 +1831,12 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessLeaderData(Args &aArgs)
+otError Interpreter::ProcessLeaderData(void)
 {
     otError      error;
     otLeaderData leaderData;
 
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     SuccessOrExit(error = otThreadGetLeaderData(mInstance, &leaderData));
 
@@ -1858,18 +1851,18 @@ exit:
 }
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessLeaderPartitionId(Args &aArgs)
+otError Interpreter::ProcessLeaderPartitionId(void)
 {
     otError  error = OT_ERROR_NONE;
     uint32_t partitionId;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%u", otThreadGetLocalLeaderPartitionId(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint32(partitionId));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint32(partitionId));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     otThreadSetLocalLeaderPartitionId(mInstance, partitionId);
 
@@ -1877,18 +1870,18 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessLeaderWeight(Args &aArgs)
+otError Interpreter::ProcessLeaderWeight(void)
 {
     otError error = OT_ERROR_NONE;
     uint8_t leaderWeight;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otThreadGetLocalLeaderWeight(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint8(leaderWeight));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint8(leaderWeight));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     otThreadSetLocalLeaderWeight(mInstance, leaderWeight);
 
@@ -1896,29 +1889,29 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessPskc(Args &aArgs)
+otError Interpreter::ProcessPskc(void)
 {
     otError error = OT_ERROR_NONE;
     otPskc  pskc;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         OutputBytes(otThreadGetPskc(mInstance)->m8, sizeof(otPskc));
         OutputLine("");
         ExitNow();
     }
 
-    if (aArgs.IsEqual("-p"))
+    if (IsNextArgEqual("-p"))
     {
-        VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
         SuccessOrExit(error = otDatasetGeneratePskc(
-                          aArgs.GetCurArg(), reinterpret_cast<const otNetworkName *>(otThreadGetNetworkName(mInstance)),
+                          GetCurArg(), reinterpret_cast<const otNetworkName *>(otThreadGetNetworkName(mInstance)),
                           otThreadGetExtendedPanId(mInstance), &pskc));
     }
     else
     {
-        SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(pskc.m8));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(pskc.m8));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
     }
 
     error = otThreadSetPskc(mInstance, &pskc);
@@ -1966,13 +1959,13 @@ void Interpreter::HandleLinkMetricsReport(const otIp6Address *aAddress, const ot
     }
 }
 
-otError Interpreter::ProcessLinkMetrics(Args &aArgs)
+otError Interpreter::ProcessLinkMetrics(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("query"))
+    if (IsNextArgEqual("query"))
     {
-        ExitNow(error = ProcessLinkMetricsQuery(aArgs));
+        ExitNow(error = ProcessLinkMetricsQuery());
     }
 
     error = OT_ERROR_INVALID_COMMAND;
@@ -1981,22 +1974,22 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessLinkMetricsQuery(Args &aArgs)
+otError Interpreter::ProcessLinkMetricsQuery(void)
 {
     otError       error = OT_ERROR_INVALID_ARGS;
     otIp6Address  address;
     otLinkMetrics linkMetrics;
     long          seriesId = 0;
 
-    SuccessOrExit(error = aArgs.ParseAsIp6Address(address));
+    SuccessOrExit(error = ParseCurArgAsIp6Address(address));
 
     memset(&linkMetrics, 0, sizeof(otLinkMetrics));
 
-    if (aArgs.IsEqual("single"))
+    if (IsNextArgEqual("single"))
     {
-        VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
 
-        for (char *flag = aArgs.GetCurArg(); *flag != '\0'; flag++)
+        for (char *flag = GetCurArg(); *flag != '\0'; flag++)
         {
             switch (*flag)
             {
@@ -2031,20 +2024,20 @@ exit:
 
 #endif // OPENTHREAD_CONFIG_MLE_LINK_METRICS_ENABLE
 
-otError Interpreter::ProcessMasterKey(Args &aArgs)
+otError Interpreter::ProcessMasterKey(void)
 {
     otError     error = OT_ERROR_NONE;
     otMasterKey key;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         OutputBytes(otThreadGetMasterKey(mInstance)->m8, OT_MASTER_KEY_SIZE);
         OutputLine("");
         ExitNow();
     }
 
-    SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(key.m8));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(key.m8));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otThreadSetMasterKey(mInstance, &key);
 
@@ -2054,20 +2047,20 @@ exit:
 
 #if OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE && OPENTHREAD_CONFIG_COMMISSIONER_ENABLE
 
-otError Interpreter::ProcessMlr(Args &aArgs)
+otError Interpreter::ProcessMlr(void)
 {
     otError error = OT_ERROR_INVALID_COMMAND;
 
-    if (aArgs.IsEqual("reg"))
+    if (IsNextArgEqual("reg"))
     {
-        ExitNow(error = ProcessMlrReg(aArgs));
+        ExitNow(error = ProcessMlrReg());
     }
 
 exit:
     return error;
 }
 
-otError Interpreter::ProcessMlrReg(Args &aArgs)
+otError Interpreter::ProcessMlrReg(void)
 {
     otError      error = OT_ERROR_NONE;
     otIp6Address addresses[kIPv6AddressesNumMax];
@@ -2075,18 +2068,18 @@ otError Interpreter::ProcessMlrReg(Args &aArgs)
     bool         hasTimeout = false;
     uint32_t     timeout;
 
-    while (!aArgs.IsEmpty() && (aArgs.ParseAsIp6Address(addresses[index]) == OT_ERROR_NONE))
+    while (!IsArgsEmpty() && (ParseCurArgAsIp6Address(addresses[index]) == OT_ERROR_NONE))
     {
         index++;
         VerifyOrExit(index < kIPv6AddressesNumMax; error = OT_ERROR_INVALID_ARGS);
     }
 
     // Parse the last argument (if any) as timeout in seconds
-    if (!aArgs.IsEmpty())
+    if (!IsArgsEmpty())
     {
-        SuccessOrExit(error = aArgs.ParseAsUint32(timeout));
+        SuccessOrExit(error = ParseCurArgAsUint32(timeout));
         hasTimeout = true;
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
     }
 
     VerifyOrExit(index > 0, error = OT_ERROR_INVALID_ARGS);
@@ -2130,12 +2123,12 @@ void Interpreter::HandleMlrRegResult(otError             aError,
 
 #endif // OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE && OPENTHREAD_CONFIG_COMMISSIONER_ENABLE
 
-otError Interpreter::ProcessMode(Args &aArgs)
+otError Interpreter::ProcessMode(void)
 {
     otError          error = OT_ERROR_NONE;
     otLinkModeConfig linkMode;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         linkMode = otThreadGetLinkMode(mInstance);
 
@@ -2164,9 +2157,9 @@ otError Interpreter::ProcessMode(Args &aArgs)
     }
 
     memset(&linkMode, 0, sizeof(otLinkModeConfig));
-    VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
 
-    for (char *flag = aArgs.GetCurArg(); *flag != '\0'; flag++)
+    for (char *flag = GetCurArg(); *flag != '\0'; flag++)
     {
         switch (*flag)
         {
@@ -2198,15 +2191,15 @@ exit:
 }
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessNeighbor(Args &aArgs)
+otError Interpreter::ProcessNeighbor(void)
 {
     otError                error = OT_ERROR_NONE;
     otNeighborInfo         neighborInfo;
     otNeighborInfoIterator iterator = OT_NEIGHBOR_INFO_ITERATOR_INIT;
 
-    if (aArgs.IsEqual("table"))
+    if (IsNextArgEqual("table"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
         OutputLine("| Role | RLOC16 | Age | Avg RSSI | Last RSSI |R|S|D|N| Extended MAC     |");
         OutputLine("+------+--------+-----+----------+-----------+-+-+-+-+------------------+");
@@ -2231,9 +2224,9 @@ otError Interpreter::ProcessNeighbor(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("list"))
+    if (IsNextArgEqual("list"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
         while (otThreadGetNextNeighborInfo(mInstance, &iterator, &neighborInfo) == OT_ERROR_NONE)
         {
@@ -2252,13 +2245,13 @@ exit:
 #endif
 
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
-otError Interpreter::ProcessNetif(Args &aArgs)
+otError Interpreter::ProcessNetif(void)
 {
     otError      error    = OT_ERROR_NONE;
     const char * netif    = nullptr;
     unsigned int netifidx = 0;
 
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     SuccessOrExit(error = otPlatGetNetif(mInstance, &netif, &netifidx));
 
@@ -2269,12 +2262,12 @@ exit:
 }
 #endif
 
-otError Interpreter::ProcessNetstat(Args &aArgs)
+otError Interpreter::ProcessNetstat(void)
 {
     otError      error  = OT_ERROR_NONE;
     otUdpSocket *socket = otUdpGetSockets(mInstance);
 
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     OutputLine("|                 Local Address                 |                  Peer Address                 |");
     OutputLine("+-----------------------------------------------+-----------------------------------------------+");
@@ -2346,7 +2339,7 @@ otError Interpreter::ProcessServiceList(void)
     return OT_ERROR_NONE;
 }
 
-otError Interpreter::ProcessService(Args &aArgs)
+otError Interpreter::ProcessService(void)
 {
     otError         error = OT_ERROR_NONE;
     otServiceConfig config;
@@ -2357,16 +2350,16 @@ otError Interpreter::ProcessService(Args &aArgs)
         kRemoveService,
     } operation;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(error = ProcessServiceList());
     }
 
-    if (aArgs.IsEqual("add"))
+    if (IsNextArgEqual("add"))
     {
         operation = kAddService;
     }
-    else if (aArgs.IsEqual("remove"))
+    else if (IsNextArgEqual("remove"))
     {
         operation = kRemoveService;
     }
@@ -2376,10 +2369,10 @@ otError Interpreter::ProcessService(Args &aArgs)
     }
 
     memset(&config, 0, sizeof(config));
-    SuccessOrExit(error = aArgs.ParseAsUint32(config.mEnterpriseNumber));
+    SuccessOrExit(error = ParseCurArgAsUint32(config.mEnterpriseNumber));
 
     dataLength = sizeof(config.mServiceData);
-    SuccessOrExit(error = aArgs.ParseAsHexString(config.mServiceData, dataLength));
+    SuccessOrExit(error = ParseCurArgAsHexString(config.mServiceData, dataLength));
     VerifyOrExit(dataLength > 0, error = OT_ERROR_INVALID_ARGS);
     config.mServiceDataLength = static_cast<uint8_t>(dataLength);
 
@@ -2387,7 +2380,7 @@ otError Interpreter::ProcessService(Args &aArgs)
     {
     case kAddService:
         dataLength = sizeof(config.mServerConfig.mServerData);
-        SuccessOrExit(error = aArgs.ParseAsHexString(config.mServerConfig.mServerData, dataLength));
+        SuccessOrExit(error = ParseCurArgAsHexString(config.mServerConfig.mServerData, dataLength));
         VerifyOrExit(dataLength > 0, error = OT_ERROR_INVALID_ARGS);
         config.mServerConfig.mServerDataLength = static_cast<uint8_t>(dataLength);
         config.mServerConfig.mStable           = true;
@@ -2404,24 +2397,24 @@ exit:
 }
 #endif // OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
 
-otError Interpreter::ProcessNetworkData(Args &aArgs)
+otError Interpreter::ProcessNetworkData(void)
 {
-    return mNetworkData.Process(aArgs.GetLength(), aArgs.GetArgs());
+    return mNetworkData.Process(GetArgsLength(), GetArgs());
 }
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessNetworkIdTimeout(Args &aArgs)
+otError Interpreter::ProcessNetworkIdTimeout(void)
 {
     otError error = OT_ERROR_NONE;
     uint8_t timeout;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otThreadGetNetworkIdTimeout(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint8(timeout));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint8(timeout));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
     otThreadSetNetworkIdTimeout(mInstance, timeout);
 
 exit:
@@ -2429,30 +2422,30 @@ exit:
 }
 #endif
 
-otError Interpreter::ProcessNetworkName(Args &aArgs)
+otError Interpreter::ProcessNetworkName(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine(otThreadGetNetworkName(mInstance)));
     }
 
-    VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
-    error = otThreadSetNetworkName(mInstance, aArgs.GetCurArg());
+    VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
+    error = otThreadSetNetworkName(mInstance, GetCurArg());
 
 exit:
     return error;
 }
 
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
-otError Interpreter::ProcessNetworkTime(Args &aArgs)
+otError Interpreter::ProcessNetworkTime(void)
 {
     otError  error = OT_ERROR_NONE;
     uint16_t syncPeriod;
     uint16_t xtalThreshold;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         uint64_t            time;
         otNetworkTimeStatus networkTimeStatus;
@@ -2484,8 +2477,8 @@ otError Interpreter::ProcessNetworkTime(Args &aArgs)
         ExitNow();
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint16(syncPeriod));
-    SuccessOrExit(error = aArgs.ParseAsUint16(xtalThreshold));
+    SuccessOrExit(error = ParseCurArgAsUint16(syncPeriod));
+    SuccessOrExit(error = ParseCurArgAsUint16(xtalThreshold));
 
     SuccessOrExit(error = otNetworkTimeSetSyncPeriod(mInstance, syncPeriod));
     SuccessOrExit(error = otNetworkTimeSetXtalThreshold(mInstance, xtalThreshold));
@@ -2495,18 +2488,18 @@ exit:
 }
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
 
-otError Interpreter::ProcessPanId(Args &aArgs)
+otError Interpreter::ProcessPanId(void)
 {
     otError error = OT_ERROR_NONE;
     otPanId panId;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("0x%04x", otLinkGetPanId(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint16(panId));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint16(panId));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otLinkSetPanId(mInstance, panId);
 
@@ -2514,12 +2507,12 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessParent(Args &aArgs)
+otError Interpreter::ProcessParent(void)
 {
     otError      error = OT_ERROR_NONE;
     otRouterInfo parentInfo;
 
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     SuccessOrExit(error = otThreadGetParentInfo(mInstance, &parentInfo));
     OutputFormat("Ext Addr: ");
@@ -2536,18 +2529,18 @@ exit:
 }
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessParentPriority(Args &aArgs)
+otError Interpreter::ProcessParentPriority(void)
 {
     otError error = OT_ERROR_NONE;
     int8_t  priority;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otThreadGetParentPriority(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsInt8(priority));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsInt8(priority));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otThreadSetParentPriority(mInstance, priority);
 
@@ -2595,11 +2588,11 @@ exit:
     return;
 }
 
-otError Interpreter::ProcessPing(Args &aArgs)
+otError Interpreter::ProcessPing(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("stop"))
+    if (IsNextArgEqual("stop"))
     {
         mPingIdentifier = 0;
         VerifyOrExit(mPingTimer.IsRunning(), error = OT_ERROR_INVALID_STATE);
@@ -2609,40 +2602,40 @@ otError Interpreter::ProcessPing(Args &aArgs)
 
     VerifyOrExit(!mPingTimer.IsRunning(), error = OT_ERROR_BUSY);
 
-    SuccessOrExit(error = aArgs.ParseAsIp6Address(mPingDestAddress));
+    SuccessOrExit(error = ParseCurArgAsIp6Address(mPingDestAddress));
 
-    if (!aArgs.IsEmpty())
+    if (!IsArgsEmpty())
     {
-        SuccessOrExit(error = aArgs.ParseAsUint16(mPingLength));
+        SuccessOrExit(error = ParseCurArgAsUint16(mPingLength));
     }
     else
     {
         mPingLength = kDefaultPingLength;
     }
 
-    if (!aArgs.IsEmpty())
+    if (!IsArgsEmpty())
     {
-        SuccessOrExit(error = aArgs.ParseAsUint16(mPingCount));
+        SuccessOrExit(error = ParseCurArgAsUint16(mPingCount));
     }
     else
     {
         mPingCount = kDefaultPingCount;
     }
 
-    if (!aArgs.IsEmpty())
+    if (!IsArgsEmpty())
     {
-        SuccessOrExit(error = ParsePingInterval(aArgs.GetCurArg(), mPingInterval));
+        SuccessOrExit(error = ParsePingInterval(GetCurArg(), mPingInterval));
         VerifyOrExit(0 < mPingInterval && mPingInterval <= Timer::kMaxDelay, error = OT_ERROR_INVALID_ARGS);
-        aArgs.Advance();
+        AdvanceArg();
     }
     else
     {
         mPingInterval = kDefaultPingInterval;
     }
 
-    if (!aArgs.IsEmpty())
+    if (!IsArgsEmpty())
     {
-        SuccessOrExit(error = aArgs.ParseAsUint8(mPingHopLimit));
+        SuccessOrExit(error = ParseCurArgAsUint8(mPingHopLimit));
         mPingAllowZeroHopLimit = (mPingHopLimit == 0);
     }
     else
@@ -2651,7 +2644,7 @@ otError Interpreter::ProcessPing(Args &aArgs)
         mPingAllowZeroHopLimit = false;
     }
 
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     mPingIdentifier++;
 
@@ -2706,18 +2699,18 @@ exit:
     }
 }
 
-otError Interpreter::ProcessPollPeriod(Args &aArgs)
+otError Interpreter::ProcessPollPeriod(void)
 {
     otError  error = OT_ERROR_NONE;
     uint32_t pollPeriod;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otLinkGetPollPeriod(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint32(pollPeriod));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint32(pollPeriod));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otLinkSetPollPeriod(mInstance, pollPeriod);
 
@@ -2725,11 +2718,11 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessPromiscuous(Args &aArgs)
+otError Interpreter::ProcessPromiscuous(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         bool isPromiscuous = (otLinkIsPromiscuous(mInstance) && otPlatRadioGetPromiscuous(mInstance));
 
@@ -2737,15 +2730,15 @@ otError Interpreter::ProcessPromiscuous(Args &aArgs)
         ExitNow();
     }
 
-    VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
 
-    if (aArgs.IsEqual("enable"))
+    if (IsNextArgEqual("enable"))
     {
         SuccessOrExit(error = otLinkSetPromiscuous(mInstance, true));
         ExitNow(otLinkSetPcapCallback(mInstance, &HandleLinkPcapReceive, this));
     }
 
-    if (aArgs.IsEqual("disable"))
+    if (IsNextArgEqual("disable"))
     {
         otLinkSetPcapCallback(mInstance, nullptr, nullptr);
         ExitNow(SuccessOrExit(error = otLinkSetPromiscuous(mInstance, false)));
@@ -2831,32 +2824,32 @@ void Interpreter::HandleLinkPcapReceive(const otRadioFrame *aFrame, bool aIsTx)
 }
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
-otError Interpreter::ProcessPrefixAdd(Args &aArgs)
+otError Interpreter::ProcessPrefixAdd(void)
 {
     otError              error = OT_ERROR_NONE;
     otBorderRouterConfig config;
 
     memset(&config, 0, sizeof(otBorderRouterConfig));
 
-    SuccessOrExit(error = aArgs.ParseAsIp6Prefix(config.mPrefix));
+    SuccessOrExit(error = ParseCurArgAsIp6Prefix(config.mPrefix));
 
-    while (!aArgs.IsEmpty())
+    while (!IsArgsEmpty())
     {
-        if (aArgs.IsEqual("high"))
+        if (IsNextArgEqual("high"))
         {
             config.mPreference = OT_ROUTE_PREFERENCE_HIGH;
         }
-        else if (aArgs.IsEqual("med"))
+        else if (IsNextArgEqual("med"))
         {
             config.mPreference = OT_ROUTE_PREFERENCE_MED;
         }
-        else if (aArgs.IsEqual("low"))
+        else if (IsNextArgEqual("low"))
         {
             config.mPreference = OT_ROUTE_PREFERENCE_LOW;
         }
         else
         {
-            for (char *flag = aArgs.GetCurArg(); *flag != '\0'; flag++)
+            for (char *flag = GetCurArg(); *flag != '\0'; flag++)
             {
                 switch (*flag)
                 {
@@ -2902,7 +2895,7 @@ otError Interpreter::ProcessPrefixAdd(Args &aArgs)
                 }
             }
 
-            aArgs.Advance();
+            AdvanceArg();
         }
     }
 
@@ -2912,13 +2905,13 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessPrefixRemove(Args &aArgs)
+otError Interpreter::ProcessPrefixRemove(void)
 {
     otError     error = OT_ERROR_NONE;
     otIp6Prefix prefix;
 
-    SuccessOrExit(error = aArgs.ParseAsIp6Prefix(prefix));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsIp6Prefix(prefix));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otBorderRouterRemoveOnMeshPrefix(mInstance, &prefix);
 
@@ -2950,23 +2943,23 @@ exit:
     return OT_ERROR_NONE;
 }
 
-otError Interpreter::ProcessPrefix(Args &aArgs)
+otError Interpreter::ProcessPrefix(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(error = ProcessPrefixList());
     }
 
-    if (aArgs.IsEqual("add"))
+    if (IsNextArgEqual("add"))
     {
-        ExitNow(error = ProcessPrefixAdd(aArgs));
+        ExitNow(error = ProcessPrefixAdd());
     }
 
-    if (aArgs.IsEqual("remove"))
+    if (IsNextArgEqual("remove"))
     {
-        ExitNow(error = ProcessPrefixRemove(aArgs));
+        ExitNow(error = ProcessPrefixRemove());
     }
 
     error = OT_ERROR_INVALID_COMMAND;
@@ -2977,13 +2970,13 @@ exit:
 #endif // OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessPreferRouterId(Args &aArgs)
+otError Interpreter::ProcessPreferRouterId(void)
 {
     otError error = OT_ERROR_NONE;
     uint8_t preferredRouterId;
 
-    SuccessOrExit(error = aArgs.ParseAsUint8(preferredRouterId));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint8(preferredRouterId));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
     error = otThreadSetPreferredRouterId(mInstance, preferredRouterId);
 
 exit:
@@ -2991,11 +2984,11 @@ exit:
 }
 #endif
 
-otError Interpreter::ProcessRcp(Args &aArgs)
+otError Interpreter::ProcessRcp(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("version"))
+    if (IsNextArgEqual("version"))
     {
         const char *version = otPlatRadioGetVersionString(mInstance);
 
@@ -3011,13 +3004,13 @@ exit:
 }
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessReleaseRouterId(Args &aArgs)
+otError Interpreter::ProcessReleaseRouterId(void)
 {
     otError error = OT_ERROR_NONE;
     uint8_t routerId;
 
-    SuccessOrExit(error = aArgs.ParseAsUint8(routerId));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint8(routerId));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otThreadReleaseRouterId(mInstance, routerId);
 
@@ -3026,49 +3019,45 @@ exit:
 }
 #endif
 
-otError Interpreter::ProcessReset(Args &aArgs)
+otError Interpreter::ProcessReset(void)
 {
-    OT_UNUSED_VARIABLE(aArgs);
-
     otInstanceReset(mInstance);
 
     return OT_ERROR_NONE;
 }
 
-otError Interpreter::ProcessRloc16(Args &aArgs)
+otError Interpreter::ProcessRloc16(void)
 {
-    OT_UNUSED_VARIABLE(aArgs);
-
     OutputLine("%04x", otThreadGetRloc16(mInstance));
 
     return OT_ERROR_NONE;
 }
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
-otError Interpreter::ProcessRouteAdd(Args &aArgs)
+otError Interpreter::ProcessRouteAdd(void)
 {
     otError               error = OT_ERROR_NONE;
     otExternalRouteConfig config;
 
     memset(&config, 0, sizeof(otExternalRouteConfig));
 
-    SuccessOrExit(error = aArgs.ParseAsIp6Prefix(config.mPrefix));
+    SuccessOrExit(error = ParseCurArgAsIp6Prefix(config.mPrefix));
 
-    while (!aArgs.IsEmpty())
+    while (!IsArgsEmpty())
     {
-        if (aArgs.IsEqual("s"))
+        if (IsNextArgEqual("s"))
         {
             config.mStable = true;
         }
-        else if (aArgs.IsEqual("high"))
+        else if (IsNextArgEqual("high"))
         {
             config.mPreference = OT_ROUTE_PREFERENCE_HIGH;
         }
-        else if (aArgs.IsEqual("med"))
+        else if (IsNextArgEqual("med"))
         {
             config.mPreference = OT_ROUTE_PREFERENCE_MED;
         }
-        else if (aArgs.IsEqual("low"))
+        else if (IsNextArgEqual("low"))
         {
             config.mPreference = OT_ROUTE_PREFERENCE_LOW;
         }
@@ -3084,13 +3073,13 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessRouteRemove(Args &aArgs)
+otError Interpreter::ProcessRouteRemove(void)
 {
     otError            error = OT_ERROR_NONE;
     struct otIp6Prefix prefix;
 
-    SuccessOrExit(error = aArgs.ParseAsIp6Prefix(prefix));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsIp6Prefix(prefix));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     error = otBorderRouterRemoveRoute(mInstance, &prefix);
 
@@ -3111,23 +3100,23 @@ otError Interpreter::ProcessRouteList(void)
     return OT_ERROR_NONE;
 }
 
-otError Interpreter::ProcessRoute(Args &aArgs)
+otError Interpreter::ProcessRoute(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(error = ProcessRouteList());
     }
 
-    if (aArgs.IsEqual("add"))
+    if (IsNextArgEqual("add"))
     {
-        ExitNow(error = ProcessRouteAdd(aArgs));
+        ExitNow(error = ProcessRouteAdd());
     }
 
-    if (aArgs.IsEqual("remove"))
+    if (IsNextArgEqual("remove"))
     {
-        ExitNow(error = ProcessRouteRemove(aArgs));
+        ExitNow(error = ProcessRouteRemove());
     }
 
     error = OT_ERROR_INVALID_COMMAND;
@@ -3138,13 +3127,13 @@ exit:
 #endif // OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessRouter(Args &aArgs)
+otError Interpreter::ProcessRouter(void)
 {
     otError      error = OT_ERROR_NONE;
     otRouterInfo routerInfo;
     uint16_t     id;
 
-    if (aArgs.IsEqual("table"))
+    if (IsNextArgEqual("table"))
     {
         uint8_t maxRouterId = otThreadGetMaxRouterId(mInstance);
 
@@ -3174,7 +3163,7 @@ otError Interpreter::ProcessRouter(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("list"))
+    if (IsNextArgEqual("list"))
     {
         uint8_t maxRouterId = otThreadGetMaxRouterId(mInstance);
 
@@ -3192,8 +3181,8 @@ otError Interpreter::ProcessRouter(Args &aArgs)
         ExitNow();
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint16(id));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint16(id));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     SuccessOrExit(error = otThreadGetRouterInfo(mInstance, id, &routerInfo));
 
@@ -3222,41 +3211,41 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessRouterDowngradeThreshold(Args &aArgs)
+otError Interpreter::ProcessRouterDowngradeThreshold(void)
 {
     otError error = OT_ERROR_NONE;
     uint8_t threshold;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otThreadGetRouterDowngradeThreshold(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint8(threshold));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint8(threshold));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
     otThreadSetRouterDowngradeThreshold(mInstance, threshold);
 
 exit:
     return error;
 }
 
-otError Interpreter::ProcessRouterEligible(Args &aArgs)
+otError Interpreter::ProcessRouterEligible(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine(otThreadIsRouterEligible(mInstance) ? "Enabled" : "Disabled"));
     }
 
-    VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
 
-    if (aArgs.IsEqual("enable"))
+    if (IsNextArgEqual("enable"))
     {
         ExitNow(error = otThreadSetRouterEligible(mInstance, true));
     }
 
-    if (aArgs.IsEqual("disable"))
+    if (IsNextArgEqual("disable"))
     {
         ExitNow(error = otThreadSetRouterEligible(mInstance, false));
     }
@@ -3267,35 +3256,35 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessRouterSelectionJitter(Args &aArgs)
+otError Interpreter::ProcessRouterSelectionJitter(void)
 {
     otError error = OT_ERROR_NONE;
     uint8_t jitter;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otThreadGetRouterSelectionJitter(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint8(jitter));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsUint8(jitter));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
     otThreadSetRouterSelectionJitter(mInstance, jitter);
 
 exit:
     return error;
 }
 
-otError Interpreter::ProcessRouterUpgradeThreshold(Args &aArgs)
+otError Interpreter::ProcessRouterUpgradeThreshold(void)
 {
     otError error = OT_ERROR_NONE;
     uint8_t threshold;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otThreadGetRouterUpgradeThreshold(mInstance)));
 
-        SuccessOrExit(error = aArgs.ParseAsUint8(threshold));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsUint8(threshold));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         otThreadSetRouterUpgradeThreshold(mInstance, threshold);
     }
 
@@ -3304,18 +3293,18 @@ exit:
 }
 #endif // OPENTHREAD_FTD
 
-otError Interpreter::ProcessScan(Args &aArgs)
+otError Interpreter::ProcessScan(void)
 {
     otError  error        = OT_ERROR_NONE;
     uint32_t scanChannels = 0;
     uint16_t scanDuration = 0;
 
-    if (aArgs.IsEqual("energy"))
+    if (IsNextArgEqual("energy"))
     {
-        if (!aArgs.IsEmpty())
+        if (!IsArgsEmpty())
         {
-            SuccessOrExit(error = aArgs.ParseAsUint16(scanDuration));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsUint16(scanDuration));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         }
 
         OutputLine("| Ch | RSSI |");
@@ -3325,15 +3314,15 @@ otError Interpreter::ProcessScan(Args &aArgs)
         ExitNow(error = OT_ERROR_PENDING);
     }
 
-    if (!aArgs.IsEmpty())
+    if (!IsArgsEmpty())
     {
         uint8_t channel;
 
-        SuccessOrExit(error = aArgs.ParseAsUint8(channel));
+        SuccessOrExit(error = ParseCurArgAsUint8(channel));
         VerifyOrExit(channel < sizeof(scanChannels) * CHAR_BIT, error = OT_ERROR_INVALID_ARGS);
         scanChannels = 1 << channel;
 
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
     }
 
     OutputLine("| J | Network Name     | Extended PAN     | PAN  | MAC Address      | Ch | dBm | LQI |");
@@ -3397,11 +3386,11 @@ exit:
     return;
 }
 
-otError Interpreter::ProcessSingleton(Args &aArgs)
+otError Interpreter::ProcessSingleton(void)
 {
     otError error = OT_ERROR_NONE;
 
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
     OutputLine(otThreadIsSingleton(mInstance) ? "true" : "false");
 
@@ -3410,19 +3399,19 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
-otError Interpreter::ProcessSntp(Args &aArgs)
+otError Interpreter::ProcessSntp(void)
 {
     otError       error = OT_ERROR_NONE;
     otMessageInfo messageInfo;
     otSntpQuery   query;
 
-    if (aArgs.IsEqual("query"))
+    if (IsNextArgEqual("query"))
     {
         VerifyOrExit(!mSntpQueryingInProgress, error = OT_ERROR_BUSY);
 
-        if (!aArgs.IsEmpty())
+        if (!IsArgsEmpty())
         {
-            SuccessOrExit(error = aArgs.ParseAsIp6Address(messageInfo.mPeerAddr));
+            SuccessOrExit(error = ParseCurArgAsIp6Address(messageInfo.mPeerAddr));
         }
         else
         {
@@ -3430,9 +3419,9 @@ otError Interpreter::ProcessSntp(Args &aArgs)
             SuccessOrExit(error = otIp6AddressFromString(OT_SNTP_DEFAULT_SERVER_IP, &messageInfo.mPeerAddr));
         }
 
-        if (!aArgs.IsEmpty())
+        if (!IsArgsEmpty())
         {
-            SuccessOrExit(error = aArgs.ParseAsUint16(messageInfo.mPeerPort));
+            SuccessOrExit(error = ParseCurArgAsUint16(messageInfo.mPeerPort));
         }
         else
         {
@@ -3478,11 +3467,11 @@ void Interpreter::HandleSntpResponse(uint64_t aTime, otError aResult)
 }
 #endif
 
-otError Interpreter::ProcessState(Args &aArgs)
+otError Interpreter::ProcessState(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         switch (otThreadGetDeviceRole(mInstance))
         {
@@ -3516,25 +3505,25 @@ otError Interpreter::ProcessState(Args &aArgs)
         ExitNow();
     }
 
-    VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
 
-    if (aArgs.IsEqual("detached"))
+    if (IsNextArgEqual("detached"))
     {
         ExitNow(error = otThreadBecomeDetached(mInstance));
     }
 
-    if (aArgs.IsEqual("child"))
+    if (IsNextArgEqual("child"))
     {
         ExitNow(error = otThreadBecomeChild(mInstance));
     }
 
 #if OPENTHREAD_FTD
-    if (aArgs.IsEqual("router"))
+    if (IsNextArgEqual("router"))
     {
         ExitNow(error = otThreadBecomeRouter(mInstance));
     }
 
-    if (aArgs.IsEqual("leader"))
+    if (IsNextArgEqual("leader"))
     {
         ExitNow(error = otThreadBecomeLeader(mInstance));
     }
@@ -3546,23 +3535,23 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessThread(Args &aArgs)
+otError Interpreter::ProcessThread(void)
 {
     otError error = OT_ERROR_NONE;
 
-    VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
 
-    if (aArgs.IsEqual("start"))
+    if (IsNextArgEqual("start"))
     {
         ExitNow(error = otThreadSetEnabled(mInstance, true));
     }
 
-    if (aArgs.IsEqual("stop"))
+    if (IsNextArgEqual("stop"))
     {
         ExitNow(error = otThreadSetEnabled(mInstance, false));
     }
 
-    if (aArgs.IsEqual("version"))
+    if (IsNextArgEqual("version"))
     {
         ExitNow(OutputLine("%u", otThreadGetVersion()));
     }
@@ -3573,68 +3562,68 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessDataset(Args &aArgs)
+otError Interpreter::ProcessDataset(void)
 {
-    return mDataset.Process(aArgs.GetLength(), aArgs.GetArgs());
+    return mDataset.Process(GetArgsLength(), GetArgs());
 }
 
-otError Interpreter::ProcessTxPower(Args &aArgs)
+otError Interpreter::ProcessTxPower(void)
 {
     otError error = OT_ERROR_NONE;
     int8_t  power;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         SuccessOrExit(error = otPlatRadioGetTransmitPower(mInstance, &power));
         ExitNow(OutputLine("%d dBm", power));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsInt8(power));
-    VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseCurArgAsInt8(power));
+    VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
     error = otPlatRadioSetTransmitPower(mInstance, power);
 
 exit:
     return error;
 }
 
-otError Interpreter::ProcessUdp(Args &aArgs)
+otError Interpreter::ProcessUdp(void)
 {
-    return mUdp.Process(aArgs.GetLength(), aArgs.GetArgs());
+    return mUdp.Process(GetArgsLength(), GetArgs());
 }
 
-otError Interpreter::ProcessUnsecurePort(Args &aArgs)
+otError Interpreter::ProcessUnsecurePort(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("add"))
+    if (IsNextArgEqual("add"))
     {
         uint16_t port;
 
-        SuccessOrExit(error = aArgs.ParseAsUint16(port));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsUint16(port));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(error = otIp6AddUnsecurePort(mInstance, port));
     }
 
-    if (aArgs.IsEqual("remove"))
+    if (IsNextArgEqual("remove"))
     {
         uint16_t port;
 
-        if (aArgs.IsEqual("all"))
+        if (IsNextArgEqual("all"))
         {
             ExitNow(otIp6RemoveAllUnsecurePorts(mInstance));
         }
 
-        SuccessOrExit(error = aArgs.ParseAsUint16(port));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsUint16(port));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(error = otIp6RemoveUnsecurePort(mInstance, port));
     }
 
-    if (aArgs.IsEqual("get"))
+    if (IsNextArgEqual("get"))
     {
         const uint16_t *ports;
         uint8_t         numPorts;
 
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
         ports = otIp6GetUnsecurePorts(mInstance, &numPorts);
 
@@ -3655,16 +3644,16 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessVersion(Args &aArgs)
+otError Interpreter::ProcessVersion(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%s", otGetVersionString()));
     }
 
-    if (aArgs.IsEqual("api"))
+    if (IsNextArgEqual("api"))
     {
         ExitNow(OutputLine("%d", OPENTHREAD_API_VERSION));
     }
@@ -3676,31 +3665,31 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
-otError Interpreter::ProcessCommissioner(Args &aArgs)
+otError Interpreter::ProcessCommissioner(void)
 {
-    return mCommissioner.Process(aArgs.GetLength(), aArgs.GetArgs());
+    return mCommissioner.Process(GetArgsLength(), GetArgs());
 }
 #endif
 
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
-otError Interpreter::ProcessJoiner(Args &aArgs)
+otError Interpreter::ProcessJoiner(void)
 {
-    return mJoiner.Process(aArgs.GetLength(), aArgs.GetArgs());
+    return mJoiner.Process(GetArgsLength(), GetArgs());
 }
 #endif
 
 #if OPENTHREAD_FTD
-otError Interpreter::ProcessJoinerPort(Args &aArgs)
+otError Interpreter::ProcessJoinerPort(void)
 {
     otError  error = OT_ERROR_NONE;
     uint16_t port;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(OutputLine("%d", otThreadGetJoinerUdpPort(mInstance)));
     }
 
-    SuccessOrExit(error = aArgs.ParseAsUint16(port));
+    SuccessOrExit(error = ParseCurArgAsUint16(port));
     error = otThreadSetJoinerUdpPort(mInstance, port);
 
 exit:
@@ -3709,25 +3698,25 @@ exit:
 #endif
 
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
-otError Interpreter::ProcessMacFilter(Args &aArgs)
+otError Interpreter::ProcessMacFilter(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         ExitNow(PrintMacFilter());
     }
 
-    VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
 
-    if (aArgs.IsEqual("addr"))
+    if (IsNextArgEqual("addr"))
     {
-        ExitNow(error = ProcessMacFilterAddress(aArgs));
+        ExitNow(error = ProcessMacFilterAddress());
     }
 
-    if (aArgs.IsEqual("rss"))
+    if (IsNextArgEqual("rss"))
     {
-        ExitNow(error = ProcessMacFilterRss(aArgs));
+        ExitNow(error = ProcessMacFilterRss());
     }
 
     error = OT_ERROR_INVALID_COMMAND;
@@ -3795,11 +3784,11 @@ void Interpreter::PrintMacFilter(void)
     }
 }
 
-otError Interpreter::ProcessMacFilterAddress(Args &aArgs)
+otError Interpreter::ProcessMacFilterAddress(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         otMacFilterAddressMode mode     = otLinkFilterGetAddressMode(mInstance);
         otMacFilterIterator    iterator = OT_MAC_FILTER_ITERATOR_INIT;
@@ -3834,36 +3823,36 @@ otError Interpreter::ProcessMacFilterAddress(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("disable"))
+    if (IsNextArgEqual("disable"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(otLinkFilterSetAddressMode(mInstance, OT_MAC_FILTER_ADDRESS_MODE_DISABLED));
     }
 
-    if (aArgs.IsEqual("allowlist"))
+    if (IsNextArgEqual("allowlist"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(otLinkFilterSetAddressMode(mInstance, OT_MAC_FILTER_ADDRESS_MODE_ALLOWLIST));
     }
 
-    if (aArgs.IsEqual("denylist"))
+    if (IsNextArgEqual("denylist"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(otLinkFilterSetAddressMode(mInstance, OT_MAC_FILTER_ADDRESS_MODE_DENYLIST));
     }
 
-    if (aArgs.IsEqual("add"))
+    if (IsNextArgEqual("add"))
     {
         otExtAddress extAddr;
         bool         hasRss = false;
         int8_t       rss;
 
-        SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(extAddr.m8));
+        SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(extAddr.m8));
 
-        if (!aArgs.IsEmpty())
+        if (!IsArgsEmpty())
         {
-            SuccessOrExit(error = aArgs.ParseAsInt8(rss));
-            VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+            SuccessOrExit(error = ParseCurArgAsInt8(rss));
+            VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
             hasRss = true;
         }
 
@@ -3878,18 +3867,18 @@ otError Interpreter::ProcessMacFilterAddress(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("remove"))
+    if (IsNextArgEqual("remove"))
     {
         otExtAddress extAddr;
 
-        SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(extAddr.m8));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(extAddr.m8));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(otLinkFilterRemoveAddress(mInstance, &extAddr));
     }
 
-    if (aArgs.IsEqual("clear"))
+    if (IsNextArgEqual("clear"))
     {
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(otLinkFilterClearAddresses(mInstance));
     }
 
@@ -3899,11 +3888,11 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessMacFilterRss(Args &aArgs)
+otError Interpreter::ProcessMacFilterRss(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEmpty())
+    if (IsArgsEmpty())
     {
         otMacFilterIterator iterator = OT_MAC_FILTER_ITERATOR_INIT;
         otMacFilterEntry    entry;
@@ -3935,26 +3924,26 @@ otError Interpreter::ProcessMacFilterRss(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("add-lqi"))
+    if (IsNextArgEqual("add-lqi"))
     {
         otExtAddress extAddr;
         uint8_t      linkQuality;
         int8_t       rss;
         bool         defaultRssIn = false;
 
-        if (aArgs.IsEqual("*"))
+        if (IsNextArgEqual("*"))
         {
             defaultRssIn = true;
         }
         else
         {
-            SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(extAddr.m8));
+            SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(extAddr.m8));
         }
 
-        SuccessOrExit(error = aArgs.ParseAsUint8(linkQuality));
+        SuccessOrExit(error = ParseCurArgAsUint8(linkQuality));
         VerifyOrExit(linkQuality <= 3, error = OT_ERROR_INVALID_ARGS);
         rss = otLinkConvertLinkQualityToRss(mInstance, linkQuality);
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
         if (defaultRssIn)
         {
@@ -3968,23 +3957,23 @@ otError Interpreter::ProcessMacFilterRss(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("add"))
+    if (IsNextArgEqual("add"))
     {
         otExtAddress extAddr;
         int8_t       rss;
         bool         defaultRssIn = false;
 
-        if (aArgs.IsEqual("*"))
+        if (IsNextArgEqual("*"))
         {
             defaultRssIn = true;
         }
         else
         {
-            SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(extAddr.m8));
+            SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(extAddr.m8));
         }
 
-        SuccessOrExit(error = aArgs.ParseAsInt8(rss));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsInt8(rss));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
 
         if (defaultRssIn)
         {
@@ -3998,26 +3987,26 @@ otError Interpreter::ProcessMacFilterRss(Args &aArgs)
         ExitNow();
     }
 
-    if (aArgs.IsEqual("remove"))
+    if (IsNextArgEqual("remove"))
     {
         otExtAddress extAddr;
 
-        VerifyOrExit(aArgs.GetLength() == 1, error = OT_ERROR_INVALID_ARGS);
+        VerifyOrExit(GetArgsLength() == 1, error = OT_ERROR_INVALID_ARGS);
 
-        if (aArgs.IsEqual("*"))
+        if (IsNextArgEqual("*"))
         {
             otLinkFilterClearDefaultRssIn(mInstance);
         }
         else
         {
-            SuccessOrExit(error = aArgs.ParseAsFixedSizeHexString(extAddr.m8));
+            SuccessOrExit(error = ParseCurArgAsFixedSizeHexString(extAddr.m8));
             otLinkFilterRemoveRssIn(mInstance, &extAddr);
         }
 
         ExitNow();
     }
 
-    if (aArgs.IsEqual("clear"))
+    if (IsNextArgEqual("clear"))
     {
         ExitNow(otLinkFilterClearAllRssIn(mInstance));
     }
@@ -4030,13 +4019,13 @@ exit:
 
 #endif // OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
 
-otError Interpreter::ProcessMac(Args &aArgs)
+otError Interpreter::ProcessMac(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("retries"))
+    if (IsNextArgEqual("retries"))
     {
-        ExitNow(error = ProcessMacRetries(aArgs));
+        ExitNow(error = ProcessMacRetries());
     }
 
     error = OT_ERROR_INVALID_COMMAND;
@@ -4045,36 +4034,36 @@ exit:
     return error;
 }
 
-otError Interpreter::ProcessMacRetries(Args &aArgs)
+otError Interpreter::ProcessMacRetries(void)
 {
     otError error = OT_ERROR_NONE;
 
-    if (aArgs.IsEqual("direct"))
+    if (IsNextArgEqual("direct"))
     {
         uint8_t retries;
 
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             ExitNow(OutputLine("%d", otLinkGetMaxFrameRetriesDirect(mInstance)));
         }
 
-        SuccessOrExit(error = aArgs.ParseAsUint8(retries));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsUint8(retries));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         ExitNow(otLinkSetMaxFrameRetriesDirect(mInstance, retries));
     }
 
 #if OPENTHREAD_FTD
-    if (aArgs.IsEqual("indirect"))
+    if (IsNextArgEqual("indirect"))
     {
         uint8_t retries;
 
-        if (aArgs.IsEmpty())
+        if (IsArgsEmpty())
         {
             ExitNow(OutputLine("%d", otLinkGetMaxFrameRetriesIndirect(mInstance)));
         }
 
-        SuccessOrExit(error = aArgs.ParseAsUint8(retries));
-        VerifyOrExit(aArgs.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseCurArgAsUint8(retries));
+        VerifyOrExit(IsArgsEmpty(), error = OT_ERROR_INVALID_ARGS);
         otLinkSetMaxFrameRetriesIndirect(mInstance, retries);
     }
 #endif
@@ -4086,7 +4075,7 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
-otError Interpreter::ProcessDiag(Args &aArgs)
+otError Interpreter::ProcessDiag(void)
 {
     otError error;
     char    output[OPENTHREAD_CONFIG_DIAG_OUTPUT_BUFFER_SIZE];
@@ -4095,7 +4084,7 @@ otError Interpreter::ProcessDiag(Args &aArgs)
     output[0]                  = '\0';
     output[sizeof(output) - 1] = '\0';
 
-    error = otDiagProcessCmd(mInstance, aArgs.GetLength(), aArgs.GetArgs(), output, sizeof(output) - 1);
+    error = otDiagProcessCmd(mInstance, GetArgsLength(), GetArgs(), output, sizeof(output) - 1);
     Output(output, static_cast<uint16_t>(strlen(output)));
 
     return error;
@@ -4133,36 +4122,36 @@ const Interpreter::Command *Interpreter::FindCommand(const char *aName) const
 
 void Interpreter::ProcessLine(char *aBuf, uint16_t aBufLength)
 {
-    Utils::CmdLineParser::ArgsArray<kMaxArgs> args;
+    char *argsArray[kMaxArgs];
     const Command *                           command;
 
     VerifyOrExit(aBuf != nullptr && StringLength(aBuf, aBufLength + 1) <= aBufLength, OT_NOOP);
 
-    VerifyOrExit(Utils::CmdLineParser::Parse(aBuf, args) == OT_ERROR_NONE,
+    VerifyOrExit(ParseCmd(aBuf, argsArray) == OT_ERROR_NONE,
                  OutputLine("Error: too many args (max %d)", kMaxArgs));
-    VerifyOrExit(!args.IsEmpty(), OutputLine("Error: no given command."));
+    VerifyOrExit(!IsArgsEmpty(), OutputLine("Error: no given command."));
 
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
-    VerifyOrExit(!otDiagIsEnabled(mInstance) || args.IsEqual("diag"),
+    VerifyOrExit(!otDiagIsEnabled(mInstance) || IsNextArgEqual("diag"),
                  OutputLine("under diagnostics mode, execute 'diag stop' before running any other commands."));
 #endif
 
-    command = FindCommand(args.GetCurArg());
+    command = FindCommand(GetCurArg());
 
     if (command != nullptr)
     {
-        args.Advance();
-        OutputResult((this->*command->mCommand)(args));
+        AdvanceArg();
+        OutputResult((this->*command->mCommand)());
         ExitNow();
     }
 
     // Check user defined commands if built-in command has not been found
     for (uint8_t i = 0; i < mUserCommandsLength; i++)
     {
-        if (args.IsEqual(mUserCommands[i].mName))
+        if (IsNextArgEqual(mUserCommands[i].mName))
         {
-            args.Advance();
-            mUserCommands[i].mCommand(args.GetLength(), args.GetArgs());
+            AdvanceArg();
+            mUserCommands[i].mCommand(GetArgsLength(), GetArgs());
             ExitNow();
         }
     }
@@ -4174,7 +4163,7 @@ exit:
 }
 
 #if OPENTHREAD_FTD || OPENTHREAD_CONFIG_TMF_NETWORK_DIAG_MTD_ENABLE
-otError Interpreter::ProcessNetworkDiagnostic(Args &aArgs)
+otError Interpreter::ProcessNetworkDiagnostic(void)
 {
     otError      error = OT_ERROR_NONE;
     otIp6Address address;
@@ -4186,11 +4175,11 @@ otError Interpreter::ProcessNetworkDiagnostic(Args &aArgs)
         kReset,
     } operation;
 
-    if (aArgs.IsEqual("get"))
+    if (IsNextArgEqual("get"))
     {
         operation = kGet;
     }
-    else if (aArgs.IsEqual("reset"))
+    else if (IsNextArgEqual("reset"))
     {
         operation = kReset;
     }
@@ -4199,12 +4188,12 @@ otError Interpreter::ProcessNetworkDiagnostic(Args &aArgs)
         ExitNow(error = OT_ERROR_INVALID_COMMAND);
     }
 
-    SuccessOrExit(error = aArgs.ParseAsIp6Address(address));
+    SuccessOrExit(error = ParseCurArgAsIp6Address(address));
 
-    while (!aArgs.IsEmpty())
+    while (!IsArgsEmpty())
     {
         VerifyOrExit(count < OT_ARRAY_LENGTH(tlvTypes), error = OT_ERROR_INVALID_ARGS);
-        SuccessOrExit(error = aArgs.ParseAsUint8(tlvTypes[count]));
+        SuccessOrExit(error = ParseCurArgAsUint8(tlvTypes[count]));
         count++;
     }
 

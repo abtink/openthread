@@ -68,50 +68,58 @@ public:
             kAllowTruncate,
         };
 
-        bool     IsEmpty(void) const { return (mLength == 0); }
-        uint16_t GetLength(void) const { return mLength; }
+        bool     IsArgsEmpty(void) const { return (mLength == 0); }
+        uint16_t GetArgsLength(void) const { return mLength; }
         char **  GetArgs(void) const { return mArgs; }
 
         char *GetCurArg(void) const { return mArgs[0]; }
 
         // const char *operator[](uint16_t index) const { return mArgs[index]; }
 
-        bool IsEqual(const char *aString);
-        void Advance(void);
+        bool IsNextArgEqual(const char *aString);
+        void AdvanceArg(void);
 
-        otError ParseAsUint8(uint8_t &aUint8);
-        otError ParseAsUint16(uint16_t &aUint16);
-        otError ParseAsUint32(uint32_t &aUint32);
-        otError ParseAsUnsignedLong(unsigned long &aUnsignedLong);
+        otError ParseCurArgAsUint8(uint8_t &aUint8);
+        otError ParseCurArgAsUint16(uint16_t &aUint16);
+        otError ParseCurArgAsUint32(uint32_t &aUint32);
+        otError ParseCurArgAsUnsignedLong(unsigned long &aUnsignedLong);
 
-        otError ParseAsInt8(int8_t &aInt8);
-        otError ParseAsInt16(int16_t &aInt16);
-        otError ParseAsInt32(int32_t &aInt32);
-        otError ParseAsLong(long &aLong);
+        otError ParseCurArgAsInt8(int8_t &aInt8);
+        otError ParseCurArgAsInt16(int16_t &aInt16);
+        otError ParseCurArgAsInt32(int32_t &aInt32);
+        otError ParseCurArgAsLong(long &aLong);
 
-        otError ParseAsBool(bool &aBool);
+        otError ParseCurArgAsBool(bool &aBool);
 
 #if OPENTHREAD_FTD || OPENTHREAD_MTD
-        otError ParseAsIp6Address(otIp6Address &aAddress);
-        otError ParseAsIp6Prefix(otIp6Prefix &aPrefix);
+        otError ParseCurArgAsIp6Address(otIp6Address &aAddress);
+        otError ParseCurArgAsIp6Prefix(otIp6Prefix &aPrefix);
 #endif
 
-        otError ParseAsString(char *&aString);
+        otError ParseCurArgAsString(char *&aString);
 
-        template <uint16_t kBufferSize> otError ParseAsFixedSizeHexString(uint8_t (&aBuffer)[kBufferSize])
+        template <uint16_t kBufferSize> otError ParseCurArgAsFixedSizeHexString(uint8_t (&aBuffer)[kBufferSize])
         {
-            return ParseAsFixedSizeHexString(aBuffer, kBufferSize);
+            return ParseCurArgAsFixedSizeHexString(aBuffer, kBufferSize);
         }
 
-        otError ParseAsFixedSizeHexString(uint8_t *aBuffer, uint16_t aSize);
+        otError ParseCurArgAsFixedSizeHexString(uint8_t *aBuffer, uint16_t aSize);
 
-        otError ParseAsHexString(uint8_t *aBuffer, uint16_t &aSize, HexStringParseMode aMode = kDisallowTruncate);
+        otError ParseCurArgAsHexString(uint8_t *aBuffer, uint16_t &aSize, HexStringParseMode aMode = kDisallowTruncate);
 
-    protected:
-        Args(char **aArgs)
-            : mArgs(aArgs)
+
+        Args(void)
+            : mArgs(nullptr)
             , mLength(0)
         {
+        }
+
+        template <uint16_t kMaxArgsLength>
+        otError ParseCmd(char *aString, char *(&aArgs)[kMaxArgsLength])
+        {
+            mArgs = aArgs;
+            mLength = 0;
+            return ParseCmd2(aString, kMaxArgsLength, *this);
         }
 
     private:
@@ -119,27 +127,6 @@ public:
         uint16_t mLength;
     };
 
-    template <uint16_t kMaxArgsLength> class ArgsArray : public Args
-    {
-        friend class CmdLineParser;
-
-    public:
-        ArgsArray(void)
-            : Args(mArgsArray)
-        {
-        }
-
-    private:
-        char *mArgsArray[kMaxArgsLength];
-    };
-
-    template <uint16_t kMaxArgsLength> static otError Parse(char *aInput, ArgsArray<kMaxArgsLength> &aArgsArray)
-    {
-        aArgsArray.mArgs   = &aArgsArray.mArgsArray[0];
-        aArgsArray.mLength = 0;
-
-        return Parse(aInput, kMaxArgsLength, aArgsArray);
-    }
 
     /**
      * This function parses the command line.
@@ -156,8 +143,8 @@ public:
      */
     static otError ParseCmd(char *aString, uint8_t &aArgsLength, char *aArgs[], uint8_t aArgsLengthMax);
 
-private:
-    static otError Parse(char *aString, uint16_t aMaxArgsLength, Args &aArgs);
+public:
+    static otError ParseCmd2(char *aString, uint16_t aMaxArgsLength, Args &aArgs);
 };
 
 /**
