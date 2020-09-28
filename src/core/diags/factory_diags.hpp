@@ -150,8 +150,7 @@ private:
 
     void TransmitPacket(void);
 
-    static void    AppendErrorResult(otError aError, char *aOutput, size_t aOutputMaxLen);
-    static otError ParseLong(char *aString, long &aLong);
+    static void AppendErrorResult(otError aError, char *aOutput, size_t aOutputMaxLen);
 
     static const struct Command sCommands[];
 

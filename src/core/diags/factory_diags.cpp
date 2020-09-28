@@ -45,6 +45,12 @@
 #include "radio/radio.hpp"
 #include "utils/parse_cmdline.hpp"
 
+using ot::Utils::CmdLineParser::ParseAsInt8;
+using ot::Utils::CmdLineParser::ParseAsUint16;
+using ot::Utils::CmdLineParser::ParseAsUint32;
+using ot::Utils::CmdLineParser::ParseAsUint8;
+using ot::Utils::CmdLineParser::ParseCmd;
+
 OT_TOOL_WEAK
 otError otPlatDiagProcess(otInstance *aInstance,
                           uint8_t     aArgsLength,
@@ -82,14 +88,14 @@ Diags::Diags(Instance &aInstance)
 otError Diags::ProcessChannel(uint8_t aArgsLength, char *aArgs[], char *aOutput, size_t aOutputMaxLen)
 {
     otError error = OT_ERROR_NONE;
-    long    value;
+    uint8_t channel;
 
     VerifyOrExit(aArgsLength == 1, error = OT_ERROR_INVALID_ARGS);
 
-    SuccessOrExit(error = ParseLong(aArgs[0], value));
-    VerifyOrExit(value >= Radio::kChannelMin && value <= Radio::kChannelMax, error = OT_ERROR_INVALID_ARGS);
+    SuccessOrExit(error = ParseAsUint8(aArgs[0], channel));
+    VerifyOrExit(channel >= Radio::kChannelMin && channel <= Radio::kChannelMax, error = OT_ERROR_INVALID_ARGS);
 
-    otPlatDiagChannelSet(static_cast<uint8_t>(value));
+    otPlatDiagChannelSet(channel);
 
 exit:
     AppendErrorResult(error, aOutput, aOutputMaxLen);
@@ -99,13 +105,13 @@ exit:
 otError Diags::ProcessPower(uint8_t aArgsLength, char *aArgs[], char *aOutput, size_t aOutputMaxLen)
 {
     otError error = OT_ERROR_NONE;
-    long    value;
+    int8_t  txPower;
 
     VerifyOrExit(aArgsLength == 1, error = OT_ERROR_INVALID_ARGS);
 
-    SuccessOrExit(error = ParseLong(aArgs[0], value));
+    SuccessOrExit(error = ParseAsInt8(aArgs[0], txPower));
 
-    otPlatDiagTxPowerSet(static_cast<int8_t>(value));
+    otPlatDiagTxPowerSet(txPower);
 
 exit:
     AppendErrorResult(error, aOutput, aOutputMaxLen);
@@ -174,12 +180,12 @@ otError Diags::ProcessChannel(uint8_t aArgsLength, char *aArgs[], char *aOutput,
     }
     else
     {
-        long value;
+        uint8_t channel;
 
-        SuccessOrExit(error = ParseLong(aArgs[0], value));
-        VerifyOrExit(value >= Radio::kChannelMin && value <= Radio::kChannelMax, error = OT_ERROR_INVALID_ARGS);
+        SuccessOrExit(error = ParseAsUint8(aArgs[0], channel));
+        VerifyOrExit(channel >= Radio::kChannelMin && channel <= Radio::kChannelMax, error = OT_ERROR_INVALID_ARGS);
 
-        mChannel = static_cast<uint8_t>(value);
+        mChannel = channel;
         IgnoreError(Get<Radio>().Receive(mChannel));
         otPlatDiagChannelSet(mChannel);
 
@@ -203,11 +209,7 @@ otError Diags::ProcessPower(uint8_t aArgsLength, char *aArgs[], char *aOutput, s
     }
     else
     {
-        long value;
-
-        SuccessOrExit(error = ParseLong(aArgs[0], value));
-
-        mTxPower = static_cast<int8_t>(value);
+        SuccessOrExit(error = ParseAsInt8(aArgs[0], mTxPower));
         SuccessOrExit(error = Get<Radio>().SetTransmitPower(mTxPower));
         otPlatDiagTxPowerSet(mTxPower);
 
@@ -234,16 +236,11 @@ otError Diags::ProcessRepeat(uint8_t aArgsLength, char *aArgs[], char *aOutput, 
     }
     else
     {
-        long value;
-
         VerifyOrExit(aArgsLength == 2, error = OT_ERROR_INVALID_ARGS);
 
-        SuccessOrExit(error = ParseLong(aArgs[0], value));
-        mTxPeriod = static_cast<uint32_t>(value);
-
-        SuccessOrExit(error = ParseLong(aArgs[1], value));
-        VerifyOrExit(value <= OT_RADIO_FRAME_MAX_SIZE, error = OT_ERROR_INVALID_ARGS);
-        mTxLen = static_cast<uint8_t>(value);
+        SuccessOrExit(error = ParseAsUint32(aArgs[0], mTxPeriod));
+        SuccessOrExit(error = ParseAsUint8(aArgs[1], mTxLen));
+        VerifyOrExit(mTxLen <= OT_RADIO_FRAME_MAX_SIZE, error = OT_ERROR_INVALID_ARGS);
 
         mRepeatActive = true;
         uint32_t now  = otPlatAlarmMilliGetNow();
@@ -260,17 +257,13 @@ exit:
 otError Diags::ProcessSend(uint8_t aArgsLength, char *aArgs[], char *aOutput, size_t aOutputMaxLen)
 {
     otError error = OT_ERROR_NONE;
-    long    value;
 
     VerifyOrExit(otPlatDiagModeGet(), error = OT_ERROR_INVALID_STATE);
     VerifyOrExit(aArgsLength == 2, error = OT_ERROR_INVALID_ARGS);
 
-    SuccessOrExit(error = ParseLong(aArgs[0], value));
-    mTxPackets = static_cast<uint32_t>(value);
-
-    SuccessOrExit(error = ParseLong(aArgs[1], value));
-    VerifyOrExit(value <= OT_RADIO_FRAME_MAX_SIZE, error = OT_ERROR_INVALID_ARGS);
-    mTxLen = static_cast<uint8_t>(value);
+    SuccessOrExit(error = ParseAsUint32(aArgs[0], mTxPackets));
+    SuccessOrExit(error = ParseAsUint8(aArgs[1], mTxLen));
+    VerifyOrExit(mTxLen <= OT_RADIO_FRAME_MAX_SIZE, error = OT_ERROR_INVALID_ARGS);
 
     snprintf(aOutput, aOutputMaxLen, "sending %#x packet(s), length %#x\r\nstatus 0x%02x\r\n",
              static_cast<int>(mTxPackets), static_cast<int>(mTxLen), error);
@@ -505,13 +498,6 @@ void Diags::AppendErrorResult(otError aError, char *aOutput, size_t aOutputMaxLe
     }
 }
 
-otError Diags::ParseLong(char *aString, long &aLong)
-{
-    char *endptr;
-    aLong = strtol(aString, &endptr, 0);
-    return (*endptr == '\0') ? OT_ERROR_NONE : OT_ERROR_PARSE;
-}
-
 void Diags::ProcessLine(const char *aString, char *aOutput, size_t aOutputMaxLen)
 {
     enum
@@ -528,7 +514,7 @@ void Diags::ProcessLine(const char *aString, char *aOutput, size_t aOutputMaxLen
     VerifyOrExit(StringLength(aString, kMaxCommandBuffer) < kMaxCommandBuffer, error = OT_ERROR_NO_BUFS);
 
     strcpy(buffer, aString);
-    error = ot::Utils::CmdLineParser::ParseCmd(buffer, argCount, aArgsector, kMaxArgs);
+    error = ParseCmd(buffer, argCount, aArgsector, kMaxArgs);
 
 exit:
 

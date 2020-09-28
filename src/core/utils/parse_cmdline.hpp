@@ -35,10 +35,13 @@
 #define PARSE_CMD_LINE_HPP_
 
 #include <stdint.h>
+
 #include <openthread/error.h>
+#include <openthread/ip6.h>
 
 namespace ot {
 namespace Utils {
+namespace CmdLineParser {
 
 /**
  * @addtogroup utils-parse-cmd-line
@@ -49,33 +52,63 @@ namespace Utils {
  * @{
  */
 
+enum HexStringParseMode : uint8_t
+{
+    kDisallowTruncate,
+    kAllowTruncate,
+};
+
 /**
- * This class implements the command line parser.
+ * This function parses a given command line string and breaks it into an argument list.
+ *
+ * Note: this method may change the input @p aCommandString, it will put a '\0' by the end of each argument,
+ *       and @p aArgs will point to the arguments in the input @p aCommandString. Backslash ('\') can be used
+ *       to escape separators (' ', '\t', '\r', '\n') and the backslash itself.
+ *
+ * @param[in]   aCommandString  A null-terminated input string.
+ * @param[out]  aArgsLength     The argument counter of the command line.
+ * @param[out]  aArgs           The argument vector of the command line.
+ * @param[in]   aArgsLengthMax  The maximum argument counter.
  *
  */
-class CmdLineParser
+otError ParseCmd(char *aCommandString, uint8_t &aArgsLength, char *aArgs[], uint8_t aArgsLengthMax);
+
+otError ParseAsUint8(const char *aString, uint8_t &aUint8);
+otError ParseAsUint16(const char *aString, uint16_t &aUint16);
+otError ParseAsUint32(const char *aString, uint32_t &aUint32);
+otError ParseAsUint64(const char *aString, uint64_t &aUint64);
+
+otError ParseAsInt8(const char *aString, int8_t &aInt8);
+otError ParseAsInt16(const char *aString, int16_t &aInt16);
+otError ParseAsInt32(const char *aString, int32_t &aInt32);
+
+otError ParseAsBool(const char *aString, bool &aBool);
+
+#if OPENTHREAD_FTD || OPENTHREAD_MTD
+inline otError ParseAsIp6Address(const char *aString, otIp6Address &aAddress)
 {
-public:
-    /**
-     * This function parses the command line.
-     *
-     * Note: this method may change the input @p aString, it will put a '\0' by the end of each argument,
-     *       and @p aArgs will point to the arguments in the input @p aString. Backslash ('\') can be used
-     *       to escape separators (' ', '\t', '\r', '\n') and the backslash itself.
-     *
-     * @param[in]   aString         A null-terminated input string.
-     * @param[out]  aArgsLength     The argument counter of the command line.
-     * @param[out]  aArgs           The argument vector of the command line.
-     * @param[in]   aArgsLengthMax  The maximum argument counter.
-     *
-     */
-    static otError ParseCmd(char *aString, uint8_t &aArgsLength, char *aArgs[], uint8_t aArgsLengthMax);
-};
+    return otIp6AddressFromString(aString, &aAddress);
+}
+
+otError ParseAsIp6Prefix(const char *aString, otIp6Prefix &aPrefix);
+#endif
+
+otError ParseAsHexString(const char *aString, uint8_t *aBuffer, uint16_t aSize);
+otError ParseAsHexString(const char *       aString,
+                         uint16_t &         aSize,
+                         uint8_t *          aBuffer,
+                         HexStringParseMode aMode = kDisallowTruncate);
+
+template <uint16_t kBufferSize> static otError ParseAsHexString(const char *aString, uint8_t (&aBuffer)[kBufferSize])
+{
+    return ParseAsHexString(aString, aBuffer, kBufferSize);
+}
 
 /**
  * @}
  */
 
+} // namespace CmdLineParser
 } // namespace Utils
 } // namespace ot
 
