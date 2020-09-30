@@ -510,7 +510,7 @@ otError Interpreter::ProcessBackboneRouterLocal(uint8_t aArgsLength, char *aArgs
     }
     else if (strcmp(aArgs[0], "register") == 0)
     {
-        SuccessOrExit(error = otBackboneRouterRegister(mInstance));
+        error = otBackboneRouterRegister(mInstance);
     }
     else if (strcmp(aArgs[0], "state") == 0)
     {
@@ -565,7 +565,7 @@ otError Interpreter::ProcessBackboneRouterLocal(uint8_t aArgsLength, char *aArgs
                 }
             }
 
-            SuccessOrExit(error = otBackboneRouterSetConfig(mInstance, &config));
+            error = otBackboneRouterSetConfig(mInstance, &config);
         }
     }
     else
@@ -588,10 +588,9 @@ otError Interpreter::ProcessDomainName(uint8_t aArgsLength, char *aArgs[])
     }
     else
     {
-        SuccessOrExit(error = otThreadSetDomainName(mInstance, aArgs[0]));
+        error = otThreadSetDomainName(mInstance, aArgs[0]);
     }
 
-exit:
     return error;
 }
 
@@ -618,7 +617,7 @@ otError Interpreter::ProcessDua(uint8_t aArgsLength, char *aArgs[])
     case 2:
         if (strcmp(aArgs[1], "clear") == 0)
         {
-            SuccessOrExit(error = otThreadSetFixedDuaInterfaceIdentifier(mInstance, nullptr));
+            error = otThreadSetFixedDuaInterfaceIdentifier(mInstance, nullptr);
         }
         else
         {
@@ -627,7 +626,7 @@ otError Interpreter::ProcessDua(uint8_t aArgsLength, char *aArgs[])
             VerifyOrExit(Hex2Bin(aArgs[1], iid.mFields.m8, sizeof(otIp6InterfaceIdentifier)) ==
                              sizeof(otIp6InterfaceIdentifier),
                          error = OT_ERROR_INVALID_ARGS);
-            SuccessOrExit(error = otThreadSetFixedDuaInterfaceIdentifier(mInstance, &iid));
+            error = otThreadSetFixedDuaInterfaceIdentifier(mInstance, &iid);
         }
         break;
     default:
@@ -682,7 +681,7 @@ otError Interpreter::ProcessCcaThreshold(uint8_t aArgsLength, char *aArgs[])
         long value;
 
         SuccessOrExit(error = ParseLong(aArgs[0], value));
-        SuccessOrExit(error = otPlatRadioSetCcaEnergyDetectThreshold(mInstance, static_cast<int8_t>(value)));
+        error = otPlatRadioSetCcaEnergyDetectThreshold(mInstance, static_cast<int8_t>(value));
     }
 
 exit:
@@ -751,7 +750,7 @@ otError Interpreter::ProcessChannel(uint8_t aArgsLength, char *aArgs[])
         }
         else
         {
-            ExitNow(error = OT_ERROR_INVALID_ARGS);
+            error = OT_ERROR_INVALID_ARGS;
         }
     }
 #endif // OPENTHREAD_CONFIG_CHANNEL_MONITOR_ENABLE
@@ -820,7 +819,7 @@ otError Interpreter::ProcessChannel(uint8_t aArgsLength, char *aArgs[])
         }
         else
         {
-            ExitNow(error = OT_ERROR_INVALID_ARGS);
+            error = OT_ERROR_INVALID_ARGS;
         }
     }
 #endif // OPENTHREAD_CONFIG_CHANNEL_MANAGER_ENABLE && OPENTHREAD_FTD
@@ -975,7 +974,7 @@ otError Interpreter::ProcessChildIp(uint8_t aArgsLength, char *aArgs[])
         {
             unsigned long value;
             SuccessOrExit(error = ParseUnsignedLong(aArgs[1], value));
-            SuccessOrExit(error = otThreadSetMaxChildIpAddresses(mInstance, static_cast<uint8_t>(value)));
+            error = otThreadSetMaxChildIpAddresses(mInstance, static_cast<uint8_t>(value));
         }
 #endif
         else
@@ -1006,7 +1005,7 @@ otError Interpreter::ProcessChildMax(uint8_t aArgsLength, char *aArgs[])
     else
     {
         SuccessOrExit(error = ParseLong(aArgs[0], value));
-        SuccessOrExit(error = otThreadSetMaxAllowedChildren(mInstance, static_cast<uint16_t>(value)));
+        error = otThreadSetMaxAllowedChildren(mInstance, static_cast<uint16_t>(value));
     }
 
 exit:
@@ -1094,7 +1093,7 @@ otError Interpreter::ProcessCoexMetrics(uint8_t aArgsLength, char *aArgs[])
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_ARGS);
+        error = OT_ERROR_INVALID_ARGS;
     }
 
 exit:
@@ -1176,7 +1175,7 @@ otError Interpreter::ProcessCounters(uint8_t aArgsLength, char *aArgs[])
         }
         else
         {
-            ExitNow(error = OT_ERROR_INVALID_ARGS);
+            error = OT_ERROR_INVALID_ARGS;
         }
     }
     else if (strcmp(aArgs[0], "mle") == 0)
@@ -1201,15 +1200,14 @@ otError Interpreter::ProcessCounters(uint8_t aArgsLength, char *aArgs[])
         }
         else
         {
-            ExitNow(error = OT_ERROR_INVALID_ARGS);
+            error = OT_ERROR_INVALID_ARGS;
         }
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_ARGS);
+        error = OT_ERROR_INVALID_ARGS;
     }
 
-exit:
     return error;
 }
 
@@ -1234,15 +1232,15 @@ otError Interpreter::ProcessCsl(uint8_t aArgsLength, char *argv[])
 
         if (strcmp(argv[0], "channel") == 0)
         {
-            SuccessOrExit(error = otLinkCslSetChannel(mInstance, static_cast<uint8_t>(value)));
+            error = otLinkCslSetChannel(mInstance, static_cast<uint8_t>(value));
         }
         else if (strcmp(argv[0], "period") == 0)
         {
-            SuccessOrExit(error = otLinkCslSetPeriod(mInstance, static_cast<uint16_t>(value)));
+            error = otLinkCslSetPeriod(mInstance, static_cast<uint16_t>(value));
         }
         else if (strcmp(argv[0], "timeout") == 0)
         {
-            SuccessOrExit(error = otLinkCslSetTimeout(mInstance, static_cast<uint32_t>(value)));
+            error = otLinkCslSetTimeout(mInstance, static_cast<uint32_t>(value));
         }
     }
 
@@ -1264,11 +1262,11 @@ otError Interpreter::ProcessDelayTimerMin(uint8_t aArgsLength, char *aArgs[])
     {
         unsigned long value;
         SuccessOrExit(error = ParseUnsignedLong(aArgs[0], value));
-        SuccessOrExit(error = otDatasetSetDelayTimerMinimal(mInstance, static_cast<uint32_t>(value * 1000)));
+        error = otDatasetSetDelayTimerMinimal(mInstance, static_cast<uint32_t>(value * 1000));
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_ARGS);
+        error = OT_ERROR_INVALID_ARGS;
     }
 
 exit:
@@ -1480,24 +1478,24 @@ otError Interpreter::ProcessLog(uint8_t aArgsLength, char *aArgs[])
             long level;
 
             SuccessOrExit(error = ParseLong(aArgs[1], level));
-            SuccessOrExit(error = otLoggingSetLevel(static_cast<otLogLevel>(level)));
+            error = otLoggingSetLevel(static_cast<otLogLevel>(level));
         }
 #endif
         else
         {
-            ExitNow(error = OT_ERROR_INVALID_ARGS);
+            error = OT_ERROR_INVALID_ARGS;
         }
     }
 #if (OPENTHREAD_CONFIG_LOG_OUTPUT == OPENTHREAD_CONFIG_LOG_OUTPUT_DEBUG_UART) && OPENTHREAD_POSIX
     else if (!strcmp(aArgs[0], "filename"))
     {
         VerifyOrExit(aArgsLength == 1, error = OT_ERROR_INVALID_ARGS);
-        SuccessOrExit(error = otPlatDebugUart_logfile(aArgs[1]));
+        error = otPlatDebugUart_logfile(aArgs[1]);
     }
 #endif
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_ARGS);
+        error = OT_ERROR_INVALID_COMMAND;
     }
 
 exit:
@@ -1582,18 +1580,17 @@ otError Interpreter::ProcessIfconfig(uint8_t aArgsLength, char *aArgs[])
     }
     else if (strcmp(aArgs[0], "up") == 0)
     {
-        SuccessOrExit(error = otIp6SetEnabled(mInstance, true));
+        error = otIp6SetEnabled(mInstance, true);
     }
     else if (strcmp(aArgs[0], "down") == 0)
     {
-        SuccessOrExit(error = otIp6SetEnabled(mInstance, false));
+        error = otIp6SetEnabled(mInstance, false);
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_ARGS);
+        error = OT_ERROR_INVALID_ARGS;
     }
 
-exit:
     return error;
 }
 
@@ -1647,11 +1644,11 @@ otError Interpreter::ProcessIpAddr(uint8_t aArgsLength, char *aArgs[])
     {
         if (strcmp(aArgs[0], "add") == 0)
         {
-            SuccessOrExit(error = ProcessIpAddrAdd(aArgsLength - 1, aArgs + 1));
+            error = ProcessIpAddrAdd(aArgsLength - 1, aArgs + 1);
         }
         else if (strcmp(aArgs[0], "del") == 0)
         {
-            SuccessOrExit(error = ProcessIpAddrDel(aArgsLength - 1, aArgs + 1));
+            error = ProcessIpAddrDel(aArgsLength - 1, aArgs + 1);
         }
         else if (strcmp(aArgs[0], "linklocal") == 0)
         {
@@ -1670,11 +1667,10 @@ otError Interpreter::ProcessIpAddr(uint8_t aArgsLength, char *aArgs[])
         }
         else
         {
-            ExitNow(error = OT_ERROR_INVALID_COMMAND);
+            error = OT_ERROR_INVALID_COMMAND;
         }
     }
 
-exit:
     return error;
 }
 
@@ -1757,23 +1753,22 @@ otError Interpreter::ProcessIpMulticastAddr(uint8_t aArgsLength, char *aArgs[])
     {
         if (strcmp(aArgs[0], "add") == 0)
         {
-            SuccessOrExit(error = ProcessIpMulticastAddrAdd(aArgsLength - 1, aArgs + 1));
+            error = ProcessIpMulticastAddrAdd(aArgsLength - 1, aArgs + 1);
         }
         else if (strcmp(aArgs[0], "del") == 0)
         {
-            SuccessOrExit(error = ProcessIpMulticastAddrDel(aArgsLength - 1, aArgs + 1));
+            error = ProcessIpMulticastAddrDel(aArgsLength - 1, aArgs + 1);
         }
         else if (strcmp(aArgs[0], "promiscuous") == 0)
         {
-            SuccessOrExit(error = ProcessMulticastPromiscuous(aArgsLength - 1, aArgs + 1));
+            error = ProcessMulticastPromiscuous(aArgsLength - 1, aArgs + 1);
         }
         else
         {
-            ExitNow(error = OT_ERROR_INVALID_COMMAND);
+            error = OT_ERROR_INVALID_COMMAND;
         }
     }
 
-exit:
     return error;
 }
 
@@ -1810,7 +1805,7 @@ otError Interpreter::ProcessKeySequence(uint8_t aArgsLength, char *aArgs[])
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_ARGS);
+        error = OT_ERROR_INVALID_ARGS;
     }
 
 exit:
@@ -2011,7 +2006,7 @@ otError Interpreter::ProcessPskc(uint8_t aArgsLength, char *aArgs[])
             ExitNow(error = OT_ERROR_INVALID_ARGS);
         }
 
-        SuccessOrExit(error = otThreadSetPskc(mInstance, &pskc));
+        error = otThreadSetPskc(mInstance, &pskc);
     }
 
 exit:
@@ -2033,7 +2028,7 @@ otError Interpreter::ProcessMasterKey(uint8_t aArgsLength, char *aArgs[])
         otMasterKey key;
 
         VerifyOrExit(Hex2Bin(aArgs[0], key.m8, sizeof(key.m8)) == OT_MASTER_KEY_SIZE, error = OT_ERROR_INVALID_ARGS);
-        SuccessOrExit(error = otThreadSetMasterKey(mInstance, &key));
+        error = otThreadSetMasterKey(mInstance, &key);
     }
 
 exit:
@@ -2245,7 +2240,7 @@ otError Interpreter::ProcessNeighbor(uint8_t aArgsLength, char *aArgs[])
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_ARGS);
+        error = OT_ERROR_INVALID_ARGS;
     }
 
 exit:
@@ -2430,10 +2425,9 @@ otError Interpreter::ProcessNetworkName(uint8_t aArgsLength, char *aArgs[])
     }
     else
     {
-        SuccessOrExit(error = otThreadSetNetworkName(mInstance, aArgs[0]));
+        error = otThreadSetNetworkName(mInstance, aArgs[0]);
     }
 
-exit:
     return error;
 }
 
@@ -2479,11 +2473,11 @@ otError Interpreter::ProcessNetworkTime(uint8_t aArgsLength, char *aArgs[])
         SuccessOrExit(error = otNetworkTimeSetSyncPeriod(mInstance, static_cast<uint16_t>(value)));
 
         SuccessOrExit(error = ParseLong(aArgs[1], value));
-        SuccessOrExit(error = otNetworkTimeSetXtalThreshold(mInstance, static_cast<uint16_t>(value)));
+        error = otNetworkTimeSetXtalThreshold(mInstance, static_cast<uint16_t>(value));
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_ARGS);
+        error = OT_ERROR_INVALID_ARGS;
     }
 
 exit:
@@ -2749,11 +2743,11 @@ otError Interpreter::ProcessPromiscuous(uint8_t aArgsLength, char *aArgs[])
         else if (strcmp(aArgs[0], "disable") == 0)
         {
             otLinkSetPcapCallback(mInstance, nullptr, nullptr);
-            SuccessOrExit(error = otLinkSetPromiscuous(mInstance, false));
+            error = otLinkSetPromiscuous(mInstance, false);
         }
         else
         {
-            ExitNow(error = OT_ERROR_INVALID_ARGS);
+            error = OT_ERROR_INVALID_ARGS;
         }
     }
 
@@ -2997,22 +2991,21 @@ otError Interpreter::ProcessPrefix(uint8_t aArgsLength, char *aArgs[])
 
     if (aArgsLength == 0)
     {
-        SuccessOrExit(error = ProcessPrefixList());
+        error = ProcessPrefixList();
     }
     else if (strcmp(aArgs[0], "add") == 0)
     {
-        SuccessOrExit(error = ProcessPrefixAdd(aArgsLength - 1, aArgs + 1));
+        error = ProcessPrefixAdd(aArgsLength - 1, aArgs + 1);
     }
     else if (strcmp(aArgs[0], "remove") == 0)
     {
-        SuccessOrExit(error = ProcessPrefixRemove(aArgsLength - 1, aArgs + 1));
+        error = ProcessPrefixRemove(aArgsLength - 1, aArgs + 1);
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_COMMAND);
+        error = OT_ERROR_INVALID_COMMAND;
     }
 
-exit:
     return error;
 }
 #endif // OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
@@ -3046,7 +3039,7 @@ otError Interpreter::ProcessRcp(uint8_t aArgsLength, char *aArgs[])
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_ARGS);
+        error = OT_ERROR_INVALID_ARGS;
     }
 
 exit:
@@ -3062,7 +3055,7 @@ otError Interpreter::ProcessReleaseRouterId(uint8_t aArgsLength, char *aArgs[])
     VerifyOrExit(aArgsLength > 0, error = OT_ERROR_INVALID_ARGS);
 
     SuccessOrExit(error = ParseLong(aArgs[0], value));
-    SuccessOrExit(error = otThreadReleaseRouterId(mInstance, static_cast<uint8_t>(value)));
+    error = otThreadReleaseRouterId(mInstance, static_cast<uint8_t>(value));
 
 exit:
     return error;
@@ -3201,22 +3194,21 @@ otError Interpreter::ProcessRoute(uint8_t aArgsLength, char *aArgs[])
 
     if (aArgsLength == 0)
     {
-        SuccessOrExit(error = ProcessRouteList());
+        error = ProcessRouteList();
     }
     else if (strcmp(aArgs[0], "add") == 0)
     {
-        SuccessOrExit(error = ProcessRouteAdd(aArgsLength - 1, aArgs + 1));
+        error = ProcessRouteAdd(aArgsLength - 1, aArgs + 1);
     }
     else if (strcmp(aArgs[0], "remove") == 0)
     {
-        SuccessOrExit(error = ProcessRouteRemove(aArgsLength - 1, aArgs + 1));
+        error = ProcessRouteRemove(aArgsLength - 1, aArgs + 1);
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_COMMAND);
+        error = OT_ERROR_INVALID_COMMAND;
     }
 
-exit:
     return error;
 }
 #endif // OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
@@ -3347,10 +3339,9 @@ otError Interpreter::ProcessRouterEligible(uint8_t aArgsLength, char *aArgs[])
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_ARGS);
+        error = OT_ERROR_INVALID_ARGS;
     }
 
-exit:
     return error;
 }
 
@@ -3623,30 +3614,28 @@ otError Interpreter::ProcessState(uint8_t aArgsLength, char *aArgs[])
     {
         if (strcmp(aArgs[0], "detached") == 0)
         {
-            SuccessOrExit(error = otThreadBecomeDetached(mInstance));
+            error = otThreadBecomeDetached(mInstance);
         }
         else if (strcmp(aArgs[0], "child") == 0)
         {
-            SuccessOrExit(error = otThreadBecomeChild(mInstance));
+            error = otThreadBecomeChild(mInstance);
         }
-
 #if OPENTHREAD_FTD
         else if (strcmp(aArgs[0], "router") == 0)
         {
-            SuccessOrExit(error = otThreadBecomeRouter(mInstance));
+            error = otThreadBecomeRouter(mInstance);
         }
         else if (strcmp(aArgs[0], "leader") == 0)
         {
-            SuccessOrExit(error = otThreadBecomeLeader(mInstance));
+            error = otThreadBecomeLeader(mInstance);
         }
 #endif
         else
         {
-            ExitNow(error = OT_ERROR_INVALID_ARGS);
+            error = OT_ERROR_INVALID_ARGS;
         }
     }
 
-exit:
     return error;
 }
 
@@ -3658,11 +3647,11 @@ otError Interpreter::ProcessThread(uint8_t aArgsLength, char *aArgs[])
 
     if (strcmp(aArgs[0], "start") == 0)
     {
-        SuccessOrExit(error = otThreadSetEnabled(mInstance, true));
+        error = otThreadSetEnabled(mInstance, true);
     }
     else if (strcmp(aArgs[0], "stop") == 0)
     {
-        SuccessOrExit(error = otThreadSetEnabled(mInstance, false));
+        error = otThreadSetEnabled(mInstance, false);
     }
     else if (strcmp(aArgs[0], "version") == 0)
     {
@@ -3670,7 +3659,7 @@ otError Interpreter::ProcessThread(uint8_t aArgsLength, char *aArgs[])
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_COMMAND);
+        error = OT_ERROR_INVALID_COMMAND;
     }
 
 exit:
@@ -3698,7 +3687,7 @@ otError Interpreter::ProcessTxPower(uint8_t aArgsLength, char *aArgs[])
         long value;
 
         SuccessOrExit(error = ParseLong(aArgs[0], value));
-        SuccessOrExit(error = otPlatRadioSetTransmitPower(mInstance, static_cast<int8_t>(value)));
+        error = otPlatRadioSetTransmitPower(mInstance, static_cast<int8_t>(value));
     }
 
 exit:
@@ -3723,7 +3712,7 @@ otError Interpreter::ProcessUnsecurePort(uint8_t aArgsLength, char *aArgs[])
         VerifyOrExit(aArgsLength == 2, error = OT_ERROR_INVALID_ARGS);
         SuccessOrExit(error = ParseUnsignedLong(aArgs[1], value));
         VerifyOrExit(value <= 0xffff, error = OT_ERROR_INVALID_ARGS);
-        SuccessOrExit(error = otIp6AddUnsecurePort(mInstance, static_cast<uint16_t>(value)));
+        error = otIp6AddUnsecurePort(mInstance, static_cast<uint16_t>(value));
     }
     else if (strcmp(aArgs[0], "remove") == 0)
     {
@@ -3739,7 +3728,7 @@ otError Interpreter::ProcessUnsecurePort(uint8_t aArgsLength, char *aArgs[])
 
             SuccessOrExit(error = ParseUnsignedLong(aArgs[1], value));
             VerifyOrExit(value <= 0xffff, error = OT_ERROR_INVALID_ARGS);
-            SuccessOrExit(error = otIp6RemoveUnsecurePort(mInstance, static_cast<uint16_t>(value)));
+            error = otIp6RemoveUnsecurePort(mInstance, static_cast<uint16_t>(value));
         }
     }
     else if (strcmp(aArgs[0], "get") == 0)
@@ -3761,7 +3750,7 @@ otError Interpreter::ProcessUnsecurePort(uint8_t aArgsLength, char *aArgs[])
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_COMMAND);
+        error = OT_ERROR_INVALID_COMMAND;
     }
 
 exit:
@@ -3784,7 +3773,7 @@ otError Interpreter::ProcessVersion(uint8_t aArgsLength, char *aArgs[])
     }
     else
     {
-        ExitNow(error = OT_ERROR_INVALID_COMMAND);
+        error = OT_ERROR_INVALID_COMMAND;
     }
 
 exit:
@@ -3983,7 +3972,7 @@ otError Interpreter::ProcessMacFilterAddress(uint8_t aArgsLength, char *aArgs[])
                 VerifyOrExit(aArgsLength == 3, error = OT_ERROR_INVALID_ARGS);
                 SuccessOrExit(error = ParseLong(aArgs[2], value));
                 rss = static_cast<int8_t>(value);
-                SuccessOrExit(error = otLinkFilterAddRssIn(mInstance, &extAddr, rss));
+                error = otLinkFilterAddRssIn(mInstance, &extAddr, rss);
             }
         }
         else if (strcmp(aArgs[0], "remove") == 0)
@@ -4063,7 +4052,7 @@ otError Interpreter::ProcessMacFilterRss(uint8_t aArgsLength, char *aArgs[])
                 VerifyOrExit(Hex2Bin(aArgs[1], extAddr.m8, OT_EXT_ADDRESS_SIZE) == OT_EXT_ADDRESS_SIZE,
                              error = OT_ERROR_INVALID_ARGS);
 
-                SuccessOrExit(error = otLinkFilterAddRssIn(mInstance, &extAddr, rss));
+                error = otLinkFilterAddRssIn(mInstance, &extAddr, rss);
             }
         }
         else if (strcmp(aArgs[0], "add") == 0)
@@ -4081,7 +4070,7 @@ otError Interpreter::ProcessMacFilterRss(uint8_t aArgsLength, char *aArgs[])
                 VerifyOrExit(Hex2Bin(aArgs[1], extAddr.m8, OT_EXT_ADDRESS_SIZE) == OT_EXT_ADDRESS_SIZE,
                              error = OT_ERROR_INVALID_ARGS);
 
-                SuccessOrExit(error = otLinkFilterAddRssIn(mInstance, &extAddr, rss));
+                error = otLinkFilterAddRssIn(mInstance, &extAddr, rss);
             }
         }
         else if (strcmp(aArgs[0], "remove") == 0)
