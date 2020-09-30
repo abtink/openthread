@@ -40,14 +40,14 @@
 namespace ot {
 namespace Cli {
 
-constexpr Commissioner::Command Commissioner::sCommands[];
+constexpr CommissionerCommand Commissioner::sCommands[];
 
 otError Commissioner::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
 {
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    for (const Command &command : sCommands)
+    for (const CommissionerCommand &command : sCommands)
     {
         mInterpreter.OutputLine(command.GetName());
     }
@@ -429,8 +429,8 @@ otError Commissioner::ProcessState(uint8_t aArgsLength, char *aArgs[])
 
 otError Commissioner::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError        error = OT_ERROR_INVALID_COMMAND;
-    const Command *command;
+    otError                    error = OT_ERROR_INVALID_COMMAND;
+    const CommissionerCommand *command;
 
     VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
 

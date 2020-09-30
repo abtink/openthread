@@ -44,6 +44,57 @@ namespace ot {
 namespace Cli {
 
 class Interpreter;
+class UdpExample;
+
+/**
+ * This class represents a lookup table entry associating a command with an `Udp` handler method.
+ *
+ */
+class UdpCommand : public Utils::LookupTable::Entry
+{
+public:
+    /**
+     * This type represents a handler method pointer.
+     *
+     * @param[in] aArgsLength The number of arguments in @p aArgs array.
+     * @param[in] aArgs       The argument vector.
+     *
+     * @return An error code.
+     *
+     */
+    typedef otError (UdpExample::*Handler)(uint8_t aArgsLength, char *aArgs[]);
+
+    /**
+     * This constructor initializes the entry with a given name and handler.
+     *
+     * @param[in] aName     The null-terminated name string with which to initialize the entry.
+     * @param[in] aHandler  The handler to associate with @p aName.
+     *
+     */
+    constexpr UdpCommand(const char *aName, Handler aHandler)
+        : Entry(aName)
+        , mHandler(aHandler)
+    {
+    }
+
+    /**
+     * This method invokes the handler method.
+     *
+     * @param[in] aUdpExample  A reference to the `UdpExample` instance providing handler.
+     * @param[in] aArgsLength  The number of arguments in @p aArgs array.
+     * @param[in] aArgs        The argument vector.
+     *
+     * @returns The error code from handler.
+     *
+     */
+    otError InvokeHandler(UdpExample &aUdpExample, uint8_t aArgsLength, char *aArgs[]) const
+    {
+        return (aUdpExample.*mHandler)(aArgsLength, aArgs);
+    }
+
+private:
+    const Handler mHandler;
+};
 
 /**
  * This class implements a CLI-based UDP example.
@@ -70,8 +121,6 @@ public:
     otError Process(uint8_t aArgsLength, char *aArgs[]);
 
 private:
-    typedef Utils::LookupTable::HandlerEntry<UdpExample> Command;
-
     enum PayloadType
     {
         kTypeText      = 0,
@@ -91,7 +140,7 @@ private:
     static void HandleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
     void        HandleUdpReceive(otMessage *aMessage, const otMessageInfo *aMessageInfo);
 
-    static constexpr Command sCommands[] = {
+    static constexpr UdpCommand sCommands[] = {
         {"bind", &UdpExample::ProcessBind},
         {"close", &UdpExample::ProcessClose},
         {"connect", &UdpExample::ProcessConnect},

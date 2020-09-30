@@ -43,7 +43,7 @@
 namespace ot {
 namespace Cli {
 
-constexpr Coap::Command Coap::sCommands[];
+constexpr CoapCommand Coap::sCommands[];
 
 Coap::Coap(Interpreter &aInterpreter)
     : mInterpreter(aInterpreter)
@@ -155,7 +155,7 @@ otError Coap::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    for (const Command &command : sCommands)
+    for (const CoapCommand &command : sCommands)
     {
         mInterpreter.OutputLine(command.GetName());
     }
@@ -496,8 +496,8 @@ exit:
 
 otError Coap::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError        error = OT_ERROR_INVALID_ARGS;
-    const Command *command;
+    otError            error = OT_ERROR_INVALID_ARGS;
+    const CoapCommand *command;
 
     VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
 

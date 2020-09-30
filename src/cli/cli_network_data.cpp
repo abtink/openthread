@@ -44,7 +44,7 @@ using ot::Encoding::BigEndian::HostSwap16;
 namespace ot {
 namespace Cli {
 
-constexpr NetworkData::Command NetworkData::sCommands[];
+constexpr NetworkDataCommand NetworkData::sCommands[];
 
 NetworkData::NetworkData(Interpreter &aInterpreter)
     : mInterpreter(aInterpreter)
@@ -171,7 +171,7 @@ otError NetworkData::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    for (const Command &command : sCommands)
+    for (const NetworkDataCommand &command : sCommands)
     {
         mInterpreter.OutputLine(command.GetName());
     }
@@ -311,8 +311,8 @@ otError NetworkData::ProcessShow(uint8_t aArgsLength, char *aArgs[])
 
 otError NetworkData::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError        error = OT_ERROR_INVALID_COMMAND;
-    const Command *command;
+    otError                   error = OT_ERROR_INVALID_COMMAND;
+    const NetworkDataCommand *command;
 
     VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
 

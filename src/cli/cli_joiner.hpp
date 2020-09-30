@@ -46,6 +46,57 @@ namespace ot {
 namespace Cli {
 
 class Interpreter;
+class Joiner;
+
+/**
+ * This class represents a lookup table entry associating a command with an `Joiner` handler method.
+ *
+ */
+class JoinerCommand : public Utils::LookupTable::Entry
+{
+public:
+    /**
+     * This type represents a handler method pointer.
+     *
+     * @param[in] aArgsLength The number of arguments in @p aArgs array.
+     * @param[in] aArgs       The argument vector.
+     *
+     * @return An error code.
+     *
+     */
+    typedef otError (Joiner::*Handler)(uint8_t aArgsLength, char *aArgs[]);
+
+    /**
+     * This constructor initializes the entry with a given name and handler.
+     *
+     * @param[in] aName     The null-terminated name string with which to initialize the entry.
+     * @param[in] aHandler  The handler to associate with @p aName.
+     *
+     */
+    constexpr JoinerCommand(const char *aName, Handler aHandler)
+        : Entry(aName)
+        , mHandler(aHandler)
+    {
+    }
+
+    /**
+     * This method invokes the handler method.
+     *
+     * @param[in] aJoiner      A reference to the `Joiner` providing the handler.
+     * @param[in] aArgsLength  The number of arguments in @p aArgs array.
+     * @param[in] aArgs        The argument vector.
+     *
+     * @returns The error code from handler.
+     *
+     */
+    otError InvokeHandler(Joiner &aJoiner, uint8_t aArgsLength, char *aArgs[]) const
+    {
+        return (aJoiner.*mHandler)(aArgsLength, aArgs);
+    }
+
+private:
+    const Handler mHandler;
+};
 
 /**
  * This class implements the CLI CoAP Secure server and client.
@@ -75,8 +126,6 @@ public:
     otError Process(uint8_t aArgsLength, char *aArgs[]);
 
 private:
-    typedef Utils::LookupTable::HandlerEntry<Joiner> Command;
-
     otError ProcessDiscerner(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessHelp(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessId(uint8_t aArgsLength, char *aArgs[]);
@@ -86,7 +135,7 @@ private:
     static void HandleCallback(otError aError, void *aContext);
     void        HandleCallback(otError aError);
 
-    static constexpr Command sCommands[] = {
+    static constexpr JoinerCommand sCommands[] = {
         {"discerner", &Joiner::ProcessDiscerner}, {"help", &Joiner::ProcessHelp}, {"id", &Joiner::ProcessId},
         {"start", &Joiner::ProcessStart},         {"stop", &Joiner::ProcessStop},
     };

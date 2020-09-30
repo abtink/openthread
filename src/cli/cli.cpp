@@ -93,7 +93,7 @@ namespace ot {
 
 namespace Cli {
 
-constexpr Interpreter::Command Interpreter::sCommands[];
+constexpr InterpreterCommand Interpreter::sCommands[];
 
 Interpreter *Interpreter::sInterpreter = nullptr;
 
@@ -328,7 +328,7 @@ otError Interpreter::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    for (const Command &command : sCommands)
+    for (const InterpreterCommand &command : sCommands)
     {
         OutputLine(command.GetName());
     }
@@ -4201,10 +4201,10 @@ otError Interpreter::ProcessDiag(uint8_t aArgsLength, char *aArgs[])
 
 void Interpreter::ProcessLine(char *aBuf, uint16_t aBufLength)
 {
-    char *         aArgs[kMaxArgs] = {nullptr};
-    char *         cmdName;
-    uint8_t        aArgsLength = 0;
-    const Command *command;
+    char *                    aArgs[kMaxArgs] = {nullptr};
+    char *                    cmdName;
+    uint8_t                   aArgsLength = 0;
+    const InterpreterCommand *command;
 
     VerifyOrExit(aBuf != nullptr && StringLength(aBuf, aBufLength + 1) <= aBufLength, OT_NOOP);
 
@@ -4223,7 +4223,7 @@ void Interpreter::ProcessLine(char *aBuf, uint16_t aBufLength)
 
     if (command != nullptr)
     {
-        OutputResult(command->InvokeHandler(*this, aArgsLength - 1, &aArgs[1]));
+        OutputResult(command->InvokeHandler(*this, aArgsLength - 1, aArgs + 1));
         ExitNow();
     }
 

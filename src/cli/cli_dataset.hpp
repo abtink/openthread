@@ -46,6 +46,57 @@ namespace ot {
 namespace Cli {
 
 class Interpreter;
+class Dataset;
+
+/**
+ * This class represents a lookup table entry associating a command with an `Dataset` handler method.
+ *
+ */
+class DatasetCommand : public Utils::LookupTable::Entry
+{
+public:
+    /**
+     * This type represents a handler method pointer.
+     *
+     * @param[in] aArgsLength The number of arguments in @p aArgs array.
+     * @param[in] aArgs       The argument vector.
+     *
+     * @return An error code.
+     *
+     */
+    typedef otError (Dataset::*Handler)(uint8_t aArgsLength, char *aArgs[]);
+
+    /**
+     * This constructor initializes the entry with a given name and handler.
+     *
+     * @param[in] aName     The null-terminated name string with which to initialize the entry.
+     * @param[in] aHandler  The handler to associate with @p aName.
+     *
+     */
+    constexpr DatasetCommand(const char *aName, Handler aHandler)
+        : Entry(aName)
+        , mHandler(aHandler)
+    {
+    }
+
+    /**
+     * This method invokes the handler method.
+     *
+     * @param[in] aProvider    A reference to handler provider.
+     * @param[in] aArgsLength  The number of arguments in @p aArgs array.
+     * @param[in] aArgs        The argument vector.
+     *
+     * @returns The error code from handler.
+     *
+     */
+    otError InvokeHandler(Dataset &aDataset, uint8_t aArgsLength, char *aArgs[]) const
+    {
+        return (aDataset.*mHandler)(aArgsLength, aArgs);
+    }
+
+private:
+    const Handler mHandler;
+};
 
 /**
  * This class implements the Dataset CLI interpreter.

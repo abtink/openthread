@@ -44,7 +44,58 @@
 namespace ot {
 namespace Cli {
 
+class Coap;
 class Interpreter;
+
+/**
+ * This class represents a lookup table entry associating a command with an `Coap` handler method.
+ *
+ */
+class CoapCommand : public Utils::LookupTable::Entry
+{
+public:
+    /**
+     * This type represents a handler method pointer.
+     *
+     * @param[in] aArgsLength The number of arguments in @p aArgs array.
+     * @param[in] aArgs       The argument vector.
+     *
+     * @return An error code.
+     *
+     */
+    typedef otError (Coap::*Handler)(uint8_t aArgsLength, char *aArgs[]);
+
+    /**
+     * This constructor initializes the entry with a given name and handler.
+     *
+     * @param[in] aName     The null-terminated name string with which to initialize the entry.
+     * @param[in] aHandler  The handler to associate with @p aName.
+     *
+     */
+    constexpr CoapCommand(const char *aName, Handler aHandler)
+        : Entry(aName)
+        , mHandler(aHandler)
+    {
+    }
+
+    /**
+     * This method invokes the handler method on a given provider.
+     *
+     * @param[in] aProvider    A reference to handler provider.
+     * @param[in] aArgsLength  The number of arguments in @p aArgs array.
+     * @param[in] aArgs        The argument vector.
+     *
+     * @returns The error code from handler.
+     *
+     */
+    otError InvokeHandler(Coap &aCoap, uint8_t aArgsLength, char *aArgs[]) const
+    {
+        return (aCoap.*mHandler)(aArgsLength, aArgs);
+    }
+
+private:
+    const Handler mHandler;
+};
 
 /**
  * This class implements the CLI CoAP server and client.
@@ -76,8 +127,6 @@ private:
         kMaxUriLength  = 32,
         kMaxBufferSize = 16
     };
-
-    typedef Utils::LookupTable::HandlerEntry<Coap> Command;
 
 #if OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE
     otError CancelResourceSubscription(void);
@@ -121,7 +170,7 @@ private:
         return mUseDefaultResponseTxParameters ? nullptr : &mResponseTxParameters;
     }
 
-    static constexpr Command sCommands[] = {
+    static constexpr CoapCommand sCommands[] = {
 #if OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE
         {"cancel", &Coap::ProcessCancel},
 #endif

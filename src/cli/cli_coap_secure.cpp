@@ -45,7 +45,7 @@
 namespace ot {
 namespace Cli {
 
-constexpr CoapSecure::Command CoapSecure::sCommands[];
+constexpr CoapSecureCommand CoapSecure::sCommands[];
 
 CoapSecure::CoapSecure(Interpreter &aInterpreter)
     : mInterpreter(aInterpreter)
@@ -92,7 +92,7 @@ otError CoapSecure::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    for (const Command &command : sCommands)
+    for (const CoapSecureCommand &command : sCommands)
     {
         mInterpreter.OutputLine(command.GetName());
     }
@@ -397,8 +397,8 @@ otError CoapSecure::ProcessX509(uint8_t aArgsLength, char *aArgs[])
 
 otError CoapSecure::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError        error = OT_ERROR_INVALID_ARGS;
-    const Command *command;
+    otError                  error = OT_ERROR_INVALID_ARGS;
+    const CoapSecureCommand *command;
 
     VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
 

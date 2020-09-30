@@ -50,6 +50,57 @@ namespace ot {
 namespace Cli {
 
 class Interpreter;
+class CoapSecure;
+
+/**
+ * This class represents a lookup table entry associating a command with an `CoapSecure` handler method.
+ *
+ */
+class CoapSecureCommand : public Utils::LookupTable::Entry
+{
+public:
+    /**
+     * This type represents a handler method pointer.
+     *
+     * @param[in] aArgsLength The number of arguments in @p aArgs array.
+     * @param[in] aArgs       The argument vector.
+     *
+     * @return An error code.
+     *
+     */
+    typedef otError (CoapSecure::*Handler)(uint8_t aArgsLength, char *aArgs[]);
+
+    /**
+     * This constructor initializes the entry with a given name and handler.
+     *
+     * @param[in] aName     The null-terminated name string with which to initialize the entry.
+     * @param[in] aHandler  The handler to associate with @p aName.
+     *
+     */
+    constexpr CoapSecureCommand(const char *aName, Handler aHandler)
+        : Entry(aName)
+        , mHandler(aHandler)
+    {
+    }
+
+    /**
+     * This method invokes the handler method on a given provider.
+     *
+     * @param[in] aProvider    A reference to handler provider.
+     * @param[in] aArgsLength  The number of arguments in @p aArgs array.
+     * @param[in] aArgs        The argument vector.
+     *
+     * @returns The error code from handler.
+     *
+     */
+    otError InvokeHandler(CoapSecure &aCoapSecure, uint8_t aArgsLength, char *aArgs[]) const
+    {
+        return (aCoapSecure.*mHandler)(aArgsLength, aArgs);
+    }
+
+private:
+    const Handler mHandler;
+};
 
 /**
  * This class implements the CLI CoAP Secure server and client.
@@ -84,8 +135,6 @@ private:
         kPskIdMaxLength = 32
     };
 
-    typedef Utils::LookupTable::HandlerEntry<CoapSecure> Command;
-
     void PrintPayload(otMessage *aMessage) const;
 
     otError ProcessHelp(uint8_t aArgsLength, char *aArgs[]);
@@ -115,7 +164,7 @@ private:
     static void HandleConnected(bool aConnected, void *aContext);
     void        HandleConnected(bool aConnected);
 
-    static constexpr Command sCommands[] = {
+    static constexpr CoapSecureCommand sCommands[] = {
         {"connect", &CoapSecure::ProcessConnect},
         {"delete", &CoapSecure::ProcessRequest},
         {"disconnect", &CoapSecure::ProcessDisconnect},

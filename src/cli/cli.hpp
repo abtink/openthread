@@ -74,6 +74,58 @@ namespace ot {
  */
 namespace Cli {
 
+class Interpreter;
+
+/**
+ * This class represents a lookup table entry associating a command with an `Interpreter` handler method.
+ *
+ */
+class InterpreterCommand : public Utils::LookupTable::Entry
+{
+public:
+    /**
+     * This type represents a handler method pointer.
+     *
+     * @param[in] aArgsLength The number of arguments in @p aArgs array.
+     * @param[in] aArgs       The argument vector.
+     *
+     * @return An error code.
+     *
+     */
+    typedef otError (Interpreter::*Handler)(uint8_t aArgsLength, char *aArgs[]);
+
+    /**
+     * This constructor initializes the entry with a given name and handler.
+     *
+     * @param[in] aName     The null-terminated name string with which to initialize the entry.
+     * @param[in] aHandler  The handler to associate with @p aName.
+     *
+     */
+    constexpr InterpreterCommand(const char *aName, Handler aHandler)
+        : Entry(aName)
+        , mHandler(aHandler)
+    {
+    }
+
+    /**
+     * This method invokes the handler method on a given provider.
+     *
+     * @param[in] aProvider    A reference to handler provider.
+     * @param[in] aArgsLength  The number of arguments in @p aArgs array.
+     * @param[in] aArgs        The argument vector.
+     *
+     * @returns The error code from handler.
+     *
+     */
+    otError InvokeHandler(Interpreter &aInterpreter, uint8_t aArgsLength, char *aArgs[]) const
+    {
+        return (aInterpreter.*mHandler)(aArgsLength, aArgs);
+    }
+
+private:
+    const Handler mHandler;
+};
+
 /**
  * This class implements the CLI interpreter.
  *
@@ -287,8 +339,6 @@ private:
 
         kMaxLineLength = OPENTHREAD_CONFIG_CLI_MAX_LINE_LENGTH,
     };
-
-    typedef Utils::LookupTable::HandlerEntry<Interpreter> Command;
 
     otError        ParsePingInterval(const char *aString, uint32_t &aInterval);
     static otError ParseJoinerDiscerner(char *aString, otJoinerDiscerner &aJoinerDiscerner);
@@ -564,7 +614,7 @@ private:
     }
     void HandleDiscoveryRequest(const otThreadDiscoveryRequestInfo &aInfo);
 
-    static constexpr Command sCommands[] = {
+    static constexpr InterpreterCommand sCommands[] = {
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
         {"bbr", &Interpreter::ProcessBackboneRouter},
 #endif

@@ -44,7 +44,7 @@ using ot::Encoding::BigEndian::HostSwap16;
 namespace ot {
 namespace Cli {
 
-constexpr UdpExample::Command UdpExample::sCommands[];
+constexpr UdpCommand UdpExample::sCommands[];
 
 UdpExample::UdpExample(Interpreter &aInterpreter)
     : mInterpreter(aInterpreter)
@@ -58,7 +58,7 @@ otError UdpExample::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    for (const Command &command : sCommands)
+    for (const UdpCommand &command : sCommands)
     {
         mInterpreter.OutputLine(command.GetName());
     }
@@ -283,8 +283,8 @@ exit:
 
 otError UdpExample::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError        error = OT_ERROR_INVALID_ARGS;
-    const Command *command;
+    otError           error = OT_ERROR_INVALID_ARGS;
+    const UdpCommand *command;
 
     VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
 

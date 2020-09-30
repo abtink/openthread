@@ -45,7 +45,58 @@
 namespace ot {
 namespace Cli {
 
+class Commissioner;
 class Interpreter;
+
+/**
+ * This class represents a lookup table entry associating a command with an `Commissioner` handler method.
+ *
+ */
+class CommissionerCommand : public Utils::LookupTable::Entry
+{
+public:
+    /**
+     * This type represents a handler method pointer.
+     *
+     * @param[in] aArgsLength The number of arguments in @p aArgs array.
+     * @param[in] aArgs       The argument vector.
+     *
+     * @return An error code.
+     *
+     */
+    typedef otError (Commissioner::*Handler)(uint8_t aArgsLength, char *aArgs[]);
+
+    /**
+     * This constructor initializes the entry with a given name and handler.
+     *
+     * @param[in] aName     The null-terminated name string with which to initialize the entry.
+     * @param[in] aHandler  The handler to associate with @p aName.
+     *
+     */
+    constexpr CommissionerCommand(const char *aName, Handler aHandler)
+        : Entry(aName)
+        , mHandler(aHandler)
+    {
+    }
+
+    /**
+     * This method invokes the handler method.
+     *
+     * @param[in] aProvider    A reference to handler provider.
+     * @param[in] aArgsLength  The number of arguments in @p aArgs array.
+     * @param[in] aArgs        The argument vector.
+     *
+     * @returns The error code from handler.
+     *
+     */
+    otError InvokeHandler(Commissioner &aCommissioner, uint8_t aArgsLength, char *aArgs[]) const
+    {
+        return (aCommissioner.*mHandler)(aArgsLength, aArgs);
+    }
+
+private:
+    const Handler mHandler;
+};
 
 /**
  * This class implements the CLI CoAP Secure server and client.
@@ -79,8 +130,6 @@ private:
     {
         kDefaultJoinerTimeout = 120, ///< Default timeout for Joiners, in seconds.
     };
-
-    typedef Utils::LookupTable::HandlerEntry<Commissioner> Command;
 
     otError ProcessHelp(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessAnnounce(uint8_t aArgsLength, char *aArgs[]);
@@ -117,7 +166,7 @@ private:
 
     static const char *StateToString(otCommissionerState aState);
 
-    static constexpr Command sCommands[] = {
+    static constexpr CommissionerCommand sCommands[] = {
         {"announce", &Commissioner::ProcessAnnounce},   {"energy", &Commissioner::ProcessEnergy},
         {"help", &Commissioner::ProcessHelp},           {"joiner", &Commissioner::ProcessJoiner},
         {"mgmtget", &Commissioner::ProcessMgmtGet},     {"mgmtset", &Commissioner::ProcessMgmtSet},

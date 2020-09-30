@@ -42,7 +42,7 @@
 namespace ot {
 namespace Cli {
 
-constexpr Joiner::Command Joiner::sCommands[];
+constexpr JoinerCommand Joiner::sCommands[];
 
 otError Joiner::ProcessDiscerner(uint8_t aArgsLength, char *aArgs[])
 {
@@ -86,7 +86,7 @@ otError Joiner::ProcessHelp(uint8_t aArgsLength, char *aArgs[])
     OT_UNUSED_VARIABLE(aArgsLength);
     OT_UNUSED_VARIABLE(aArgs);
 
-    for (const Command &command : sCommands)
+    for (const JoinerCommand &command : sCommands)
     {
         mInterpreter.OutputLine(command.GetName());
     }
@@ -136,8 +136,8 @@ otError Joiner::ProcessStop(uint8_t aArgsLength, char *aArgs[])
 
 otError Joiner::Process(uint8_t aArgsLength, char *aArgs[])
 {
-    otError        error = OT_ERROR_INVALID_COMMAND;
-    const Command *command;
+    otError              error = OT_ERROR_INVALID_COMMAND;
+    const JoinerCommand *command;
 
     VerifyOrExit(aArgsLength != 0, IgnoreError(ProcessHelp(0, nullptr)));
 

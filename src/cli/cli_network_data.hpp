@@ -44,6 +44,57 @@ namespace ot {
 namespace Cli {
 
 class Interpreter;
+class NetworkData;
+
+/**
+ * This class represents a lookup table entry associating a command with an `NetworkData` handler method.
+ *
+ */
+class NetworkDataCommand : public Utils::LookupTable::Entry
+{
+public:
+    /**
+     * This type represents a handler method pointer.
+     *
+     * @param[in] aArgsLength The number of arguments in @p aArgs array.
+     * @param[in] aArgs       The argument vector.
+     *
+     * @return An error code.
+     *
+     */
+    typedef otError (NetworkData::*Handler)(uint8_t aArgsLength, char *aArgs[]);
+
+    /**
+     * This constructor initializes the entry with a given name and handler.
+     *
+     * @param[in] aName     The null-terminated name string with which to initialize the entry.
+     * @param[in] aHandler  The handler to associate with @p aName.
+     *
+     */
+    constexpr NetworkDataCommand(const char *aName, Handler aHandler)
+        : Entry(aName)
+        , mHandler(aHandler)
+    {
+    }
+
+    /**
+     * This method invokes the handler method.
+     *
+     * @param[in] aNetworkData A reference to the `NetworkData` instance providing the handler.
+     * @param[in] aArgsLength  The number of arguments in @p aArgs array.
+     * @param[in] aArgs        The argument vector.
+     *
+     * @returns The error code from handler.
+     *
+     */
+    otError InvokeHandler(NetworkData &aNetworkData, uint8_t aArgsLength, char *aArgs[]) const
+    {
+        return (aNetworkData.*mHandler)(aArgsLength, aArgs);
+    }
+
+private:
+    const Handler mHandler;
+};
 
 /**
  * This class implements the Network Data CLI.
@@ -94,8 +145,6 @@ public:
     void OutputService(const otServiceConfig &aConfig);
 
 private:
-    typedef Utils::LookupTable::HandlerEntry<NetworkData> Command;
-
     otError ProcessHelp(uint8_t aArgsLength, char *aArgs[]);
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
     otError ProcessRegister(uint8_t aArgsLength, char *aArgs[]);
@@ -108,7 +157,7 @@ private:
     void    OutputRoutes(void);
     void    OutputServices(void);
 
-    static constexpr Command sCommands[] = {
+    static constexpr NetworkDataCommand sCommands[] = {
         {"help", &NetworkData::ProcessHelp},
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
         {"register", &NetworkData::ProcessRegister},
