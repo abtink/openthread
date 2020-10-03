@@ -1302,10 +1302,10 @@ exit:
 #if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
 otError Interpreter::ProcessDns(uint8_t aArgsLength, char *aArgs[])
 {
-    otError          error = OT_ERROR_NONE;
-    long             port  = OT_DNS_DEFAULT_SERVER_PORT;
-    Ip6::MessageInfo messageInfo;
-    otDnsQuery       query;
+    otError       error = OT_ERROR_NONE;
+    long          port  = OT_DNS_DEFAULT_SERVER_PORT;
+    otMessageInfo messageInfo;
+    otDnsQuery    query;
 
     VerifyOrExit(aArgsLength > 0, error = OT_ERROR_INVALID_ARGS);
 
@@ -1317,14 +1317,15 @@ otError Interpreter::ProcessDns(uint8_t aArgsLength, char *aArgs[])
 
         strcpy(mResolvingHostname, aArgs[1]);
 
+        memset(&messageInfo, 0, sizeof(messageInfo));
+
         if (aArgsLength > 2)
         {
-            SuccessOrExit(error = messageInfo.GetPeerAddr().FromString(aArgs[2]));
+            SuccessOrExit(error = otIp6AddressFromString(aArgs[2], &messageInfo.mPeerAddr));
         }
         else
         {
-            // Use IPv6 address of default DNS server.
-            SuccessOrExit(error = messageInfo.GetPeerAddr().FromString(OT_DNS_DEFAULT_SERVER_IP));
+            SuccessOrExit(error = otIp6AddressFromString(OT_DNS_DEFAULT_SERVER_IP, &messageInfo.mPeerAddr));
         }
 
         if (aArgsLength > 3)
@@ -1332,10 +1333,10 @@ otError Interpreter::ProcessDns(uint8_t aArgsLength, char *aArgs[])
             SuccessOrExit(error = ParseLong(aArgs[3], port));
         }
 
-        messageInfo.SetPeerPort(static_cast<uint16_t>(port));
+        messageInfo.mPeerPort = static_cast<uint16_t>(port);
 
         query.mHostname    = mResolvingHostname;
-        query.mMessageInfo = static_cast<const otMessageInfo *>(&messageInfo);
+        query.mMessageInfo = &messageInfo;
         query.mNoRecursion = false;
 
         SuccessOrExit(error = otDnsClientQuery(mInstance, &query, &Interpreter::HandleDnsResponse, this));
@@ -1359,11 +1360,10 @@ void Interpreter::HandleDnsResponse(void *              aContext,
                                     uint32_t            aTtl,
                                     otError             aResult)
 {
-    static_cast<Interpreter *>(aContext)->HandleDnsResponse(aHostname, static_cast<const Ip6::Address *>(aAddress),
-                                                            aTtl, aResult);
+    static_cast<Interpreter *>(aContext)->HandleDnsResponse(aHostname, aAddress, aTtl, aResult);
 }
 
-void Interpreter::HandleDnsResponse(const char *aHostname, const Ip6::Address *aAddress, uint32_t aTtl, otError aResult)
+void Interpreter::HandleDnsResponse(const char *aHostname, const otIp6Address *aAddress, uint32_t aTtl, otError aResult)
 {
     OutputFormat("DNS response for %s - ", aHostname);
 
@@ -2582,8 +2582,7 @@ void Interpreter::HandleIcmpReceive(otMessage *          aMessage,
 
     OutputLine("");
 
-    SignalPingReply(static_cast<const Ip6::MessageInfo *>(aMessageInfo)->GetPeerAddr(), dataSize, HostSwap32(timestamp),
-                    aMessageInfo->mHopLimit);
+    SignalPingReply(aMessageInfo->mPeerAddr, dataSize, HostSwap32(timestamp), aMessageInfo->mHopLimit);
 
 exit:
     return;
@@ -2686,8 +2685,7 @@ void Interpreter::SendPing(void)
     SuccessOrExit(otMessageSetLength(message, mPingLength));
     SuccessOrExit(otIcmp6SendEchoRequest(mInstance, message, &messageInfo, mPingIdentifier));
 
-    SignalPingRequest(static_cast<Ip6::MessageInfo *>(&messageInfo)->GetPeerAddr(), mPingLength, HostSwap32(timestamp),
-                      messageInfo.mHopLimit);
+    SignalPingRequest(messageInfo.mPeerAddr, mPingLength, HostSwap32(timestamp), messageInfo.mHopLimit);
 
     message = nullptr;
 
@@ -3512,10 +3510,10 @@ otError Interpreter::ProcessSingleton(uint8_t aArgsLength, char *aArgs[])
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
 otError Interpreter::ProcessSntp(uint8_t aArgsLength, char *aArgs[])
 {
-    otError          error = OT_ERROR_NONE;
-    long             port  = OT_SNTP_DEFAULT_SERVER_PORT;
-    Ip6::MessageInfo messageInfo;
-    otSntpQuery      query;
+    otError       error = OT_ERROR_NONE;
+    long          port  = OT_SNTP_DEFAULT_SERVER_PORT;
+    otMessageInfo messageInfo;
+    otSntpQuery   query;
 
     VerifyOrExit(aArgsLength > 0, error = OT_ERROR_INVALID_ARGS);
 
@@ -3523,14 +3521,15 @@ otError Interpreter::ProcessSntp(uint8_t aArgsLength, char *aArgs[])
     {
         VerifyOrExit(!mSntpQueryingInProgress, error = OT_ERROR_BUSY);
 
+        memset(&messageInfo, 0, sizeof(messageInfo));
+
         if (aArgsLength > 1)
         {
-            SuccessOrExit(error = messageInfo.GetPeerAddr().FromString(aArgs[1]));
+            SuccessOrExit(error = otIp6AddressFromString(aArgs[1], &messageInfo.mPeerAddr));
         }
         else
         {
-            // Use IPv6 address of default SNTP server.
-            SuccessOrExit(error = messageInfo.GetPeerAddr().FromString(OT_SNTP_DEFAULT_SERVER_IP));
+            SuccessOrExit(error = otIp6AddressFromString(OT_SNTP_DEFAULT_SERVER_IP, &messageInfo.mPeerAddr));
         }
 
         if (aArgsLength > 2)
@@ -3538,9 +3537,9 @@ otError Interpreter::ProcessSntp(uint8_t aArgsLength, char *aArgs[])
             SuccessOrExit(error = ParseLong(aArgs[2], port));
         }
 
-        messageInfo.SetPeerPort(static_cast<uint16_t>(port));
+        messageInfo.mPeerPort = static_cast<uint16_t>(port);
 
-        query.mMessageInfo = static_cast<const otMessageInfo *>(&messageInfo);
+        query.mMessageInfo = &messageInfo;
 
         SuccessOrExit(error = otSntpClientQuery(mInstance, &query, &Interpreter::HandleSntpResponse, this));
 
@@ -4286,11 +4285,10 @@ exit:
 
 void Interpreter::HandleDiagnosticGetResponse(otMessage *aMessage, const otMessageInfo *aMessageInfo, void *aContext)
 {
-    static_cast<Interpreter *>(aContext)->HandleDiagnosticGetResponse(
-        *aMessage, *static_cast<const Ip6::MessageInfo *>(aMessageInfo));
+    static_cast<Interpreter *>(aContext)->HandleDiagnosticGetResponse(*aMessage, *aMessageInfo);
 }
 
-void Interpreter::HandleDiagnosticGetResponse(const otMessage &aMessage, const Ip6::MessageInfo &)
+void Interpreter::HandleDiagnosticGetResponse(const otMessage &aMessage, const otMessageInfo &)
 {
     uint8_t               buf[16];
     uint16_t              bytesToPrint;
@@ -4565,7 +4563,7 @@ Interpreter &Interpreter::GetOwner(OwnerLocator &aOwnerLocator)
     return interpreter;
 }
 
-void Interpreter::SignalPingRequest(const Ip6::Address &aPeerAddress,
+void Interpreter::SignalPingRequest(const otIp6Address &aPeerAddress,
                                     uint16_t            aPingLength,
                                     uint32_t            aTimestamp,
                                     uint8_t             aHopLimit)
@@ -4576,11 +4574,12 @@ void Interpreter::SignalPingRequest(const Ip6::Address &aPeerAddress,
     OT_UNUSED_VARIABLE(aHopLimit);
 
 #if OPENTHREAD_CONFIG_OTNS_ENABLE
-    mInstance->Get<Utils::Otns>().EmitPingRequest(aPeerAddress, aPingLength, aTimestamp, aHopLimit);
+    mInstance->Get<Utils::Otns>().EmitPingRequest(static_cast<const Ip6::Adddress &>(aPeerAddress), aPingLength,
+                                                  aTimestamp, aHopLimit);
 #endif
 }
 
-void Interpreter::SignalPingReply(const Ip6::Address &aPeerAddress,
+void Interpreter::SignalPingReply(const otIp6Address &aPeerAddress,
                                   uint16_t            aPingLength,
                                   uint32_t            aTimestamp,
                                   uint8_t             aHopLimit)
@@ -4591,7 +4590,8 @@ void Interpreter::SignalPingReply(const Ip6::Address &aPeerAddress,
     OT_UNUSED_VARIABLE(aHopLimit);
 
 #if OPENTHREAD_CONFIG_OTNS_ENABLE
-    mInstance->Get<Utils::Otns>().EmitPingReply(aPeerAddress, aPingLength, aTimestamp, aHopLimit);
+    mInstance->Get<Utils::Otns>().EmitPingReply(static_cast<const Ip6::Adddress &>(aPeerAddress), aPingLength,
+                                                aTimestamp, aHopLimit);
 #endif
 }
 

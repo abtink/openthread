@@ -447,11 +447,11 @@ private:
 #endif
     otError ProcessPing(uint8_t aArgsLength, char *aArgs[]);
     otError ProcessPollPeriod(uint8_t aArgsLength, char *aArgs[]);
-    void    SignalPingRequest(const Ip6::Address &aPeerAddress,
+    void    SignalPingRequest(const otIp6Address &aPeerAddress,
                               uint16_t            aPingLength,
                               uint32_t            aTimestamp,
                               uint8_t             aHopLimit);
-    void    SignalPingReply(const Ip6::Address &aPeerAddress,
+    void    SignalPingReply(const otIp6Address &aPeerAddress,
                             uint16_t            aPingLength,
                             uint32_t            aTimestamp,
                             uint8_t             aHopLimit);
@@ -517,7 +517,7 @@ private:
     static void HandleLinkPcapReceive(const otRadioFrame *aFrame, bool aIsTx, void *aContext);
 
 #if OPENTHREAD_FTD || OPENTHREAD_CONFIG_TMF_NETWORK_DIAG_MTD_ENABLE
-    void        HandleDiagnosticGetResponse(const otMessage &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void        HandleDiagnosticGetResponse(const otMessage &aMessage, const otMessageInfo &aMessageInfo);
     static void HandleDiagnosticGetResponse(otMessage *aMessage, const otMessageInfo *aMessageInfo, void *aContext);
     void        OutputSpaces(uint16_t aCount);
     void        OutputMode(const otLinkModeConfig &aMode, uint16_t aColumn);
@@ -547,7 +547,7 @@ private:
     void HandleEnergyScanResult(otEnergyScanResult *aResult);
     void HandleLinkPcapReceive(const otRadioFrame *aFrame, bool aIsTx);
 #if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
-    void HandleDnsResponse(const char *aHostname, const Ip6::Address *aAddress, uint32_t aTtl, otError aResult);
+    void HandleDnsResponse(const char *aHostname, const otIp6Address *aAddress, uint32_t aTtl, otError aResult);
 #endif
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
     void HandleSntpResponse(uint64_t aTime, otError aResult);
