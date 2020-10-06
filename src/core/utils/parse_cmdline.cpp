@@ -116,9 +116,9 @@ exit:
 otError ParseAsUint8(const char *aString, uint8_t &aUint8)
 {
     otError  error;
-    uint32_t value;
+    uint64_t value;
 
-    SuccessOrExit(error = ParseAsUint32(aString, value));
+    SuccessOrExit(error = ParseAsUint64(aString, value));
 
     VerifyOrExit(value <= UINT8_MAX, error = OT_ERROR_INVALID_ARGS);
     aUint8 = static_cast<uint8_t>(value);
@@ -130,9 +130,9 @@ exit:
 otError ParseAsUint16(const char *aString, uint16_t &aUint16)
 {
     otError  error;
-    uint32_t value;
+    uint64_t value;
 
-    SuccessOrExit(error = ParseAsUint32(aString, value));
+    SuccessOrExit(error = ParseAsUint64(aString, value));
 
     VerifyOrExit(value <= UINT16_MAX, error = OT_ERROR_INVALID_ARGS);
     aUint16 = static_cast<uint16_t>(value);
