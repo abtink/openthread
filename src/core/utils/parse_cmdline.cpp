@@ -33,6 +33,7 @@
 
 #include "parse_cmdline.hpp"
 
+#include <limits>
 #include <string.h>
 
 #include "common/code_utils.hpp"
@@ -113,46 +114,33 @@ exit:
     return error;
 }
 
-otError ParseAsUint8(const char *aString, uint8_t &aUint8)
+template <typename UintType> otError ParseUint(const char *aString, UintType &aUint)
 {
     otError  error;
-    uint32_t value;
-
-    SuccessOrExit(error = ParseAsUint32(aString, value));
-
-    VerifyOrExit(value <= UINT8_MAX, error = OT_ERROR_INVALID_ARGS);
-    aUint8 = static_cast<uint8_t>(value);
-
-exit:
-    return error;
-}
-
-otError ParseAsUint16(const char *aString, uint16_t &aUint16)
-{
-    otError  error;
-    uint32_t value;
-
-    SuccessOrExit(error = ParseAsUint32(aString, value));
-
-    VerifyOrExit(value <= UINT16_MAX, error = OT_ERROR_INVALID_ARGS);
-    aUint16 = static_cast<uint16_t>(value);
-
-exit:
-    return error;
-}
-
-otError ParseAsUint32(const char *aString, uint32_t &aUint32)
-{
-    otError  error = OT_ERROR_NONE;
     uint64_t value;
 
     SuccessOrExit(error = ParseAsUint64(aString, value));
 
-    VerifyOrExit(value <= UINT32_MAX, error = OT_ERROR_INVALID_ARGS);
-    aUint32 = static_cast<uint32_t>(value);
+    VerifyOrExit(value <= std::numeric_limits<UintType>::max(), error = OT_ERROR_INVALID_ARGS);
+    aUint = static_cast<UintType>(value);
 
 exit:
     return error;
+}
+
+otError ParseAsUint8(const char *aString, uint8_t &aUint8)
+{
+    return ParseUint<uint8_t>(aString, aUint8);
+}
+
+otError ParseAsUint16(const char *aString, uint16_t &aUint16)
+{
+    return ParseUint<uint16_t>(aString, aUint16);
+}
+
+otError ParseAsUint32(const char *aString, uint32_t &aUint32)
+{
+    return ParseUint<uint32_t>(aString, aUint32);
 }
 
 otError ParseAsUint64(const char *aString, uint64_t &aUint64)
@@ -194,32 +182,29 @@ exit:
     return error;
 }
 
-otError ParseAsInt8(const char *aString, int8_t &aInt8)
+template <typename IntType> otError ParseInt(const char *aString, IntType &aInt)
 {
     otError error;
     int32_t value;
 
     SuccessOrExit(error = ParseAsInt32(aString, value));
 
-    VerifyOrExit((INT8_MIN <= value) && (value <= INT8_MAX), error = OT_ERROR_INVALID_ARGS);
-    aInt8 = static_cast<int8_t>(value);
+    VerifyOrExit((std::numeric_limits<IntType>::min() <= value) && (value <= std::numeric_limits<IntType>::max()),
+                 error = OT_ERROR_INVALID_ARGS);
+    aInt = static_cast<IntType>(value);
 
 exit:
     return error;
 }
 
+otError ParseAsInt8(const char *aString, int8_t &aInt8)
+{
+    return ParseInt<int8_t>(aString, aInt8);
+}
+
 otError ParseAsInt16(const char *aString, int16_t &aInt16)
 {
-    otError error;
-    int32_t value;
-
-    SuccessOrExit(error = ParseAsInt32(aString, value));
-
-    VerifyOrExit((INT16_MIN <= value) && (value <= INT16_MAX), error = OT_ERROR_INVALID_ARGS);
-    aInt16 = static_cast<int16_t>(value);
-
-exit:
-    return error;
+    return ParseInt<int16_t>(aString, aInt16);
 }
 
 otError ParseAsInt32(const char *aString, int32_t &aInt32)
@@ -239,7 +224,9 @@ otError ParseAsInt32(const char *aString, int32_t &aInt32)
     }
 
     SuccessOrExit(error = ParseAsUint64(aString, value));
-    VerifyOrExit(value <= (isNegavtive ? static_cast<uint64_t>(-static_cast<int64_t>(INT32_MIN)) : INT32_MAX),
+    VerifyOrExit(value <= (isNegavtive
+                               ? static_cast<uint64_t>(-static_cast<int64_t>(std::numeric_limits<int32_t>::min()))
+                               : static_cast<uint64_t>(std::numeric_limits<int32_t>::max())),
                  error = OT_ERROR_INVALID_ARGS);
     aInt32 = isNegavtive ? -static_cast<int32_t>(value) : static_cast<int32_t>(value);
 
