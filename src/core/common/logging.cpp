@@ -46,13 +46,252 @@
 #error OPENTHREAD_CONFIG_ENABLE_DEBUG_UART_LOG requires OPENTHREAD_CONFIG_ENABLE_DEBUG_UART
 #endif
 
-#define otLogDump(aFormat, ...) _otDynamicLog(aLogLevel, aLogRegion, aFormat OPENTHREAD_CONFIG_LOG_SUFFIX, __VA_ARGS__)
-
 #ifdef __cplusplus
 extern "C" {
 #endif
 
+#if !OPENTHREAD_CONFIG_LOG_DEFINE_AS_MACRO_ONLY
+
+static void Log(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, va_list aArgs)
+{
+    ot::String<OPENTHREAD_CONFIG_LOG_MAX_SIZE> string;
+
+#if OPENTHREAD_CONFIG_LOG_LEVEL_DYNAMIC_ENABLE
+    VerifyOrExit(otLoggingGetLevel() >= aLogLevel, OT_NOOP);
+#endif
+
+#if OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL
+    {
+        const char *levelStr = "";
+
+        switch (aLogLevel)
+        {
+        case OT_LOG_LEVEL_CRIT:
+            levelStr = OT_LOG_LEVEL_CRIT_AS_STRING;
+            break;
+
+        case OT_LOG_LEVEL_WARN:
+            levelStr = OT_LOG_LEVEL_WARN_AS_STRING;
+            break;
+
+        case OT_LOG_LEVEL_NOTE:
+            levelStr = OT_LOG_LEVEL_NOTE_AS_STRING;
+            break;
+
+        case OT_LOG_LEVEL_INFO:
+            levelStr = OT_LOG_LEVEL_INFO_AS_STRING;
+            break;
+
+        case OT_LOG_LEVEL_DEBG:
+            levelStr = OT_LOG_LEVEL_DEBG_AS_STRING;
+            break;
+
+        case OT_LOG_LEVEL_NONE:
+        default:
+            levelStr = OT_LOG_LEVEL_NONE_AS_STRING;
+            break;
+        }
+
+#if OPENTHREAD_CONFIG_LOG_PREPEND_REGION
+        IgnoreError(string.Append("[%s]", levelStr));
+#else
+        IgnoreError(string.Append("[%s]: ", levelStr));
+#endif
+    }
+#endif // OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL
+
+#if OPENTHREAD_CONFIG_LOG_PREPEND_REGION
+    {
+        const char *regionStr = "";
+
+        switch (aLogRegion)
+        {
+        case OT_LOG_REGION_API:
+            regionStr = OT_LOG_REGION_API_AS_STRING;
+            break;
+        case OT_LOG_REGION_MLE:
+            regionStr = OT_LOG_REGION_MLE_AS_STRING;
+            break;
+        case OT_LOG_REGION_ARP:
+            regionStr = OT_LOG_REGION_ARP_AS_STRING;
+            break;
+        case OT_LOG_REGION_NET_DATA:
+            regionStr = OT_LOG_REGION_NET_DATA_AS_STRING;
+            break;
+        case OT_LOG_REGION_ICMP:
+            regionStr = OT_LOG_REGION_ICMP_AS_STRING;
+            break;
+        case OT_LOG_REGION_IP6:
+            regionStr = OT_LOG_REGION_IP6_AS_STRING;
+            break;
+        case OT_LOG_REGION_MAC:
+            regionStr = OT_LOG_REGION_MAC_AS_STRING;
+            break;
+        case OT_LOG_REGION_MEM:
+            regionStr = OT_LOG_REGION_MEM_AS_STRING;
+            break;
+        case OT_LOG_REGION_NCP:
+            regionStr = OT_LOG_REGION_NCP_AS_STRING;
+            break;
+        case OT_LOG_REGION_MESH_COP:
+            regionStr = OT_LOG_REGION_MESH_COP_AS_STRING;
+            ;
+            break;
+        case OT_LOG_REGION_NET_DIAG:
+            regionStr = OT_LOG_REGION_NET_DIAG_AS_STRING;
+            break;
+        case OT_LOG_REGION_PLATFORM:
+            regionStr = OT_LOG_REGION_PLATFORM_AS_STRING;
+            break;
+        case OT_LOG_REGION_COAP:
+            regionStr = OT_LOG_REGION_COAP_AS_STRING;
+            break;
+        case OT_LOG_REGION_CLI:
+            regionStr = OT_LOG_REGION_CLI_AS_STRING;
+            break;
+        case OT_LOG_REGION_CORE:
+            regionStr = OT_LOG_REGION_CORE_AS_STRING;
+            break;
+        case OT_LOG_REGION_UTIL:
+            regionStr = OT_LOG_REGION_UTIL_AS_STRING;
+            break;
+        case OT_LOG_REGION_BBR:
+            regionStr = OT_LOG_REGION_BBR_AS_STRING;
+            break;
+        case OT_LOG_REGION_MLR:
+            regionStr = OT_LOG_REGION_MLR_AS_STRING;
+            break;
+        case OT_LOG_REGION_DUA:
+            regionStr = OT_LOG_REGION_DUA_AS_STRING;
+            break;
+        }
+
+        IgnoreError(string.Append("-%s-: ", regionStr));
+    }
+#endif // OPENTHREAD_CONFIG_LOG_PREPEND_REGION
+
+    VerifyOrExit(string.AppendVarArgs(aFormat, aArgs) != OT_ERROR_INVALID_ARGS, OT_NOOP);
+    otPlatLog(aLogLevel, aLogRegion, "%s" OPENTHREAD_CONFIG_LOG_SUFFIX, string.AsCString());
+
+exit:
+    return;
+}
+
+#if OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_CRIT
+void otLogCrit(otLogRegion aRegion, const char *aFormat, ...)
+{
+    va_list args;
+
+    va_start(args, aFormat);
+    Log(OT_LOG_LEVEL_CRIT, aRegion, aFormat, args);
+    va_end(args);
+}
+#endif
+
+#if OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_WARN
+void otLogWarn(otLogRegion aRegion, const char *aFormat, ...)
+{
+    va_list args;
+
+    va_start(args, aFormat);
+    Log(OT_LOG_LEVEL_WARN, aRegion, aFormat, args);
+    va_end(args);
+}
+#endif
+
+#if OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_NOTE
+void otLogNote(otLogRegion aRegion, const char *aFormat, ...)
+{
+    va_list args;
+
+    va_start(args, aFormat);
+    Log(OT_LOG_LEVEL_NOTE, aRegion, aFormat, args);
+    va_end(args);
+}
+#endif
+
+#if OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_INFO
+void otLogInfo(otLogRegion aRegion, const char *aFormat, ...)
+{
+    va_list args;
+
+    va_start(args, aFormat);
+    Log(OT_LOG_LEVEL_INFO, aRegion, aFormat, args);
+    va_end(args);
+}
+#endif
+
+#if OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_DEBG
+void otLogDebg(otLogRegion aRegion, const char *aFormat, ...)
+{
+    va_list args;
+
+    va_start(args, aFormat);
+    Log(OT_LOG_LEVEL_DEBG, aRegion, aFormat, args);
+    va_end(args);
+}
+#endif
+
+#if OPENTHREAD_CONFIG_LOG_MAC
+void otLogMac(otLogLevel aLogLevel, const char *aFormat, ...)
+{
+    va_list args;
+
+    VerifyOrExit(otLoggingGetLevel() >= aLogLevel, OT_NOOP);
+
+    va_start(args, aFormat);
+    Log(aLogLevel, OT_LOG_REGION_MAC, aFormat, args);
+    va_end(args);
+
+exit:
+    return;
+}
+#endif
+
+#if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
+void otLogCertMeshCoP(const char *aFormat, ...)
+{
+    va_list args;
+
+    va_start(args, aFormat);
+    Log(OT_LOG_LEVEL_NONE, OT_LOG_REGION_MESH_COP, aFormat, args);
+    va_end(args);
+}
+#endif
+
+#if OPENTHREAD_CONFIG_OTNS_ENABLE
+void otLogOtns(const char *aFormat, ...)
+{
+    va_list args;
+
+    va_start(args, aFormat);
+    Log(OT_LOG_LEVEL_NONE, OT_LOG_REGION_CORE, aFormat, args);
+    va_end(args);
+}
+#endif
+
+#endif // #if !OPENTHREAD_CONFIG_LOG_DEFINE_AS_MACRO_ONLY
+
 #if OPENTHREAD_CONFIG_LOG_PKT_DUMP
+
+#if OPENTHREAD_CONFIG_LOG_DEFINE_AS_MACRO_ONLY
+#define otLogDump(aLogLevel, aLogRegion, aFormat, ...) \
+    _otDynamicLog(aLogLevel, aLogRegion, aFormat OPENTHREAD_CONFIG_LOG_SUFFIX, __VA_ARGS__)
+#else
+static void otLogDump(otLogLevel aLogLevel, otLogRegion aRegion, const char *aFormat, ...)
+{
+    va_list args;
+
+    VerifyOrExit(otLoggingGetLevel() >= aLogLevel, OT_NOOP);
+
+    va_start(args, aFormat);
+    Log(aLogLevel, aRegion, aFormat, args);
+    va_end(args);
+
+exit:
+    return;
+}
+#endif
 
 enum : uint8_t
 {
@@ -100,7 +339,7 @@ static void DumpLine(otLogLevel aLogLevel, otLogRegion aLogRegion, const uint8_t
         IgnoreError(string.Append("%c", c));
     }
 
-    otLogDump("%s", string.AsCString());
+    otLogDump(aLogLevel, aLogRegion, "%s", string.AsCString());
 }
 
 void otDump(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aId, const void *aBuf, const size_t aLength)
@@ -125,7 +364,7 @@ void otDump(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aId, const
         IgnoreError(string.Append("="));
     }
 
-    otLogDump("%s", string.AsCString());
+    otLogDump(aLogLevel, aLogRegion, "%s", string.AsCString());
 
     for (size_t i = 0; i < aLength; i += kDumpBytesPerLine)
     {
@@ -140,7 +379,7 @@ void otDump(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aId, const
         IgnoreError(string.Append("-"));
     }
 
-    otLogDump("%s", string.AsCString());
+    otLogDump(aLogLevel, aLogRegion, "%s", string.AsCString());
 }
 #else  // OPENTHREAD_CONFIG_LOG_PKT_DUMP
 void otDump(otLogLevel, otLogRegion, const char *, const void *, const size_t)
@@ -203,6 +442,8 @@ const char *otThreadErrorToString(otError aError)
     return retval;
 }
 
+#if OPENTHREAD_CONFIG_LOG_DEFINE_AS_MACRO_ONLY
+
 const char *otLogLevelToPrefixString(otLogLevel aLogLevel)
 {
     const char *retval = "";
@@ -236,9 +477,10 @@ const char *otLogLevelToPrefixString(otLogLevel aLogLevel)
 
     return retval;
 }
+#endif
 
 #if OPENTHREAD_CONFIG_LOG_OUTPUT == OPENTHREAD_CONFIG_LOG_OUTPUT_NONE
-/* this provides a stub, incase something uses the function */
+/* this provides a stub, in case something uses the function */
 void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, ...)
 {
     OT_UNUSED_VARIABLE(aLogLevel);
