@@ -52,9 +52,11 @@ extern "C" {
 
 #if !OPENTHREAD_CONFIG_LOG_DEFINE_AS_MACRO_ONLY
 
+static ot::String<OPENTHREAD_CONFIG_LOG_MAX_SIZE> sLogString;
+
 static void Log(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat, va_list aArgs)
 {
-    ot::String<OPENTHREAD_CONFIG_LOG_MAX_SIZE> string;
+    sLogString.Clear();
 
 #if OPENTHREAD_CONFIG_LOG_LEVEL_DYNAMIC_ENABLE
     VerifyOrExit(otLoggingGetLevel() >= aLogLevel, OT_NOOP);
@@ -93,9 +95,9 @@ static void Log(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aForma
         }
 
 #if OPENTHREAD_CONFIG_LOG_PREPEND_REGION
-        IgnoreError(string.Append("[%s]", levelStr));
+        IgnoreError(sLogString.Append("[%s]", levelStr));
 #else
-        IgnoreError(string.Append("[%s]: ", levelStr));
+        IgnoreError(sLogString.Append("[%s]: ", levelStr));
 #endif
     }
 #endif // OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL
@@ -166,12 +168,12 @@ static void Log(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aForma
             break;
         }
 
-        IgnoreError(string.Append("-%s-: ", regionStr));
+        IgnoreError(sLogString.Append("-%s-: ", regionStr));
     }
 #endif // OPENTHREAD_CONFIG_LOG_PREPEND_REGION
 
-    VerifyOrExit(string.AppendVarArgs(aFormat, aArgs) != OT_ERROR_INVALID_ARGS, OT_NOOP);
-    otPlatLog(aLogLevel, aLogRegion, "%s" OPENTHREAD_CONFIG_LOG_SUFFIX, string.AsCString());
+    VerifyOrExit(sLogString.AppendVarArgs(aFormat, aArgs) != OT_ERROR_INVALID_ARGS, OT_NOOP);
+    otPlatLog(aLogLevel, aLogRegion, "%s" OPENTHREAD_CONFIG_LOG_SUFFIX, sLogString.AsCString());
 
 exit:
     return;
