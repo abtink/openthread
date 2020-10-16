@@ -125,16 +125,7 @@ public:
      * @retval OT_ERROR_NO_BUFS  Insufficient buffer space to advance the requested number of bytes.
      *
      */
-    otError Advance(uint8_t aLength)
-    {
-        otError error = OT_ERROR_NONE;
-
-        VerifyOrExit(CanWrite(aLength), error = OT_ERROR_NO_BUFS);
-        mWritePointer += aLength;
-
-    exit:
-        return error;
-    }
+    otError Advance(uint8_t aLength);
 
     /**
      * This method writes a byte into the buffer and updates the write pointer, if space is available.
@@ -145,17 +136,7 @@ public:
      * @retval  OT_ERROR_NO_BUFS  Insufficient buffer space to write the byte.
      *
      */
-    otError Write(uint8_t aByte)
-    {
-        otError error = OT_ERROR_NONE;
-
-        VerifyOrExit(CanWrite(sizeof(aByte)), error = OT_ERROR_NO_BUFS);
-
-        *mWritePointer++ = aByte;
-
-    exit:
-        return error;
-    }
+    otError Write(uint8_t aByte);
 
     /**
      * This method writes a byte sequence into the buffer and updates the write pointer, if space is available.
@@ -167,18 +148,7 @@ public:
      * @retval OT_ERROR_NO_BUFS  Insufficient buffer space to write the byte sequence.
      *
      */
-    otError Write(const void *aBuf, uint8_t aLength)
-    {
-        otError error = OT_ERROR_NONE;
-
-        VerifyOrExit(CanWrite(aLength), error = OT_ERROR_NO_BUFS);
-
-        memcpy(mWritePointer, aBuf, aLength);
-        mWritePointer += aLength;
-
-    exit:
-        return error;
-    }
+    otError Write(const void *aBuf, uint8_t aLength);
 
     /**
      * This method writes a byte sequence into the buffer and updates the write pointer, if space is available.
@@ -192,23 +162,7 @@ public:
      * @retval OT_ERROR_NO_BUFS  Insufficient buffer space to write the byte sequence.
      *
      */
-    otError Write(const Message &aMessage, uint8_t aLength)
-    {
-        otError error = OT_ERROR_NONE;
-        int     rval;
-
-        OT_UNUSED_VARIABLE(rval);
-
-        VerifyOrExit(CanWrite(aLength), error = OT_ERROR_NO_BUFS);
-
-        rval = aMessage.ReadBytes(aMessage.GetOffset(), mWritePointer, aLength);
-        OT_ASSERT(rval == aLength);
-
-        mWritePointer += aLength;
-
-    exit:
-        return error;
-    }
+    otError Write(const Message &aMessage, uint8_t aLength);
 
 private:
     uint8_t *mWritePointer;

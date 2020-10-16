@@ -50,6 +50,60 @@ using ot::Encoding::BigEndian::WriteUint16;
 namespace ot {
 namespace Lowpan {
 
+otError BufferWriter::Advance(uint8_t aLength)
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(CanWrite(aLength), error = OT_ERROR_NO_BUFS);
+    mWritePointer += aLength;
+
+exit:
+    return error;
+}
+
+otError BufferWriter::Write(uint8_t aByte)
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(CanWrite(sizeof(aByte)), error = OT_ERROR_NO_BUFS);
+
+    *mWritePointer++ = aByte;
+
+exit:
+    return error;
+}
+
+otError BufferWriter::Write(const void *aBuf, uint8_t aLength)
+{
+    otError error = OT_ERROR_NONE;
+
+    VerifyOrExit(CanWrite(aLength), error = OT_ERROR_NO_BUFS);
+
+    memcpy(mWritePointer, aBuf, aLength);
+    mWritePointer += aLength;
+
+exit:
+    return error;
+}
+
+otError BufferWriter::Write(const Message &aMessage, uint8_t aLength)
+{
+    otError error = OT_ERROR_NONE;
+    int     rval;
+
+    OT_UNUSED_VARIABLE(rval);
+
+    VerifyOrExit(CanWrite(aLength), error = OT_ERROR_NO_BUFS);
+
+    rval = aMessage.ReadBytes(aMessage.GetOffset(), mWritePointer, aLength);
+    OT_ASSERT(rval == aLength);
+
+    mWritePointer += aLength;
+
+exit:
+    return error;
+}
+
 Lowpan::Lowpan(Instance &aInstance)
     : InstanceLocator(aInstance)
 {
