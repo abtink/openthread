@@ -781,7 +781,7 @@ private:
         kMaxAcquisitionId  = 0xffff,
     };
 
-    enum Operation
+    enum Operation : uint8_t
     {
         kOperationIdle = 0,
         kOperationActiveScan,

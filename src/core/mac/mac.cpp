@@ -2153,56 +2153,24 @@ void Mac::ResetRetrySuccessHistogram()
 
 const char *Mac::OperationToString(Operation aOperation)
 {
-    const char *retval = "";
-
-    switch (aOperation)
-    {
-    case kOperationIdle:
-        retval = "Idle";
-        break;
-
-    case kOperationActiveScan:
-        retval = "ActiveScan";
-        break;
-
-    case kOperationEnergyScan:
-        retval = "EnergyScan";
-        break;
-
-    case kOperationTransmitBeacon:
-        retval = "TransmitBeacon";
-        break;
-
-    case kOperationTransmitDataDirect:
-        retval = "TransmitDataDirect";
-        break;
-
+    static const char *kOperationStrings[] = {
+        "Idle",               // kOperationIdle
+        "ActiveScan",         // kOperationActiveScan
+        "EnergyScan",         // kOperationEnergyScan
+        "TransmitBeacon",     // kOperationTransmitBeacon
+        "TransmitDataDirect", // kOperationTransmitDataDirect
 #if OPENTHREAD_FTD
-    case kOperationTransmitDataIndirect:
-        retval = "TransmitDataIndirect";
-        break;
-
+        "TransmitDataIndirect", // kOperationTransmitDataIndirect
 #if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
-    case kOperationTransmitDataCsl:
-        retval = "TransmitDataCsl";
-        break;
+        "TransmitDataCsl", // kOperationTransmitDataCsl
 #endif
 #endif
+        "TransmitPoll",     // kOperationTransmitPoll
+        "WaitingForData",   // kOperationWaitingForData
+        "TransmitOobFrame", // kOperationTransmitOutOfBandFrame
+    };
 
-    case kOperationTransmitPoll:
-        retval = "TransmitPoll";
-        break;
-
-    case kOperationWaitingForData:
-        retval = "WaitingForData";
-        break;
-
-    case kOperationTransmitOutOfBandFrame:
-        retval = "TransmitOobFrame";
-        break;
-    }
-
-    return retval;
+    return static_cast<uint8_t>(aOperation) < OT_ARRAY_LENGTH(kOperationStrings) ? kOperationStrings[aOperation] : "";
 }
 
 void Mac::LogFrameRxFailure(const RxFrame *aFrame, otError aError) const
