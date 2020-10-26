@@ -304,23 +304,22 @@ exit:
     return error;
 }
 
-otError ActiveDataset::CreateNewNetwork(otOperationalDataset &aDataset)
+otError ActiveDataset::CreateNewNetwork(Dataset::Info &aDatasetInfo)
 {
     otError          error             = OT_ERROR_NONE;
     Mac::ChannelMask supportedChannels = Get<Mac::Mac>().GetSupportedChannelMask();
     Mac::ChannelMask preferredChannels(Get<Radio>().GetPreferredChannelMask());
 
-    memset(&aDataset, 0, sizeof(aDataset));
+    aDatasetInfo.Clear();
 
-    aDataset.mActiveTimestamp = 1;
+    aDatasetInfo.SetActiveTimestamp(1);
 
-    SuccessOrExit(error = static_cast<MasterKey &>(aDataset.mMasterKey).GenerateRandom());
-    SuccessOrExit(error = static_cast<Pskc &>(aDataset.mPskc).GenerateRandom());
-    SuccessOrExit(error = Random::Crypto::FillBuffer(aDataset.mExtendedPanId.m8, sizeof(aDataset.mExtendedPanId)));
+    SuccessOrExit(error = aDatasetInfo.UpdateMasterKey().GenerateRandom());
+    SuccessOrExit(error = aDatasetInfo.UpdatePskc().GenerateRandom());
+    SuccessOrExit(error = aDatasetInfo.UpdateExtendedPanId().GenerateRandom());
+    SuccessOrExit(error = aDatasetInfo.UpdateMeshLocalPrefix().GenerateRandomUla());
 
-    SuccessOrExit(error = static_cast<Ip6::NetworkPrefix &>(aDataset.mMeshLocalPrefix).GenerateRandomUla());
-
-    aDataset.mSecurityPolicy.mFlags = Get<KeyManager>().GetSecurityPolicyFlags();
+    aDatasetInfo.SetSecurityPolicy(0, Get<KeyManager>().GetSecurityPolicyFlags());
 
     // If the preferred channel mask is not empty, select a random
     // channel from it, otherwise choose one from the supported
@@ -333,23 +332,11 @@ otError ActiveDataset::CreateNewNetwork(otOperationalDataset &aDataset)
         preferredChannels = supportedChannels;
     }
 
-    aDataset.mChannel     = preferredChannels.ChooseRandomChannel();
-    aDataset.mChannelMask = supportedChannels.GetMask();
+    aDatasetInfo.SetChannel(preferredChannels.ChooseRandomChannel());
+    aDatasetInfo.SetChannelMask(supportedChannels.GetMask());
+    aDatasetInfo.SetPanId(Mac::GenerateRandomPanId());
 
-    aDataset.mPanId = Mac::GenerateRandomPanId();
-
-    snprintf(aDataset.mNetworkName.m8, sizeof(aDataset.mNetworkName), "OpenThread-%04x", aDataset.mPanId);
-
-    aDataset.mComponents.mIsActiveTimestampPresent = true;
-    aDataset.mComponents.mIsMasterKeyPresent       = true;
-    aDataset.mComponents.mIsNetworkNamePresent     = true;
-    aDataset.mComponents.mIsExtendedPanIdPresent   = true;
-    aDataset.mComponents.mIsMeshLocalPrefixPresent = true;
-    aDataset.mComponents.mIsPanIdPresent           = true;
-    aDataset.mComponents.mIsChannelPresent         = true;
-    aDataset.mComponents.mIsPskcPresent            = true;
-    aDataset.mComponents.mIsSecurityPolicyPresent  = true;
-    aDataset.mComponents.mIsChannelMaskPresent     = true;
+    snprintf(aDatasetInfo.UpdateNetworkName().m8, sizeof(Mac::NetworkName), "OpenThread-%04x", aDatasetInfo.GetPanId());
 
 exit:
     return error;

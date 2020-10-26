@@ -96,6 +96,13 @@ Address::InfoString Address::ToString(void) const
                                     : (mType == kTypeNone ? InfoString("None") : InfoString("0x%04x", GetShort()));
 }
 
+#if !OPENTHREAD_RADIO
+otError ExtendedPanId::GenerateRandom(void)
+{
+    return Random::Crypto::FillBuffer(m8, sizeof(ExtendedPanId));
+}
+#endif
+
 ExtendedPanId::InfoString ExtendedPanId::ToString(void) const
 {
     InfoString string;

@@ -459,6 +459,14 @@ public:
     typedef String<kInfoStringSize> InfoString;
 
     /**
+     * This method generates a (crypto secure) random Extended PAN Identifier.
+     *
+     * @retval OT_ERROR_NONE    Successfully generated a random Extended PAN Identifier.
+     *
+     */
+    otError GenerateRandom(void);
+
+    /**
      * This method converts an address to a string.
      *
      * @returns An `InfoString` containing the string representation of the Extended PAN Identifier.
