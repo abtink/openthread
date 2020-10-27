@@ -211,7 +211,11 @@ public:
          * @param[in] aTimestamp   A Timestamp value.
          *
          */
-        void SetActiveTimestamp(uint64_t aTimestamp);
+        void SetActiveTimestamp(uint64_t aTimestamp)
+        {
+            mActiveTimestamp                      = aTimestamp;
+            mComponents.mIsActiveTimestampPresent = true;
+        }
 
         /**
          * This method indicates whether or not the Pending Timestamp is present in the Dataset.
@@ -238,7 +242,11 @@ public:
          * @param[in] aTimestamp   A Timestamp value.
          *
          */
-        void SetPendingTimestamp(uint64_t aTimestamp);
+        void SetPendingTimestamp(uint64_t aTimestamp)
+        {
+            mPendingTimestamp                      = aTimestamp;
+            mComponents.mIsPendingTimestampPresent = true;
+        }
 
         /**
          * This method indicates whether or not the Network Master Key is present in the Dataset.
@@ -265,7 +273,11 @@ public:
          * @param[in] aMasterKey  A Master Key.
          *
          */
-        void SetMasterKey(const MasterKey &aMasterKey);
+        void SetMasterKey(const MasterKey &aMasterKey)
+        {
+            mMasterKey                      = aMasterKey;
+            mComponents.mIsMasterKeyPresent = true;
+        }
 
         /**
          * This method returns a reference to the Network Master Key in the Dataset to be updated by caller.
@@ -273,7 +285,11 @@ public:
          * @returns A reference to the Network Master Key in the Dataset.
          *
          */
-        MasterKey &UpdateMasterKey(void);
+        MasterKey &UpdateMasterKey(void)
+        {
+            mComponents.mIsMasterKeyPresent = true;
+            return static_cast<MasterKey &>(mMasterKey);
+        }
 
         /**
          * This method indicates whether or not the Network Name is present in the Dataset.
@@ -303,7 +319,11 @@ public:
          * @param[in] aNetworkNameData   A Network Name Data.
          *
          */
-        void SetNetworkName(const Mac::NameData &aNetworkNameData);
+        void SetNetworkName(const Mac::NameData &aNetworkNameData)
+        {
+            IgnoreError(static_cast<Mac::NetworkName &>(mNetworkName).Set(aNetworkNameData));
+            mComponents.mIsNetworkNamePresent = true;
+        }
 
         /**
          * This method returns a reference to the Network Name in the Dataset to be updated by caller.
@@ -311,7 +331,11 @@ public:
          * @returns A reference to the Network Name in the Dataset.
          *
          */
-        Mac::NetworkName &UpdateNetworkName(void);
+        Mac::NetworkName &UpdateNetworkName(void)
+        {
+            mComponents.mIsNetworkNamePresent = true;
+            return static_cast<Mac::NetworkName &>(mNetworkName);
+        }
 
         /**
          * This method indicates whether or not the Extended PAN ID is present in the Dataset.
@@ -341,7 +365,11 @@ public:
          * @param[in] aExtendedPanId   An Extended PAN ID.
          *
          */
-        void SetExtendedPanId(const Mac::ExtendedPanId &aExtendedPanId);
+        void SetExtendedPanId(const Mac::ExtendedPanId &aExtendedPanId)
+        {
+            mExtendedPanId                      = aExtendedPanId;
+            mComponents.mIsExtendedPanIdPresent = true;
+        }
 
         /**
          * This method returns a reference to the Extended PAN ID in the Dataset to be updated by caller.
@@ -349,7 +377,11 @@ public:
          * @returns A reference to the Extended PAN ID in the Dataset.
          *
          */
-        Mac::ExtendedPanId &UpdateExtendedPanId(void);
+        Mac::ExtendedPanId &UpdateExtendedPanId(void)
+        {
+            mComponents.mIsExtendedPanIdPresent = true;
+            return static_cast<Mac::ExtendedPanId &>(mExtendedPanId);
+        }
 
         /**
          * This method indicates whether or not the Mesh Local Prefix is present in the Dataset.
@@ -379,7 +411,11 @@ public:
          * @param[in] aMeshLocalPrefix   A Mesh Local Prefix.
          *
          */
-        void SetMeshLocalPrefix(const Mle::MeshLocalPrefix &aMeshLocalPrefix);
+        void SetMeshLocalPrefix(const Mle::MeshLocalPrefix &aMeshLocalPrefix)
+        {
+            mMeshLocalPrefix                      = aMeshLocalPrefix;
+            mComponents.mIsMeshLocalPrefixPresent = true;
+        }
 
         /**
          * This method returns a reference to the Mesh Local Prefix in the Dataset to be updated by the caller.
@@ -387,7 +423,11 @@ public:
          * @returns A reference to the Mesh Local Prefix in the Dataset.
          *
          */
-        Mle::MeshLocalPrefix &UpdateMeshLocalPrefix(void);
+        Mle::MeshLocalPrefix &UpdateMeshLocalPrefix(void)
+        {
+            mComponents.mIsMeshLocalPrefixPresent = true;
+            return static_cast<Mle::MeshLocalPrefix &>(mMeshLocalPrefix);
+        }
 
         /**
          * This method indicates whether or not the Delay Timer is present in the Dataset.
@@ -414,7 +454,11 @@ public:
          * @param[in] aDely   A Delay value.
          *
          */
-        void SetDelay(uint32_t aDelay);
+        void SetDelay(uint32_t aDelay)
+        {
+            mDelay                      = aDelay;
+            mComponents.mIsDelayPresent = true;
+        }
 
         /**
          * This method indicates whether or not the PAN ID is present in the Dataset.
@@ -441,7 +485,11 @@ public:
          * @param[in] aPanId  A PAN ID.
          *
          */
-        void SetPanId(Mac::PanId aPanId);
+        void SetPanId(Mac::PanId aPanId)
+        {
+            mPanId                      = aPanId;
+            mComponents.mIsPanIdPresent = true;
+        }
 
         /**
          * This method indicates whether or not the Channel is present in the Dataset.
@@ -468,7 +516,11 @@ public:
          * @param[in] aChannel  A Channel.
          *
          */
-        void SetChannel(uint16_t aChannel);
+        void SetChannel(uint16_t aChannel)
+        {
+            mChannel                      = aChannel;
+            mComponents.mIsChannelPresent = true;
+        }
 
         /**
          * This method indicates whether or not the PSKc is present in the Dataset.
@@ -494,7 +546,11 @@ public:
          * @param[in] aPskc  A PSKc value.
          *
          */
-        void SetPskc(const Pskc &aPskc);
+        void SetPskc(const Pskc &aPskc)
+        {
+           mPskc                      = aPskc;
+            mComponents.mIsPskcPresent = true;
+        }
 
         /**
          * This method returns a reference to the PSKc in the Dataset to be updated by the caller.
@@ -502,7 +558,11 @@ public:
          * @returns A reference to teh PSKc in the Dataset.
          *
          */
-        Pskc &UpdatePskc(void);
+        Pskc &UpdatePskc(void)
+        {
+           mComponents.mIsPskcPresent = true;
+            return static_cast<Pskc &>(mPskc);
+        }
 
         /**
          * This method indicates whether or not the Security Policy is present in the Dataset.
@@ -530,7 +590,12 @@ public:
          * @param[in] aFlags         Security policy flags
          *
          */
-        void SetSecurityPolicy(uint16_t aRotationTime, uint8_t aFlags);
+        void SetSecurityPolicy(uint16_t aRotationTime, uint8_t aFlags)
+        {
+            mSecurityPolicy.mRotationTime        = aRotationTime;
+            mSecurityPolicy.mFlags               = aFlags;
+            mComponents.mIsSecurityPolicyPresent = true;
+        }
 
         /**
          * This method indicates whether or not the Channel Mask is present in the Dataset.
@@ -557,7 +622,11 @@ public:
          * @param[in] aChannelMask   A Channel Mask value.
          *
          */
-        void SetChannelMask(otChannelMask aChannelMask);
+        void SetChannelMask(otChannelMask aChannelMask)
+        {
+           mChannelMask                      = aChannelMask;
+            mComponents.mIsChannelMaskPresent = true;
+        }
     };
 
     /**
