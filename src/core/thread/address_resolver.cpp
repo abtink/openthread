@@ -533,7 +533,7 @@ otError AddressResolver::SendAddressQuery(const Ip6::Address &aEid)
     SuccessOrExit(error = message->AppendUriPathOptions(UriPath::kAddressQuery));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv(*message, ThreadTlv::kTarget, aEid));
+    SuccessOrExit(error = Tlv::AppendTlv<ThreadTargetTlv>(*message, aEid));
 
     messageInfo.GetPeerAddr().SetToRealmLocalAllRoutersMulticast();
 
@@ -809,7 +809,7 @@ void AddressResolver::SendAddressQueryResponse(const Ip6::Address &            a
 
     SuccessOrExit(error = Tlv::AppendTlv(*message, ThreadTlv::kTarget, aTarget));
     SuccessOrExit(error = Tlv::AppendTlv(*message, ThreadTlv::kMeshLocalEid, aMeshLocalIid));
-    SuccessOrExit(error = Tlv::AppendUint16Tlv(*message, ThreadTlv::kRloc16, Get<Mle::MleRouter>().GetRloc16()));
+    SuccessOrExit(error = Tlv::AppendTlv<ThreadRloc16Tlv>(*message, Get<Mle::MleRouter>().GetRloc16()));
 
     if (aLastTransactionTime != nullptr)
     {

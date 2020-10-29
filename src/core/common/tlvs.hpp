@@ -472,6 +472,22 @@ public:
         return AppendTlv(aMessage, aType, &aValue, sizeof(ValueType));
     }
 
+    template <typename SimpleTlvType>
+    static otError AppendTlv(Message &aMessage, const typename SimpleTlvType::ValueType &aValue)
+    {
+        return AppendTlv(aMessage, SimpleTlvType::kType, &aValue, sizeof(aValue));
+    }
+
+    template <typename UintTlvType>
+    static otError AppendTlv(Message &aMessage, typename UintTlvType::UintValueType aValue)
+    {
+        typedef typename UintTlvType::UintValueType Uint;
+
+        Uint value = Encoding::BigEndian::HostSwap<Uint>(aValue);
+
+        return AppendTlv(aMessage, UintTlvType::kType, &value, sizeof(Uint));
+    }
+
 protected:
     enum
     {
@@ -531,6 +547,54 @@ public:
 private:
     uint16_t mLength;
 } OT_TOOL_PACKED_END;
+
+template <uint8_t kTlvTypeValue> struct Uint8Tlv
+{
+    enum : uint8_t
+    {
+        kType = kTlvTypeValue, ///< The TLV Type value.
+    };
+
+    typedef uint8_t UintValueType; ///< The TLV Value unsigned int type.
+};
+
+template <uint8_t kTlvTypeValue> struct Uint16Tlv
+{
+    enum : uint8_t
+    {
+        kType = kTlvTypeValue, ///< The TLV Type value.
+    };
+
+    typedef uint16_t UintValueType; ///< The TLV Value unsigned int type.
+};
+
+template <uint8_t kTlvTypeValue> struct Uint32Tlv
+{
+    enum : uint8_t
+    {
+        kType = kTlvTypeValue, ///< The TLV Type value.
+    };
+
+    typedef uint32_t UintValueType; ///< The TLV Value unsigned int type.
+};
+
+template <uint8_t kTlvTypeValue, typename TlvValueType> struct SimpleTlv
+{
+    static_assert(!TypeTraits::IsPointer<TlvValueType>::kValue, "TlvValueType must not be a pointer");
+    static_assert(!TypeTraits::IsSame<TlvValueType, uint8_t>::kValue, "SimpleTlve must not to be used with int value");
+    static_assert(!TypeTraits::IsSame<TlvValueType, uint16_t>::kValue, "SimpleTlve must not to be used with int value");
+    static_assert(!TypeTraits::IsSame<TlvValueType, uint32_t>::kValue, "SimpleTlve must not to be used with int value");
+    static_assert(!TypeTraits::IsSame<TlvValueType, int8_t>::kValue, "SimpleTlve must not to be used with int value");
+    static_assert(!TypeTraits::IsSame<TlvValueType, int16_t>::kValue, "SimpleTlve must not to be used with int value");
+    static_assert(!TypeTraits::IsSame<TlvValueType, int32_t>::kValue, "SimpleTlve must not to be used with int value");
+
+    enum : uint8_t
+    {
+        kType = kTlvTypeValue, ///< The TLV Type value.
+    };
+
+    typedef TlvValueType ValueType; ///< The TLV Value type.
+};
 
 } // namespace ot
 

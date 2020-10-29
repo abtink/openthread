@@ -102,6 +102,9 @@ public:
 
 } OT_TOOL_PACKED_END;
 
+typedef SimpleTlv<ThreadTlv::kTarget, Ip6::Address> ThreadTargetTlv;
+typedef Uint16Tlv<ThreadTlv::kRloc16>               ThreadRloc16Tlv;
+
 /**
  * This class defines Status TLV constants.
  *
