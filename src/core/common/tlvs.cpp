@@ -171,6 +171,22 @@ exit:
     return error;
 }
 
+template <typename UintType> otError Tlv::ReadUintTlv(Message &aMessage, uint16_t aOffset, UintType &aValue)
+{
+    otError error;
+
+    SuccessOrExit(error = ReadTlv(aMessage, aOffset, &aValue, sizeof(aValue)));
+    aValue = Encoding::BigEndian::HostSwap<UintType>(aValue);
+
+exit:
+    return error;
+}
+
+// Explicit instantiations of `ReadUintTlv<>()`
+template otError Tlv::ReadUintTlv<uint8_t>(Message &aMessage, uint16_t aOffset, uint8_t &aValue);
+template otError Tlv::ReadUintTlv<uint16_t>(Message &aMessage, uint16_t aOffset, uint16_t &aValue);
+template otError Tlv::ReadUintTlv<uint32_t>(Message &aMessage, uint16_t aOffset, uint32_t &aValue);
+
 otError Tlv::ReadUint8Tlv(const Message &aMessage, uint16_t aOffset, uint8_t &aValue)
 {
     return ReadTlv(aMessage, aOffset, &aValue, sizeof(uint8_t));
@@ -180,7 +196,7 @@ otError Tlv::ReadUint16Tlv(const Message &aMessage, uint16_t aOffset, uint16_t &
 {
     otError error;
 
-    SuccessOrExit(error = ReadTlv(aMessage, aOffset, &aValue, sizeof(uint16_t)));
+    SuccessOrExit(error = ReadTlv(aMessage, aOffset, aValue));
     aValue = HostSwap16(aValue);
 
 exit:
@@ -191,7 +207,7 @@ otError Tlv::ReadUint32Tlv(const Message &aMessage, uint16_t aOffset, uint32_t &
 {
     otError error;
 
-    SuccessOrExit(error = ReadTlv(aMessage, aOffset, &aValue, sizeof(uint32_t)));
+    SuccessOrExit(error = ReadTlv(aMessage, aOffset, aValue));
     aValue = HostSwap32(aValue);
 
 exit:
@@ -212,6 +228,23 @@ otError Tlv::ReadTlv(const Message &aMessage, uint16_t aOffset, void *aValue, ui
 exit:
     return error;
 }
+
+template <typename UintType> otError Tlv::FindUintTlv(Message &aMessage, uint8_t aType, UintType &aValue)
+{
+    otError  error = OT_ERROR_NONE;
+    uint16_t offset;
+
+    SuccessOrExit(error = FindTlvOffset(aMessage, aType, offset));
+    error = ReadUintTlv<UintType>(aMessage, offset, aValue);
+
+exit:
+    return error;
+}
+
+// Explicit instantiations of `FindUintTlv<>()`
+template otError Tlv::FindUintTlv<uint8_t>(Message &aMessage, uint8_t aType, uint8_t &aValue);
+template otError Tlv::FindUintTlv<uint16_t>(Message &aMessage, uint8_t aType, uint16_t &aValue);
+template otError Tlv::FindUintTlv<uint32_t>(Message &aMessage, uint8_t aType, uint32_t &aValue);
 
 otError Tlv::FindUint8Tlv(const Message &aMessage, uint8_t aType, uint8_t &aValue)
 {
@@ -263,26 +296,17 @@ exit:
     return error;
 }
 
-otError Tlv::AppendUint8Tlv(Message &aMessage, uint8_t aType, uint8_t aValue)
+template <typename UintType> otError Tlv::AppendUintTlv(Message &aMessage, uint8_t aType, UintType aValue)
 {
-    uint8_t value8 = aValue;
+    UintType value = Encoding::BigEndian::HostSwap<UintType>(aValue);
 
-    return AppendTlv(aMessage, aType, &value8, sizeof(uint8_t));
+    return AppendTlv(aMessage, aType, &value, sizeof(UintType));
 }
 
-otError Tlv::AppendUint16Tlv(Message &aMessage, uint8_t aType, uint16_t aValue)
-{
-    uint16_t value16 = HostSwap16(aValue);
-
-    return AppendTlv(aMessage, aType, &value16, sizeof(uint16_t));
-}
-
-otError Tlv::AppendUint32Tlv(Message &aMessage, uint8_t aType, uint32_t aValue)
-{
-    uint32_t value32 = HostSwap32(aValue);
-
-    return AppendTlv(aMessage, aType, &value32, sizeof(uint32_t));
-}
+// Explicit instantiations of `AppendUintTlv<>()`
+template otError Tlv::AppendUintTlv<uint8_t>(Message &aMessage, uint8_t aType, uint8_t aValue);
+template otError Tlv::AppendUintTlv<uint16_t>(Message &aMessage, uint8_t aType, uint16_t aValue);
+template otError Tlv::AppendUintTlv<uint32_t>(Message &aMessage, uint8_t aType, uint32_t aValue);
 
 otError Tlv::AppendTlv(Message &aMessage, uint8_t aType, const void *aValue, uint8_t aLength)
 {

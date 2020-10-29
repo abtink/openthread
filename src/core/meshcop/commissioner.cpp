@@ -755,24 +755,23 @@ otError Commissioner::SendMgmtCommissionerSetRequest(const otCommissioningDatase
 
     if (aDataset.mIsLocatorSet)
     {
-        SuccessOrExit(error = Tlv::AppendUint16Tlv(*message, MeshCoP::Tlv::kBorderAgentLocator, aDataset.mLocator));
+        SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::BorderAgentLocatorTlv>(*message, aDataset.mLocator));
     }
 
     if (aDataset.mIsSessionIdSet)
     {
-        SuccessOrExit(error =
-                          Tlv::AppendUint16Tlv(*message, MeshCoP::Tlv::kCommissionerSessionId, aDataset.mSessionId));
+        SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::CommissionerSessionIdTlv>(*message, aDataset.mSessionId));
     }
 
     if (aDataset.mIsSteeringDataSet)
     {
-        SuccessOrExit(error = Tlv::AppendTlv(*message, MeshCoP::Tlv::kSteeringData, aDataset.mSteeringData.m8,
-                                             aDataset.mSteeringData.mLength));
+        SuccessOrExit(error = Tlv::AppendTlv<SteeringDataTlv>(*message, aDataset.mSteeringData.m8,
+                                                              aDataset.mSteeringData.mLength));
     }
 
     if (aDataset.mIsJoinerUdpPortSet)
     {
-        SuccessOrExit(error = Tlv::AppendUint16Tlv(*message, Tlv::kJoinerUdpPort, aDataset.mJoinerUdpPort));
+        SuccessOrExit(error = Tlv::AppendTlv<JoinerUdpPortTlv>(*message, aDataset.mJoinerUdpPort));
     }
 
     if (aLength > 0)
@@ -930,10 +929,10 @@ void Commissioner::SendKeepAlive(uint16_t aSessionId)
     SuccessOrExit(error = message->InitAsConfirmablePost(UriPath::kLeaderKeepAlive));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendUint8Tlv(*message, Tlv::kState,
-                                              (mState == kStateActive) ? StateTlv::kAccept : StateTlv::kReject));
+    SuccessOrExit(
+        error = Tlv::AppendTlv<StateTlv>(*message, (mState == kStateActive) ? StateTlv::kAccept : StateTlv::kReject));
 
-    SuccessOrExit(error = Tlv::AppendUint16Tlv(*message, Tlv::kCommissionerSessionId, aSessionId));
+    SuccessOrExit(error = Tlv::AppendTlv<CommissionerSessionIdTlv>(*message, aSessionId));
 
     messageInfo.SetSockAddr(Get<Mle::MleRouter>().GetMeshLocal16());
     SuccessOrExit(error = Get<Mle::MleRouter>().GetLeaderAloc(messageInfo.GetPeerAddr()));
@@ -1003,7 +1002,7 @@ void Commissioner::HandleRelayReceive(Coap::Message &aMessage, const Ip6::Messag
     VerifyOrExit(aMessage.IsNonConfirmablePostRequest());
 
     SuccessOrExit(error = Tlv::FindUint16Tlv(aMessage, Tlv::kJoinerUdpPort, joinerPort));
-    SuccessOrExit(error = Tlv::FindTlv(aMessage, Tlv::kJoinerIid, &joinerIid, sizeof(joinerIid)));
+    SuccessOrExit(error = Tlv::FindTlv(aMessage, Tlv::kJoinerIid, joinerIid));
     SuccessOrExit(error = Tlv::FindUint16Tlv(aMessage, Tlv::kJoinerRouterLocator, joinerRloc));
 
     SuccessOrExit(error = Tlv::FindTlvValueOffset(aMessage, Tlv::kJoinerDtlsEncapsulation, offset, length));
@@ -1122,7 +1121,7 @@ void Commissioner::SendJoinFinalizeResponse(const Coap::Message &aRequest, State
     message->SetOffset(message->GetLength());
     message->SetSubType(Message::kSubTypeJoinerFinalizeResponse);
 
-    SuccessOrExit(error = Tlv::AppendUint8Tlv(*message, Tlv::kState, static_cast<uint8_t>(aState)));
+    SuccessOrExit(error = Tlv::AppendTlv<StateTlv>(*message, aState));
 
     joinerMessageInfo.SetPeerAddr(Get<Mle::MleRouter>().GetMeshLocal64());
     joinerMessageInfo.GetPeerAddr().SetIid(mJoinerIid);
@@ -1173,14 +1172,13 @@ otError Commissioner::SendRelayTransmit(Message &aMessage, const Ip6::MessageInf
     SuccessOrExit(error = message->AppendUriPathOptions(UriPath::kRelayTx));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendUint16Tlv(*message, Tlv::kJoinerUdpPort, mJoinerPort));
-    SuccessOrExit(error = Tlv::AppendTlv(*message, Tlv::kJoinerIid, &mJoinerIid, sizeof(mJoinerIid)));
-    SuccessOrExit(error = Tlv::AppendUint16Tlv(*message, Tlv::kJoinerRouterLocator, mJoinerRloc));
+    SuccessOrExit(error = Tlv::AppendTlv<JoinerUdpPortTlv>(*message, mJoinerPort));
+    SuccessOrExit(error = Tlv::AppendTlv<JoinerIidTlv>(*message, mJoinerIid));
+    SuccessOrExit(error = Tlv::AppendTlv<JoinerRouterLocatorTlv>(*message, mJoinerRloc));
 
     if (aMessage.GetSubType() == Message::kSubTypeJoinerFinalizeResponse)
     {
-        SuccessOrExit(
-            error = Tlv::AppendTlv(*message, Tlv::kJoinerRouterKek, Get<KeyManager>().GetKek().GetKey(), Kek::kSize));
+        SuccessOrExit(error = Tlv::AppendTlv<JoinerRouterKekTlv>(*message, Get<KeyManager>().GetKek()));
     }
 
     tlv.SetType(Tlv::kJoinerDtlsEncapsulation);

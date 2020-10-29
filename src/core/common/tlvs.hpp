@@ -41,6 +41,7 @@
 #include <openthread/platform/toolchain.h>
 
 #include "common/encoding.hpp"
+#include "common/type_traits.hpp"
 
 namespace ot {
 
@@ -230,6 +231,38 @@ public:
     static otError ReadTlv(const Message &aMessage, uint16_t aOffset, void *aValue, uint8_t aMinLength);
 
     /**
+     * This static method reads a TLV in a message at a given offset into a given value object.
+     *
+     * @tparam      ValueType   The type of TLV's value.
+     *
+     * @param[in]   aMessage    The message to read from.
+     * @param[in]   aOffset     The offset into the message pointing to the start of the TLV.
+     * @param[out]  aValue      A reference to a `ValueType` object to output the TLV's value.
+     *
+     * @retval OT_ERROR_NONE        Successfully read the TLV and updated the @p aValue.
+     * @retval OT_ERROR_PARSE       The TLV was not well-formed and could not be parsed.
+     *
+     */
+    template <typename ValueType> static otError ReadTlv(const Message &aMessage, uint16_t aOffset, ValueType &aValue)
+    {
+        static_assert(!TypeTraits::IsPointer<ValueType>::kValue, "ValueType must not be a pointer");
+
+        return ReadTlv(aMessage, aOffset, &aValue, sizeof(ValueType));
+    }
+
+    template <typename SimpleTlvType>
+    static otError ReadTlv(Message &aMessage, uint16_t aOffset, typename SimpleTlvType::ValueType &aValue)
+    {
+        return ReadTlv(aMessage, aOffset, &aValue, sizeof(aValue));
+    }
+
+    template <typename UintTlvType>
+    static otError ReadTlv(Message &aMessage, uint16_t aOffset, typename UintTlvType::UintValueType &aValue)
+    {
+        return ReadUintTlv(aMessage, aOffset, aValue);
+    }
+
+    /**
      * This static method reads the requested TLV out of @p aMessage.
      *
      * This method can be used independent of whether the read TLV (from message) is an Extended TLV or not.
@@ -341,57 +374,58 @@ public:
     static otError FindTlv(const Message &aMessage, uint8_t aType, void *aValue, uint8_t aLength);
 
     /**
-     * This static method appends a simple TLV with a given type and an `uint8_t` value to a message.
+     * This static method searches for a TLV with a given type in a message, ensures its length is same or larger than
+     * a given `ValueType` object size, and then reads its value into a value object reference.
      *
-     * On success this method grows the message by the size of the TLV.
+     * If the TLV length is smaller than the size of `ValueType`, the TLV is considered invalid. In this case, this
+     * method returns `OT_ERROR_PARSE` and the @p aValue  is not updated.
      *
-     * @param[in]  aMessage      A reference to the message to append to.
-     * @param[in]  aType         The TLV type.
-     * @param[in]  aValue        The TLV value (`uint8_t`).
+     * If the TLV length is larger than the size of `ValueType`, the TLV is considered valid, but the size of
+     * `ValueType` bytes are read and copied into the @p aValue.
      *
-     * @retval OT_ERROR_NONE     Successfully appended the TLV to the message.
-     * @retval OT_ERROR_NO_BUFS  Insufficient available buffers to grow the message.
+     * @tparam       ValueType   The type of TLV's value.
+     *
+     * @param[in]    aMessage    A reference to the message.
+     * @param[in]    aType       The TLV type to search for.
+     * @param[out]   aValue      A reference to a `ValueType` object to output the read value.
+     *
+     * @retval OT_ERROR_NONE       The TLV was found and read successfully. @p aValue is updated.
+     * @retval OT_ERROR_NOT_FOUND  Could not find the TLV with Type @p aType.
+     * @retval OT_ERROR_PARSE      TLV was found but it was not well-formed and could not be parsed.
      *
      */
-    static otError AppendUint8Tlv(Message &aMessage, uint8_t aType, uint8_t aValue);
+    template <typename ValueType> static otError FindTlv(const Message &aMessage, uint8_t aType, ValueType &aValue)
+    {
+        static_assert(!TypeTraits::IsPointer<ValueType>::kValue, "ValueType must not be a pointer");
 
-    /**
-     * This static method appends a simple TLV with a given type and an `uint16_t` value to a message.
-     *
-     * On success this method grows the message by the size of the TLV.
-     *
-     * @param[in]  aMessage      A reference to the message to append to.
-     * @param[in]  aType         The TLV type.
-     * @param[in]  aValue        The TLV value (`uint16_t`).
-     *
-     * @retval OT_ERROR_NONE     Successfully appended the TLV to the message.
-     * @retval OT_ERROR_NO_BUFS  Insufficient available buffers to grow the message.
-     *
-     */
-    static otError AppendUint16Tlv(Message &aMessage, uint8_t aType, uint16_t aValue);
+        return FindTlv(aMessage, aType, &aValue, sizeof(ValueType));
+    }
 
-    /**
-     * This static method appends a (simple) TLV with a given type and an `uint32_t` value to a message.
-     *
-     * On success this method grows the message by the size of the TLV.
-     *
-     * @param[in]  aMessage      A reference to the message to append to.
-     * @param[in]  aType         The TLV type.
-     * @param[in]  aValue        The TLV value (`uint32_t`).
-     *
-     * @retval OT_ERROR_NONE     Successfully appended the TLV to the message.
-     * @retval OT_ERROR_NO_BUFS  Insufficient available buffers to grow the message.
-     *
-     */
-    static otError AppendUint32Tlv(Message &aMessage, uint8_t aType, uint32_t aValue);
+    template <typename TlvType> static otError FindTlv(const Message &aMessage, void *aValue, uint8_t aLength)
+    {
+        return FindTlv(aMessage, TlvType::kType, aValue, aLength);
+    }
+
+    template <typename SimpleTlvType>
+    static otError FindTlv(Message &aMessage, typename SimpleTlvType::ValueType &aValue)
+    {
+        return FindTlv(aMessage, SimpleTlvType::kType, &aValue, sizeof(aValue));
+    }
+
+    template <typename UintTlvType>
+    static otError FindTlv(Message &aMessage, typename UintTlvType::UintValueType &aValue)
+    {
+        return FindUintTlv(aMessage, UintTlvType::kType, aValue);
+    }
 
     /**
      * This static method appends a TLV with a given type and value to a message.
      *
      * On success this method grows the message by the size of the TLV.
      *
+     * @tparam     TlvType       The TLV type to append.
+     *
      * @param[in]  aMessage      A reference to the message to append to.
-     * @param[in]  aType         The TLV type.
      * @param[in]  aValue        A buffer containing the TLV value.
      * @param[in]  aLength       The value length (in bytes).
      *
@@ -399,7 +433,50 @@ public:
      * @retval OT_ERROR_NO_BUFS  Insufficient available buffers to grow the message.
      *
      */
-    static otError AppendTlv(Message &aMessage, uint8_t aType, const void *aValue, uint8_t aLength);
+    template <typename TlvType> static otError AppendTlv(Message &aMessage, const void *aValue, uint8_t aLength)
+    {
+        return AppendTlv(aMessage, TlvType::kType, aValue, aLength);
+    }
+
+    /**
+     * This static method appends a simple TLV with a single (non-integral) value to a message.
+     *
+     * On success this method grows the message by the size of the TLV.
+     *
+     * @tparam     SimpleTlvType The simple TLV type to append (must be a sub-class of `SimpleTlvInfo`)
+     *
+     * @param[in]  aMessage      A reference to the message to append to.
+     * @param[in]  aValue        A reference to the object containing TLV's value.
+     *
+     * @retval OT_ERROR_NONE     Successfully appended the TLV to the message.
+     * @retval OT_ERROR_NO_BUFS  Insufficient available buffers to grow the message.
+     *
+     */
+    template <typename SimpleTlvType>
+    static otError AppendTlv(Message &aMessage, const typename SimpleTlvType::ValueType &aValue)
+    {
+        return AppendTlv(aMessage, SimpleTlvType::kType, &aValue, sizeof(aValue));
+    }
+
+    /**
+     * This static method appends a simple TLV with a single integral value to a message.
+     *
+     * On success this method grows the message by the size of the TLV.
+     *
+     * @tparam     UintTlvType   The simple TLV type to append (must be a sub-class of `UintTlvInfo`)
+     *
+     * @param[in]  aMessage      A reference to the message to append to.
+     * @param[in]  aValue        An unsigned int value to use as TLV's value.
+     *
+     * @retval OT_ERROR_NONE     Successfully appended the TLV to the message.
+     * @retval OT_ERROR_NO_BUFS  Insufficient available buffers to grow the message.
+     *
+     */
+    template <typename UintTlvType>
+    static otError AppendTlv(Message &aMessage, typename UintTlvType::UintValueType aValue)
+    {
+        return AppendUintTlv(aMessage, UintTlvType::kType, aValue);
+    }
 
 protected:
     enum
@@ -431,6 +508,14 @@ private:
                         uint16_t *     aSize,
                         bool *         aIsExtendedTlv);
 
+    static otError AppendTlv(Message &aMessage, uint8_t aType, const void *aValue, uint8_t aLength);
+
+    template <typename UintType> static otError ReadUintTlv(Message &aMessage, uint16_t aOffset, UintType &aValue);
+
+    template <typename UintType> static otError FindUintTlv(Message &aMessage, uint8_t aTyle, UintType &aValue);
+
+    template <typename UintType> static otError AppendUintTlv(Message &aMessage, uint8_t aType, UintType aValue);
+
     uint8_t mType;
     uint8_t mLength;
 } OT_TOOL_PACKED_END;
@@ -460,6 +545,65 @@ public:
 private:
     uint16_t mLength;
 } OT_TOOL_PACKED_END;
+
+/**
+ * This class defines constants for a TLV.
+ *
+ * @tparam kTlvTypeValue   The TLV Type value.
+ *
+ */
+template <uint8_t kTlvTypeValue> class TlvInfo
+{
+public:
+    enum : uint8_t
+    {
+        kType = kTlvTypeValue, ///< The TLV Type value.
+    };
+};
+
+/**
+ * This class defines constants and types for a simple TLV with an unsigned int value type.
+ *
+ * This class and its sub-classes are intended to be used as the template type in `Tlv::AppendTlv<UintTlvType>()`, and
+ * the related `Tlv::FindTlv()` and `Tlv::ReadTlv()`.
+ *
+ * @tparam kTlvTypeValue   The TLV Type value.
+ * @tparam UintType        The TLV Value's type (must be an unsigned int, i.e. uint8_t, uint16_t, or uint32_t).
+ *
+ */
+template <uint8_t kTlvTypeValue, typename UintType> class UintTlvInfo : public TlvInfo<kTlvTypeValue>
+{
+public:
+    static_assert(TypeTraits::IsSame<UintType, uint8_t>::kValue || TypeTraits::IsSame<UintType, uint16_t>::kValue ||
+                      TypeTraits::IsSame<UintType, uint32_t>::kValue,
+                  "UintTlv must be used used with unsigned int value type");
+
+    typedef UintType UintValueType; ///< The TLV Value unsigned int type.
+};
+
+/**
+ * This class defines constants and types for a simple TLV with a single value.
+ *
+ * This class and its sub-classes are intended to be used as the template type in `Tlv::AppendTlv<SimpleTlvType>()`,
+ * and the related `Tlv::FindTlv()` and `Tlv::ReadTlv()`.
+ *
+ * @tparam kTlvTypeValue   The TLV Type value.
+ * @tparam TlvValueType    The TLV Value's type (must not be an integral type).
+ *
+ */
+template <uint8_t kTlvTypeValue, typename TlvValueType> class SimpleTlvInfo : public TlvInfo<kTlvTypeValue>
+{
+public:
+    static_assert(!TypeTraits::IsPointer<TlvValueType>::kValue, "TlvValueType must not be a pointer");
+    static_assert(!TypeTraits::IsSame<TlvValueType, uint8_t>::kValue, "SimpleTlv must not to be used with int value");
+    static_assert(!TypeTraits::IsSame<TlvValueType, uint16_t>::kValue, "SimpleTlv must not to be used with int value");
+    static_assert(!TypeTraits::IsSame<TlvValueType, uint32_t>::kValue, "SimpleTlv must not to be used with int value");
+    static_assert(!TypeTraits::IsSame<TlvValueType, int8_t>::kValue, "SimpleTlv must not to be used with int value");
+    static_assert(!TypeTraits::IsSame<TlvValueType, int16_t>::kValue, "SimpleTlv must not to be used with int value");
+    static_assert(!TypeTraits::IsSame<TlvValueType, int32_t>::kValue, "SimpleTlv must not to be used with int value");
+
+    typedef TlvValueType ValueType; ///< The TLV Value type.
+};
 
 } // namespace ot
 

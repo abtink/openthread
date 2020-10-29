@@ -1014,37 +1014,37 @@ exit:
 
 otError Mle::AppendSourceAddress(Message &aMessage) const
 {
-    return Tlv::AppendUint16Tlv(aMessage, Tlv::kSourceAddress, GetRloc16());
+    return Tlv::AppendTlv<SourceAddressTlv>(aMessage, GetRloc16());
 }
 
 otError Mle::AppendStatus(Message &aMessage, StatusTlv::Status aStatus)
 {
-    return Tlv::AppendUint8Tlv(aMessage, Tlv::kStatus, static_cast<uint8_t>(aStatus));
+    return Tlv::AppendTlv<StatusTlv>(aMessage, aStatus);
 }
 
 otError Mle::AppendMode(Message &aMessage, DeviceMode aMode)
 {
-    return Tlv::AppendUint8Tlv(aMessage, Tlv::kMode, aMode.Get());
+    return Tlv::AppendTlv<ModeTlv>(aMessage, aMode.Get());
 }
 
 otError Mle::AppendTimeout(Message &aMessage, uint32_t aTimeout)
 {
-    return Tlv::AppendUint32Tlv(aMessage, Tlv::kTimeout, aTimeout);
+    return Tlv::AppendTlv<TimeoutTlv>(aMessage, aTimeout);
 }
 
 otError Mle::AppendChallenge(Message &aMessage, const Challenge &aChallenge)
 {
-    return Tlv::AppendTlv(aMessage, Tlv::kChallenge, aChallenge.mBuffer, aChallenge.mLength);
+    return Tlv::AppendTlv<ChallengeTlv>(aMessage, aChallenge.mBuffer, aChallenge.mLength);
 }
 
 otError Mle::AppendChallenge(Message &aMessage, const uint8_t *aChallenge, uint8_t aChallengeLength)
 {
-    return Tlv::AppendTlv(aMessage, Tlv::kChallenge, aChallenge, aChallengeLength);
+    return Tlv::AppendTlv<ChallengeTlv>(aMessage, aChallenge, aChallengeLength);
 }
 
 otError Mle::AppendResponse(Message &aMessage, const Challenge &aResponse)
 {
-    return Tlv::AppendTlv(aMessage, Tlv::kResponse, aResponse.mBuffer, aResponse.mLength);
+    return Tlv::AppendTlv<ResponseTlv>(aMessage, aResponse.mBuffer, aResponse.mLength);
 }
 
 otError Mle::ReadChallengeOrResponse(const Message &aMessage, uint8_t aTlvType, Challenge &aBuffer)
@@ -1080,17 +1080,17 @@ otError Mle::ReadResponse(const Message &aMessage, Challenge &aResponse)
 
 otError Mle::AppendLinkFrameCounter(Message &aMessage)
 {
-    return Tlv::AppendUint32Tlv(aMessage, Tlv::kLinkFrameCounter, Get<KeyManager>().GetMacFrameCounter());
+    return Tlv::AppendTlv<LinkFrameCounterTlv>(aMessage, Get<KeyManager>().GetMacFrameCounter());
 }
 
 otError Mle::AppendMleFrameCounter(Message &aMessage)
 {
-    return Tlv::AppendUint32Tlv(aMessage, Tlv::kMleFrameCounter, Get<KeyManager>().GetMleFrameCounter());
+    return Tlv::AppendTlv<MleFrameCounterTlv>(aMessage, Get<KeyManager>().GetMleFrameCounter());
 }
 
 otError Mle::AppendAddress16(Message &aMessage, uint16_t aRloc16)
 {
-    return Tlv::AppendUint16Tlv(aMessage, Tlv::kAddress16, aRloc16);
+    return Tlv::AppendTlv<Address16Tlv>(aMessage, aRloc16);
 }
 
 otError Mle::AppendLeaderData(Message &aMessage)
@@ -1130,7 +1130,7 @@ otError Mle::AppendNetworkData(Message &aMessage, bool aStableOnly)
     length = sizeof(networkData);
     IgnoreError(Get<NetworkData::Leader>().GetNetworkData(aStableOnly, networkData, length));
 
-    error = Tlv::AppendTlv(aMessage, Tlv::kNetworkData, networkData, length);
+    error = Tlv::AppendTlv<NetworkDataTlv>(aMessage, networkData, length);
 
 exit:
     return error;
@@ -1138,7 +1138,7 @@ exit:
 
 otError Mle::AppendTlvRequest(Message &aMessage, const uint8_t *aTlvs, uint8_t aTlvsLength)
 {
-    return Tlv::AppendTlv(aMessage, Tlv::kTlvRequest, aTlvs, aTlvsLength);
+    return Tlv::AppendTlv<TlvRequestTlv>(aMessage, aTlvs, aTlvsLength);
 }
 
 otError Mle::FindTlvRequest(const Message &aMessage, RequestedTlvs &aRequestedTlvs)
@@ -1163,17 +1163,17 @@ exit:
 
 otError Mle::AppendScanMask(Message &aMessage, uint8_t aScanMask)
 {
-    return Tlv::AppendUint8Tlv(aMessage, Tlv::kScanMask, aScanMask);
+    return Tlv::AppendTlv<ScanMaskTlv>(aMessage, aScanMask);
 }
 
 otError Mle::AppendLinkMargin(Message &aMessage, uint8_t aLinkMargin)
 {
-    return Tlv::AppendUint8Tlv(aMessage, Tlv::kLinkMargin, aLinkMargin);
+    return Tlv::AppendTlv<LinkMarginTlv>(aMessage, aLinkMargin);
 }
 
 otError Mle::AppendVersion(Message &aMessage)
 {
-    return Tlv::AppendUint16Tlv(aMessage, Tlv::kVersion, kThreadVersion);
+    return Tlv::AppendTlv<VersionTlv>(aMessage, kThreadVersion);
 }
 
 bool Mle::HasUnregisteredAddress(void)
@@ -1352,7 +1352,7 @@ otError Mle::AppendTimeParameter(Message &aMessage)
 
 otError Mle::AppendXtalAccuracy(Message &aMessage)
 {
-    return Tlv::AppendUint16Tlv(aMessage, Tlv::kXtalAccuracy, otPlatTimeGetXtalAccuracy());
+    return Tlv::AppendTlv<XtalAccuracyTlv>(aMessage, otPlatTimeGetXtalAccuracy());
 }
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
 
@@ -1415,8 +1415,8 @@ exit:
 otError Mle::AppendCslTimeout(Message &aMessage)
 {
     OT_ASSERT(Get<Mac::Mac>().IsCslEnabled());
-    return Tlv::AppendUint32Tlv(aMessage, Tlv::kCslTimeout,
-                                Get<Mac::Mac>().GetCslTimeout() == 0 ? mTimeout : Get<Mac::Mac>().GetCslTimeout());
+    return Tlv::AppendTlv<CslTimeoutTlv>(
+        aMessage, Get<Mac::Mac>().GetCslTimeout() == 0 ? mTimeout : Get<Mac::Mac>().GetCslTimeout());
 }
 #endif // OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
 
@@ -2393,7 +2393,7 @@ void Mle::SendAnnounce(uint8_t aChannel, bool aOrphanAnnounce, const Ip6::Addres
         SuccessOrExit(error = AppendActiveTimestamp(*message));
     }
 
-    SuccessOrExit(error = Tlv::AppendUint16Tlv(*message, Tlv::kPanId, Get<Mac::Mac>().GetPanId()));
+    SuccessOrExit(error = Tlv::AppendTlv<PanIdTlv>(*message, Get<Mac::Mac>().GetPanId()));
 
     SuccessOrExit(error = SendMessage(*message, aDestination));
 

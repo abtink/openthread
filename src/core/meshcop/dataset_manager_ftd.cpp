@@ -143,14 +143,14 @@ otError DatasetManager::HandleSet(Coap::Message &aMessage, const Ip6::MessageInf
     }
 
     // check mesh local prefix
-    if (Tlv::FindTlv(aMessage, Tlv::kMeshLocalPrefix, &meshLocalPrefix, sizeof(meshLocalPrefix)) == OT_ERROR_NONE &&
+    if (Tlv::FindTlv(aMessage, Tlv::kMeshLocalPrefix, meshLocalPrefix) == OT_ERROR_NONE &&
         meshLocalPrefix != Get<Mle::MleRouter>().GetMeshLocalPrefix())
     {
         doesAffectConnectivity = true;
     }
 
     // check network master key
-    if (Tlv::FindTlv(aMessage, Tlv::kNetworkMasterKey, &masterKey, sizeof(masterKey)) == OT_ERROR_NONE)
+    if (Tlv::FindTlv(aMessage, Tlv::kNetworkMasterKey, masterKey) == OT_ERROR_NONE)
     {
         hasMasterKey = true;
 
@@ -281,7 +281,7 @@ void DatasetManager::SendSetResponse(const Coap::Message &   aRequest,
     SuccessOrExit(error = message->SetDefaultResponseHeader(aRequest));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendUint8Tlv(*message, Tlv::kState, static_cast<uint8_t>(aState)));
+    SuccessOrExit(error = Tlv::AppendTlv<StateTlv>(*message, aState));
 
     SuccessOrExit(error = Get<Tmf::TmfAgent>().SendMessage(*message, aMessageInfo));
 

@@ -215,7 +215,7 @@ private:
  *
  */
 OT_TOOL_PACKED_BEGIN
-class LinkMetricsReportSubTlv : public Tlv
+class LinkMetricsReportSubTlv : public Tlv, public TlvInfo<kLinkMetricsReportSub>
 {
 public:
     /**
@@ -306,7 +306,7 @@ private:
  *
  */
 OT_TOOL_PACKED_BEGIN
-class LinkMetricsQueryOptionsTlv : public Tlv
+class LinkMetricsQueryOptionsTlv : public Tlv, public TlvInfo<kLinkMetricsQueryOptions>
 {
 public:
     /**

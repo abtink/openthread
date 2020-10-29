@@ -441,7 +441,7 @@ otError Joiner::PrepareJoinerFinalizeMessage(const char *aProvisioningUrl,
     SuccessOrExit(error = mFinalizeMessage->SetPayloadMarker());
     mFinalizeMessage->SetOffset(mFinalizeMessage->GetLength());
 
-    SuccessOrExit(error = Tlv::AppendUint8Tlv(*mFinalizeMessage, Tlv::kState, StateTlv::kAccept));
+    SuccessOrExit(error = Tlv::AppendTlv<StateTlv>(*mFinalizeMessage, StateTlv::kAccept));
 
     vendorNameTlv.Init();
     vendorNameTlv.SetVendorName(aVendorName);
@@ -569,8 +569,7 @@ void Joiner::HandleJoinerEntrust(Coap::Message &aMessage, const Ip6::MessageInfo
 
     datasetInfo.Clear();
 
-    SuccessOrExit(
-        error = Tlv::FindTlv(aMessage, Tlv::kNetworkMasterKey, &datasetInfo.UpdateMasterKey(), sizeof(MasterKey)));
+    SuccessOrExit(error = Tlv::FindTlv(aMessage, Tlv::kNetworkMasterKey, datasetInfo.UpdateMasterKey()));
 
     datasetInfo.SetChannel(Get<Mac::Mac>().GetPanChannel());
     datasetInfo.SetPanId(Get<Mac::Mac>().GetPanId());

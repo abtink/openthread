@@ -74,14 +74,14 @@ otError PanIdQueryClient::SendQuery(uint16_t                            aPanId,
     SuccessOrExit(error = message->InitAsPost(aAddress, UriPath::kPanIdQuery));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendUint16Tlv(*message, MeshCoP::Tlv::kCommissionerSessionId,
-                                               Get<MeshCoP::Commissioner>().GetSessionId()));
+    SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::CommissionerSessionIdTlv>(
+                      *message, Get<MeshCoP::Commissioner>().GetSessionId()));
 
     channelMask.Init();
     channelMask.SetChannelMask(aChannelMask);
     SuccessOrExit(error = channelMask.AppendTo(*message));
 
-    SuccessOrExit(error = Tlv::AppendUint16Tlv(*message, MeshCoP::Tlv::kPanId, aPanId));
+    SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::PanIdTlv>(*message, aPanId));
 
     messageInfo.SetSockAddr(Get<Mle::MleRouter>().GetMeshLocal16());
     messageInfo.SetPeerAddr(aAddress);

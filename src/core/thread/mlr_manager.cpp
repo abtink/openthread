@@ -407,13 +407,13 @@ otError MlrManager::SendMulticastListenerRegistrationMessage(const otIp6Address 
 #if OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE && OPENTHREAD_CONFIG_COMMISSIONER_ENABLE
     if (Get<MeshCoP::Commissioner>().IsActive())
     {
-        SuccessOrExit(error = ThreadTlv::AppendUint16Tlv(*message, ThreadTlv::kCommissionerSessionId,
-                                                         Get<MeshCoP::Commissioner>().GetSessionId()));
+        SuccessOrExit(error = Tlv::AppendTlv<ThreadCommissionerSessionIdTlv>(
+                          *message, Get<MeshCoP::Commissioner>().GetSessionId()));
     }
 
     if (aTimeout != nullptr)
     {
-        SuccessOrExit(error = Tlv::AppendUint32Tlv(*message, ThreadTlv::kTimeout, *aTimeout));
+        SuccessOrExit(error = Tlv::AppendTlv<ThreadTimeoutTlv>(*message, *aTimeout));
     }
 #else
     OT_ASSERT(aTimeout == nullptr);

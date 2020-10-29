@@ -104,7 +104,7 @@ otError NetworkDiagnostic::SendDiagnosticGet(const Ip6::Address &aDestination,
 
     if (aCount > 0)
     {
-        SuccessOrExit(error = Tlv::AppendTlv(*message, NetworkDataTlv::kTypeList, aTlvTypes, aCount));
+        SuccessOrExit(error = Tlv::AppendTlv<TypeListTlv>(*message, aTlvTypes, aCount));
     }
 
     if (aDestination.IsLinkLocal() || aDestination.IsLinkLocalMulticast())
@@ -298,22 +298,21 @@ otError NetworkDiagnostic::FillRequestedTlvs(const Message &       aRequest,
         switch (type)
         {
         case NetworkDiagnosticTlv::kExtMacAddress:
-            SuccessOrExit(
-                error = Tlv::AppendTlv(aResponse, type, &Get<Mac::Mac>().GetExtAddress(), sizeof(Mac::ExtAddress)));
+            SuccessOrExit(error = Tlv::AppendTlv<ExtMacAddressTlv>(aResponse, Get<Mac::Mac>().GetExtAddress()));
             break;
 
         case NetworkDiagnosticTlv::kAddress16:
-            SuccessOrExit(error = Tlv::AppendUint16Tlv(aResponse, type, Get<Mle::MleRouter>().GetRloc16()));
+            SuccessOrExit(error = Tlv::AppendTlv<Address16Tlv>(aResponse, Get<Mle::MleRouter>().GetRloc16()));
             break;
 
         case NetworkDiagnosticTlv::kMode:
-            SuccessOrExit(error = Tlv::AppendUint8Tlv(aResponse, type, Get<Mle::MleRouter>().GetDeviceMode().Get()));
+            SuccessOrExit(error = Tlv::AppendTlv<ModeTlv>(aResponse, Get<Mle::MleRouter>().GetDeviceMode().Get()));
             break;
 
         case NetworkDiagnosticTlv::kTimeout:
             if (!Get<Mle::MleRouter>().IsRxOnWhenIdle())
             {
-                SuccessOrExit(error = Tlv::AppendUint32Tlv(aResponse, type, Get<Mle::MleRouter>().GetTimeout()));
+                SuccessOrExit(error = Tlv::AppendTlv<TimeoutTlv>(aResponse, Get<Mle::MleRouter>().GetTimeout()));
             }
 
             break;
@@ -360,7 +359,7 @@ otError NetworkDiagnostic::FillRequestedTlvs(const Message &       aRequest,
             uint8_t length = sizeof(netData);
 
             IgnoreError(Get<NetworkData::Leader>().GetNetworkData(/* aStableOnly */ false, netData, length));
-            SuccessOrExit(error = Tlv::AppendTlv(aResponse, type, netData, length));
+            SuccessOrExit(error = Tlv::AppendTlv<NetworkDataTlv>(aResponse, netData, length));
             break;
         }
 
@@ -436,7 +435,7 @@ otError NetworkDiagnostic::FillRequestedTlvs(const Message &       aRequest,
 
             if (Get<Mle::MleRouter>().GetMaxChildTimeout(maxTimeout) == OT_ERROR_NONE)
             {
-                SuccessOrExit(error = Tlv::AppendUint32Tlv(aResponse, type, maxTimeout));
+                SuccessOrExit(error = Tlv::AppendTlv<MaxChildTimeoutTlv>(aResponse, maxTimeout));
             }
 
             break;
@@ -585,7 +584,7 @@ otError NetworkDiagnostic::SendDiagnosticReset(const Ip6::Address &aDestination,
 
     if (aCount > 0)
     {
-        SuccessOrExit(error = Tlv::AppendTlv(*message, NetworkDataTlv::kTypeList, aTlvTypes, aCount));
+        SuccessOrExit(error = Tlv::AppendTlv<TypeListTlv>(*message, aTlvTypes, aCount));
     }
 
     if (aDestination.IsLinkLocal() || aDestination.IsLinkLocalMulticast())
@@ -743,8 +742,7 @@ otError NetworkDiagnostic::GetNextDiagTlv(const Coap::Message &aMessage,
         switch (tlv.GetType())
         {
         case NetworkDiagnosticTlv::kExtMacAddress:
-            SuccessOrExit(
-                error = Tlv::ReadTlv(aMessage, offset, &aNetworkDiagTlv.mData.mExtAddress, sizeof(Mac::ExtAddress)));
+            SuccessOrExit(error = Tlv::ReadTlv(aMessage, offset, aNetworkDiagTlv.mData.mExtAddress));
             break;
 
         case NetworkDiagnosticTlv::kAddress16:
