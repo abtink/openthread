@@ -69,15 +69,15 @@ otError AnnounceBeginClient::SendRequest(uint32_t            aChannelMask,
     SuccessOrExit(error = message->InitAsPost(aAddress, UriPath::kAnnounceBegin));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::CommissionerSessionIdTlv>(
-                      *message, Get<MeshCoP::Commissioner>().GetSessionId()));
+    SuccessOrExit(
+        error = message->AppendTlv<MeshCoP::CommissionerSessionIdTlv>(Get<MeshCoP::Commissioner>().GetSessionId()));
 
     channelMask.Init();
     channelMask.SetChannelMask(aChannelMask);
     SuccessOrExit(error = channelMask.AppendTo(*message));
 
-    SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::CountTlv>(*message, aCount));
-    SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::PeriodTlv>(*message, aPeriod));
+    SuccessOrExit(error = message->AppendTlv<MeshCoP::CountTlv>(aCount));
+    SuccessOrExit(error = message->AppendTlv<MeshCoP::PeriodTlv>(aPeriod));
 
     messageInfo.SetSockAddr(Get<Mle::MleRouter>().GetMeshLocal16());
     messageInfo.SetPeerAddr(aAddress);

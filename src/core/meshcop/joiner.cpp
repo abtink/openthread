@@ -441,7 +441,7 @@ otError Joiner::PrepareJoinerFinalizeMessage(const char *aProvisioningUrl,
     SuccessOrExit(error = mFinalizeMessage->SetPayloadMarker());
     mFinalizeMessage->SetOffset(mFinalizeMessage->GetLength());
 
-    SuccessOrExit(error = Tlv::AppendTlv<StateTlv>(*mFinalizeMessage, StateTlv::kAccept));
+    SuccessOrExit(error = mFinalizeMessage->AppendTlv<StateTlv>(StateTlv::kAccept));
 
     vendorNameTlv.Init();
     vendorNameTlv.SetVendorName(aVendorName);

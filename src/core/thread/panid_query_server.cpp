@@ -124,7 +124,7 @@ void PanIdQueryServer::SendConflict(void)
     channelMask.SetChannelMask(mChannelMask);
     SuccessOrExit(error = channelMask.AppendTo(*message));
 
-    SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::PanIdTlv>(*message, mPanId));
+    SuccessOrExit(error = message->AppendTlv<MeshCoP::PanIdTlv>(mPanId));
 
     messageInfo.SetSockAddr(Get<Mle::MleRouter>().GetMeshLocal16());
     messageInfo.SetPeerAddr(mCommissioner);

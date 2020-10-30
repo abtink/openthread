@@ -369,7 +369,7 @@ void Leader::SendCommissioningSetResponse(const Coap::Message &    aRequest,
     SuccessOrExit(error = message->SetDefaultResponseHeader(aRequest));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::StateTlv>(*message, aState));
+    SuccessOrExit(error = message->AppendTlv<MeshCoP::StateTlv>(aState));
 
     SuccessOrExit(error = Get<Tmf::TmfAgent>().SendMessage(*message, aMessageInfo));
 

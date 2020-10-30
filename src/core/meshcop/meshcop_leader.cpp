@@ -131,7 +131,7 @@ void Leader::SendPetitionResponse(const Coap::Message &   aRequest,
     SuccessOrExit(error = message->SetDefaultResponseHeader(aRequest));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<StateTlv>(*message, aState));
+    SuccessOrExit(error = message->AppendTlv<StateTlv>(aState));
 
     if (mTimer.IsRunning())
     {
@@ -140,7 +140,7 @@ void Leader::SendPetitionResponse(const Coap::Message &   aRequest,
 
     if (aState == StateTlv::kAccept)
     {
-        SuccessOrExit(error = Tlv::AppendTlv<CommissionerSessionIdTlv>(*message, mSessionId));
+        SuccessOrExit(error = message->AppendTlv<CommissionerSessionIdTlv>(mSessionId));
     }
 
     SuccessOrExit(error = Get<Tmf::TmfAgent>().SendMessage(*message, aMessageInfo));
@@ -215,7 +215,7 @@ void Leader::SendKeepAliveResponse(const Coap::Message &   aRequest,
     SuccessOrExit(error = message->SetDefaultResponseHeader(aRequest));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<StateTlv>(*message, aState));
+    SuccessOrExit(error = message->AppendTlv<StateTlv>(aState));
 
     SuccessOrExit(error = Get<Tmf::TmfAgent>().SendMessage(*message, aMessageInfo));
 

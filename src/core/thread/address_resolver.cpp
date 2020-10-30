@@ -533,7 +533,7 @@ otError AddressResolver::SendAddressQuery(const Ip6::Address &aEid)
     SuccessOrExit(error = message->AppendUriPathOptions(UriPath::kAddressQuery));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadTargetTlv>(*message, aEid));
+    SuccessOrExit(error = message->AppendTlv<ThreadTargetTlv>(aEid));
 
     messageInfo.GetPeerAddr().SetToRealmLocalAllRoutersMulticast();
 
@@ -651,8 +651,8 @@ void AddressResolver::SendAddressError(const Ip6::Address &            aTarget,
     SuccessOrExit(error = message->AppendUriPathOptions(UriPath::kAddressError));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadTargetTlv>(*message, aTarget));
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadMeshLocalEidTlv>(*message, aMeshLocalIid));
+    SuccessOrExit(error = message->AppendTlv<ThreadTargetTlv>(aTarget));
+    SuccessOrExit(error = message->AppendTlv<ThreadMeshLocalEidTlv>(aMeshLocalIid));
 
     if (aDestination == nullptr)
     {
@@ -830,13 +830,13 @@ void AddressResolver::SendAddressQueryResponse(const Ip6::Address &            a
     SuccessOrExit(error = message->AppendUriPathOptions(UriPath::kAddressNotify));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadTargetTlv>(*message, aTarget));
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadMeshLocalEidTlv>(*message, aMeshLocalIid));
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadRloc16Tlv>(*message, Get<Mle::MleRouter>().GetRloc16()));
+    SuccessOrExit(error = message->AppendTlv<ThreadTargetTlv>(aTarget));
+    SuccessOrExit(error = message->AppendTlv<ThreadMeshLocalEidTlv>(aMeshLocalIid));
+    SuccessOrExit(error = message->AppendTlv<ThreadRloc16Tlv>(Get<Mle::MleRouter>().GetRloc16()));
 
     if (aLastTransactionTime != nullptr)
     {
-        SuccessOrExit(error = Tlv::AppendTlv<ThreadLastTransactionTimeTlv>(*message, *aLastTransactionTime));
+        SuccessOrExit(error = message->AppendTlv<ThreadLastTransactionTimeTlv>(*aLastTransactionTime));
     }
 
     messageInfo.SetPeerAddr(aDestination);

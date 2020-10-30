@@ -281,7 +281,7 @@ void DatasetManager::SendSetResponse(const Coap::Message &   aRequest,
     SuccessOrExit(error = message->SetDefaultResponseHeader(aRequest));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<StateTlv>(*message, aState));
+    SuccessOrExit(error = message->AppendTlv<StateTlv>(aState));
 
     SuccessOrExit(error = Get<Tmf::TmfAgent>().SendMessage(*message, aMessageInfo));
 

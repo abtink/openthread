@@ -279,7 +279,7 @@ void Manager::SendMulticastListenerRegistrationResponse(const Coap::Message &   
     SuccessOrExit(message->SetDefaultResponseHeader(aMessage));
     SuccessOrExit(message->SetPayloadMarker());
 
-    SuccessOrExit(Tlv::AppendTlv<ThreadStatusTlv>(*message, aStatus));
+    SuccessOrExit(message->AppendTlv<ThreadStatusTlv>(aStatus));
 
     if (aFailedAddressNum > 0)
     {
@@ -324,7 +324,7 @@ void Manager::SendBackboneMulticastListenerRegistration(const Ip6::Address *aAdd
     SuccessOrExit(error = message->Append(addressesTlv));
     SuccessOrExit(error = message->AppendBytes(aAddresses, sizeof(Ip6::Address) * aAddressNum));
 
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadTimeoutTlv>(*message, aTimeout));
+    SuccessOrExit(error = message->AppendTlv<ThreadTimeoutTlv>(aTimeout));
 
     messageInfo.SetPeerAddr(Get<BackboneRouter::Local>().GetAllNetworkBackboneRoutersAddress());
     messageInfo.SetPeerPort(BackboneRouter::kBackboneUdpPort); // TODO: Provide API for configuring Backbone COAP port.
@@ -429,8 +429,8 @@ void Manager::SendDuaRegistrationResponse(const Coap::Message &      aMessage,
     SuccessOrExit(message->SetDefaultResponseHeader(aMessage));
     SuccessOrExit(message->SetPayloadMarker());
 
-    SuccessOrExit(Tlv::AppendTlv<ThreadStatusTlv>(*message, aStatus));
-    SuccessOrExit(Tlv::AppendTlv<ThreadTargetTlv>(*message, aTarget));
+    SuccessOrExit(message->AppendTlv<ThreadStatusTlv>(aStatus));
+    SuccessOrExit(message->AppendTlv<ThreadTargetTlv>(aTarget));
 
     SuccessOrExit(error = Get<Tmf::TmfAgent>().SendMessage(*message, aMessageInfo));
 
@@ -503,11 +503,11 @@ otError Manager::SendBackboneQuery(const Ip6::Address &aDua, uint16_t aRloc16)
     SuccessOrExit(error = message->InitAsNonConfirmablePost(UriPath::kBackboneQuery));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadTargetTlv>(*message, aDua));
+    SuccessOrExit(error = message->AppendTlv<ThreadTargetTlv>(aDua));
 
     if (aRloc16 != Mac::kShortAddrInvalid)
     {
-        SuccessOrExit(error = Tlv::AppendTlv<ThreadRloc16Tlv>(*message, aRloc16));
+        SuccessOrExit(error = message->AppendTlv<ThreadRloc16Tlv>(aRloc16));
     }
 
     messageInfo.SetPeerAddr(Get<BackboneRouter::Local>().GetAllDomainBackboneRoutersAddress());
@@ -649,22 +649,21 @@ otError Manager::SendBackboneAnswer(const Ip6::Address &            aDstAddr,
                                         UriPath::kBackboneAnswer));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadTargetTlv>(*message, aDua));
+    SuccessOrExit(error = message->AppendTlv<ThreadTargetTlv>(aDua));
 
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadMeshLocalEidTlv>(*message, aMeshLocalIid));
+    SuccessOrExit(error = message->AppendTlv<ThreadMeshLocalEidTlv>(aMeshLocalIid));
 
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadLastTransactionTimeTlv>(*message, aTimeSinceLastTransaction));
+    SuccessOrExit(error = message->AppendTlv<ThreadLastTransactionTimeTlv>(aTimeSinceLastTransaction));
 
     {
         const Mac::NameData nameData = Get<Mac::Mac>().GetNetworkName().GetAsData();
 
-        SuccessOrExit(error =
-                          Tlv::AppendTlv<ThreadNetworkNameTlv>(*message, nameData.GetBuffer(), nameData.GetLength()));
+        SuccessOrExit(error = message->AppendTlv<ThreadNetworkNameTlv>(nameData.GetBuffer(), nameData.GetLength()));
     }
 
     if (aSrcRloc16 != Mac::kShortAddrInvalid)
     {
-        SuccessOrExit(Tlv::AppendTlv<ThreadRloc16Tlv>(*message, aSrcRloc16));
+        SuccessOrExit(message->AppendTlv<ThreadRloc16Tlv>(aSrcRloc16));
     }
 
     messageInfo.SetPeerAddr(aDstAddr);

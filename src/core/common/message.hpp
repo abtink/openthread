@@ -47,6 +47,7 @@
 #include "common/locator.hpp"
 #include "common/non_copyable.hpp"
 #include "common/pool.hpp"
+#include "common/tlvs.hpp"
 #include "common/type_traits.hpp"
 #include "mac/mac_types.hpp"
 #include "thread/child_mask.hpp"
@@ -624,6 +625,11 @@ public:
         static_assert(!TypeTraits::IsPointer<ObjectType>::kValue, "ObjectType must not be a pointer");
 
         return AppendBytes(&aObject, sizeof(ObjectType));
+    }
+
+    template <typename TlvType, typename... Types> otError AppendTlv(Types... aArgs)
+    {
+        return Tlv::AppendTlv<TlvType>(*this, aArgs...);
     }
 
     /**

@@ -146,9 +146,9 @@ void JoinerRouter::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &a
     SuccessOrExit(error = message->InitAsNonConfirmablePost(UriPath::kRelayRx));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<JoinerUdpPortTlv>(*message, aMessageInfo.GetPeerPort()));
-    SuccessOrExit(error = Tlv::AppendTlv<JoinerIidTlv>(*message, aMessageInfo.GetPeerAddr().GetIid()));
-    SuccessOrExit(error = Tlv::AppendTlv<JoinerRouterLocatorTlv>(*message, Get<Mle::MleRouter>().GetRloc16()));
+    SuccessOrExit(error = message->AppendTlv<JoinerUdpPortTlv>(aMessageInfo.GetPeerPort()));
+    SuccessOrExit(error = message->AppendTlv<JoinerIidTlv>(aMessageInfo.GetPeerAddr().GetIid()));
+    SuccessOrExit(error = message->AppendTlv<JoinerRouterLocatorTlv>(Get<Mle::MleRouter>().GetRloc16()));
 
     tlv.SetType(Tlv::kJoinerDtlsEncapsulation);
     tlv.SetLength(aMessage.GetLength() - aMessage.GetOffset());
@@ -326,9 +326,9 @@ Coap::Message *JoinerRouter::PrepareJoinerEntrustMessage(void)
     SuccessOrExit(error = message->SetPayloadMarker());
     message->SetSubType(Message::kSubTypeJoinerEntrust);
 
-    SuccessOrExit(error = Tlv::AppendTlv<NetworkMasterKeyTlv>(*message, Get<KeyManager>().GetMasterKey()));
-    SuccessOrExit(error = Tlv::AppendTlv<MeshLocalPrefixTlv>(*message, Get<Mle::MleRouter>().GetMeshLocalPrefix()));
-    SuccessOrExit(error = Tlv::AppendTlv<ExtendedPanIdTlv>(*message, Get<Mac::Mac>().GetExtendedPanId()));
+    SuccessOrExit(error = message->AppendTlv<NetworkMasterKeyTlv>(Get<KeyManager>().GetMasterKey()));
+    SuccessOrExit(error = message->AppendTlv<MeshLocalPrefixTlv>(Get<Mle::MleRouter>().GetMeshLocalPrefix()));
+    SuccessOrExit(error = message->AppendTlv<ExtendedPanIdTlv>(Get<Mac::Mac>().GetExtendedPanId()));
 
     networkName.Init();
     networkName.SetNetworkName(Get<Mac::Mac>().GetNetworkName().GetAsData());
@@ -380,7 +380,7 @@ Coap::Message *JoinerRouter::PrepareJoinerEntrustMessage(void)
         SuccessOrExit(error = securityPolicy.AppendTo(*message));
     }
 
-    SuccessOrExit(error = Tlv::AppendTlv<NetworkKeySequenceTlv>(*message, Get<KeyManager>().GetCurrentKeySequence()));
+    SuccessOrExit(error = message->AppendTlv<NetworkKeySequenceTlv>(Get<KeyManager>().GetCurrentKeySequence()));
 
 exit:
     FreeAndNullMessageOnError(message, error);

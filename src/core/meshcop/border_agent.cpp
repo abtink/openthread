@@ -372,7 +372,7 @@ bool BorderAgent::HandleUdpReceive(const Message &aMessage, const Ip6::MessageIn
         aMessage.CopyTo(aMessage.GetOffset(), offset, udpLength, *message);
     }
 
-    SuccessOrExit(error = Tlv::AppendTlv<Ip6AddressTlv>(*message, aMessageInfo.GetPeerAddr()));
+    SuccessOrExit(error = message->AppendTlv<Ip6AddressTlv>(aMessageInfo.GetPeerAddr()));
 
     SuccessOrExit(error = Get<Coap::CoapSecure>().SendMessage(*message, Get<Coap::CoapSecure>().GetMessageInfo()));
 

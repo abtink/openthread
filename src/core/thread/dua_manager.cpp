@@ -443,8 +443,8 @@ void DuaManager::PerformNextRegistration(void)
     if (mDuaState == kToRegister && mDelay.mFields.mRegistrationDelay == 0)
     {
         dua = GetDomainUnicastAddress();
-        SuccessOrExit(error = Tlv::AppendTlv<ThreadTargetTlv>(*message, dua));
-        SuccessOrExit(error = Tlv::AppendTlv<ThreadMeshLocalEidTlv>(*message, mle.GetMeshLocal64().GetIid()));
+        SuccessOrExit(error = message->AppendTlv<ThreadTargetTlv>(dua));
+        SuccessOrExit(error = message->AppendTlv<ThreadMeshLocalEidTlv>(mle.GetMeshLocal64().GetIid()));
         mDuaState             = kRegistering;
         mLastRegistrationTime = TimerMilli::GetNow();
     }
@@ -476,11 +476,11 @@ void DuaManager::PerformNextRegistration(void)
         OT_ASSERT(duaPtr != nullptr);
 
         dua = *duaPtr;
-        SuccessOrExit(error = Tlv::AppendTlv<ThreadTargetTlv>(*message, dua));
-        SuccessOrExit(error = Tlv::AppendTlv<ThreadMeshLocalEidTlv>(*message, child->GetMeshLocalIid()));
+        SuccessOrExit(error = message->AppendTlv<ThreadTargetTlv>(dua));
+        SuccessOrExit(error = message->AppendTlv<ThreadMeshLocalEidTlv>(child->GetMeshLocalIid()));
 
         lastTransactionTime = Time::MsecToSec(TimerMilli::GetNow() - child->GetLastHeard());
-        SuccessOrExit(error = Tlv::AppendTlv<ThreadLastTransactionTimeTlv>(*message, lastTransactionTime));
+        SuccessOrExit(error = message->AppendTlv<ThreadLastTransactionTimeTlv>(lastTransactionTime));
 #endif // OPENTHREAD_CONFIG_TMF_PROXY_DUA_ENABLE
     }
 
@@ -670,8 +670,8 @@ void DuaManager::SendAddressNotification(Ip6::Address &             aAddress,
     SuccessOrExit(error = message->InitAsConfirmablePost(UriPath::kDuaRegistrationNotify));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadStatusTlv>(*message, aStatus));
-    SuccessOrExit(error = Tlv::AppendTlv<ThreadTargetTlv>(*message, aAddress));
+    SuccessOrExit(error = message->AppendTlv<ThreadStatusTlv>(aStatus));
+    SuccessOrExit(error = message->AppendTlv<ThreadTargetTlv>(aAddress));
 
     messageInfo.GetPeerAddr().SetToRoutingLocator(Get<Mle::MleRouter>().GetMeshLocalPrefix(), aChild.GetRloc16());
     messageInfo.SetPeerPort(Tmf::kUdpPort);

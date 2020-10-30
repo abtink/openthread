@@ -487,8 +487,7 @@ otError DatasetManager::SendSetRequest(const Dataset::Info &aDatasetInfo, const 
 
         if (!hasSessionId)
         {
-            SuccessOrExit(error =
-                              Tlv::AppendTlv<CommissionerSessionIdTlv>(*message, Get<Commissioner>().GetSessionId()));
+            SuccessOrExit(error = message->AppendTlv<CommissionerSessionIdTlv>(Get<Commissioner>().GetSessionId()));
         }
     }
 

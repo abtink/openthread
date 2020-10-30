@@ -77,16 +77,16 @@ otError EnergyScanClient::SendQuery(uint32_t                           aChannelM
     SuccessOrExit(error = message->InitAsPost(aAddress, UriPath::kEnergyScan));
     SuccessOrExit(error = message->SetPayloadMarker());
 
-    SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::CommissionerSessionIdTlv>(
-                      *message, Get<MeshCoP::Commissioner>().GetSessionId()));
+    SuccessOrExit(
+        error = message->AppendTlv<MeshCoP::CommissionerSessionIdTlv>(Get<MeshCoP::Commissioner>().GetSessionId()));
 
     channelMask.Init();
     channelMask.SetChannelMask(aChannelMask);
     SuccessOrExit(error = channelMask.AppendTo(*message));
 
-    SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::CountTlv>(*message, aCount));
-    SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::PeriodTlv>(*message, aPeriod));
-    SuccessOrExit(error = Tlv::AppendTlv<MeshCoP::ScanDurationTlv>(*message, aScanDuration));
+    SuccessOrExit(error = message->AppendTlv<MeshCoP::CountTlv>(aCount));
+    SuccessOrExit(error = message->AppendTlv<MeshCoP::PeriodTlv>(aPeriod));
+    SuccessOrExit(error = message->AppendTlv<MeshCoP::ScanDurationTlv>(aScanDuration));
 
     messageInfo.SetSockAddr(Get<Mle::MleRouter>().GetMeshLocal16());
     messageInfo.SetPeerAddr(aAddress);
