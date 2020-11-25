@@ -109,6 +109,121 @@ public:
 typedef Mac::Key Kek;
 
 /**
+ * This type represents a Security Policy.
+ *
+ */
+class SecurityPolicy : public otSecurityPolicy, public Equatable<SecurityPolicy>
+{
+public:
+    enum : uint8_t
+    {
+        kObtainMasterKeyFlag      = OT_SECURITY_POLICY_OBTAIN_MASTER_KEY,     ///< Obtaining the Master Key
+        kNativeCommissioningFlag  = OT_SECURITY_POLICY_NATIVE_COMMISSIONING,  ///< Native Commissioning
+        kRoutersFlag              = OT_SECURITY_POLICY_ROUTERS,               ///< Routers enabled
+        kExternalCommissionerFlag = OT_SECURITY_POLICY_EXTERNAL_COMMISSIONER, ///< External Commissioner allowed
+        kBeaconsFlag              = OT_SECURITY_POLICY_BEACONS,               ///< Beacons enabled
+        kAllFlags                 = 0xff,                                     ///< All security policy flags
+    };
+
+    enum : uint16_t
+    {
+        kMinKeyRotationTime = 1, ///< Minimum Key Rotation Time.
+    };
+
+    /**
+     * This is the default constructor for `SecurityPolicy`.
+     *
+     */
+    SecurityPolicy(void) = default;
+
+    /**
+     * This constructor initializes `SecurityPolicy` object.
+     *
+     * @param[in] aRotationTime   The key rotation time (in units of hours).
+     * @param[in] aFlags          The security policy flags.
+     *
+     */
+    SecurityPolicy(uint16_t aRotationTime, uint8_t aFlags)
+    {
+        mRotationTime = aRotationTime;
+        mFlags        = aFlags;
+    }
+
+    /**
+     * This method overloads the assignment operator `=` for `SecurityPolicy`.
+     *
+     * This method updates the Rotation Time to the value in @p aSecurityPolicy only when the value is valid (i.e.
+     * larger than `kMinKeyRotationTime`) and
+     *
+     *
+     */
+    void operator=(const SecurityPolicy &aSecurityPolicy);
+
+    /**
+     * This method gets the key rotation time (in units of hours).
+     *
+     * @returns The key rotation time.
+     *
+     */
+    uint16_t GetRotationTime(void) const { return mRotationTime; }
+
+    /**
+     * This method gets the security policy flags.
+     *
+     * @returns The security policy flags.
+     *
+     */
+    uint8_t GetFlags(void) const { return mFlags; }
+
+    /**
+     * This method indicates whether or not obtaining Master key for out-of-band is enabled.
+     *
+     * @retval TRUE   If obtaining Master key for out-of-band is enabled.
+     * @retval FALSE  If obtaining Master key for out-of-band is not enabled.
+     *
+     */
+    bool IsObtainMasterKeyEnabled(void) const { return (mFlags & kObtainMasterKeyFlag) != 0; }
+
+    /**
+     * This method indicates whether or not Native Commissioning using PSKc is allowed.
+     *
+     * @retval TRUE   If Native Commissioning using PSKc is allowed.
+     * @retval FALSE  If Native Commissioning using PSKc is not allowed.
+     *
+     */
+    bool IsNativeCommissioningAllowed(void) const { return (mFlags & kNativeCommissioningFlag) != 0; }
+
+    /**
+     * This method indicates whether or not Thread 1.1 Routers are enabled.
+     *
+     * @retval TRUE   If Thread 1.1 Routers are enabled.
+     * @retval FALSE  If Thread 1.1 Routers are not enabled.
+     *
+     */
+    bool IsRouterEnabled(void) const { return (mFlags & kRoutersFlag) != 0; }
+
+    /**
+     * This method indicates whether or not external Commissioner authentication is allowed using PSKc.
+     *
+     * @retval TRUE   If the commissioning sessions by an external Commissioner based on the PSKc are allowed
+     *                to be established and that changes to the Commissioner Dataset by on-mesh nodes are allowed.
+     * @retval FALSE  If the commissioning sessions by an external Commissioner based on the PSKc are not allowed
+     *                to be established and that changes to the Commissioner Dataset by on-mesh nodes are not allowed.
+     *
+     */
+    bool IsExternalCommissionerAllowed(void) const { return (mFlags & kExternalCommissionerFlag) != 0; }
+
+    /**
+     * This method indicates whether or not Thread Beacons are enabled.
+     *
+     * @retval TRUE   If Thread Beacons are enabled.
+     * @retval FALSE  If Thread Beacons are not enabled.
+     *
+     */
+    bool IsThreadBeaconEnabled(void) const { return (mFlags & kBeaconsFlag) != 0; }
+};
+
+/**
  * This class defines Thread Key Manager.
  *
  */
@@ -310,27 +425,20 @@ public:
     void IncrementKekFrameCounter(void) { mKekFrameCounter++; }
 
     /**
-     * This method returns the KeyRotation time.
+     * This method returns the Security Policy.
      *
-     * The KeyRotation time is the time interval after witch security key will be automatically rotated.
+     * @return A reference to the Security Policy object.
      *
-     * @returns The KeyRotation value in hours.
      */
-    uint32_t GetKeyRotation(void) const { return mKeyRotationTime; }
+    const SecurityPolicy &GetSecurityPolicy(void) const { return mSecurityPolicy; }
 
     /**
-     * This method sets the KeyRotation time.
+     * This method sets the Security Policy.
      *
-     * The KeyRotation time is the time interval after witch security key will be automatically rotated.
-     * Its value shall be larger than or equal to kMinKeyRotationTime.
-     *
-     * @param[in]  aKeyRotation  The KeyRotation value in hours.
-     *
-     * @retval  OT_ERROR_NONE          KeyRotation time updated.
-     * @retval  OT_ERROR_INVALID_ARGS  @p aKeyRotation is out of range.
+     * @param[in] The Security Policy object.
      *
      */
-    otError SetKeyRotation(uint32_t aKeyRotation);
+    void SetSecurityPolicy(const SecurityPolicy &aSecurityPolicy);
 
     /**
      * This method returns the KeySwitchGuardTime.
@@ -351,84 +459,6 @@ public:
      *
      */
     void SetKeySwitchGuardTime(uint32_t aKeySwitchGuardTime) { mKeySwitchGuardTime = aKeySwitchGuardTime; }
-
-    /**
-     * This method returns the Security Policy Flags.
-     *
-     * The Security Policy Flags specifies network administrator preferences for which
-     * security-related operations are allowed or disallowed.
-     *
-     * @returns The SecurityPolicy Flags.
-     *
-     */
-    uint8_t GetSecurityPolicyFlags(void) const { return mSecurityPolicyFlags; }
-
-    /**
-     * This method sets the Security Policy Flags.
-     *
-     * The Security Policy Flags specifies network administrator preferences for which
-     * security-related operations are allowed or disallowed.
-     *
-     * @param[in]  aSecurityPolicyFlags  The Security Policy Flags.
-     *
-     */
-    void SetSecurityPolicyFlags(uint8_t aSecurityPolicyFlags);
-
-    /**
-     * This method indicates whether or not obtaining Master key for out-of-band is enabled.
-     *
-     * @retval TRUE   If obtaining Master key for out-of-band is enabled.
-     * @retval FALSE  If obtaining Master key for out-of-band is not enabled.
-     *
-     */
-    bool IsObtainMasterKeyEnabled(void) const
-    {
-        return (mSecurityPolicyFlags & OT_SECURITY_POLICY_OBTAIN_MASTER_KEY) != 0;
-    }
-
-    /**
-     * This method indicates whether or not Native Commissioning using PSKc is allowed.
-     *
-     * @retval TRUE   If Native Commissioning using PSKc is allowed.
-     * @retval FALSE  If Native Commissioning using PSKc is not allowed.
-     *
-     */
-    bool IsNativeCommissioningAllowed(void) const
-    {
-        return (mSecurityPolicyFlags & OT_SECURITY_POLICY_NATIVE_COMMISSIONING) != 0;
-    }
-
-    /**
-     * This method indicates whether or not Thread 1.1 Routers are enabled.
-     *
-     * @retval TRUE   If Thread 1.1 Routers are enabled.
-     * @retval FALSE  If Thread 1.1 Routers are not enabled.
-     *
-     */
-    bool IsRouterEnabled(void) const { return (mSecurityPolicyFlags & OT_SECURITY_POLICY_ROUTERS) != 0; }
-
-    /**
-     * This method indicates whether or not external Commissioner authentication is allowed using PSKc.
-     *
-     * @retval TRUE   If the commissioning sessions by an external Commissioner based on the PSKc are allowed
-     *                to be established and that changes to the Commissioner Dataset by on-mesh nodes are allowed.
-     * @retval FALSE  If the commissioning sessions by an external Commissioner based on the PSKc are not allowed
-     *                to be established and that changes to the Commissioner Dataset by on-mesh nodes are not allowed.
-     *
-     */
-    bool IsExternalCommissionerAllowed(void) const
-    {
-        return (mSecurityPolicyFlags & OT_SECURITY_POLICY_EXTERNAL_COMMISSIONER) != 0;
-    }
-
-    /**
-     * This method indicates whether or not Thread Beacons are enabled.
-     *
-     * @retval TRUE   If Thread Beacons are enabled.
-     * @retval FALSE  If Thread Beacons are not enabled.
-     *
-     */
-    bool IsThreadBeaconEnabled(void) const { return (mSecurityPolicyFlags & OT_SECURITY_POLICY_BEACONS) != 0; }
 
     /**
      * This method updates the MAC keys and MLE key.
@@ -486,9 +516,7 @@ private:
     uint32_t mStoredMleFrameCounter;
 
     uint32_t   mHoursSinceKeyRotation;
-    uint32_t   mKeyRotationTime;
     uint32_t   mKeySwitchGuardTime;
-    bool       mKeySwitchGuardEnabled;
     TimerMilli mKeyRotationTimer;
 
 #if OPENTHREAD_MTD || OPENTHREAD_FTD
@@ -497,8 +525,10 @@ private:
     Kek      mKek;
     uint32_t mKekFrameCounter;
 
-    uint8_t mSecurityPolicyFlags;
-    bool    mIsPskcSet : 1;
+    SecurityPolicy mSecurityPolicy;
+
+    bool mKeySwitchGuardEnabled : 1;
+    bool mIsPskcSet : 1;
 };
 
 /**

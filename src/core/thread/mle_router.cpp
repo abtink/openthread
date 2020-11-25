@@ -2882,7 +2882,7 @@ otError MleRouter::SendDiscoveryResponse(const Ip6::Address &aDestination, uint1
     discoveryResponse.Init();
     discoveryResponse.SetVersion(kThreadVersion);
 
-    if (Get<KeyManager>().IsNativeCommissioningAllowed())
+    if (Get<KeyManager>().GetSecurityPolicy().IsNativeCommissioningAllowed())
     {
         SuccessOrExit(error = Tlv::Append<MeshCoP::CommissionerUdpPortTlv>(*message, MeshCoP::kBorderAgentUdpPort));
 

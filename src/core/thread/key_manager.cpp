@@ -66,6 +66,16 @@ const otMasterKey KeyManager::kDefaultMasterKey = {{
     0xff,
 }};
 
+void SecurityPolicy::operator=(const SecurityPolicy &aSecurityPolicy)
+{
+    if (aSecurityPolicy.mRotationTime >= kMinKeyRotationTime)
+    {
+        mRotationTime = aSecurityPolicy.mRotationTime;
+    }
+
+    mFlags = aSecurityPolicy.mFlags;
+}
+
 KeyManager::KeyManager(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mKeySequence(0)
@@ -73,12 +83,11 @@ KeyManager::KeyManager(Instance &aInstance)
     , mStoredMacFrameCounter(0)
     , mStoredMleFrameCounter(0)
     , mHoursSinceKeyRotation(0)
-    , mKeyRotationTime(kDefaultKeyRotationTime)
     , mKeySwitchGuardTime(kDefaultKeySwitchGuardTime)
-    , mKeySwitchGuardEnabled(false)
     , mKeyRotationTimer(aInstance, KeyManager::HandleKeyRotationTimer, this)
     , mKekFrameCounter(0)
-    , mSecurityPolicyFlags(0xff)
+    , mSecurityPolicy(kDefaultKeyRotationTime, SecurityPolicy::kAllFlags)
+    , mKeySwitchGuardEnabled(false)
     , mIsPskcSet(false)
 {
     mMasterKey = static_cast<const MasterKey &>(kDefaultMasterKey);
@@ -253,21 +262,9 @@ void KeyManager::SetKek(const uint8_t *aKek)
     mKekFrameCounter = 0;
 }
 
-otError KeyManager::SetKeyRotation(uint32_t aKeyRotation)
+void KeyManager::SetSecurityPolicy(const SecurityPolicy &aSecurityPolicy)
 {
-    otError result = OT_ERROR_NONE;
-
-    VerifyOrExit(aKeyRotation >= static_cast<uint32_t>(kMinKeyRotationTime), result = OT_ERROR_INVALID_ARGS);
-
-    mKeyRotationTime = aKeyRotation;
-
-exit:
-    return result;
-}
-
-void KeyManager::SetSecurityPolicyFlags(uint8_t aSecurityPolicyFlags)
-{
-    IgnoreError(Get<Notifier>().Update(mSecurityPolicyFlags, aSecurityPolicyFlags, kEventSecurityPolicyChanged));
+    IgnoreError(Get<Notifier>().Update(mSecurityPolicy, aSecurityPolicy, kEventSecurityPolicyChanged));
 }
 
 void KeyManager::StartKeyRotationTimer(void)
@@ -294,7 +291,7 @@ void KeyManager::HandleKeyRotationTimer(void)
 
     mKeyRotationTimer.StartAt(mKeyRotationTimer.GetFireTime(), kOneHourIntervalInMsec);
 
-    if (mHoursSinceKeyRotation >= mKeyRotationTime)
+    if (mHoursSinceKeyRotation >= mSecurityPolicy.GetRotationTime())
     {
         SetCurrentKeySequence(mKeySequence + 1);
     }

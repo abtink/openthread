@@ -976,27 +976,10 @@ public:
     /**
      * This method returns the Rotation Time value.
      *
-     * @returns The Rotation Time value.
+     * @returns The Rotation Time value (in units of hours)
      *
      */
     uint16_t GetRotationTime(void) const { return HostSwap16(mRotationTime); }
-
-    /**
-     * This method sets the Rotation Time value.
-     *
-     * @param[in]  aRotationTime  The Rotation Time value.
-     *
-     */
-    void SetRotationTime(uint16_t aRotationTime) { mRotationTime = HostSwap16(aRotationTime); }
-
-    enum
-    {
-        kObtainMasterKeyFlag      = OT_SECURITY_POLICY_OBTAIN_MASTER_KEY,     ///< Obtaining the Master Key
-        kNativeCommissioningFlag  = OT_SECURITY_POLICY_NATIVE_COMMISSIONING,  ///< Native Commissioning
-        kRoutersFlag              = OT_SECURITY_POLICY_ROUTERS,               ///< Routers enabled
-        kExternalCommissionerFlag = OT_SECURITY_POLICY_EXTERNAL_COMMISSIONER, ///< External Commissioner allowed
-        kBeaconsFlag              = OT_SECURITY_POLICY_BEACONS,               ///< Beacons enabled
-    };
 
     /**
      * This method returns the Flags value.
@@ -1007,12 +990,24 @@ public:
     uint8_t GetFlags(void) const { return mFlags; }
 
     /**
-     * This method sets the Flags value.
+     * This method gets the Security Policy from the TLV.
      *
-     * @param[in]  aFlags  The Flags value.
+     * @returns The Security Policy from TLV.
      *
      */
-    void SetFlags(uint8_t aFlags) { mFlags = aFlags; }
+    SecurityPolicy GetSecurityPolicy(void) const { return SecurityPolicy(GetRotationTime(), GetFlags()); }
+
+    /**
+     * This method sets the TLV from a Security Policy object.
+     *
+     * @param[in]  aSecurityPolicy  The Security Policy object.
+     *
+     */
+    void SetSecurityPolicy(const SecurityPolicy &aSecurityPolicy)
+    {
+        mRotationTime = HostSwap16(aSecurityPolicy.GetRotationTime());
+        mFlags        = aSecurityPolicy.GetFlags();
+    }
 
 private:
     uint16_t mRotationTime;

@@ -386,8 +386,7 @@ otError ActiveDataset::GenerateLocal(void)
     {
         SecurityPolicyTlv tlv;
         tlv.Init();
-        tlv.SetRotationTime(static_cast<uint16_t>(Get<KeyManager>().GetKeyRotation()));
-        tlv.SetFlags(Get<KeyManager>().GetSecurityPolicyFlags());
+        tlv.SetSecurityPolicy(Get<KeyManager>().GetSecurityPolicy());
         IgnoreError(dataset.SetTlv(tlv));
     }
 

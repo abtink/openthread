@@ -67,11 +67,11 @@ otError Dataset::Info::GenerateRandom(Instance &aInstance)
 
     Clear();
 
-    mActiveTimestamp       = 1;
-    mChannel               = preferredChannels.ChooseRandomChannel();
-    mChannelMask           = supportedChannels.GetMask();
-    mSecurityPolicy.mFlags = aInstance.Get<KeyManager>().GetSecurityPolicyFlags();
-    mPanId                 = Mac::GenerateRandomPanId();
+    mActiveTimestamp = 1;
+    mChannel         = preferredChannels.ChooseRandomChannel();
+    mChannelMask     = supportedChannels.GetMask();
+    mSecurityPolicy  = aInstance.Get<KeyManager>().GetSecurityPolicy();
+    mPanId           = Mac::GenerateRandomPanId();
 
     SuccessOrExit(error = static_cast<MasterKey &>(mMasterKey).GenerateRandom());
     SuccessOrExit(error = static_cast<Pskc &>(mPskc).GenerateRandom());
@@ -136,9 +136,7 @@ bool Dataset::Info::IsSubsetOf(const Info &aOther) const
 
     if (IsSecurityPolicyPresent())
     {
-        VerifyOrExit(aOther.IsSecurityPolicyPresent() &&
-                     GetSecurityPolicy().mRotationTime == aOther.GetSecurityPolicy().mRotationTime &&
-                     GetSecurityPolicy().mFlags == aOther.GetSecurityPolicy().mFlags);
+        VerifyOrExit(aOther.IsSecurityPolicyPresent() && GetSecurityPolicy() == aOther.GetSecurityPolicy());
     }
 
     if (IsChannelMaskPresent())
@@ -245,11 +243,8 @@ void Dataset::ConvertTo(Info &aDatasetInfo) const
             break;
 
         case Tlv::kSecurityPolicy:
-        {
-            const SecurityPolicyTlv *tlv = static_cast<const SecurityPolicyTlv *>(cur);
-            aDatasetInfo.SetSecurityPolicy(tlv->GetRotationTime(), tlv->GetFlags());
+            aDatasetInfo.SetSecurityPolicy(static_cast<const SecurityPolicyTlv *>(cur)->GetSecurityPolicy());
             break;
-        }
 
         default:
             break;
@@ -362,8 +357,7 @@ otError Dataset::SetFrom(const Info &aDatasetInfo)
     {
         SecurityPolicyTlv tlv;
         tlv.Init();
-        tlv.SetRotationTime(aDatasetInfo.GetSecurityPolicy().mRotationTime);
-        tlv.SetFlags(aDatasetInfo.GetSecurityPolicy().mFlags);
+        tlv.SetSecurityPolicy(aDatasetInfo.GetSecurityPolicy());
         IgnoreError(SetTlv(tlv));
     }
 
@@ -589,12 +583,8 @@ otError Dataset::ApplyConfiguration(Instance &aInstance, bool *aIsMasterKeyUpdat
             break;
 
         case Tlv::kSecurityPolicy:
-        {
-            const SecurityPolicyTlv *securityPolicy = static_cast<const SecurityPolicyTlv *>(cur);
-            IgnoreError(keyManager.SetKeyRotation(securityPolicy->GetRotationTime()));
-            keyManager.SetSecurityPolicyFlags(securityPolicy->GetFlags());
+            keyManager.SetSecurityPolicy(static_cast<const SecurityPolicyTlv *>(cur)->GetSecurityPolicy());
             break;
-        }
 
         default:
             break;
