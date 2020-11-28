@@ -626,6 +626,41 @@ public:
      */
     const SubMac &GetSubMac(void) const { return mSubMac; }
 
+    /**
+     * This method returns a reference to the current MAC key (for Key Mode 1) for a given Frame.
+     *
+     * @param[in] aFrame    The frame for which to get the MAC key.
+     *
+     * @returns A reference to the current MAC key.
+     *
+     */
+    const Key *GetCurrentMacKey(const Frame &aFrame) const;
+
+    /**
+     * This method returns a reference to the temporary MAC key (for Key Mode 1) for a given Frame based on a given
+     * Key Sequence.
+     *
+     * @param[in] aFrame        The frame for which to get the MAC key.
+     * @param[in] aKeySequence  The Key Sequence number (MUST be one off (+1 or -1) from current key sequence number).
+     *
+     * @returns A reference to the temporary MAC key.
+     *
+     */
+    const Key *GetTemporaryMacKey(const Frame &aFrame, uint32_t aKeySequence) const;
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+    /**
+     * This method sets the current MAC frame counter value from the value from a `TxFrame`.
+     *
+     * @param[in] TxFrame  The `TxFrame` from which to get the counter value.
+     *
+     * @retval OT_ERROR_NONE             If successful.
+     * @retval OT_ERROR_INVALID_STATE    If the raw link-layer isn't enabled.
+     *
+     */
+    void SetMacFrameCounter(TxFrame &aFrame);
+#endif
+
 private:
     enum
     {

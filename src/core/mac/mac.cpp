@@ -1022,107 +1022,6 @@ bool Mac::IsJoinable(void) const
     return (numUnsecurePorts != 0);
 }
 
-const Key *Mac::GetCurrentMacKey(const Frame &aFrame) const
-{
-    // Gets the security MAC key (for Key Mode 1) based on radio link type of `aFrame`.
-
-    const Key *key = nullptr;
-#if OPENTHREAD_CONFIG_MULTI_RADIO
-    RadioType radioType = aFrame.GetRadioType();
-#endif
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
-#if OPENTHREAD_CONFIG_MULTI_RADIO
-    if (radioType == kRadioTypeIeee802154)
-#endif
-    {
-        ExitNow(key = &Get<SubMac>().GetCurrentMacKey());
-    }
-#endif
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-#if OPENTHREAD_CONFIG_MULTI_RADIO
-    if (radioType == kRadioTypeTrel)
-#endif
-    {
-        ExitNow(key = &Get<KeyManager>().GetCurrentTrelMacKey());
-    }
-#endif
-
-    OT_UNUSED_VARIABLE(aFrame);
-
-exit:
-    return key;
-}
-
-const Key *Mac::GetTemporaryMacKey(const Frame &aFrame, uint32_t aKeySequence) const
-{
-    // Gets the security MAC key (for Key Mode 1) based on radio link
-    // type of `aFrame` and given Key Sequence.
-
-    const Key *key = nullptr;
-#if OPENTHREAD_CONFIG_MULTI_RADIO
-    RadioType radioType = aFrame.GetRadioType();
-#endif
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
-#if OPENTHREAD_CONFIG_MULTI_RADIO
-    if (radioType == kRadioTypeIeee802154)
-#endif
-    {
-        if (aKeySequence == Get<KeyManager>().GetCurrentKeySequence() - 1)
-        {
-            ExitNow(key = &Get<SubMac>().GetPreviousMacKey());
-        }
-        else if (aKeySequence == Get<KeyManager>().GetCurrentKeySequence() + 1)
-        {
-            ExitNow(key = &Get<SubMac>().GetNextMacKey());
-        }
-        else
-        {
-            OT_ASSERT(false);
-        }
-    }
-#endif
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-#if OPENTHREAD_CONFIG_MULTI_RADIO
-    if (radioType == kRadioTypeTrel)
-#endif
-    {
-        ExitNow(key = &Get<KeyManager>().GetTemporaryTrelMacKey(aKeySequence));
-    }
-#endif
-
-    OT_UNUSED_VARIABLE(aFrame);
-
-exit:
-    return key;
-}
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-void Mac::SetMacFrameCounter(TxFrame &aFrame)
-{
-#if OPENTHREAD_CONFIG_MULTI_RADIO
-    RadioType radioType = aFrame.GetRadioType();
-#endif
-
-#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-#if OPENTHREAD_CONFIG_MULTI_RADIO
-    if (radioType == kRadioTypeTrel)
-#endif
-    {
-        aFrame.SetFrameCounter(Get<KeyManager>().GetTrelMacFrameCounter());
-        Get<KeyManager>().IncrementTrelMacFrameCounter();
-        ExitNow();
-    }
-#endif
-
-exit:
-    return;
-}
-#endif // #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-
 void Mac::ProcessTransmitSecurity(TxFrame &aFrame)
 {
     KeyManager &      keyManager = Get<KeyManager>();
@@ -1160,7 +1059,7 @@ void Mac::ProcessTransmitSecurity(TxFrame &aFrame)
 #endif
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-        aFrame.SetAesKey(*GetCurrentMacKey(aFrame));
+        aFrame.SetAesKey(*mLinks.GetCurrentMacKey(aFrame));
         extAddress = &GetExtAddress();
 
         // If the frame is marked as a retransmission, `MeshForwarder` which
@@ -1171,7 +1070,7 @@ void Mac::ProcessTransmitSecurity(TxFrame &aFrame)
 
         if (!aFrame.IsARetransmission())
         {
-            SetMacFrameCounter(aFrame);
+            mLinks.SetMacFrameCounter(aFrame);
             aFrame.SetKeyId((keyManager.GetCurrentKeySequence() & 0x7f) + 1);
         }
 #endif
@@ -1838,17 +1737,17 @@ otError Mac::ProcessReceiveSecurity(RxFrame &aFrame, const Address &aSrcAddr, Ne
         if (keyid == (keyManager.GetCurrentKeySequence() & 0x7f))
         {
             keySequence = keyManager.GetCurrentKeySequence();
-            macKey      = GetCurrentMacKey(aFrame);
+            macKey      = mLinks.GetCurrentMacKey(aFrame);
         }
         else if (keyid == ((keyManager.GetCurrentKeySequence() - 1) & 0x7f))
         {
             keySequence = keyManager.GetCurrentKeySequence() - 1;
-            macKey      = GetTemporaryMacKey(aFrame, keySequence);
+            macKey      = mLinks.GetTemporaryMacKey(aFrame, keySequence);
         }
         else if (keyid == ((keyManager.GetCurrentKeySequence() + 1) & 0x7f))
         {
             keySequence = keyManager.GetCurrentKeySequence() + 1;
-            macKey      = GetTemporaryMacKey(aFrame, keySequence);
+            macKey      = mLinks.GetTemporaryMacKey(aFrame, keySequence);
         }
         else
         {

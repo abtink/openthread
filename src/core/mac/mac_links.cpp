@@ -175,5 +175,106 @@ void Links::Send(TxFrame &aFrame, RadioTypes aRadioTypes)
 
 #endif // #if OPENTHREAD_CONFIG_MULTI_RADIO
 
+const Key *Links::GetCurrentMacKey(const Frame &aFrame) const
+{
+    // Gets the security MAC key (for Key Mode 1) based on radio link type of `aFrame`.
+
+    const Key *key = nullptr;
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    RadioType radioType = aFrame.GetRadioType();
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    if (radioType == kRadioTypeIeee802154)
+#endif
+    {
+        ExitNow(key = &Get<SubMac>().GetCurrentMacKey());
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    if (radioType == kRadioTypeTrel)
+#endif
+    {
+        ExitNow(key = &Get<KeyManager>().GetCurrentTrelMacKey());
+    }
+#endif
+
+    OT_UNUSED_VARIABLE(aFrame);
+
+exit:
+    return key;
+}
+
+const Key *Links::GetTemporaryMacKey(const Frame &aFrame, uint32_t aKeySequence) const
+{
+    // Gets the security MAC key (for Key Mode 1) based on radio link
+    // type of `aFrame` and given Key Sequence.
+
+    const Key *key = nullptr;
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    RadioType radioType = aFrame.GetRadioType();
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    if (radioType == kRadioTypeIeee802154)
+#endif
+    {
+        if (aKeySequence == Get<KeyManager>().GetCurrentKeySequence() - 1)
+        {
+            ExitNow(key = &Get<SubMac>().GetPreviousMacKey());
+        }
+        else if (aKeySequence == Get<KeyManager>().GetCurrentKeySequence() + 1)
+        {
+            ExitNow(key = &Get<SubMac>().GetNextMacKey());
+        }
+        else
+        {
+            OT_ASSERT(false);
+        }
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    if (radioType == kRadioTypeTrel)
+#endif
+    {
+        ExitNow(key = &Get<KeyManager>().GetTemporaryTrelMacKey(aKeySequence));
+    }
+#endif
+
+    OT_UNUSED_VARIABLE(aFrame);
+
+exit:
+    return key;
+}
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+void Links::SetMacFrameCounter(TxFrame &aFrame)
+{
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    RadioType radioType = aFrame.GetRadioType();
+#endif
+
+#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    if (radioType == kRadioTypeTrel)
+#endif
+    {
+        aFrame.SetFrameCounter(Get<KeyManager>().GetTrelMacFrameCounter());
+        Get<KeyManager>().IncrementTrelMacFrameCounter();
+        ExitNow();
+    }
+#endif
+
+exit:
+    return;
+}
+#endif // #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
+
 } // namespace Mac
 } // namespace ot

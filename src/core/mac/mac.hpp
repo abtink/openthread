@@ -830,12 +830,6 @@ private:
     otError ProcessEnhAckSecurity(TxFrame &aTxFrame, RxFrame &aAckFrame);
 #endif
 
-    const Key *GetCurrentMacKey(const Frame &aFrame) const;
-    const Key *GetTemporaryMacKey(const Frame &aFrame, uint32_t aKeySequence) const;
-#if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-    void SetMacFrameCounter(TxFrame &aFrame);
-#endif
-
     void     UpdateIdleMode(void);
     void     StartOperation(Operation aOperation);
     void     FinishOperation(void);
