@@ -316,19 +316,13 @@ exit:
     return error;
 }
 
-void ResourceRecord::Init(uint16_t aType, uint16_t aClass, uint32_t aTtl)
+void UpdateLeaseOptRecord::Init(void)
 {
-    SetType(aType);
-    SetClass(aClass);
-    SetTtl(aTtl);
-    SetLength(0);
-}
-
-void ResourceRecordAaaa::Init(void)
-{
-    ResourceRecord::Init(kTypeAaaa);
-    SetLength(sizeof(mAddress));
-    mAddress.Clear();
+    OptRecord::Init(0); // Update lease uses CLASS value zero.
+    SetTtl(0);
+    SetLength(static_cast<uint16_t>(sizeof(UpdateLeaseOptRecord) - sizeof(ResourceRecord)));
+    SetOptionCode(kOptionCodeUpdateLease);
+    SetOptionLength(static_cast<uint16_t>(sizeof(UpdateLeaseOptRecord) - sizeof(OptRecord)));
 }
 
 } // namespace Dns
