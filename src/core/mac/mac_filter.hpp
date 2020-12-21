@@ -239,14 +239,20 @@ private:
         ExtAddress mExtAddress; // IEEE 802.15.4 Extended Address.
 
         bool IsInUse(void) const { return mFiltered || (mRssIn != kFixedRssDisabled); }
+
+        void Clear(void)
+        {
+            mFiltered = false;
+            mRssIn    = kFixedRssDisabled;
+        }
     };
 
     FilterEntry *FindAvailableEntry(void);
     FilterEntry *FindEntry(const ExtAddress &aExtAddress);
 
-    Mode        mMode;
-    int8_t      mDefaultRssIn;
-    FilterEntry mFilterEntries[kMaxEntries];
+    Mode                                    mMode;
+    int8_t                                  mDefaultRssIn;
+    UnorderedList<FilterEntry, kMaxEntries> mFilterEntries;
 };
 
 /**

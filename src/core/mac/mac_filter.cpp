@@ -44,11 +44,6 @@ Filter::Filter(void)
     : mMode(kModeRssInOnly)
     , mDefaultRssIn(kFixedRssDisabled)
 {
-    for (FilterEntry &entry : mFilterEntries)
-    {
-        entry.mFiltered = false;
-        entry.mRssIn    = kFixedRssDisabled;
-    }
 }
 
 Filter::FilterEntry *Filter::FindEntry(const ExtAddress &aExtAddress)
@@ -85,18 +80,25 @@ exit:
 
 otError Filter::AddAddress(const ExtAddress &aExtAddress)
 {
-    otError      error = OT_ERROR_NONE;
-    FilterEntry *entry = FindEntry(aExtAddress);
+    otError      error;
+    FilterEntry *entry;
 
-    if (entry == nullptr)
+    switch (error = mFilterEntries.AddMatching(aExtAddress, entry))
     {
-        VerifyOrExit((entry = FindAvailableEntry()) != nullptr, error = OT_ERROR_NO_BUFS);
+    case OT_ERROR_NONE:
         entry->mExtAddress = aExtAddress;
+
+        // Fall through
+
+    case OT_ERROR_ALREADY:
+        entry->mFiltered = true;
+        error = OT_ERROR_NONE;
+        break;
+
+    default:
+        break;
     }
 
-    entry->mFiltered = true;
-
-exit:
     return error;
 }
 
