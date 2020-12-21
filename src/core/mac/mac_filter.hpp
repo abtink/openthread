@@ -39,6 +39,7 @@
 #include <stdint.h>
 
 #include "common/non_copyable.hpp"
+#include "common/unordered_list.hpp"
 #include "mac/mac_frame.hpp"
 
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
