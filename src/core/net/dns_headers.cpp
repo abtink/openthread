@@ -419,13 +419,50 @@ const char *ResourceRecord::TypeToString(uint16_t aType)
     return str;
 }
 
+bool AaaaRecord::IsValid(void) const
+{
+    return GetType() == Dns::ResourceRecord::kTypeAaaa && GetSize() == sizeof(*this);
+}
+
+bool KeyRecord::IsValid(void) const
+{
+    return GetType() == Dns::ResourceRecord::kTypeKey;
+}
+
+void Ecdsa256KeyRecord::Init(void)
+{
+    KeyRecord::Init();
+    SetAlgorithm(kAlgorithmEcdsaP256Sha256);
+}
+
+bool Ecdsa256KeyRecord::IsValid(void) const
+{
+    return KeyRecord::IsValid() && GetLength() == sizeof(*this) - sizeof(ResourceRecord) &&
+           GetAlgorithm() == kAlgorithmEcdsaP256Sha256;
+}
+
+bool SigRecord::IsValid(void) const
+{
+    return GetType() == Dns::ResourceRecord::kTypeSig && GetLength() >= sizeof(*this) - sizeof(ResourceRecord);
+}
+
 void UpdateLeaseOptRecord::Init(void)
 {
-    OptRecord::Init(kClassZero); // Update lease uses CLASS value zero.
+    OptRecord::Init(0); // Update lease uses CLASS value zero.
     SetTtl(0);
     SetLength(static_cast<uint16_t>(sizeof(UpdateLeaseOptRecord) - sizeof(ResourceRecord)));
     SetOptionCode(kOptionCodeUpdateLease);
-    SetOptionLength(kOptionLength);
+    SetOptionLength(static_cast<uint16_t>(sizeof(UpdateLeaseOptRecord) - sizeof(OptRecord)));
+}
+
+bool UpdateLeaseOptRecord::IsValid(void) const
+{
+    return GetType() == Dns::ResourceRecord::kTypeOpt && GetClass() == kClassZero && GetTtl() == 0 &&
+           GetOptionCode() == Dns::OptRecord::kOptionCodeUpdateLease &&
+           GetOptionLength() == sizeof(UpdateLeaseOptRecord) - sizeof(OptRecord) &&
+           GetLeaseInterval() <= GetKeyLeaseInterval() &&
+           // Earlier version of the Lease Option includes optional serial number at the end.
+           GetSize() >= sizeof(*this);
 }
 
 } // namespace Dns

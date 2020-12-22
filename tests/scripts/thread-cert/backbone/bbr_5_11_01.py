@@ -91,6 +91,7 @@ class BBR_5_11_01(thread_cert.TestCase):
         self.simulator.go(5)
         self.assertEqual('router', self.nodes[ROUTER2].get_state())
 
+        self.nodes[BR_1].disable_srp_server()
         self.nodes[BR_1].start()
         self.simulator.go(5)
         self.assertEqual('router', self.nodes[BR_1].get_state())

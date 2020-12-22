@@ -65,6 +65,17 @@ const char *StringFind(const char *aString, char aChar)
     return ret;
 }
 
+bool StringStartsWith(const char *aString, const char *aPrefix)
+{
+    while (aString[0] != '\0' && aPrefix[0] != '\0' && aString[0] == aPrefix[0])
+    {
+        ++aString;
+        ++aPrefix;
+    }
+
+    return (aPrefix[0] == '\0');
+}
+
 otError StringBase::Write(char *aBuffer, uint16_t aSize, uint16_t &aLength, const char *aFormat, va_list aArgs)
 {
     otError error = OT_ERROR_NONE;

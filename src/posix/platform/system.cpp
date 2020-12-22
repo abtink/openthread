@@ -36,9 +36,11 @@
 #include "platform-posix.h"
 
 #include <assert.h>
+#include <stdlib.h>
 
 #include <openthread-core-config.h>
 #include <openthread/border_router.h>
+#include <openthread/heap.h>
 #include <openthread/tasklet.h>
 #include <openthread/platform/alarm-milli.h>
 #include <openthread/platform/otns.h>
@@ -69,6 +71,10 @@ otInstance *otSysInit(otPlatformConfig *aPlatformConfig)
 {
     otInstance *        instance = nullptr;
     ot::Posix::RadioUrl radioUrl(aPlatformConfig->mRadioUrl);
+
+#if OPENTHREAD_CONFIG_HEAP_EXTERNAL_ENABLE
+    otHeapSetCAllocFree(calloc, free);
+#endif
 
 #if OPENTHREAD_POSIX_VIRTUAL_TIME
     // The last argument must be the node id

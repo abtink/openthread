@@ -682,6 +682,16 @@ class NodeImpl:
         self.send_command(cmd)
         self._expect('Done')
 
+    def enable_srp_server(self):
+        cmd = 'srpserver enable'
+        self.send_command(cmd)
+        self._expect('Done')
+
+    def disable_srp_server(self):
+        cmd = 'srpserver disable'
+        self.send_command(cmd)
+        self._expect('Done')
+
     def enable_backbone_router(self):
         cmd = 'bbr enable'
         self.send_command(cmd)

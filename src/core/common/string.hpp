@@ -80,6 +80,17 @@ uint16_t StringLength(const char *aString, uint16_t aMaxLength);
 const char *StringFind(const char *aString, char aChar);
 
 /**
+ * This function tells if a string starts with a given prefix.
+ *
+ * @param  aString  A pointer to the string.
+ * @param  aPrefix  A pointer to the prefix.
+ *
+ * @returns  A boolean indicates whether the string starts with the prefix.
+ *
+ */
+bool StringStartsWith(const char *aString, const char *aPrefix);
+
+/**
  * This class defines the base class for `String`.
  *
  */

@@ -246,7 +246,7 @@ public:
         /**
          * This method gets the pointer to the buffer containing the public key (as an uncompressed curve point).
          *
-         * @return The pointer to the buffer containing the public key (with `kSize` bytes).
+         * @return The pointer to the buffer containing the public key (with `1 + kSize` bytes).
          *
          */
         const uint8_t *GetBytes(void) const { return mData; }

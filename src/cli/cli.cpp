@@ -143,6 +143,8 @@ Interpreter::Interpreter(Instance *aInstance)
 #endif
 #if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
     , mSrpClient(*this)
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+    , mSrpServer(*this)
 #endif
     , mInstance(aInstance)
 {
@@ -4081,6 +4083,13 @@ otError Interpreter::ProcessCommissioner(uint8_t aArgsLength, char *aArgs[])
 otError Interpreter::ProcessJoiner(uint8_t aArgsLength, char *aArgs[])
 {
     return mJoiner.Process(aArgsLength, aArgs);
+}
+#endif
+
+#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+otError Interpreter::ProcessSrpServer(uint8_t aArgsLength, char *aArgs[])
+{
+    return mSrpServer.Process(aArgsLength, aArgs);
 }
 #endif
 

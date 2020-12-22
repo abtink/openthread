@@ -567,6 +567,64 @@ void otLogDebg(otLogRegion aRegion, const char *aRegionPrefix, const char *aForm
 #endif
 
 /**
+ * @def otLogCritSrp
+ *
+ * This function generates a log with level critical for the Service Registration Protocol(SRP) region.
+ *
+ * @param[in]  ...  Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogWarnSrp
+ *
+ * This function generates a log with level warning for the Service Registration Protocol(SRP) region.
+ *
+ * @param[in]  ...  Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogNoteSrp
+ *
+ * This function generates a log with level note for the Service Registration Protocol(SRP) region.
+ *
+ * @param[in]  ...  Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogInfoSrp
+ *
+ * This function generates a log with level info for the Service Registration Protocol(SRP) region.
+ *
+ * @param[in]  ...  Arguments for the format specification.
+ *
+ */
+
+/**
+ * @def otLogDebgSrp
+ *
+ * This function generates a log with level debug for the Service Registration Protocol(SRP) region.
+ *
+ * @param[in]  ...  Arguments for the format specification.
+ *
+ */
+#if OPENTHREAD_CONFIG_LOG_SRP
+#define otLogCritSrp(...) otLogCrit(OT_LOG_REGION_SRP, _OT_REGION_SRP_PREFIX, __VA_ARGS__)
+#define otLogWarnSrp(...) otLogWarn(OT_LOG_REGION_SRP, _OT_REGION_SRP_PREFIX, __VA_ARGS__)
+#define otLogNoteSrp(...) otLogNote(OT_LOG_REGION_SRP, _OT_REGION_SRP_PREFIX, __VA_ARGS__)
+#define otLogInfoSrp(...) otLogInfo(OT_LOG_REGION_SRP, _OT_REGION_SRP_PREFIX, __VA_ARGS__)
+#define otLogDebgSrp(...) otLogDebg(OT_LOG_REGION_SRP, _OT_REGION_SRP_PREFIX, __VA_ARGS__)
+#else
+#define otLogCritSrp(...)
+#define otLogWarnSrp(...)
+#define otLogNoteSrp(...)
+#define otLogInfoSrp(...)
+#define otLogDebgSrp(...)
+#endif
+
+/**
  * @def otLogCritMlr
  *
  * This function generates a log with level critical for the Multicast Listener Registration (MLR) region.

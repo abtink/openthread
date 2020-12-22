@@ -65,4 +65,14 @@
 #define OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE 0
 #endif
 
+/**
+ * @def OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+ *
+ * Define to 1 to enable SRP server support.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
+#define OPENTHREAD_CONFIG_SRP_SERVER_ENABLE 0
+#endif
+
 #endif // CONFIG_BORDER_ROUTER_H_
