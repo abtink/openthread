@@ -35,12 +35,69 @@
 
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
+#include "common/random.hpp"
 #include "common/string.hpp"
 
 namespace ot {
 namespace Dns {
 
 using ot::Encoding::BigEndian::HostSwap16;
+
+otError Header::SetRandomMessageId(void)
+{
+    return Random::Crypto::FillBuffer(reinterpret_cast<uint8_t *>(&mMessageId), sizeof(mMessageId));
+}
+
+otError Header::ResponseCodeToError(Response aResponse)
+{
+    otError error = OT_ERROR_FAILED;
+
+    switch (aResponse)
+    {
+    case kResponseSuccess:
+        error = OT_ERROR_NONE;
+        break;
+
+    case kResponseFormatError:   // Server unable to interpret request due to format error.
+    case kResponseBadName:       // Bad name
+    case kResponseBadTruncation: // Bad truncation.
+    case kResponseNotZone:       // A name is not in the zone.
+        error = OT_ERROR_PARSE;
+        break;
+
+    case kResponseServerFailure: // Server encountered an internal failure,
+        error = OT_ERROR_FAILED;
+        break;
+
+    case kResponseNameError:       // Name that ought to exist, does not exists.
+    case kResponseRecordNotExists: // Some RRset that out to exist, does not exist.
+        error = OT_ERROR_NOT_FOUND;
+        break;
+
+    case kResponseNotImplemented: // Server does not support the query type (OpCode).
+        error = OT_ERROR_NOT_IMPLEMENTED;
+        break;
+
+    case kResponseBadAlg: // Bad algorithm.
+        error = OT_ERROR_NOT_CAPABLE;
+        break;
+
+    case kResponseNameExists:   // Some name that ought not to exist, does exist.
+    case kResponseRecordExists: // Some RRset that ought not to exits, does exist.
+        error = OT_ERROR_DUPLICATED;
+        break;
+
+    case kResponseRefused: // Server refused to perform operation for policy or security reasons.
+    case kResponseNotAuth: // Service is not authoritative for zone.
+        error = OT_ERROR_SECURITY;
+        break;
+
+    default:
+        break;
+    }
+
+    return error;
+}
 
 otError Name::AppendLabel(const char *aLabel, Message &aMessage)
 {
@@ -316,19 +373,59 @@ exit:
     return error;
 }
 
-void ResourceRecord::Init(uint16_t aType, uint16_t aClass, uint32_t aTtl)
+const char *ResourceRecord::TypeToString(uint16_t aType)
 {
-    SetType(aType);
-    SetClass(aClass);
-    SetTtl(aTtl);
-    SetLength(0);
+    const char *str = "Unknown";
+
+    switch (aType)
+    {
+    case kTypeZero:
+        str = "ZERO";
+        break;
+    case kTypeA:
+        str = "A";
+        break;
+    case kTypeSoa:
+        str = "SOA";
+        break;
+    case kTypePtr:
+        str = "PTR";
+        break;
+    case kTypeTxt:
+        str = "TXT";
+        break;
+    case kTypeSig:
+        str = "SIG";
+        break;
+    case kTypeKey:
+        str = "KEY";
+        break;
+    case kTypeAaaa:
+        str = "AAAA";
+        break;
+    case kTypeSrv:
+        str = "SRV";
+        break;
+    case kTypeOpt:
+        str = "OPT";
+        break;
+    case kTypeAny:
+        str = "ANY";
+        break;
+    default:
+        break;
+    };
+
+    return str;
 }
 
-void ResourceRecordAaaa::Init(void)
+void UpdateLeaseOptRecord::Init(void)
 {
-    ResourceRecord::Init(kTypeAaaa);
-    SetLength(sizeof(mAddress));
-    mAddress.Clear();
+    OptRecord::Init(kClassZero); // Update lease uses CLASS value zero.
+    SetTtl(0);
+    SetLength(static_cast<uint16_t>(sizeof(UpdateLeaseOptRecord) - sizeof(ResourceRecord)));
+    SetOptionCode(kOptionCodeUpdateLease);
+    SetOptionLength(kOptionLength);
 }
 
 } // namespace Dns
