@@ -373,6 +373,52 @@ exit:
     return error;
 }
 
+const char *ResourceRecord::TypeToString(uint16_t aType)
+{
+    const char *str = "Unknown";
+
+    switch (aType)
+    {
+    case kTypeZero:
+        str = "ZERO";
+        break;
+    case kTypeA:
+        str = "A";
+        break;
+    case kTypeSoa:
+        str = "SOA";
+        break;
+    case kTypePtr:
+        str = "PTR";
+        break;
+    case kTypeTxt:
+        str = "TXT";
+        break;
+    case kTypeSig:
+        str = "SIG";
+        break;
+    case kTypeKey:
+        str = "KEY";
+        break;
+    case kTypeAaaa:
+        str = "AAAA";
+        break;
+    case kTypeSrv:
+        str = "SRV";
+        break;
+    case kTypeOpt:
+        str = "OPT";
+        break;
+    case kTypeAny:
+        str = "ANY";
+        break;
+    default:
+        break;
+    };
+
+    return str;
+}
+
 void UpdateLeaseOptRecord::Init(void)
 {
     OptRecord::Init(kClassZero); // Update lease uses CLASS value zero.
