@@ -855,6 +855,14 @@ public:
      */
     uint32_t GetSize(void) const { return sizeof(ResourceRecord) + GetLength(); }
 
+    /**
+     * This static method converts a Resource Record type to a string.
+     *
+     * @param[in]  aType    The type of the resource record.
+     *
+     */
+    const char *TypeToString(uint16_t aType);
+
 private:
     uint16_t mType;   // The type of the data in RDATA section.
     uint16_t mClass;  // The class of the data in RDATA section.
