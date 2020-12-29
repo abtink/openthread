@@ -210,6 +210,8 @@ Client::Client(Instance &aInstance)
     , mCallbackContext(nullptr)
     , mDomainName(kDefaultDomainName)
     , mTimer(aInstance, Client::HandleTimer, this)
+    // TODO: REMOVE THIS:
+    , mTestTimer(aInstance, Client::HandleTestTimer, this)
 {
     mHostInfo.Init();
 
@@ -596,6 +598,10 @@ void Client::SendUpdate(void)
 
     VerifyOrExit(message != nullptr, error = OT_ERROR_NO_BUFS);
     SuccessOrExit(error = PrepareUpdateMessage(*message));
+
+    // TODO: REMOVE FOR TEST ONLY
+    TestParseLogMessage(*message);
+
     SuccessOrExit(error = mSocket.SendTo(*message, Ip6::MessageInfo()));
 
     otLogInfoSrp("[client] Send update");
@@ -1524,6 +1530,119 @@ void Client::LogRetryWaitInterval(void) const
 }
 
 #endif // #if (OPENTHREAD_CONFIG_LOG_LEVEL >= OT_LOG_LEVEL_INFO) && (OPENTHREAD_CONFIG_LOG_SRP == 1)
+
+//======================================================================================================================
+// For TESTING ONLY
+
+void Client::TestParseLogMessage(const Message &aMessage)
+{
+    static uint32_t counter = 0;
+
+    otError error;
+
+    uint16_t            offset = 0;
+    char                name[258];
+    Dns::UpdateHeader header;
+    Dns::ResourceRecord rr;
+    uint16_t            recordCount;
+
+    otLogInfoSrp("TEST -------------------------");
+
+    SuccessOrExit(error = aMessage.Read(offset, header));
+
+    otLogInfoSrp("\tTEST header.GetType() = %d", header.GetType());
+    otLogInfoSrp("\tTEST header.GetQueryType() = %d", header.GetQueryType());
+    otLogInfoSrp("\tTEST header.GetMessageId() = %d", header.GetMessageId());
+    otLogInfoSrp("\tTEST header.GetZoneRecordCount() = %d", header.GetZoneRecordCount());
+    otLogInfoSrp("\tTEST header.GetPrerequisiteRecordCount() = %d", header.GetPrerequisiteRecordCount());
+    otLogInfoSrp("\tTEST header.GetUpdateRecordCount() = %d", header.GetUpdateRecordCount());
+    otLogInfoSrp("\tTEST header.GetAdditionalRecordsCount() = %d", header.GetAdditionalRecordsCount());
+
+    offset += sizeof(header);
+
+    // Zone:
+    SuccessOrExit(error = Dns::Name::ReadName(aMessage, offset, 0, name, sizeof(name)));
+    offset += sizeof(Dns::Zone);
+    otLogInfoSrp("\tTEST Zone name \"%s\"", name);
+
+    for (uint8_t section = 1; section < 4; section++)
+    {
+        switch (section)
+        {
+        case 1:
+            otLogInfoSrp("TEST Prerequisite");
+            recordCount = header.GetPrerequisiteRecordCount();
+            break;
+        case 2:
+            otLogInfoSrp("TEST Update");
+            recordCount = header.GetUpdateRecordCount();
+            break;
+        case 3:
+            otLogInfoSrp("TEST Additional Data");
+            recordCount = header.GetAdditionalRecordsCount();
+            break;
+        default:
+            break;
+        }
+
+        while (recordCount > 0)
+        {
+            SuccessOrExit(error = Dns::Name::ReadName(aMessage, offset, 0, name, sizeof(name)));
+            // otLogInfoSrp("\t TEZSTING ReadName no error, %s, offset:%d", name, offset);
+
+            SuccessOrExit(error = aMessage.Read(offset, rr));
+            // otLogInfoSrp("\t TEZSTING ReadRR no error, offset:%d", offset);
+
+            VerifyOrExit(offset + rr.GetSize() <= aMessage.GetLength(), error = OT_ERROR_PARSE);
+            offset += static_cast<uint16_t>(rr.GetSize());
+
+            otLogInfoSrp("\tTEST record name \"%s\", type:%d, class:%d, ttl:%u, dlen:%d", name, rr.GetType(),
+                         rr.GetClass(), rr.GetTtl(), rr.GetLength());
+
+            recordCount--;
+        }
+    }
+
+    counter++;
+    if (counter % 4 == 0)
+    {
+        FreeMessage(mResponse);
+        mResponse = aMessage.Clone();
+        VerifyOrExit(mResponse != nullptr);
+
+        header.SetType(Dns::Header::kTypeResponse);
+        mResponse->Write(0, header);
+        mResponse->SetOffset(0);
+
+        mTestTimer.Start(10);
+        otLogInfoSrp("TEST %d Echo what was sent as response!", counter);
+    }
+    else
+    {
+        otLogInfoSrp("TEST %d Drop the msg (no response)", counter);
+    }
+
+exit:
+    return;
+}
+
+void Client::HandleTestTimer(Timer &aTimer)
+{
+    aTimer.GetOwner<Client>().HandleTestTimer();
+}
+
+void Client::HandleTestTimer(void)
+{
+    otLogInfoSrp("TEST Test timer fired");
+
+    if (mResponse != nullptr)
+    {
+
+        ProcessResponse(*mResponse);
+        FreeMessage(mResponse);
+        mResponse = nullptr;
+    }
+}
 
 } // namespace Srp
 } // namespace ot

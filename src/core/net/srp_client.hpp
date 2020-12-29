@@ -699,6 +699,14 @@ private:
     HostInfo            mHostInfo;
     LinkedList<Service> mServices;
     TimerMilli          mTimer;
+
+    //==================================================================================
+    void        TestParseLogMessage(const Message &aMessage);
+    static void HandleTestTimer(Timer &aTimer);
+    void        HandleTestTimer(void);
+
+    TimerMilli mTestTimer;
+    Message *  mResponse;
 };
 
 } // namespace Srp
