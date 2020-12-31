@@ -51,6 +51,7 @@
 #include "thread/mle.hpp"
 #include "thread/mle_router.hpp"
 #include "thread/thread_netif.hpp"
+#include "crypto/ecdsa.hpp"
 
 namespace ot {
 
@@ -147,6 +148,23 @@ void MeshForwarder::Stop(void)
     mEnabled     = false;
     mSendMessage = nullptr;
     Get<Mac::Mac>().SetRxOnWhenIdle(false);
+
+    {
+        Crypto::Ecdsa::P256::KeyPair   keyPair;
+        Crypto::Ecdsa::P256::PublicKey publicKey;
+        Crypto::Ecdsa::P256::Signature signature;
+        Crypto::Sha256                 sha256;
+        Crypto::Sha256::Hash           hash;
+
+        SuccessOrExit(keyPair.Generate());
+        SuccessOrExit(keyPair.GetPublicKey(publicKey));
+
+        sha256.Start();
+        sha256.Finish(hash);
+
+        SuccessOrExit(keyPair.Sign(hash, signature));
+        SuccessOrExit(publicKey.Verify(hash, signature));
+    }
 
 exit:
     return;
