@@ -1484,7 +1484,6 @@ public:
         kOptionLength = sizeof(uint32_t) + sizeof(uint32_t), ///< Option length (lease and key lease values)
     };
 
-
     /**
      * This method initializes the Update Lease OPT Resource Record.
      *

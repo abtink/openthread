@@ -173,10 +173,10 @@ public:
      * @param[in]  aMessageInfo  The message info associated to the SRP update message.
      *
      */
-    void HandleSrpUpdateResult(otError                 aError,
-                               const Dns::UpdateHeader &     aDnsHeader,
-                               Host &                  aHost,
-                               const Ip6::MessageInfo &aMessageInfo);
+    void HandleSrpUpdateResult(otError                  aError,
+                               const Dns::UpdateHeader &aDnsHeader,
+                               Host &                   aHost,
+                               const Ip6::MessageInfo & aMessageInfo);
 
     /**
      * This class represents a server-side SRP service.
@@ -683,11 +683,11 @@ private:
         UpdateMetadata(const Dns::UpdateHeader &aHeader, Host *aHost, const Ip6::MessageInfo &aMessageInfo);
         ~UpdateMetadata() = default;
 
-        TimeMilli        mExpireTime;  // Expire time of this update; In milliseconds.
-        Dns::UpdateHeader      mDnsHeader;   // The header of the DNS update request.
-        Host *           mHost;        // The host will be updated. The UpdateMetadata has no ownership of this host.
-        Ip6::MessageInfo mMessageInfo; // The message info of the DNS update request.
-        UpdateMetadata * mNext;        // The pointer to the next UpdateMetadata object.
+        TimeMilli         mExpireTime;  // Expire time of this update; In milliseconds.
+        Dns::UpdateHeader mDnsHeader;   // The header of the DNS update request.
+        Host *            mHost;        // The host will be updated. The UpdateMetadata has no ownership of this host.
+        Ip6::MessageInfo  mMessageInfo; // The message info of the DNS update request.
+        UpdateMetadata *  mNext;        // The pointer to the next UpdateMetadata object.
     };
 
     void           Start();
@@ -695,37 +695,37 @@ private:
     void           HandleNotifierEvents(Events aEvents);
     otError        PublishService();
     void           UnpublishService();
-    void           HandleDnsUpdate(Message &               aMessage,
-                                   const Ip6::MessageInfo &aMessageInfo,
-                                   const Dns::UpdateHeader &     aDnsHeader,
-                                   uint16_t                aOffset);
-    otError        ProcessZoneSection(const Message &    aMessage,
+    void           HandleDnsUpdate(Message &                aMessage,
+                                   const Ip6::MessageInfo & aMessageInfo,
+                                   const Dns::UpdateHeader &aDnsHeader,
+                                   uint16_t                 aOffset);
+    otError        ProcessZoneSection(const Message &          aMessage,
                                       const Dns::UpdateHeader &aDnsHeader,
-                                      uint16_t &         aOffset,
-                                      Dns::Zone &        aZone);
-    otError        ProcessUpdateSection(Host &             aHost,
-                                        const Message &    aMessage,
+                                      uint16_t &               aOffset,
+                                      Dns::Zone &              aZone);
+    otError        ProcessUpdateSection(Host &                   aHost,
+                                        const Message &          aMessage,
                                         const Dns::UpdateHeader &aDnsHeader,
-                                        const Dns::Zone &  aZone,
-                                        uint16_t           aHeaderOffset,
-                                        uint16_t &         aOffset);
-    otError        ProcessAdditionalSection(Host *             aHost,
-                                            const Message &    aMessage,
+                                        const Dns::Zone &        aZone,
+                                        uint16_t                 aHeaderOffset,
+                                        uint16_t &               aOffset);
+    otError        ProcessAdditionalSection(Host *                   aHost,
+                                            const Message &          aMessage,
                                             const Dns::UpdateHeader &aDnsHeader,
-                                            uint16_t           aHeaderOffset,
-                                            uint16_t &         aOffset);
+                                            uint16_t                 aHeaderOffset,
+                                            uint16_t &               aOffset);
     otError        VerifySignature(const Dns::Ecdsa256KeyRecord &aKey,
                                    const Message &               aMessage,
-                                   Dns::UpdateHeader                   aDnsHeader,
+                                   Dns::UpdateHeader             aDnsHeader,
                                    uint16_t                      aSigOffset,
                                    uint16_t                      aSigRdataOffset,
                                    uint16_t                      aSigRdataLength);
-    static otError HandleDiscoveryInstructions(Host &             aHost,
-                                               const Message &    aMessage,
+    static otError HandleDiscoveryInstructions(Host &                   aHost,
+                                               const Message &          aMessage,
                                                const Dns::UpdateHeader &aDnsHeader,
-                                               const Dns::Zone &  aZone,
-                                               uint16_t           aHeaderOffset,
-                                               uint16_t           aOffset);
+                                               const Dns::Zone &        aZone,
+                                               uint16_t                 aHeaderOffset,
+                                               uint16_t                 aOffset);
 
     /**
      * This method handles a "Delete All RRsets from a name" update for both the host and all services
@@ -750,13 +750,13 @@ private:
     void        RemoveHost(Host *aHost);
     Service *   FindService(const char *aFullName);
     bool        HasNameConflictsWith(Host &aHost);
-    void        SendResponse(const Dns::UpdateHeader &     aHeader,
-                             Dns::Header::Response   aResponseCode,
-                             const Ip6::MessageInfo &aMessageInfo);
-    void        SendResponse(const Dns::UpdateHeader &     aHeader,
-                             uint32_t                aLease,
-                             uint32_t                aKeyLease,
-                             const Ip6::MessageInfo &aMessageInfo);
+    void        SendResponse(const Dns::UpdateHeader &aHeader,
+                             Dns::Header::Response    aResponseCode,
+                             const Ip6::MessageInfo & aMessageInfo);
+    void        SendResponse(const Dns::UpdateHeader &aHeader,
+                             uint32_t                 aLease,
+                             uint32_t                 aKeyLease,
+                             const Ip6::MessageInfo & aMessageInfo);
     static void HandleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
     void        HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
     static void HandleLeaseTimer(Timer &aTimer);
