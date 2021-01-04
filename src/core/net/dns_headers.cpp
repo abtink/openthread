@@ -424,11 +424,6 @@ bool AaaaRecord::IsValid(void) const
     return GetType() == Dns::ResourceRecord::kTypeAaaa && GetSize() == sizeof(*this);
 }
 
-bool KeyRecord::IsValid(void) const
-{
-    return GetType() == Dns::ResourceRecord::kTypeKey;
-}
-
 void Ecdsa256KeyRecord::Init(void)
 {
     KeyRecord::Init();

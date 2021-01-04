@@ -378,15 +378,6 @@ public:
      */
     void SetAdditionalRecordsCount(uint16_t aCount) { mArCount = HostSwap16(aCount); }
 
-#define GetZoneCount GetQuestionCount
-#define SetZoneCount SetQuestionCount
-#define GetPrerequisiteCount GetAnswerCount
-#define SetPrerequisiteCount SetAnswerCount
-#define GetUpdateCount GetAuthorityRecordsCount
-#define SetUpdateCount SetAuthorityRecordsCount
-#define GetAdditionalDataCount GetAdditionalRecordsCount
-#define SetAdditionalDataCount SetAdditionalRecordsCount
-
 private:
     /**
      * Protocol Constants (RFC 1035).
@@ -729,7 +720,7 @@ private:
  *
  */
 OT_TOOL_PACKED_BEGIN
-class ResourceRecord : public Clearable<ResourceRecord>
+class ResourceRecord
 {
 public:
     /**
@@ -965,44 +956,6 @@ private:
     Ip6::Address mAddress; // IPv6 Address of AAAA Resource Record.
 } OT_TOOL_PACKED_END;
 
-#if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
-
-/**
- * This class implements Resource Record body format of PTR type.
- *
- */
-OT_TOOL_PACKED_BEGIN
-class PtrRecord : public ResourceRecord
-{
-public:
-    /**
-     * This method initializes the PTR Resource Record by setting its type and class.
-     *
-     * Other record fields (TTL, length) remain unchanged/uninitialized.
-     *
-     */
-    void Init(void) { ResourceRecord::Init(kTypePtr); }
-
-} OT_TOOL_PACKED_END;
-
-/**
- * This class implements Resource Record body format of TXT type.
- *
- */
-OT_TOOL_PACKED_BEGIN
-class TxtRecord : public ResourceRecord
-{
-public:
-    /**
-     * This method initializes the TXT Resource Record by setting its type and class.
-     *
-     * Other record fields (TTL, length) remain unchanged/uninitialized.
-     *
-     */
-    void Init(void) { ResourceRecord::Init(kTypeTxt); }
-
-} OT_TOOL_PACKED_END;
-
 /**
  * This class implements Resource Record body format of SRV type (RFC 2782)
  *
@@ -1148,14 +1101,16 @@ public:
      *
      * Other record fields (TTL, length, flags, protocol, algorithm) remain unchanged/uninitialized.
      *
+     * @param[in] aClass  The class of the resource record (default is `kClassInternet`).
+     *
      */
-    void Init(void) { ResourceRecord::Init(kTypeKey); }
+    void Init(uint16_t aClass = kClassInternet) { ResourceRecord::Init(kTypeKey, aClass); }
 
     /**
      * This method tells whether this is a valid DNSKEY Resource Record.
      *
      */
-    bool IsValid(void) const;
+    bool IsValid(void) const { return GetType() == Dns::ResourceRecord::kTypeKey; }
 
     /**
      * This method gets the key use (or key type) flags.
@@ -1285,7 +1240,7 @@ private:
  *
  */
 OT_TOOL_PACKED_BEGIN
-class SigRecord : public ResourceRecord
+class SigRecord : public ResourceRecord, public Clearable<SigRecord>
 {
 public:
     enum : uint8_t
@@ -1313,530 +1268,6 @@ public:
      *
      */
     bool IsValid(void) const;
-
-    /**
-     * This method returns the SIG record's type-covered value.
-     *
-     * @returns The type-covered value.
-     *
-     */
-    uint16_t GetTypeCovered(void) const { return HostSwap16(mTypeCovered); }
-
-    /**
-     * This method sets the SIG record's type-covered value.
-     *
-     * @param[in]  aTypeCovered  The type-covered value.
-     *
-     */
-    void SetTypeCovered(uint8_t aTypeCovered) { mTypeCovered = HostSwap16(aTypeCovered); }
-
-    /**
-     * This method returns the SIG record's algorithm value.
-     *
-     * @returns The algorithm value.
-     *
-     */
-    uint8_t GetAlgorithm(void) const { return mAlgorithm; }
-
-    /**
-     * This method sets the SIG record's algorithm value.
-     *
-     * @param[in]  aAlgorithm  The algorithm value.
-     *
-     */
-    void SetAlgorithm(uint8_t aAlgorithm) { mAlgorithm = aAlgorithm; }
-
-    /**
-     * This method returns the SIG record's labels-count (number of labels, not counting null label, in the original
-     * name of the owner).
-     *
-     * @returns The labels-count value.
-     *
-     */
-    uint8_t GetLabels(void) const { return mLabels; }
-
-    /**
-     * This method sets the SIG record's labels-count (number of labels, not counting null label, in the original
-     * name of the owner).
-     *
-     * @param[in]  aLabels  The labels-count value.
-     *
-     */
-    void SetLabels(uint8_t aLabels) { mLabels = aLabels; }
-
-    /**
-     * This method returns the SIG record's original TTL value.
-     *
-     * @returns The original TTL value.
-     *
-     */
-    uint32_t GetOriginalTtl(void) const { return HostSwap32(mOriginalTtl); }
-
-    /**
-     * This method sets the SIG record's original TTL value.
-     *
-     * @param[in]  aOriginalTtl  The original TTL value.
-     *
-     */
-    void SetOriginalTtl(uint32_t aOriginalTtl) { mOriginalTtl = HostSwap32(aOriginalTtl); }
-
-    /**
-     * This method returns the SIG record's expiration time value.
-     *
-     * @returns The expiration time value (seconds since Jan 1, 1970).
-     *
-     */
-    uint32_t GetExpiration(void) const { return HostSwap32(mExpiration); }
-
-    /**
-     * This method sets the SIG record's expiration time value.
-     *
-     * @param[in]  aExpiration  The expiration time value (seconds since Jan 1, 1970).
-     *
-     */
-    void SetExpiration(uint32_t aExpiration) { mExpiration = HostSwap32(aExpiration); }
-
-    /**
-     * This method returns the SIG record's inception time value.
-     *
-     * @returns The inception time value (seconds since Jan 1, 1970).
-     *
-     */
-    uint32_t GetInception(void) const { return HostSwap32(mInception); }
-
-    /**
-     * This method sets the SIG record's inception time value.
-     *
-     * @param[in]  aInception  The inception time value (seconds since Jan 1, 1970).
-     *
-     */
-    void SetInception(uint32_t aInception) { mInception = HostSwap32(aInception); }
-
-    /**
-     * This method returns the SIG record's key tag value.
-     *
-     * @returns The key tag value.
-     *
-     */
-    uint16_t GetKeyTag(void) const { return HostSwap16(mKeyTag); }
-
-    /**
-     * This method sets the SIG record's key tag value.
-     *
-     * @param[in]  aKeyTag  The key tag value.
-     *
-     */
-    void SetKeyTag(uint16_t aKeyTag) { mKeyTag = HostSwap16(aKeyTag); }
-
-private:
-    uint16_t mTypeCovered; // type of the other RRs covered by this SIG. set to zero for SIG(0).
-    uint8_t  mAlgorithm;   // Algorithm number (see `KeyRecord` enumeration).
-    uint8_t  mLabels;      // Number of labels (not counting null label) in the original name of the owner of RR.
-    uint32_t mOriginalTtl; // Original time-to-live (should set to zero for SIG(0)).
-    uint32_t mExpiration;  // Signature expiration time (seconds since Jan 1, 1970).
-    uint32_t mInception;   // Signature inception time (seconds since Jan 1, 1970).
-    uint16_t mKeyTag;      // Key tag.
-    // Followed by signer name fields and signature fields
-} OT_TOOL_PACKED_END;
-
-/**
- * This class implements a Resource Record body format of OPT type (RFC 6981 - Section 6.1)
- *
- */
-OT_TOOL_PACKED_BEGIN
-class OptRecord : public ResourceRecord
-{
-public:
-    /**
-     * This enumeration defines option code values.
-     *
-     */
-    enum : uint16_t
-    {
-        kOptionCodeUpdateLease = 2, ///< Update lease option code.
-    };
-
-    /**
-     * This method initializes the OPT Resource Record by setting its type and class.
-     *
-     * Other record fields (TTL, length, ...) remain unchanged/uninitialized.
-     *
-     * @param[in] aClass  The class of the resource record.
-     *
-     */
-    void Init(uint16_t aClass) { ResourceRecord::Init(kTypeOpt, aClass); }
-
-    /**
-     * This method returns the OPT record's option code value.
-     *
-     * @returns The option code value.
-     *
-     */
-    uint16_t GetOptionCode(void) const { return HostSwap16(mOptionCode); }
-
-    /**
-     * This method sets the OPT record's option code value.
-     *
-     * @param[in]  aOptionCode  The option code value.
-     *
-     */
-    void SetOptionCode(uint16_t aOptionCode) { mOptionCode = HostSwap16(aOptionCode); }
-
-    /**
-     * This method returns the OPT record's option length value.
-     *
-     * @returns The option length (size of option data in bytes).
-     *
-     */
-    uint16_t GetOptionLength(void) const { return HostSwap16(mOptionLength); }
-
-    /**
-     * This method sets the OPT record's option length value.
-     *
-     * @param[in]  aOptionLength  The option length (size of option data in bytes).
-     *
-     */
-    void SetOptionLength(uint16_t aOptionLength) { mOptionLength = HostSwap16(aOptionLength); }
-
-private:
-    uint16_t mOptionCode;
-    uint16_t mOptionLength;
-    // Followed by Option data (varies per option code).
-
-} OT_TOOL_PACKED_END;
-
-/**
- * This class implements an Update Lease OPT Resource Record.
- *
- * This implementation is intended for use in Dynamic DNS Update Lease Requests and Responses as specified in
- * https://tools.ietf.org/html/draft-sekar-dns-ul-02.
- *
- */
-OT_TOOL_PACKED_BEGIN
-class UpdateLeaseOptRecord : public OptRecord
-{
-public:
-    /**
-     * This method initializes the Update Lease OPT Resource Record.
-     *
-     * This method sets all the fields in the record, except for leave and key lease intervals.
-     *
-     */
-    void Init(void);
-
-    /**
-     * This method tells whether this is an valid LEASE OPT RR.
-     *
-     * @retval  A boolean indicates whether this record is valid.
-     *
-     */
-    bool IsValid(void) const;
-
-    /**
-     * This method returns the Update Lease OPT record's lease interval value
-     *
-     * @returns The lease interval value (in seconds).
-     *
-     */
-    uint32_t GetLeaseInterval(void) const { return HostSwap32(mLeaseInterval); }
-
-    /**
-     * This method sets the Update Lease OPT record's lease interval value
-     *
-     * @param[in]  aLeaseInterval  The lease interval value
-     *
-     */
-    void SetLeaseInterval(uint32_t aLeaseInterval) { mLeaseInterval = HostSwap32(aLeaseInterval); }
-
-    /**
-     * This method returns the Update Lease OPT record's key lease interval value
-     *
-     * @returns The key lease interval value (in seconds).
-     *
-     */
-    uint32_t GetKeyLeaseInterval(void) const { return HostSwap32(mKeyLeaseInterval); }
-
-    /**
-     * This method sets the Update Lease OPT record's key lease interval value
-     *
-     * @param[in]  aKeyLeaseInterval  The key lease interval value (in seconds).
-     *
-     */
-    void SetKeyLeaseInterval(uint32_t aKeyLeaseInterval) { mKeyLeaseInterval = HostSwap32(aKeyLeaseInterval); }
-
-private:
-    uint32_t mLeaseInterval;
-    uint32_t mKeyLeaseInterval;
-} OT_TOOL_PACKED_END;
-
-#endif // OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
-
-/**
- * This class implements Resource Record body format of SRV type (RFC 2782)
- *
- */
-OT_TOOL_PACKED_BEGIN
-class SrvRecord : public ResourceRecord
-{
-public:
-    /**
-     * This method initializes the SRV Resource Record by settings its type and class.
-     *
-     * Other record fields (TTL, length, propriety, weight, port, ...) remain unchanged/uninitialized.
-     *
-     * @param[in] aClass  The class of the resource record (default is `kClassInternet`).
-     *
-     */
-    void Init(uint16_t aClass = kClassInternet) { ResourceRecord::Init(kTypeSrv, aClass); }
-
-    /**
-     * This method returns the SRV record's priority value.
-     *
-     * @returns The priority value.
-     *
-     */
-    uint16_t GetPriority(void) const { return HostSwap16(mPriority); }
-
-    /**
-     * This method sets the SRV record's priority value.
-     *
-     * @param[in]  aPriority  The priority value.
-     *
-     */
-    void SetPriority(uint16_t aPriority) { mPriority = HostSwap16(aPriority); }
-
-    /**
-     * This method returns the SRV record's weight value.
-     *
-     * @returns The weight value.
-     *
-     */
-    uint16_t GetWeight(void) const { return HostSwap16(mWeight); }
-
-    /**
-     * This method sets the SRV record's weight value.
-     *
-     * @param[in]  aWeight  The weight value.
-     *
-     */
-    void SetWeight(uint16_t aWeight) { mWeight = HostSwap16(aWeight); }
-
-    /**
-     * This method returns the SRV record's port number on the target host for this service.
-     *
-     * @returns The port number.
-     *
-     */
-    uint16_t GetPort(void) const { return HostSwap16(mPort); }
-
-    /**
-     * This method sets the SRV record's port number on the target host for this service
-     *
-     * @param[in]  aPort  The port number.
-     *
-     */
-    void SetPort(uint16_t aPort) { mPort = HostSwap16(aPort); }
-
-private:
-    uint16_t mPriority;
-    uint16_t mWeight;
-    uint16_t mPort;
-    // Followed by the target host domain name.
-
-} OT_TOOL_PACKED_END;
-
-/**
- * This class implements Resource Record body format of KEY type (RFC 2535)
- *
- */
-OT_TOOL_PACKED_BEGIN
-class KeyRecord : public ResourceRecord
-{
-public:
-    /**
-     * This enumeration defines protocol field values (RFC 2535 - section 3.1.3)
-     *
-     */
-    enum : uint8_t
-    {
-        kProtocolTls    = 1, ///< TLS protocol code.
-        kProtocolDnsSec = 3, ///< DNS security protocol code.
-    };
-
-    /**
-     * This enumeration defines algorithm field values (RFC 8624 - section 3.1).
-     *
-     */
-    enum : uint8_t
-    {
-        kAlgorithmEcdsaP256Sha256 = 13, ///< ECDSA-P256-SHA256 algorithm.
-        kAlgorithmEcdsaP384Sha384 = 14, ///< ECDSA-P384-SHA384 algorithm.
-        kAlgorithmEd25519         = 15, ///< ED25519 algorithm.
-        kAlgorithmEd448           = 16, ///< ED448 algorithm.
-    };
-
-    /**
-     * This enumeration type represents the use (or key type) flags (RFC 2535 - section 3.1.2).
-     *
-     */
-    enum UseFlags : uint8_t
-    {
-        kAuthConfidPermitted = 0x00, ///< Use of the key for authentication and/or confidentiality is permitted
-        kAuthPermitted       = 0x40, ///< Use of the key is only permitted for authentication.
-        kConfidPermitted     = 0x80, ///< Use of the key is only permitted for confidentiality.
-        kNoKey               = 0xc0, ///< No key value (e.g., can indicate zone is not secure).
-    };
-
-    /**
-     * This enumeration type represents key owner (or name type) flags (RFC 2535 - section 3.1.2).
-     *
-     */
-    enum OwnerFlags : uint8_t
-    {
-        kOwnerUser     = 0x00, ///< Key is associated with a "user" or "account" at end entity.
-        kOwnerZone     = 0x01, ///< Key is a zone key (used for data origin authentication).
-        kOwnerNoneZone = 0x02, ///< Key is associated with a non-zone "entity".
-        kOwnerReserved = 0x03, ///< Reserved for future use.
-    };
-
-    /**
-     * This enumeration defines flag bits for the "signatory" flags (RFC 2137)
-     *
-     * The flags defined are for non-zone (`kOwnerNoneZone`) keys (RFC 2137 - section 3.1.3).
-     *
-     */
-    enum : uint8_t
-    {
-        kSignatoryFlagZone    = 1 << 3, ///< Key is authorized to attach, detach, and move zones.
-        kSignatoryFlagStrong  = 1 << 2, ///< key is authorized to add and delete RRs even if RRs auth with other key.
-        kSignatoryFlagUnique  = 1 << 1, ///< key is authorized to add and update RRs for only a single owner name.
-        kSignatoryFlagGeneral = 1 << 0, ///< If the other flags are zero, this is used to indicate it is an update key.
-    };
-
-    /**
-     * This method initializes the KEY Resource Record by setting its type and class.
-     *
-     * Other record fields (TTL, length, flags, protocol, algorithm) remain unchanged/uninitialized.
-     *
-     * @param[in] aClass  The class of the resource record (default is `kClassInternet`).
-     *
-     */
-    void Init(uint16_t aClass = kClassInternet) { ResourceRecord::Init(kTypeKey, aClass); }
-
-    /**
-     * This method gets the key use (or key type) flags.
-     *
-     * @returns The key use flags.
-     *
-     */
-    UseFlags GetUseFlags(void) const { return static_cast<UseFlags>(mFlags[0] & kUseFlagsMask); }
-
-    /**
-     * This method gets the owner (or name type) flags.
-     *
-     * @returns The key owner flags.
-     *
-     */
-    OwnerFlags GetOwnerFlags(void) const { return static_cast<OwnerFlags>(mFlags[0] & kOwnerFlagsMask); }
-
-    /**
-     * This method gets the signatory flags.
-     *
-     * @returns The signatory flags.
-     *
-     */
-    uint8_t GetSignatoryFlags(void) const { return (mFlags[1] & kSignatoryFlagsMask); }
-
-    /**
-     * This method sets the flags field.
-     *
-     * @param[in] aUseFlags        The `UseFlags` value.
-     * @param[in] aOwnerFlags      The `OwnerFlags` value.
-     * @param[in] aSignatoryFlags  The signatory flags.
-     *
-     */
-    void SetFlags(UseFlags aUseFlags, OwnerFlags aOwnerFlags, uint8_t aSignatoryFlags)
-    {
-        mFlags[0] = (static_cast<uint8_t>(aUseFlags) | static_cast<uint8_t>(aOwnerFlags));
-        mFlags[1] = (aSignatoryFlags & kSignatoryFlagsMask);
-    }
-
-    /**
-     * This method returns the KEY record's protocol value.
-     *
-     * @returns The protocol value.
-     *
-     */
-    uint8_t GetProtocol(void) const { return mProtocol; }
-
-    /**
-     * This method sets the KEY record's protocol value.
-     *
-     * @param[in]  aProtocol  The protocol value.
-     *
-     */
-    void SetProtocol(uint8_t aProtocol) { mProtocol = aProtocol; }
-
-    /**
-     * This method returns the KEY record's algorithm value.
-     *
-     * @returns The algorithm value.
-     *
-     */
-    uint8_t GetAlgorithm(void) const { return mAlgorithm; }
-
-    /**
-     * This method sets the KEY record's algorithm value.
-     *
-     * @param[in]  aAlgorithm  The algorithm value.
-     *
-     */
-    void SetAlgorithm(uint8_t aAlgorithm) { mAlgorithm = aAlgorithm; }
-
-private:
-    enum : uint8_t
-    {
-        kUseFlagsMask       = 0xc0, // top two bits in the first flag byte.
-        kOwnerFlagsMask     = 0x03, // lowest two bits in the first flag byte.
-        kSignatoryFlagsMask = 0x0f, // lower 4 bits in the second flag byte.
-    };
-
-    // Flags format:
-    //
-    //    0   1   2   3   4   5   6   7   8   9   0   1   2   3   4   5
-    //  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-    //  |  Use  | Z | XT| Z | Z | Owner | Z | Z | Z | Z |      SIG      |
-    //  +---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+---+
-    //  \                              / \                             /
-    //   ---------- mFlags[0] ---------   -------- mFlags[1] ----------
-
-    uint8_t mFlags[2];
-    uint8_t mProtocol;
-    uint8_t mAlgorithm;
-    // Followed by the public key
-
-} OT_TOOL_PACKED_END;
-
-/**
- * This class implements Resource Record body format of SIG type (RFC 2535 - section-4.1)
- *
- *
- */
-OT_TOOL_PACKED_BEGIN
-class SigRecord : public ResourceRecord, public Clearable<SigRecord>
-{
-public:
-    /**
-     * This method initializes the SIG Resource Record by setting its type and class.
-     *
-     * Other record fields (TTL, length, ...) remain unchanged/uninitialized.
-     *
-     * SIG(0) requires SIG RR to set class field as ANY or `kClassAnyANY (RFC 2931 - section 3).
-     *
-     * @param[in] aClass  The class of the resource record.
-     *
-     */
-    void Init(uint16_t aClass) { ResourceRecord::Init(kTypeSig, aClass); }
 
     /**
      * This method returns the SIG record's type-covered value.
@@ -2053,6 +1484,7 @@ public:
         kOptionLength = sizeof(uint32_t) + sizeof(uint32_t), ///< Option length (lease and key lease values)
     };
 
+
     /**
      * This method initializes the Update Lease OPT Resource Record.
      *
@@ -2060,6 +1492,14 @@ public:
      *
      */
     void Init(void);
+
+    /**
+     * This method tells whether this is an valid LEASE OPT RR.
+     *
+     * @retval  A boolean indicates whether this record is valid.
+     *
+     */
+    bool IsValid(void) const;
 
     /**
      * This method returns the Update Lease OPT record's lease interval value
@@ -2116,8 +1556,6 @@ public:
         SetClass(aClass);
     }
 
-    Question() = default;
-
     /**
      * This method returns the type of the question.
      *
@@ -2155,12 +1593,6 @@ private:
     uint16_t mClass; // The class of the data in question section.
 
 } OT_TOOL_PACKED_END;
-
-/**
- * This class implements Zone Section in a DNS Update.
- *
- */
-typedef Question Zone;
 
 /**
  * This class implements Question format of AAAA type.

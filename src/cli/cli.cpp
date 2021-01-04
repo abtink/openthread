@@ -143,6 +143,7 @@ Interpreter::Interpreter(Instance *aInstance)
 #endif
 #if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE
     , mSrpClient(*this)
+#endif
 #if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
     , mSrpServer(*this)
 #endif

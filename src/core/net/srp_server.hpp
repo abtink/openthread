@@ -174,7 +174,7 @@ public:
      *
      */
     void HandleSrpUpdateResult(otError                 aError,
-                               const Dns::Header &     aDnsHeader,
+                               const Dns::UpdateHeader &     aDnsHeader,
                                Host &                  aHost,
                                const Ip6::MessageInfo &aMessageInfo);
 
@@ -614,7 +614,7 @@ private:
          *           failed to allocate memory.
          *
          */
-        static UpdateMetadata *New(const Dns::Header &aHeader, Host *aHost, const Ip6::MessageInfo &aMessageInfo);
+        static UpdateMetadata *New(const Dns::UpdateHeader &aHeader, Host *aHost, const Ip6::MessageInfo &aMessageInfo);
 
         /**
          * This method destroys a UpdateMetadata object.
@@ -641,7 +641,7 @@ private:
          * @returns  The DNS header.
          *
          */
-        const Dns::Header &GetDnsHeader(void) const { return mDnsHeader; }
+        const Dns::UpdateHeader &GetDnsHeader(void) const { return mDnsHeader; }
 
         /**
          * This method returns the Host object which represent the SRP update.
@@ -680,11 +680,11 @@ private:
         bool Matches(const Host *aHost) const { return mHost == aHost; }
 
     private:
-        UpdateMetadata(const Dns::Header &aHeader, Host *aHost, const Ip6::MessageInfo &aMessageInfo);
+        UpdateMetadata(const Dns::UpdateHeader &aHeader, Host *aHost, const Ip6::MessageInfo &aMessageInfo);
         ~UpdateMetadata() = default;
 
         TimeMilli        mExpireTime;  // Expire time of this update; In milliseconds.
-        Dns::Header      mDnsHeader;   // The header of the DNS update request.
+        Dns::UpdateHeader      mDnsHeader;   // The header of the DNS update request.
         Host *           mHost;        // The host will be updated. The UpdateMetadata has no ownership of this host.
         Ip6::MessageInfo mMessageInfo; // The message info of the DNS update request.
         UpdateMetadata * mNext;        // The pointer to the next UpdateMetadata object.
@@ -697,32 +697,32 @@ private:
     void           UnpublishService();
     void           HandleDnsUpdate(Message &               aMessage,
                                    const Ip6::MessageInfo &aMessageInfo,
-                                   const Dns::Header &     aDnsHeader,
+                                   const Dns::UpdateHeader &     aDnsHeader,
                                    uint16_t                aOffset);
     otError        ProcessZoneSection(const Message &    aMessage,
-                                      const Dns::Header &aDnsHeader,
+                                      const Dns::UpdateHeader &aDnsHeader,
                                       uint16_t &         aOffset,
                                       Dns::Zone &        aZone);
     otError        ProcessUpdateSection(Host &             aHost,
                                         const Message &    aMessage,
-                                        const Dns::Header &aDnsHeader,
+                                        const Dns::UpdateHeader &aDnsHeader,
                                         const Dns::Zone &  aZone,
                                         uint16_t           aHeaderOffset,
                                         uint16_t &         aOffset);
     otError        ProcessAdditionalSection(Host *             aHost,
                                             const Message &    aMessage,
-                                            const Dns::Header &aDnsHeader,
+                                            const Dns::UpdateHeader &aDnsHeader,
                                             uint16_t           aHeaderOffset,
                                             uint16_t &         aOffset);
     otError        VerifySignature(const Dns::Ecdsa256KeyRecord &aKey,
                                    const Message &               aMessage,
-                                   Dns::Header                   aDnsHeader,
+                                   Dns::UpdateHeader                   aDnsHeader,
                                    uint16_t                      aSigOffset,
                                    uint16_t                      aSigRdataOffset,
                                    uint16_t                      aSigRdataLength);
     static otError HandleDiscoveryInstructions(Host &             aHost,
                                                const Message &    aMessage,
-                                               const Dns::Header &aDnsHeader,
+                                               const Dns::UpdateHeader &aDnsHeader,
                                                const Dns::Zone &  aZone,
                                                uint16_t           aHeaderOffset,
                                                uint16_t           aOffset);
@@ -733,7 +733,7 @@ private:
      *
      */
     static otError HandleDeleteAllResources(Host &aHost, const char *aFullName);
-    void           HandleUpdate(const Dns::Header &aDnsHeader, Host *aHost, const Ip6::MessageInfo &aMessageInfo);
+    void           HandleUpdate(const Dns::UpdateHeader &aDnsHeader, Host *aHost, const Ip6::MessageInfo &aMessageInfo);
 
     /**
      * This method adds a SRP service host and takes ownership of it.
@@ -750,10 +750,10 @@ private:
     void        RemoveHost(Host *aHost);
     Service *   FindService(const char *aFullName);
     bool        HasNameConflictsWith(Host &aHost);
-    void        SendResponse(const Dns::Header &     aHeader,
+    void        SendResponse(const Dns::UpdateHeader &     aHeader,
                              Dns::Header::Response   aResponseCode,
                              const Ip6::MessageInfo &aMessageInfo);
-    void        SendResponse(const Dns::Header &     aHeader,
+    void        SendResponse(const Dns::UpdateHeader &     aHeader,
                              uint32_t                aLease,
                              uint32_t                aKeyLease,
                              const Ip6::MessageInfo &aMessageInfo);

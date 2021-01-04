@@ -65,7 +65,7 @@ static Dns::Header::Response ErrorToDnsResponseCode(otError aError)
         responseCode = Dns::Header::kResponseFormatError;
         break;
     case OT_ERROR_DUPLICATED:
-        responseCode = Dns::Header::kResponseYxDomain;
+        responseCode = Dns::Header::kResponseNameExists;
         break;
     default:
         responseCode = Dns::Header::kResponseRefused;
@@ -237,7 +237,7 @@ void Server::HandleAdvertisingResult(UpdateMetadata *aUpdate, otError aError)
 }
 
 void Server::HandleSrpUpdateResult(otError                 aError,
-                                   const Dns::Header &     aDnsHeader,
+                                   const Dns::UpdateHeader &     aDnsHeader,
                                    Host &                  aHost,
                                    const Ip6::MessageInfo &aMessageInfo)
 {
@@ -442,7 +442,7 @@ exit:
 
 void Server::HandleDnsUpdate(Message &               aMessage,
                              const Ip6::MessageInfo &aMessageInfo,
-                             const Dns::Header &     aDnsHeader,
+                             const Dns::UpdateHeader &     aDnsHeader,
                              uint16_t                aOffset)
 {
     otError   error = OT_ERROR_NONE;
@@ -466,7 +466,7 @@ void Server::HandleDnsUpdate(Message &               aMessage,
     }
 
     // Per 2.3.2 of SRP draft 6, no prerequisites should be included in a SRP update.
-    VerifyOrExit(aDnsHeader.GetPrerequisiteCount() == 0, error = OT_ERROR_FAILED);
+    VerifyOrExit(aDnsHeader.GetPrerequisiteRecordCount() == 0, error = OT_ERROR_FAILED);
 
     host = Host::New();
     VerifyOrExit(host != nullptr, error = OT_ERROR_NO_BUFS);
@@ -486,14 +486,14 @@ exit:
 }
 
 otError Server::ProcessZoneSection(const Message &    aMessage,
-                                   const Dns::Header &aDnsHeader,
+                                   const Dns::UpdateHeader &aDnsHeader,
                                    uint16_t &         aOffset,
                                    Dns::Zone &        aZone)
 {
     otError   error = OT_ERROR_NONE;
     Dns::Zone zone;
 
-    VerifyOrExit(aDnsHeader.GetZoneCount() == 1, error = OT_ERROR_FAILED);
+    VerifyOrExit(aDnsHeader.GetZoneRecordCount() == 1, error = OT_ERROR_FAILED);
 
     SuccessOrExit(Dns::Name::ParseName(aMessage, aOffset));
     SuccessOrExit(aMessage.Read(aOffset, zone));
@@ -508,7 +508,7 @@ exit:
 
 otError Server::ProcessUpdateSection(Host &             aHost,
                                      const Message &    aMessage,
-                                     const Dns::Header &aDnsHeader,
+                                     const Dns::UpdateHeader &aDnsHeader,
                                      const Dns::Zone &  aZone,
                                      uint16_t           aHeaderOffset,
                                      uint16_t &         aOffset)
@@ -520,7 +520,7 @@ otError Server::ProcessUpdateSection(Host &             aHost,
     // a "Delete All RRsets from a name" record.
     SuccessOrExit(error = HandleDiscoveryInstructions(aHost, aMessage, aDnsHeader, aZone, aHeaderOffset, aOffset));
 
-    for (uint16_t i = 0; i < aDnsHeader.GetUpdateCount(); ++i)
+    for (uint16_t i = 0; i < aDnsHeader.GetUpdateRecordCount(); ++i)
     {
         char                name[Dns::Name::kMaxLength + 1];
         Dns::ResourceRecord record;
@@ -646,14 +646,14 @@ exit:
 
 otError Server::HandleDiscoveryInstructions(Host &             aHost,
                                             const Message &    aMessage,
-                                            const Dns::Header &aDnsHeader,
+                                            const Dns::UpdateHeader &aDnsHeader,
                                             const Dns::Zone &  aZone,
                                             uint16_t           aHeaderOffset,
                                             uint16_t           aOffset)
 {
     otError error;
 
-    for (uint16_t i = 0; i < aDnsHeader.GetUpdateCount(); ++i)
+    for (uint16_t i = 0; i < aDnsHeader.GetUpdateRecordCount(); ++i)
     {
         char                name[Dns::Name::kMaxLength + 1];
         Dns::ResourceRecord record;
@@ -723,7 +723,7 @@ exit:
 
 otError Server::ProcessAdditionalSection(Host *             aHost,
                                          const Message &    aMessage,
-                                         const Dns::Header &aDnsHeader,
+                                         const Dns::UpdateHeader &aDnsHeader,
                                          uint16_t           aHeaderOffset,
                                          uint16_t &         aOffset)
 {
@@ -785,7 +785,7 @@ exit:
 
 otError Server::VerifySignature(const Dns::Ecdsa256KeyRecord &aKey,
                                 const Message &               aMessage,
-                                Dns::Header                   aDnsHeader,
+                                Dns::UpdateHeader                   aDnsHeader,
                                 uint16_t                      aSigOffset,
                                 uint16_t                      aSigRdataOffset,
                                 uint16_t                      aSigRdataLength)
@@ -820,7 +820,7 @@ exit:
     return error;
 }
 
-void Server::HandleUpdate(const Dns::Header &aDnsHeader, Host *aHost, const Ip6::MessageInfo &aMessageInfo)
+void Server::HandleUpdate(const Dns::UpdateHeader &aDnsHeader, Host *aHost, const Ip6::MessageInfo &aMessageInfo)
 {
     if (aHost->GetLease() == 0)
     {
@@ -859,13 +859,13 @@ void Server::HandleUpdate(const Dns::Header &aDnsHeader, Host *aHost, const Ip6:
     }
 }
 
-void Server::SendResponse(const Dns::Header &     aHeader,
+void Server::SendResponse(const Dns::UpdateHeader &     aHeader,
                           Dns::Header::Response   aResponseCode,
                           const Ip6::MessageInfo &aMessageInfo)
 {
     otError     error;
     Message *   response = nullptr;
-    Dns::Header header;
+    Dns::UpdateHeader header;
 
     header.SetMessageId(aHeader.GetMessageId());
     header.SetType(Dns::Header::kTypeResponse);
@@ -894,14 +894,14 @@ exit:
     }
 }
 
-void Server::SendResponse(const Dns::Header &     aHeader,
+void Server::SendResponse(const Dns::UpdateHeader &     aHeader,
                           uint32_t                aLease,
                           uint32_t                aKeyLease,
                           const Ip6::MessageInfo &aMessageInfo)
 {
     otError                   error;
     Message *                 response = nullptr;
-    Dns::Header               header;
+    Dns::UpdateHeader               header;
     char                      kRootName[2] = ".";
     Dns::UpdateLeaseOptRecord leaseRecord;
 
@@ -942,14 +942,14 @@ void Server::HandleUdpReceive(void *aContext, otMessage *aMessage, const otMessa
 void Server::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     otError     error;
-    Dns::Header dnsHeader;
+    Dns::UpdateHeader dnsHeader;
     uint16_t    offset = aMessage.GetOffset();
 
     SuccessOrExit(error = aMessage.Read(offset, dnsHeader));
     offset += sizeof(dnsHeader);
 
     // Handles only queries.
-    VerifyOrExit(dnsHeader.GetType() == Dns::Header::Type::kTypeQuery, error = OT_ERROR_DROP);
+    VerifyOrExit(dnsHeader.GetType() == Dns::UpdateHeader::Type::kTypeQuery, error = OT_ERROR_DROP);
 
     switch (dnsHeader.GetQueryType())
     {
@@ -1459,7 +1459,7 @@ bool Server::Host::Matches(const char *aName) const
     return mFullName != nullptr && strcmp(mFullName, aName) == 0;
 }
 
-Server::UpdateMetadata *Server::UpdateMetadata::New(const Dns::Header &     aHeader,
+Server::UpdateMetadata *Server::UpdateMetadata::New(const Dns::UpdateHeader &     aHeader,
                                                     Host *                  aHost,
                                                     const Ip6::MessageInfo &aMessageInfo)
 {
@@ -1484,7 +1484,7 @@ void Server::UpdateMetadata::Destroy(UpdateMetadata *aUpdateMetadata)
     }
 }
 
-Server::UpdateMetadata::UpdateMetadata(const Dns::Header &aHeader, Host *aHost, const Ip6::MessageInfo &aMessageInfo)
+Server::UpdateMetadata::UpdateMetadata(const Dns::UpdateHeader &aHeader, Host *aHost, const Ip6::MessageInfo &aMessageInfo)
     : mExpireTime(TimerMilli::GetNow() + kDefaultEventsHandlerTimeout)
     , mDnsHeader(aHeader)
     , mHost(aHost)
