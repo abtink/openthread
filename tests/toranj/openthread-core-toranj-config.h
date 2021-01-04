@@ -286,7 +286,7 @@
  * Define to prepend the log level to all log messages
  *
  */
-#define OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL 0
+#define OPENTHREAD_CONFIG_LOG_PREPEND_LEVEL 1
 
 /**
  * @def OPENTHREAD_CONFIG_LOG_PREPEND_REGION
@@ -294,7 +294,7 @@
  * Define to prepend the log region to all log messages
  *
  */
-#define OPENTHREAD_CONFIG_LOG_PREPEND_REGION 0
+#define OPENTHREAD_CONFIG_LOG_PREPEND_REGION 1
 
 /**
  * @def OPENTHREAD_CONFIG_LOG_SUFFIX
