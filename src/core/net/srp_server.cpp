@@ -552,14 +552,16 @@ otError Server::ProcessUpdateSection(Host &                   aHost,
             continue;
         }
 
-        VerifyOrExit(record.GetClass() == aZone.GetClass(), error = OT_ERROR_FAILED);
-
         if (record.GetType() == Dns::ResourceRecord::kTypePtr)
         {
             // Skip, as we have already processed all PTR RRs.
             aOffset += record.GetSize();
+            continue;
         }
-        else if (record.GetType() == Dns::ResourceRecord::kTypeSrv)
+
+        VerifyOrExit(record.GetClass() == aZone.GetClass(), error = OT_ERROR_FAILED);
+
+        if (record.GetType() == Dns::ResourceRecord::kTypeSrv)
         {
             Dns::SrvRecord srvRecord;
             Service *      service;
