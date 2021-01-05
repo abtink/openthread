@@ -468,6 +468,8 @@ void Server::HandleDnsUpdate(Message &                aMessage,
     // Per 2.3.2 of SRP draft 6, no prerequisites should be included in a SRP update.
     VerifyOrExit(aDnsHeader.GetPrerequisiteRecordCount() == 0, error = OT_ERROR_FAILED);
 
+    otLogInfoSrp("[server] After GetPrerequisiteRecordCount zero check");
+
     host = Host::New();
     VerifyOrExit(host != nullptr, error = OT_ERROR_NO_BUFS);
     SuccessOrExit(error = ProcessUpdateSection(*host, aMessage, aDnsHeader, zone, headerOffset, aOffset));
@@ -493,6 +495,8 @@ otError Server::ProcessZoneSection(const Message &          aMessage,
     otError   error = OT_ERROR_NONE;
     Dns::Zone zone;
 
+    otLogInfoSrp("[server] ProcessZoneSection() entering");
+
     VerifyOrExit(aDnsHeader.GetZoneRecordCount() == 1, error = OT_ERROR_FAILED);
 
     SuccessOrExit(Dns::Name::ParseName(aMessage, aOffset));
@@ -503,6 +507,7 @@ otError Server::ProcessZoneSection(const Message &          aMessage,
     aZone = zone;
 
 exit:
+    otLogInfoSrp("[server] ProcessZoneSection() exit %s", otThreadErrorToString(error));
     return error;
 }
 
@@ -514,6 +519,8 @@ otError Server::ProcessUpdateSection(Host &                   aHost,
                                      uint16_t &               aOffset)
 {
     otError error = OT_ERROR_NONE;
+
+    otLogInfoSrp("[server] ProcessUpdateSection() entering");
 
     // Enumerate over all Service Discovery Instructions before processing any other records.
     // So that we will know whether a name is a hostname or service instance name when processing
@@ -528,6 +535,9 @@ otError Server::ProcessUpdateSection(Host &                   aHost,
         SuccessOrExit(error = Dns::Name::ReadName(aMessage, aOffset, aHeaderOffset, name, sizeof(name)));
         SuccessOrExit(error = aMessage.Read(aOffset, record));
 
+        otLogInfoSrp("[server] ProcessUpdateSection() \t name:%s, rr.type:%d class:%d", name, record.GetType(),
+            record.GetClass());
+
         if (record.GetClass() == Dns::ResourceRecord::kClassAny)
         {
             // Delete All RRsets from a name.
@@ -537,6 +547,8 @@ otError Server::ProcessUpdateSection(Host &                   aHost,
             SuccessOrExit(error = HandleDeleteAllResources(aHost, name));
 
             aOffset += record.GetSize();
+
+            otLogInfoSrp("[server] ProcessUpdateSection() \t Delete all RRset from a name");
             continue;
         }
 
@@ -554,13 +566,22 @@ otError Server::ProcessUpdateSection(Host &                   aHost,
             char           hostName[Dns::Name::kMaxLength + 1];
             uint16_t       hostNameLength = sizeof(hostName);
 
+            otLogInfoSrp("[server] ProcessUpdateSection() \t It is SRV record");
+
             SuccessOrExit(error = aMessage.Read(aOffset, srvRecord));
             aOffset += sizeof(srvRecord);
 
             SuccessOrExit(error = Dns::Name::ReadName(aMessage, aOffset, aHeaderOffset, hostName, hostNameLength));
-            VerifyOrExit(aHost.Matches(hostName), error = OT_ERROR_FAILED);
+            otLogInfoSrp("[server] ProcessUpdateSection() \t SRV hostName:%s aHost.GetFullName():%s", hostName,
+                          aHost.GetFullName());
+
+            // TODO: ABTIN, I think this is a bug, host name may not yet be set when we get here
+            //VerifyOrExit(aHost.Matches(hostName), error = OT_ERROR_FAILED);
+            otLogInfoSrp("[server] ProcessUpdateSection() \t aHost.Matches(hostName) passed");
+
 
             service = aHost.FindService(name);
+            otLogInfoSrp("[server] ProcessUpdateSection() \t FindService(name) %p", service);
             VerifyOrExit(service != nullptr && !service->IsDeleted(), error = OT_ERROR_FAILED);
 
             // Make sure that this is the first SRV RR for this service.
@@ -568,19 +589,28 @@ otError Server::ProcessUpdateSection(Host &                   aHost,
             service->mPriority = srvRecord.GetPriority();
             service->mWeight   = srvRecord.GetWeight();
             service->mPort     = srvRecord.GetPort();
+
+            otLogInfoSrp("[server] ProcessUpdateSection() \t SRV parsed");
         }
         else if (record.GetType() == Dns::ResourceRecord::kTypeTxt)
         {
+            otLogInfoSrp("[server] ProcessUpdateSection() \t it is TXT");
+
+
             Service *service = aHost.FindService(name);
             VerifyOrExit(service != nullptr && !service->IsDeleted(), error = OT_ERROR_FAILED);
 
             aOffset += sizeof(record);
             SuccessOrExit(error = service->SetTxtDataFromMessage(aMessage, aOffset, record.GetLength()));
             aOffset += record.GetLength();
+
+            otLogInfoSrp("[server] ProcessUpdateSection() \t TXT parsed");
         }
         else if (record.GetType() == Dns::ResourceRecord::kTypeAaaa)
         {
             Dns::AaaaRecord aaaaRecord;
+
+            otLogInfoSrp("[server] ProcessUpdateSection() \t it is AAAA");
 
             if (aHost.GetFullName() == nullptr)
             {
@@ -598,6 +628,9 @@ otError Server::ProcessUpdateSection(Host &                   aHost,
             VerifyOrExit(aHost.AddIp6Address(aaaaRecord.GetAddress()) != OT_ERROR_NO_BUFS, error = OT_ERROR_NO_BUFS);
 
             aOffset += aaaaRecord.GetSize();
+
+            otLogInfoSrp("[server] ProcessUpdateSection() \t AAAA parsed");
+
         }
         else if (record.GetType() == Dns::ResourceRecord::kTypeA)
         {
@@ -606,6 +639,8 @@ otError Server::ProcessUpdateSection(Host &                   aHost,
         }
         else if (record.GetType() == Dns::ResourceRecord::kTypeKey)
         {
+            otLogInfoSrp("[server] ProcessUpdateSection() \t It is KEY");
+
             // We currently support only ECDSA P-256.
             Dns::Ecdsa256KeyRecord key;
 
@@ -617,6 +652,9 @@ otError Server::ProcessUpdateSection(Host &                   aHost,
             aHost.SetKey(key);
 
             aOffset += record.GetSize();
+
+            otLogInfoSrp("[server] ProcessUpdateSection() \t KEY parsed");
+
         }
         else
         {
@@ -641,6 +679,8 @@ otError Server::ProcessUpdateSection(Host &                   aHost,
     VerifyOrExit(!HasNameConflictsWith(aHost), error = OT_ERROR_DUPLICATED);
 
 exit:
+    otLogInfoSrp("[server] ProcessUpdateSection() exiting %s", otThreadErrorToString(error));
+
     return error;
 }
 
@@ -652,6 +692,8 @@ otError Server::HandleDiscoveryInstructions(Host &                   aHost,
                                             uint16_t                 aOffset)
 {
     otError error;
+
+    otLogInfoSrp("[server] HandleDiscoveryInstructions() entering");
 
     for (uint16_t i = 0; i < aDnsHeader.GetUpdateRecordCount(); ++i)
     {
@@ -691,6 +733,7 @@ otError Server::HandleDiscoveryInstructions(Host &                   aHost,
     }
 
 exit:
+    otLogInfoSrp("[server] HandleDiscoveryInstructions() exiting %s", otThreadErrorToString(error));
     return error;
 }
 
@@ -730,6 +773,8 @@ otError Server::ProcessAdditionalSection(Host *                   aHost,
     otError                   error = OT_ERROR_NONE;
     char                      name[2]; // The root domain name (".") is expected.
     Dns::UpdateLeaseOptRecord leaseRecord;
+
+    otLogInfoSrp("[server] ProcessAdditionalSection()");
 
     Dns::SigRecord sigRecord;
     uint16_t       sigOffset;
@@ -776,10 +821,13 @@ otError Server::ProcessAdditionalSection(Host *                   aHost,
     VerifyOrExit(signatureLength == Crypto::Ecdsa::P256::Signature::kSize, error = OT_ERROR_PARSE);
     VerifyOrExit(sigRecord.GetTypeCovered() == 0, error = OT_ERROR_FAILED);
 
+    otLogInfoSrp("[server] ProcessAdditionalSection() \t About to VerifySignature()");
+
     SuccessOrExit(error = VerifySignature(*aHost->GetKey(), aMessage, aDnsHeader, sigOffset, sigRdataOffset,
                                           sigRecord.GetLength()));
 
 exit:
+    otLogInfoSrp("[server] ProcessAdditionalSection() exiting %s", otThreadErrorToString(error));
     return error;
 }
 
@@ -797,6 +845,8 @@ otError Server::VerifySignature(const Dns::Ecdsa256KeyRecord &aKey,
     Crypto::Sha256::Hash           hash;
     Crypto::Ecdsa::P256::Signature signature;
 
+    otLogInfoSrp("[server] \t VerifySignature()");
+
     VerifyOrExit(aSigRdataLength >= Crypto::Ecdsa::P256::Signature::kSize, error = OT_ERROR_INVALID_ARGS);
 
     sha256.Start();
@@ -811,12 +861,15 @@ otError Server::VerifySignature(const Dns::Ecdsa256KeyRecord &aKey,
 
     sha256.Finish(hash);
 
+    otDumpInfoSrp("[server] sha hash", &hash, sizeof(hash));
+
     signatureOffset = aSigRdataOffset + aSigRdataLength - Crypto::Ecdsa::P256::Signature::kSize;
     SuccessOrExit(error = aMessage.Read(signatureOffset, signature));
 
     error = aKey.GetKey().Verify(hash, signature);
 
 exit:
+    otLogInfoSrp("[server] \t VerifySignature() exiting %s", otThreadErrorToString(error));
     return error;
 }
 

@@ -1008,6 +1008,9 @@ otError Client::AppendSignature(Message &aMessage, Info &aInfo)
     sha256.Update(aMessage, 0, offset);
 
     sha256.Finish(hash);
+
+    otDumpInfoSrp("[client] sha hash", &hash, sizeof(hash));
+
     SuccessOrExit(error = aInfo.mKeyPair.Sign(hash, signature));
 
     // Move back in message and append SIG RR now with compressed host
@@ -1020,7 +1023,7 @@ otError Client::AppendSignature(Message &aMessage, Info &aInfo)
 
     offset = aMessage.GetLength();
     SuccessOrExit(error = aMessage.Append(sig));
-    SuccessOrExit(error = AppendHostName(aMessage, aInfo));
+    SuccessOrExit(error = AppendHostName(aMessage, aInfo, /* aDoNotCompress */ true));
     SuccessOrExit(error = aMessage.Append(signature));
     UpdateRecordLengthInMessage(sig, offset, aMessage);
 

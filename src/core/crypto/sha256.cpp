@@ -34,6 +34,7 @@
 #include "sha256.hpp"
 
 #include "common/message.hpp"
+#include "common/logging.hpp"
 
 namespace ot {
 namespace Crypto {
@@ -51,16 +52,20 @@ Sha256::~Sha256(void)
 void Sha256::Start(void)
 {
     mbedtls_sha256_starts_ret(&mContext, 0);
+    //otLogInfoSrp("Sha256::Start()");
 }
 
 void Sha256::Update(const void *aBuf, uint16_t aBufLength)
 {
     mbedtls_sha256_update_ret(&mContext, reinterpret_cast<const uint8_t *>(aBuf), aBufLength);
+    //otDumpInfoSrp("Sha256::Update", aBuf, aBufLength);
 }
 
 void Sha256::Update(const Message &aMessage, uint16_t aOffset, uint16_t aLength)
 {
     Message::Chunk chunk;
+
+    //otLogInfoSrp("Sha256::UpdateFromMessage(aOffset=%d, aLength=%d)", aOffset, aLength);
 
     aMessage.GetFirstChunk(aOffset, aLength, chunk);
 
@@ -69,11 +74,13 @@ void Sha256::Update(const Message &aMessage, uint16_t aOffset, uint16_t aLength)
         Update(chunk.GetData(), chunk.GetLength());
         aMessage.GetNextChunk(aLength, chunk);
     }
+    //otLogInfoSrp("Sha256::UpdateFromMessage() done");
 }
 
 void Sha256::Finish(Hash &aHash)
 {
     mbedtls_sha256_finish_ret(&mContext, aHash.m8);
+    //otDumpInfoSrp("Sha256::Finish() hash", &aHash, sizeof(aHash));
 }
 
 } // namespace Crypto
