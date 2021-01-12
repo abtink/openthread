@@ -177,7 +177,7 @@ otError Server::SetDomain(const char *aDomain)
 
     VerifyOrExit(!mEnabled, error = OT_ERROR_INVALID_STATE);
 
-    VerifyOrExit(length > 0 && length <= Dns::Name::kMaxLength, error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(length > 0 && length < Dns::Name::kMaxNameSize, error = OT_ERROR_INVALID_ARGS);
     if (aDomain[length - 1] != '.')
     {
         appendTrailingDot = 1;
@@ -631,7 +631,7 @@ otError Server::ProcessHostDescriptionInstruction(Host &                   aHost
 
     for (uint16_t i = 0; i < aDnsHeader.GetUpdateRecordCount(); ++i)
     {
-        char                name[Dns::Name::kMaxLength + 1];
+        char                name[Dns::Name::kMaxNameSize];
         Dns::ResourceRecord record;
 
         SuccessOrExit(error = Dns::Name::ReadName(aMessage, aOffset, name, sizeof(name)));
@@ -734,9 +734,9 @@ otError Server::ProcessServiceDiscoveryInstructions(Host &                   aHo
 
     for (uint16_t i = 0; i < aDnsHeader.GetUpdateRecordCount(); ++i)
     {
-        char                name[Dns::Name::kMaxLength + 1];
+        char                name[Dns::Name::kMaxNameSize];
         Dns::ResourceRecord record;
-        char                serviceName[Dns::Name::kMaxLength + 1];
+        char                serviceName[Dns::Name::kMaxNameSize];
         Service *           service;
 
         SuccessOrExit(error = Dns::Name::ReadName(aMessage, aOffset, name, sizeof(name)));
@@ -783,7 +783,7 @@ otError Server::ProcessServiceDescriptionInstructions(Host &                   a
 
     for (uint16_t i = 0; i < aDnsHeader.GetUpdateRecordCount(); ++i)
     {
-        char                name[Dns::Name::kMaxLength + 1];
+        char                name[Dns::Name::kMaxNameSize];
         Dns::ResourceRecord record;
 
         SuccessOrExit(error = Dns::Name::ReadName(aMessage, aOffset, name, sizeof(name)));
@@ -806,7 +806,7 @@ otError Server::ProcessServiceDescriptionInstructions(Host &                   a
         if (record.GetType() == Dns::ResourceRecord::kTypeSrv)
         {
             Dns::SrvRecord srvRecord;
-            char           hostName[Dns::Name::kMaxLength + 1];
+            char           hostName[Dns::Name::kMaxNameSize];
             uint16_t       hostNameLength = sizeof(hostName);
 
             VerifyOrExit(record.GetClass() == aZone.GetClass(), error = OT_ERROR_FAILED);
@@ -871,7 +871,7 @@ otError Server::ProcessAdditionalSection(Host *                   aHost,
     char             name[2]; // The root domain name (".") is expected.
     uint16_t         sigOffset;
     uint16_t         sigRdataOffset;
-    char             signerName[Dns::Name::kMaxLength + 1];
+    char             signerName[Dns::Name::kMaxNameSize];
     uint16_t         signatureLength;
 
     VerifyOrExit(aDnsHeader.GetAdditionalRecordCount() == 2, error = OT_ERROR_FAILED);
