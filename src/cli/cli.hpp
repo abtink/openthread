@@ -41,7 +41,7 @@
 #include <stdarg.h>
 
 #include <openthread/cli.h>
-#include <openthread/dns.h>
+#include <openthread/dns_client.h>
 #include <openthread/ip6.h>
 #include <openthread/sntp.h>
 #include <openthread/udp.h>
@@ -546,11 +546,8 @@ private:
 #endif
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
-    static void HandleDnsResponse(void *              aContext,
-                                  const char *        aHostname,
-                                  const otIp6Address *aAddress,
-                                  uint32_t            aTtl,
-                                  otError             aResult);
+    static void HandleDnsResponse(otError aError, const otDnsAddressResponse *aResponse, void *aContext);
+    void        HandleDnsResponse(otError aError, const otDnsAddressResponse *aResponse);
 #endif
 
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
@@ -562,9 +559,6 @@ private:
     void HandleActiveScanResult(otActiveScanResult *aResult);
     void HandleEnergyScanResult(otEnergyScanResult *aResult);
     void HandleLinkPcapReceive(const otRadioFrame *aFrame, bool aIsTx);
-#if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
-    void HandleDnsResponse(const char *aHostname, const Ip6::Address *aAddress, uint32_t aTtl, otError aResult);
-#endif
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
     void HandleSntpResponse(uint64_t aTime, otError aResult);
 #endif
@@ -787,11 +781,6 @@ private:
     otIp6Address        mPingDestAddress;
     TimerMilli          mPingTimer;
     otIcmp6Handler      mIcmpHandler;
-#if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
-    bool mResolvingInProgress;
-    char mResolvingHostname[OT_DNS_MAX_HOSTNAME_LENGTH];
-#endif
-
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
     bool mSntpQueryingInProgress;
 #endif
