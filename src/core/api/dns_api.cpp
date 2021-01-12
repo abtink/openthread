@@ -33,7 +33,7 @@
 
 #include "openthread-core-config.h"
 
-#include <openthread/dns.h>
+#include <openthread/dns_client.h>
 
 #include "common/instance.hpp"
 #include "common/locator-getters.hpp"
@@ -42,10 +42,38 @@
 using namespace ot;
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
-otError otDnsClientQuery(otInstance *aInstance, const otDnsQuery *aQuery, otDnsResponseHandler aHandler, void *aContext)
+
+otError otDnsClientGetAddressResponseHostName(const otDnsClientAddressResponse *aResponse,
+                                              char *                            aNameBuffer,
+                                              uint16_t                          aNameBufferSize)
+{
+    const Dns::Client::AddressResponse &response = *static_cast<const Dns::Client::AddressResponse *>(aResponse);
+
+    return response.GetHostName(aNameBuffer, aNameBufferSize);
+}
+
+otError otDnsClientGetAddressResponseAddress(const otDnsClientAddressResponse *aResponse,
+                                             uint16_t                          aIndex,
+                                             otIp6Address *                    aAddress,
+                                             uint32_t *                        aTtl)
+{
+    const Dns::Client::AddressResponse &response = *static_cast<const Dns::Client::AddressResponse *>(aResponse);
+    uint32_t                            ttl;
+
+    return response.GetAddress(aIndex, *static_cast<Ip6::Address *>(aAddress), (aTtl != nullptr) ? *aTtl : ttl);
+}
+
+otError otDnsClientResolveAddress(otInstance *                      aInstance,
+                                  const otSockAddr *                aServerSockAddr,
+                                  const char *                      aHostName,
+                                  bool                              aNoRecursion,
+                                  otDnsClientAddressResponseHandler aHandler,
+                                  void *                            aContext)
 {
     Instance &instance = *static_cast<Instance *>(aInstance);
 
-    return instance.Get<Dns::Client>().Query(*static_cast<const Dns::Client::QueryInfo *>(aQuery), aHandler, aContext);
+    return instance.Get<Dns::Client>().ResolveAddress(*static_cast<const Ip6::SockAddr *>(aServerSockAddr), aHostName,
+                                                      aNoRecursion, aHandler, aContext);
 }
-#endif
+
+#endif // OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE

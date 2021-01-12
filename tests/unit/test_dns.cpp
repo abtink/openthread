@@ -657,8 +657,8 @@ void TestHeaderAndResourceRecords(void)
     Dns::ResourceRecord record;
     Ip6::Address        hostAddress;
 
-    char    label[Dns::Name::kMaxLabelLength + 1];
-    char    name[Dns::Name::kMaxLength];
+    char    label[Dns::Name::kMaxLabelSize];
+    char    name[Dns::Name::kMaxNameSize];
     uint8_t buffer[kMaxSize];
 
     printf("================================================================\n");

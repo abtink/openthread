@@ -282,6 +282,22 @@ public:
      *
      */
     const Address &GetAddress(void) const { return *static_cast<const Address *>(&mAddress); }
+
+    /**
+     * This method returns the port number.
+     *
+     * @returns The port number.
+     *
+     */
+    uint16_t GetPort(void) { return mPort; }
+
+    /**
+     * This method sets the port number.
+     *
+     * @param[in]  aPort   The port number.
+     *
+     */
+    void SetPort(uint16_t aPort) { mPort = aPort; }
 };
 
 /**
