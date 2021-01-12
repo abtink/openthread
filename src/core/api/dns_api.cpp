@@ -42,10 +42,16 @@
 using namespace ot;
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
-otError otDnsClientQuery(otInstance *aInstance, const otDnsQuery *aQuery, otDnsResponseHandler aHandler, void *aContext)
+otError otDnsClientQuery(otInstance *         aInstance,
+                         const otSockAddr *   aServerSockAddr,
+                         const char *         aHostName,
+                         bool                 aNoRecursion,
+                         otDnsResponseHandler aHandler,
+                         void *               aContext)
 {
     Instance &instance = *static_cast<Instance *>(aInstance);
 
-    return instance.Get<Dns::Client>().Query(*static_cast<const Dns::Client::QueryInfo *>(aQuery), aHandler, aContext);
+    return instance.Get<Dns::Client>().Query(*static_cast<const Ip6::SockAddr *>(aServerSockAddr), aHostName,
+                                             aNoRecursion, aHandler, aContext);
 }
 #endif

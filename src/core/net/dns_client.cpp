@@ -50,7 +50,7 @@ namespace Dns {
 
 Client::Client(Instance &aInstance)
     : mSocket(aInstance)
-    , mRetransmissionTimer(aInstance, Client::HandleRetransmissionTimer, this)
+    , mTimer(aInstance, Client::HandleTimer, this)
 {
 }
 
@@ -67,105 +67,188 @@ exit:
 
 otError Client::Stop(void)
 {
-    Message *     message;
-    QueryMetadata queryMetadata;
+    Query *query;
+    Info   info;
 
-    // Remove all pending queries.
-    while ((message = mPendingQueries.GetHead()) != nullptr)
+    while ((query = mQueries.GetHead()) != nullptr)
     {
-        queryMetadata.ReadFrom(*message);
-        FinalizeDnsTransaction(*message, queryMetadata, nullptr, 0, OT_ERROR_ABORT);
+        InvokeResponseHandler(*query, OT_ERROR_ABORT);
+        FreeQuery(*query);
     }
 
     return mSocket.Close();
 }
 
-otError Client::Query(const QueryInfo &aQuery, ResponseHandler aHandler, void *aContext)
+otError Client::Query(const Ip6::SockAddr &aServerSockAddr,
+                      const char *         aHostName,
+                      ResponseHandler      aHandler,
+                      void *               aContext)
 {
-    otError       error;
-    QueryMetadata queryMetadata;
-    Message *     message     = nullptr;
-    Message *     messageCopy = nullptr;
-    Header        header;
-    QuestionAaaa  question;
+    otError error;
+    Info    info;
+    Query * query;
 
-    VerifyOrExit(aQuery.IsValid(), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit(mSocket.IsBound(), error = OT_ERROR_INVALID_STATE);
 
-    do
+    info.Clear();
+    info.mServerSockAddr  = aServerSockAddr;
+    info.mResponseHandler = aHandler;
+    info.mResponseContext = aContext;
+
+    SuccessOrExit(error = AllocateQuery(info, aHostName, query));
+    mQueries.Enqueue(*query);
+
+    SendQuery(*query);
+
+exit:
+    return error;
+}
+
+otError Client::AllocateQuery(const Info &aInfo, const char *aHostName, Query *&aQuery)
+{
+    otError error = OT_ERROR_NONE;
+
+    aQuery = Get<MessagePool>().New(Message::kTypeOther, /* aReserveHeader */ 0);
+    VerifyOrExit(aQuery != nullptr);
+
+    SuccessOrExit(error = aQuery->Append(aInfo));
+    SuccessOrExit(error = Name::AppendName(aHostName, *aQuery));
+
+exit:
+    FreeAndNullMessageOnError(aQuery, error);
+    return error;
+}
+
+void Client::FreeQuery(Query &aQuery)
+{
+    mQueries.Dequeue(aQuery);
+    aQuery.Free();
+}
+
+void Client::SendQuery(Query &aQuery)
+{
+    otError          error   = OT_ERROR_NONE;
+    Message *        message = nullptr;
+    Info             info;
+    Header           header;
+    Ip6::MessageInfo messageInfo;
+
+    info.ReadFrom(aQuery);
+
+    info.mRetransmissionTime = TimerMilli::GetNow() + kResponseTimeout;
+
+    if (info.mMessageId == 0)
     {
-        SuccessOrExit(error = header.SetRandomMessageId());
-    } while (FindQueryById(header.GetMessageId()) != nullptr);
+        do
+        {
+            SuccessOrExit(error = header.SetRandomMessageId());
+        } while (FindQueryById(header.GetMessageId()) != nullptr);
+
+        info.mMessageId = header.GetMessageId();
+    }
+    else
+    {
+        header.SetMessageId(info.mMessageId);
+    }
 
     header.SetType(Header::kTypeQuery);
     header.SetQueryType(Header::kQueryTypeStandard);
 
-    if (!aQuery.IsNoRecursion())
+    if (!info.mNoRecursion)
     {
         header.SetRecursionDesiredFlag();
     }
 
     header.SetQuestionCount(1);
 
-    VerifyOrExit((message = NewMessage(header)) != nullptr, error = OT_ERROR_NO_BUFS);
+    message = mSocket.NewMessage(0);
+    VerifyOrExit(message != nullptr, error = OT_ERROR_NO_BUFS);
 
-    SuccessOrExit(error = Name::AppendName(aQuery.GetHostname(), *message));
-    SuccessOrExit(error = question.AppendTo(*message));
+    SuccessOrExit(error = AppendNameFromQuery(aQuery, *message));
+    SuccessOrExit(error = message->Append(QuestionAaaa()));
 
-    queryMetadata.mHostname            = aQuery.GetHostname();
-    queryMetadata.mResponseHandler     = aHandler;
-    queryMetadata.mResponseContext     = aContext;
-    queryMetadata.mTransmissionTime    = TimerMilli::GetNow() + kResponseTimeout;
-    queryMetadata.mSourceAddress       = aQuery.GetMessageInfo().GetSockAddr();
-    queryMetadata.mDestinationAddress  = aQuery.GetMessageInfo().GetPeerAddr();
-    queryMetadata.mDestinationPort     = aQuery.GetMessageInfo().GetPeerPort();
-    queryMetadata.mRetransmissionCount = 0;
+    messageInfo.SetPeerAddr(info.mServerSockAddr.GetAddress());
+    messageInfo.SetPeerPort(info.mServerSockAddr.GetPeerPort());
 
-    VerifyOrExit((messageCopy = CopyAndEnqueueMessage(*message, queryMetadata)) != nullptr, error = OT_ERROR_NO_BUFS);
-    SuccessOrExit(error = SendMessage(*message, aQuery.GetMessageInfo()));
+    SuccessOrExit(error = mSocket.SendTo(*message, messageInfo));
 
 exit:
+    FreeMessageOnError(message, error);
 
-    if (error != OT_ERROR_NONE)
-    {
-        FreeMessage(message);
+    UpdateQuery(aQuery, info);
+    mTimer.FireAtIfEarlier(info.mRetransmissionTime);
+}
 
-        if (messageCopy)
-        {
-            DequeueMessage(*messageCopy);
-        }
-    }
+otError Client::AppendNameFromQuery(const Query &aQuery, Message &aMessage)
+{
+    otError  error = OT_ERROR_NONE;
+    uint16_t offset;
+    uint16_t length;
 
+    // The name is encoded and included after the `Info` in `aQuery. We
+    // first calculate the encoded length of the name, then grow the
+    // message, and finally copy the encoded name bytes from `aQuery`
+    // into `aMessage`.
+
+    length = aQuery.GetLength() - sizeof(Info);
+
+    offset = aMessage.GetLength();
+    SuccessOrExit(error = aMessage.SetLength(offset + length));
+
+    aQuery.CopyTo(/* aSourceOffset */ sizeof(Info), /* aDestOffset */ offset, length, aMessage);
+
+exit:
     return error;
 }
 
-Message *Client::NewMessage(const Header &aHeader)
+void Client::InvokeResponseHandler(Query &aQuery, otError aError)
 {
-    Message *message = mSocket.NewMessage(sizeof(aHeader));
+    Info info;
 
-    VerifyOrExit(message != nullptr);
-    IgnoreError(message->Prepend(aHeader));
-    message->SetOffset(0);
+    OT_ASSERT(aError != OT_ERROR_NONE);
+
+    info.ReadFrom(aQuery);
+    VerifyOrExit(info.mResponseHandler != nullptr);
+
+    info.mResponseHandler(aError, /* host */ nullptr, nullptr, 0, info.mResponseContext);
 
 exit:
-    return message;
+    return;
 }
 
-Message *Client::CopyAndEnqueueMessage(const Message &aMessage, const QueryMetadata &aQueryMetadata)
+Query *Client::FindQueryById(uint16_t aMessageId)
 {
-    otError  error       = OT_ERROR_NONE;
-    Message *messageCopy = aMessage.Clone();
+    Query *query;
+    Info   info;
 
-    VerifyOrExit(messageCopy != nullptr, error = OT_ERROR_NO_BUFS);
+    for (query = mQueries.GetHead(); query != nullptr; query = query->GetNext())
+    {
+        info.ReadFrom(*query);
 
-    SuccessOrExit(error = aQueryMetadata.AppendTo(*messageCopy));
-    mPendingQueries.Enqueue(*messageCopy);
+        if (info.mMessageId == aMessageId)
+        {
+            break;
+        }
+    }
 
-    mRetransmissionTimer.FireAtIfEarlier(aQueryMetadata.mTransmissionTime);
-
-exit:
-    FreeAndNullMessageOnError(messageCopy, error);
-    return messageCopy;
+    return query;
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 void Client::DequeueMessage(Message &aMessage)
 {
@@ -173,33 +256,10 @@ void Client::DequeueMessage(Message &aMessage)
 
     if (mPendingQueries.GetHead() == nullptr)
     {
-        mRetransmissionTimer.Stop();
+        mTimer.Stop();
     }
 
     aMessage.Free();
-}
-
-otError Client::SendMessage(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
-{
-    return mSocket.SendTo(aMessage, aMessageInfo);
-}
-
-void Client::SendCopy(const Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
-{
-    otError  error;
-    Message *messageCopy = aMessage.Clone(aMessage.GetLength() - sizeof(QueryMetadata));
-
-    VerifyOrExit(messageCopy != nullptr, error = OT_ERROR_NO_BUFS);
-
-    error = SendMessage(*messageCopy, aMessageInfo);
-
-exit:
-
-    if (error != OT_ERROR_NONE)
-    {
-        FreeMessage(messageCopy);
-        otLogWarnIp6("Failed to send DNS request: %s", otThreadErrorToString(error));
-    }
 }
 
 otError Client::CompareQuestions(Message &aMessageResponse, Message &aMessageQuery, uint16_t &aOffset)
@@ -268,12 +328,12 @@ void Client::FinalizeDnsTransaction(Message &            aQuery,
     }
 }
 
-void Client::HandleRetransmissionTimer(Timer &aTimer)
+void Client::HandleTimer(Timer &aTimer)
 {
-    aTimer.GetOwner<Client>().HandleRetransmissionTimer();
+    aTimer.GetOwner<Client>().HandleTimer();
 }
 
-void Client::HandleRetransmissionTimer(void)
+void Client::HandleTimer(void)
 {
     TimeMilli        now      = TimerMilli::GetNow();
     TimeMilli        nextTime = now.GetDistantFuture();
@@ -318,7 +378,7 @@ void Client::HandleRetransmissionTimer(void)
 
     if (nextTime < now.GetDistantFuture())
     {
-        mRetransmissionTimer.FireAt(nextTime);
+        mTimer.FireAt(nextTime);
     }
 }
 

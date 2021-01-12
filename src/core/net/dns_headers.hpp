@@ -1674,27 +1674,9 @@ public:
      *
      */
     QuestionAaaa(void)
-        : Question(kType, kClass)
+        : Question(ResourceRecord::kTypeAaaa, ResourceRecord::kClassInternet)
     {
     }
-
-    /**
-     * This method appends request data to the message.
-     *
-     * @param[in]  aMessage  A reference to the message.
-     *
-     * @retval OT_ERROR_NONE     Successfully appended the bytes.
-     * @retval OT_ERROR_NO_BUFS  Insufficient available buffers to grow the message.
-     *
-     */
-    otError AppendTo(Message &aMessage) const { return aMessage.Append(*this); }
-
-private:
-    enum
-    {
-        kType  = 0x1C, // AAAA Resource Record type.
-        kClass = 0x01, // The value of the Internet class.
-    };
 };
 
 /**
