@@ -159,6 +159,22 @@ private:
         kBufSize = 16
     };
 
+    struct QueryData
+    {
+        otError AppendTo(Message &aMessage) const { return aMessage.Append(*this); }
+        void    ReadFrom(const Message &aMessage) { IgnoreError(aMessage.Read(0, *this));}
+        void    UpdateIn(Message &aMessage) const { aMessage.Write(0, *this); }
+
+        uint16_t        mMessageId;
+        Ip6::SockAddr   mServerSockAddr;
+        ResponseHandler mResponseHandler;
+        void *          mResponseContext;
+        TimeMilli       mRetransmissionTime;
+        uint8_t         mRetransmissionCount;
+        uint8_t         mTxFailureCount;
+        // Followed by the host name appended as given.
+    };
+
     struct QueryMetadata
     {
         otError AppendTo(Message &aMessage) const { return aMessage.Append(*this); }
@@ -180,8 +196,6 @@ private:
     void     DequeueMessage(Message &aMessage);
     otError  SendMessage(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
     void     SendCopy(const Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
-
-    otError GenerateUniqueRandomId(uint16_t &aRandomId);
 
     otError CompareQuestions(Message &aMessageResponse, Message &aMessageQuery, uint16_t &aOffset);
 
