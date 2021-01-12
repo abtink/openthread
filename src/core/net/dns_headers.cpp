@@ -101,14 +101,14 @@ otError Header::ResponseCodeToError(Response aResponse)
 
 otError Name::AppendLabel(const char *aLabel, Message &aMessage)
 {
-    return AppendLabel(aLabel, static_cast<uint8_t>(StringLength(aLabel, kMaxLabelLength + 1)), aMessage);
+    return AppendLabel(aLabel, static_cast<uint8_t>(StringLength(aLabel, kMaxLabelSize)), aMessage);
 }
 
 otError Name::AppendLabel(const char *aLabel, uint8_t aLabelLength, Message &aMessage)
 {
     otError error = OT_ERROR_NONE;
 
-    VerifyOrExit((0 < aLabelLength) && (aLabelLength <= kMaxLabelLength), error = OT_ERROR_INVALID_ARGS);
+    VerifyOrExit((0 < aLabelLength) && (aLabelLength < kMaxLabelSize), error = OT_ERROR_INVALID_ARGS);
 
     SuccessOrExit(error = aMessage.Append(aLabelLength));
     error = aMessage.AppendBytes(aLabel, aLabelLength);
@@ -264,7 +264,7 @@ otError Name::ReadName(const Message &aMessage, uint16_t &aOffset, char *aNameBu
                 // here since `iterator.ReadLabel()` would verify it.
             }
 
-            labelLength = static_cast<uint8_t>(OT_MIN(kMaxLabelLength + 1, aNameBufferSize));
+            labelLength = static_cast<uint8_t>(OT_MIN(static_cast<uint8_t>(kMaxLabelSize), aNameBufferSize));
             SuccessOrExit(error = iterator.ReadLabel(aNameBuffer, labelLength, /* aAllowDotCharInLabel */ false));
             aNameBuffer += labelLength;
             aNameBufferSize -= labelLength;

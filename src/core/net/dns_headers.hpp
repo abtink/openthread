@@ -36,6 +36,8 @@
 
 #include "openthread-core-config.h"
 
+#include <openthread/dns_client.h>
+
 #include "common/clearable.hpp"
 #include "common/encoding.hpp"
 #include "common/message.hpp"
@@ -488,9 +490,17 @@ class Name
 public:
     enum : uint8_t
     {
-        kMaxLabelLength   = 63,  ///< Max number of characters in a label.
-        kMaxLength        = 254, ///< Max number of characters in a name.
-        kMaxEncodedLength = 255, ///< Max length of an encoded name.
+        /**
+         * Max size (number of chars) in a name string (includes null char at the end of string).
+         *
+         */
+        kMaxNameSize = OT_DNS_MAX_NAME_SIZE,
+
+        /**
+         * Max size (number of chars) in a label string (includes null char at the end of the string).
+         *
+         */
+        kMaxLabelSize = OT_DNS_MAX_LABEL_SIZE,
     };
 
     /**
@@ -753,6 +763,8 @@ private:
         kLabelTypeMask    = 0xc0, // 0b1100_0000 (first two bits)
         kTextLabelType    = 0x00, // Text label type (00)
         kPointerLabelType = 0xc0, // Pointer label type - compressed name (11)
+
+        kMaxEncodedLength = 255, ///< Max length of an encoded name.
     };
 
     enum : uint16_t
@@ -2060,6 +2072,12 @@ class Question
 {
 public:
     /**
+     * Default constructor for Question
+     *
+     */
+    Question(void) = default;
+
+    /**
      * Constructor for Question.
      *
      */
@@ -2101,21 +2119,9 @@ public:
      */
     void SetClass(uint16_t aClass) { mClass = HostSwap16(aClass); }
 
-    /**
-     * This method appends the question data to the message.
-     *
-     * @param[in]  aMessage  A reference to the message.
-     *
-     * @retval OT_ERROR_NONE     Successfully appended the question data.
-     * @retval OT_ERROR_NO_BUFS  Insufficient available buffers to grow the message.
-     *
-     */
-    otError AppendTo(Message &aMessage) const { return aMessage.Append(*this); }
-
 private:
     uint16_t mType;  // The type of the data in question section.
     uint16_t mClass; // The class of the data in question section.
-
 } OT_TOOL_PACKED_END;
 
 /**
