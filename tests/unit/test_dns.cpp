@@ -106,6 +106,9 @@ void TestDnsName(void)
         "PoemByRumiMolana",
     };
 
+    static const char kBadLabel[] = "badlabel";
+    static const char kBadName[]  = "bad.name";
+
     printf("================================================================\n");
     printf("TestDnsName()\n");
 
@@ -173,6 +176,55 @@ void TestDnsName(void)
         VerifyOrQuit(Dns::Name::ReadName(*message, offset, 0, name,
                                          static_cast<uint16_t>(strlen(test.mExpectedReadName))) == OT_ERROR_NO_BUFS,
                      "Name::ReadName() did not fail with too small name buffer size");
+
+        // Compare labels one by one.
+        offset = 0;
+
+        for (uint8_t index = 0; test.mLabels[index] != nullptr; index++)
+        {
+            uint16_t startOffset = offset;
+
+            SuccessOrQuit(Dns::Name::CompareLabel(*message, offset, 0, test.mLabels[index]),
+                          "Name::CompareLabel() failed");
+            VerifyOrQuit(offset != startOffset, "Name::CompareLabel() did not change offset");
+
+            VerifyOrQuit(Dns::Name::CompareLabel(*message, startOffset, 0, kBadLabel) == OT_ERROR_NOT_FOUND,
+                         "Name::CompareLabel() did not fail with incorrect label");
+        }
+
+        // Compare the whole name.
+        offset = 0;
+        SuccessOrQuit(Dns::Name::CompareName(*message, offset, 0, test.mExpectedReadName),
+                      "Name::CompareName() failed");
+        VerifyOrQuit(offset == len, "Name::CompareName() returned incorrect offset");
+
+        offset = 0;
+        VerifyOrQuit(Dns::Name::CompareName(*message, offset, 0, kBadName) == OT_ERROR_NOT_FOUND,
+                     "Name::CompareName() did not fail with incorrect name");
+        VerifyOrQuit(offset == len, "Name::CompareName() returned incorrect offset");
+
+        // Remove the terminating '.' in expected name and verify
+        // that it is can still be used by `CompareName()`
+        offset = 0;
+        strcpy(name, test.mExpectedReadName);
+        name[strlen(name) - 1] = '\0';
+        SuccessOrQuit(Dns::Name::CompareName(*message, offset, 0, name), "Name::CompareName() failed with root");
+        VerifyOrQuit(offset == len, "Name::CompareName() returned incorrect offset");
+
+        if (strlen(name) >= 1)
+        {
+            name[strlen(name) - 1] = '\0';
+            offset                 = 0;
+            VerifyOrQuit(Dns::Name::CompareName(*message, offset, 0, name) == OT_ERROR_NOT_FOUND,
+                         "Name::CompareName() did not fail with invalid name");
+            VerifyOrQuit(offset == len, "Name::CompareName() returned incorrect offset");
+        }
+
+        // Compare the name with itself read from message.
+        offset = 0;
+        SuccessOrQuit(Dns::Name::CompareName(*message, offset, 0, *message, offset, 0),
+                      "Name::CompareName() with itself failed");
+        VerifyOrQuit(offset == len, "Name::CompareName() returned incorrect offset");
     }
 
     printf("----------------------------------------------------------------\n");
@@ -265,6 +317,8 @@ void TestDnsCompressedName(void)
     static const char kExpectedReadName1[] = "F.ISI.ARPA.";
     static const char kExpectedReadName2[] = "FOO.F.ISI.ARPA.";
     static const char kExpectedReadName3[] = "ISI.ARPA.";
+
+    static const char kBadName[] = "bad.name";
 
     Instance *   instance;
     MessagePool *messagePool;
@@ -366,6 +420,35 @@ void TestDnsCompressedName(void)
     VerifyOrQuit(strcmp(name, kExpectedReadName1) == 0, "Name::ReadName() did not return expected name");
     VerifyOrQuit(offset == name1Offset + sizeof(kEncodedName), "Name::ReadName() returned incorrect offset");
 
+    offset = name1Offset;
+
+    for (const char *nameLabel : kName1Labels)
+    {
+        SuccessOrQuit(Dns::Name::CompareLabel(*message, offset, kHeaderOffset, nameLabel),
+                      "Name::ComapreLabel() failed");
+    }
+
+    offset = name1Offset;
+    SuccessOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, kExpectedReadName1),
+                  "Name::CompareName() failed");
+    VerifyOrQuit(offset == name1Offset + sizeof(kEncodedName), "Name::CompareName() returned incorrect offset");
+
+    offset = name1Offset;
+    VerifyOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, kBadName) == OT_ERROR_NOT_FOUND,
+                 "Name::CompareName() did not fail with incorrect name");
+    VerifyOrQuit(offset == name1Offset + sizeof(kEncodedName), "Name::CompareName() returned incorrect offset");
+
+    offset = name1Offset;
+    SuccessOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, *message, offset, kHeaderOffset),
+                  "Name::CompareName() with itself failed");
+    VerifyOrQuit(offset == name1Offset + sizeof(kEncodedName), "Name::CompareName() returned incorrect offset");
+
+    offset = name1Offset;
+    VerifyOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, *message, name2Offset, kHeaderOffset) ==
+                     OT_ERROR_NOT_FOUND,
+                 "Name::CompareName() did not fail with mismatching name");
+    VerifyOrQuit(offset == name1Offset + sizeof(kEncodedName), "Name::CompareName() returned incorrect offset");
+
     printf("----------------------------------------------------------------\n");
     printf("Read and parse compressed name-2 \"FOO.F.ISI.ARPA\"\n");
 
@@ -398,6 +481,35 @@ void TestDnsCompressedName(void)
     printf("Read name =\"%s\"\n", name);
     VerifyOrQuit(strcmp(name, kExpectedReadName2) == 0, "Name::ReadName() did not return expected name");
     VerifyOrQuit(offset == name2Offset + kName2EncodedSize, "Name::ReadName() returned incorrect offset");
+
+    offset = name2Offset;
+
+    for (const char *nameLabel : kName2Labels)
+    {
+        SuccessOrQuit(Dns::Name::CompareLabel(*message, offset, kHeaderOffset, nameLabel),
+                      "Name::ComapreLabel() failed");
+    }
+
+    offset = name2Offset;
+    SuccessOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, kExpectedReadName2),
+                  "Name::CompareName() failed");
+    VerifyOrQuit(offset == name2Offset + kName2EncodedSize, "Name::CompareName() returned incorrect offset");
+
+    offset = name2Offset;
+    VerifyOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, kBadName) == OT_ERROR_NOT_FOUND,
+                 "Name::CompareName() did not fail with incorrect name");
+    VerifyOrQuit(offset == name2Offset + kName2EncodedSize, "Name::CompareName() returned incorrect offset");
+
+    offset = name2Offset;
+    SuccessOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, *message, offset, kHeaderOffset),
+                  "Name::CompareName() with itself failed");
+    VerifyOrQuit(offset == name2Offset + kName2EncodedSize, "Name::CompareName() returned incorrect offset");
+
+    offset = name2Offset;
+    VerifyOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, *message, name3Offset, kHeaderOffset) ==
+                     OT_ERROR_NOT_FOUND,
+                 "Name::CompareName() did not fail with mismatching name");
+    VerifyOrQuit(offset == name2Offset + kName2EncodedSize, "Name::CompareName() returned incorrect offset");
 
     printf("----------------------------------------------------------------\n");
     printf("Read and parse compressed name-3 \"ISI.ARPA\"\n");
@@ -432,6 +544,35 @@ void TestDnsCompressedName(void)
     VerifyOrQuit(strcmp(name, kExpectedReadName3) == 0, "Name::ReadName() did not return expected name");
     VerifyOrQuit(offset == name3Offset + kName3EncodedSize, "Name::ReadName() returned incorrect offset");
 
+    offset = name3Offset;
+
+    for (const char *nameLabel : kName3Labels)
+    {
+        SuccessOrQuit(Dns::Name::CompareLabel(*message, offset, kHeaderOffset, nameLabel),
+                      "Name::ComapreLabel() failed");
+    }
+
+    offset = name3Offset;
+    SuccessOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, kExpectedReadName3),
+                  "Name::CompareName() failed");
+    VerifyOrQuit(offset == name3Offset + kName3EncodedSize, "Name::CompareName() returned incorrect offset");
+
+    offset = name3Offset;
+    VerifyOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, kBadName) == OT_ERROR_NOT_FOUND,
+                 "Name::CompareName() did not fail with incorrect name");
+    VerifyOrQuit(offset == name3Offset + kName3EncodedSize, "Name::CompareName() returned incorrect offset");
+
+    offset = name3Offset;
+    SuccessOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, *message, offset, kHeaderOffset),
+                  "Name::CompareName() with itself failed");
+    VerifyOrQuit(offset == name3Offset + kName3EncodedSize, "Name::CompareName() returned incorrect offset");
+
+    offset = name3Offset;
+    VerifyOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, *message, name4Offset, kHeaderOffset) ==
+                     OT_ERROR_NOT_FOUND,
+                 "Name::CompareName() did not fail with mismatching name");
+    VerifyOrQuit(offset == name3Offset + kName3EncodedSize, "Name::CompareName() returned incorrect offset");
+
     printf("----------------------------------------------------------------\n");
     printf("Read and parse the uncompressed name-4 \"Human\\.Readable.F.ISI.ARPA\"\n");
 
@@ -459,6 +600,23 @@ void TestDnsCompressedName(void)
     offset = name4Offset;
     VerifyOrQuit(Dns::Name::ReadName(*message, offset, kHeaderOffset, name, sizeof(name)) == OT_ERROR_PARSE,
                  "Name::ReadName() did not fail with invalid label");
+
+    offset = name4Offset;
+
+    for (const char *nameLabel : kName4Labels)
+    {
+        SuccessOrQuit(Dns::Name::CompareLabel(*message, offset, kHeaderOffset, nameLabel),
+                      "Name::ComapreLabel() failed");
+    }
+
+    offset = name4Offset;
+    SuccessOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, *message, offset, kHeaderOffset),
+                  "Name::CompareName() with itself failed");
+
+    offset = name4Offset;
+    VerifyOrQuit(Dns::Name::CompareName(*message, offset, kHeaderOffset, *message, name1Offset, kHeaderOffset) ==
+                     OT_ERROR_NOT_FOUND,
+                 "Name::CompareName() did not fail with mismatching name");
 
     message->Free();
     testFreeInstance(instance);
