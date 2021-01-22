@@ -195,7 +195,8 @@ private:
     otError     AllocateQuery(const Info &aInfo, const char *aHostName, Query *&aQuery);
     void        FreeQuery(Query &aQuery);
     void        UpdateQuery(Query &aQuery, const Info &aInfo) { aQuery.Write(0, aInfo); }
-    void        SendQuery(Query &aQuery, bool aUpdateTimer);
+    void        SendQuery(Query &aQuery);
+    void        SendQuery(Query &aQuery, Info &aInfo, bool aUpdateTimer);
     void        FinalizeQuery(Query &aQuery, otError aError);
     void        FinalizeQuery(AddressResponse &Response, otError aError);
     otError     AppendNameFromQuery(const Query &aQuery, Message &aMessage);

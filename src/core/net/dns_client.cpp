@@ -153,7 +153,7 @@ otError Client::ResolveAddress(const Ip6::SockAddr &aServerSockAddr,
     SuccessOrExit(error = AllocateQuery(info, aHostName, query));
     mQueries.Enqueue(*query);
 
-    SendQuery(*query, /* aUpdateTimer */ true);
+    SendQuery(*query);
 
 exit:
     return error;
@@ -180,36 +180,42 @@ void Client::FreeQuery(Query &aQuery)
     aQuery.Free();
 }
 
-void Client::SendQuery(Query &aQuery, bool aUpdateTimer)
+void Client::SendQuery(Query &aQuery)
 {
-    otError          error   = OT_ERROR_NONE;
-    Message *        message = nullptr;
-    Info             info;
-    Header           header;
-    Ip6::MessageInfo messageInfo;
+    Info info;
 
     info.ReadFrom(aQuery);
 
-    info.mRetransmissionTime = TimerMilli::GetNow() + kResponseTimeout;
+    SendQuery(aQuery, info, /* aUpdateTimer */ true);
+}
 
-    if (info.mMessageId == 0)
+void Client::SendQuery(Query &aQuery, Info &aInfo, bool aUpdateTimer)
+{
+    otError          error   = OT_ERROR_NONE;
+    Message *        message = nullptr;
+    Header           header;
+    Ip6::MessageInfo messageInfo;
+
+    aInfo.mRetransmissionTime = TimerMilli::GetNow() + kResponseTimeout;
+
+    if (aInfo.mMessageId == 0)
     {
         do
         {
             SuccessOrExit(error = header.SetRandomMessageId());
         } while (FindQueryById(header.GetMessageId()) != nullptr);
 
-        info.mMessageId = header.GetMessageId();
+        aInfo.mMessageId = header.GetMessageId();
     }
     else
     {
-        header.SetMessageId(info.mMessageId);
+        header.SetMessageId(aInfo.mMessageId);
     }
 
     header.SetType(Header::kTypeQuery);
     header.SetQueryType(Header::kQueryTypeStandard);
 
-    if (!info.mNoRecursion)
+    if (!aInfo.mNoRecursion)
     {
         header.SetRecursionDesiredFlag();
     }
@@ -224,19 +230,19 @@ void Client::SendQuery(Query &aQuery, bool aUpdateTimer)
     SuccessOrExit(error = AppendNameFromQuery(aQuery, *message));
     SuccessOrExit(error = message->Append(Question(ResourceRecord::kTypeAaaa)));
 
-    messageInfo.SetPeerAddr(info.mServerSockAddr.GetAddress());
-    messageInfo.SetPeerPort(info.mServerSockAddr.GetPort());
+    messageInfo.SetPeerAddr(aInfo.mServerSockAddr.GetAddress());
+    messageInfo.SetPeerPort(aInfo.mServerSockAddr.GetPort());
 
     SuccessOrExit(error = mSocket.SendTo(*message, messageInfo));
 
 exit:
     FreeMessageOnError(message, error);
 
-    UpdateQuery(aQuery, info);
+    UpdateQuery(aQuery, aInfo);
 
     if (aUpdateTimer)
     {
-        mTimer.FireAtIfEarlier(info.mRetransmissionTime);
+        mTimer.FireAtIfEarlier(aInfo.mRetransmissionTime);
     }
 }
 
@@ -384,7 +390,7 @@ void Client::HandleTimer(void)
             }
 
             info.mRetransmissionCount++;
-            SendQuery(*query, /* aUpdateTimer */ false);
+            SendQuery(*query, info, /* aUpdateTimer */ false);
         }
 
         if (nextTime > info.mRetransmissionTime)
