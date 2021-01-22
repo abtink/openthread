@@ -172,6 +172,56 @@ otError otDnsClientResolveAddress(otInstance *                      aInstance,
                                   void *                            aContext);
 
 /**
+ * This type represents opaque representation of DNS response to a browse (service instance enumeration) query.
+ *
+ * Pointers to instance of this type are provided from callback `otDnsClientAddressResponseHandler`.
+ *
+ */
+typedef struct otDnsClientBrowseResponse otDnsClientBrowseResponse;
+
+/**
+ * This function pointer is called when a DNS response is received for a browse ((service instance enumeration) query
+ *
+ * Within this callback the user can use `otDnsClientGetBrowseResponse{Item}()`functions along with the @p aResponse
+ * pointer to get more info about the response.
+ *
+ * The @p aResponse pointer can only be used within this callback and after returning from this function it will not
+ * stay valid, so the user MUST NOT retain the @p aResponse pointer for later use.
+ *
+ * @param[in]  aError     The result of the DNS transaction.
+ * @param[in]  aResponse  A pointer to the response (it is always non-null).
+ * @param[in]  aContext   A pointer to application-specific context.
+ *
+ * For the full list of possible values for @p aError, please see `otDnsClientAddressResponseHandler()`.
+ *
+ */
+typedef void (*otDnsClientBrowseResponseHandler)(otError aError, const otDnsClientBrowseResponse *aResponse, void *aContext);
+
+
+/**
+ * This function gets the host name associated with a DNS browse (service enumeration) response.
+ *
+ * This function MUST only be used from `otDnsClientBrowseResponseHandler` callback.
+ *
+ * @param[in]  aResponse         A pointer to a response.
+ * @param[out] aNameBuffer       A buffer to char array to output the service name (MUST NOT be NULL).
+ * @param[in]  aNameBufferSize   The size of @p aNameBuffer.
+ *
+ * @retval OT_ERROR_NONE     The host name was read successfully.
+ * @retval OT_ERROR_NO_BUFS  The name does not fit in @p aNameBuffer.
+ *
+ */
+otError otDnsClientGetBrowseResponseServiceInstance(const otDnsClientAddressResponse *aResponse,
+                                                char *                      aNameBuffer,
+                                                uint16_t                    aNameBufferSize);
+
+otError otDnsClientBrowse(otInstance *                     aInstance,
+                          const otSockAddr *               aServerSockAddr,
+                          const char *                     aServiceName,
+                          otDnsClientBrowseResponseHandler aHandler,
+                          void *                           aContext);
+
+/**
  * @}
  *
  */
