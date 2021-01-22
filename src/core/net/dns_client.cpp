@@ -312,6 +312,8 @@ void Client::HandleUdpReceive(void *aContext, otMessage *aMessage, const otMessa
 {
     OT_UNUSED_VARIABLE(aMessageInfo);
 
+    OT_ASSERT(false);
+
     static_cast<Client *>(aContext)->ProcessResponse(*static_cast<Message *>(aMessage));
 }
 
