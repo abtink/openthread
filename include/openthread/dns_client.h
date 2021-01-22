@@ -63,16 +63,16 @@ extern "C" {
 /**
  * This type represents opaque representation of DNS response to a address resolution query.
  *
- * Pointers to instance of this type are provided from callback `otDnsClientAddressResponseHandler`.
+ * Pointers to instance of this type are provided from callback `otDnsAddressCallback`.
  *
  */
-typedef struct otDnsClientAddressResponse otDnsClientAddressResponse;
+typedef struct otDnsAddressResponse otDnsAddressResponse;
 
 /**
- * This function pointer is called when a DNS response is received for an address resolution query
+ * This function pointer is called when a DNS response is received for an address resolution query.
  *
- * Within this callback the user can use `otDnsClientGetAddressResponseHostName()` and other response related function
- * along with the @p aResponse pointer to get more info about the response.
+ * Within this callback the user can use `otDnsAddressResponseGet{Item}()` functions along with the @p aResponse
+ * pointer to get more info about the response.
  *
  * The @p aResponse pointer can only be used within this callback and after returning from this function it will not
  * stay valid, so the user MUST NOT retain the @p aResponse pointer for later use.
@@ -105,13 +105,11 @@ typedef struct otDnsClientAddressResponse otDnsClientAddressResponse;
  *  - Other error                                                                    -> OT_ERROR_FAILED
  *
  */
-typedef void (*otDnsClientAddressResponseHandler)(otError                           aError,
-                                                  const otDnsClientAddressResponse *aResponse,
-                                                  void *                            aContext);
+typedef void (*otDnsAddressCallback)(otError aError, const otDnsAddressResponse *aResponse, void *aContext);
 /**
  * This function gets the host name associated with a DNS address resolution response.
  *
- * This function MUST only be used from `otDnsClientAddressResponseHandler` callback.
+ * This function MUST only be used from `otDnsAddressCallback` callback.
  *
  * @param[in]  aResponse         A pointer to a response.
  * @param[out] aNameBuffer       A buffer to char array to output the host name (MUST NOT be NULL).
@@ -121,14 +119,14 @@ typedef void (*otDnsClientAddressResponseHandler)(otError                       
  * @retval OT_ERROR_NO_BUFS  The name does not fit in @p aNameBuffer.
  *
  */
-otError otDnsClientGetAddressResponseHostName(const otDnsClientAddressResponse *aResponse,
-                                              char *                            aNameBuffer,
-                                              uint16_t                          aNameBufferSize);
+otError otDnsAddressResponseGetHostName(const otDnsAddressResponse *aResponse,
+                                        char *                      aNameBuffer,
+                                        uint16_t                    aNameBufferSize);
 
 /**
  * This function gets an IPv6 address associated with a DNS address resolution response.
  *
- * This function MUST only be used from `otDnsClientAddressResponseHandler` callback.
+ * This function MUST only be used from `otDnsAddressCallback` callback.
  *
  * A response may include multiple IPv6 address records. @p aIndex can be used to iterate through the list of addresses,
  * (index 0 gives the the first address). When we reach end of the list, `OT_ERROR_NOT_FOUND` is returned.
@@ -143,10 +141,10 @@ otError otDnsClientGetAddressResponseHostName(const otDnsClientAddressResponse *
  * @retval OT_ERROR_NOT_FOUND  No address record in @p aResponse at @p aIndex.
  *
  */
-otError otDnsClientGetAddressResponseAddress(const otDnsClientAddressResponse *aResponse,
-                                             uint16_t                          aIndex,
-                                             otIp6Address *                    aAddress,
-                                             uint32_t *                        aTtl);
+otError otDnsAddressResponseGetAddress(const otDnsAddressResponse *aResponse,
+                                       uint16_t                    aIndex,
+                                       otIp6Address *              aAddress,
+                                       uint32_t *                  aTtl);
 
 /**
  * This function sends an address resolution DNS query for AAAA (IPv6) record(s) for a given host name.
@@ -157,32 +155,34 @@ otError otDnsClientGetAddressResponseAddress(const otDnsClientAddressResponse *a
  * @param[in]  aServerSockAddr  A pointer to server socket address.
  * @param[in]  aHostName        The host name for which to query the address.
  * @param[in]  aNoRecursion     Indicates whether name server can resolve the query recursively or not.
- * @param[in]  aHandler         A function pointer that shall be called on response reception or time-out.
+ * @param[in]  aCallback        A function pointer that shall be called on response reception or time-out.
  * @param[in]  aContext         A pointer to arbitrary context information.
  *
  * @retval OT_ERROR_NONE          Query started successfully. @p aHanlder will be invoked to report the status.
  * @retval OT_ERROR_NO_BUFS       Insufficient buffer to prepare and send query.
  *
  */
-otError otDnsClientResolveAddress(otInstance *                      aInstance,
-                                  const otSockAddr *                aServerSockAddr,
-                                  const char *                      aHostName,
-                                  bool                              aNoRecursion,
-                                  otDnsClientAddressResponseHandler aHandler,
-                                  void *                            aContext);
+otError otDnsClientResolveAddress(otInstance *         aInstance,
+                                  const otSockAddr *   aServerSockAddr,
+                                  const char *         aHostName,
+                                  bool                 aNoRecursion,
+                                  otDnsAddressCallback aCallback,
+                                  void *               aContext);
+
+//---------------------------------------------------------------------------------------------------------------------
 
 /**
  * This type represents opaque representation of DNS response to a browse (service instance enumeration) query.
  *
- * Pointers to instance of this type are provided from callback `otDnsClientAddressResponseHandler`.
+ * Pointers to instance of this type are provided from callback `otDnsAddressCallback`.
  *
  */
-typedef struct otDnsClientBrowseResponse otDnsClientBrowseResponse;
+typedef struct otDnsBrowseResponse otDnsBrowseResponse;
 
 /**
- * This function pointer is called when a DNS response is received for a browse ((service instance enumeration) query
+ * This function pointer is called when a DNS response is received for a browse (service instance enumeration) query
  *
- * Within this callback the user can use `otDnsClientGetBrowseResponse{Item}()`functions along with the @p aResponse
+ * Within this callback the user can use `otDnsBrowseResponseGet{Item}()` functions along with the @p aResponse
  * pointer to get more info about the response.
  *
  * The @p aResponse pointer can only be used within this callback and after returning from this function it will not
@@ -192,34 +192,76 @@ typedef struct otDnsClientBrowseResponse otDnsClientBrowseResponse;
  * @param[in]  aResponse  A pointer to the response (it is always non-null).
  * @param[in]  aContext   A pointer to application-specific context.
  *
- * For the full list of possible values for @p aError, please see `otDnsClientAddressResponseHandler()`.
+ * For the full list of possible values for @p aError, please see `otDnsAddressCallback()`.
  *
  */
-typedef void (*otDnsClientBrowseResponseHandler)(otError aError, const otDnsClientBrowseResponse *aResponse, void *aContext);
-
+typedef void (*otDnsBrowseCallback)(otError aError, const otDnsBrowseResponse *aResponse, void *aContext);
 
 /**
- * This function gets the host name associated with a DNS browse (service enumeration) response.
+ * This function gets the service name associated with a DNS browse (service instance enumeration) response.
  *
- * This function MUST only be used from `otDnsClientBrowseResponseHandler` callback.
+ * This function MUST only be used from `otDnsBrowseCallback` callback.
  *
  * @param[in]  aResponse         A pointer to a response.
  * @param[out] aNameBuffer       A buffer to char array to output the service name (MUST NOT be NULL).
  * @param[in]  aNameBufferSize   The size of @p aNameBuffer.
  *
- * @retval OT_ERROR_NONE     The host name was read successfully.
+ * @retval OT_ERROR_NONE     The service name was read successfully.
  * @retval OT_ERROR_NO_BUFS  The name does not fit in @p aNameBuffer.
  *
  */
-otError otDnsClientGetBrowseResponseServiceInstance(const otDnsClientAddressResponse *aResponse,
-                                                char *                      aNameBuffer,
-                                                uint16_t                    aNameBufferSize);
+otError otDnsBrowseResponseGetServiceName(const otDnsBrowseResponse *aResponse,
+                                          char *                     aNameBuffer,
+                                          uint16_t                   aNameBufferSize);
 
-otError otDnsClientBrowse(otInstance *                     aInstance,
-                          const otSockAddr *               aServerSockAddr,
-                          const char *                     aServiceName,
-                          otDnsClientBrowseResponseHandler aHandler,
-                          void *                           aContext);
+/**
+ * This function gets a service instance associated with a DNS browse (service instance enumeration) response.
+ *
+ * This function MUST only be used from `otDnsBrowseCallback` callback.
+ *
+ * A response may include multiple service instance records. @p aIndex can be used to iterate through the list. Index
+ * zero gives the the first record. When we reach end of the list, `OT_ERROR_NOT_FOUND` is returned.
+ *
+ * Note that this function gets the service instance label and not the full service instance name which is of the form
+ * `<Instance>.<Service>.<Domain>`.
+ *
+ * @param[in]  aResponse          A pointer to a response.
+ * @param[in]  aIndex             The service instance record index to retrieve.
+ * @param[out] aLabelBuffer       A buffer to char array to output the service instance label (MUST NOT be NULL).
+ * @param[in]  aLabelBufferSize   The size of @p aLabelBuffer.
+ *
+ * @retval OT_ERROR_NONE          The service instance was read successfully.
+ * @retval OT_ERROR_NO_BUFS       The name does not fit in @p aNameBuffer.
+ * @retval OT_ERROR_NOT_FOUND     No service instance record in @p aResponse at @p aIndex.
+ *
+ */
+otError otDnsBrowseResponseGetServiceInstance(const otDnsBrowseResponse *aResponse,
+                                              uint16_t                   aIndex,
+                                              char *                     aLabelBuffer,
+                                              uint8_t                    aLabelBufferSize);
+
+typedef struct otDnsServiceInstanceInfo
+{
+    uint32_t     mTtl;
+    uint16_t     mPort;
+    uint16_t     mPriority;
+    uint16_t     mWeight;
+    char *       mHostNameBuffer;
+    uint16_t     mHostNameBufferSize;
+    otIp6Address mHostAddress;
+    uint8_t *    mTxtData;
+    uint16_t     mTxtDataSize;
+} otDnsServiceInstanceInfo;
+
+otError otDnsBrowseResponseGetInstanceInfo(const otDnsBrowseResponse *aResponse,
+                                           const char *               aInstanceLabel,
+                                           otDnsServiceInstanceInfo * aServiceInfo);
+
+otError otDnsClientBrowse(otInstance *        aInstance,
+                          const otSockAddr *  aServerSockAddr,
+                          const char *        aServiceName,
+                          otDnsBrowseCallback aCallback,
+                          void *              aContext);
 
 /**
  * @}

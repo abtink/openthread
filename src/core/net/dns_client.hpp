@@ -50,7 +50,7 @@
  * This struct represents an opaque (and empty) type for a response to address resolution DNS query.
  *
  */
-struct otDnsClientAddressResponse
+struct otDnsAddressResponse
 {
 };
 
@@ -67,17 +67,17 @@ class Client : public InstanceLocator, private NonCopyable
 
 public:
     /**
-     * This type represents the function pointer which is called when a DNS response for an address resolution query is
-     * received.
+     * This type represents the function pointer callback which is called when a DNS response for an address resolution
+     * query is received.
      *
      */
-    typedef otDnsClientAddressResponseHandler AddressResponseHandler;
+    typedef otDnsAddressCallback AddressCallback;
 
     /**
      * This type represent an DNS address resolution query response.
      *
      */
-    class AddressResponse : public otDnsClientAddressResponse, public InstanceLocator
+    class AddressResponse : public otDnsAddressResponse, public InstanceLocator
     {
         friend class Client;
 
@@ -85,7 +85,7 @@ public:
         /**
          * This method gets the host name associated with a DNS address resolution response.
          *
-         * This method MUST only be used from `AddressResponseHandler` callback.
+         * This method MUST only be used from `AddressCallback` callback.
          *
          * @param[out] aNameBuffer       A buffer to char array to output the host name.
          * @param[in]  aNameBufferSize   The size of @p aNameBuffer.
@@ -99,7 +99,7 @@ public:
         /**
          * This method gets the first IPv6 address associated with a DNS address resolution response.
          *
-         * This method MUST only be used from `AddressResponseHandler` callback.
+         * This method MUST only be used from `AddressCallback` callback.
          *
          * @param[out] aAddress      A reference to a IPv6 address to output the address.
          * @param[out] aTtl          A reference to a `uint32_t` to output TTL for the address.
@@ -154,8 +154,8 @@ public:
      * @param[in]  aServerSockAddr  A pointer to server socket address.
      * @param[in]  aHostName        The host name for which to query the address.
      * @param[in]  aNoRecursion     Indicates whether name server can resolve the query recursively or not.
-     * @param[in]  aHandler         A function pointer that shall be called on response reception or time-out.
-     * @param[in]  aContext         A pointer to arbitrary context information.
+     * @param[in]  aCallback        A callback function pointer to report the result of query.
+     * @param[in]  aContext         A pointer to arbitrary context information passed to @p aCallback.
      *
      * @retval OT_ERROR_NONE            Successfully sent DNS query.
      * @retval OT_ERROR_NO_BUFS         Failed to allocate retransmission data.
@@ -163,11 +163,11 @@ public:
      * @retval OT_ERROR_INVALID_STATE   Cannot send query since Thread interface is not up.
      *
      */
-    otError ResolveAddress(const Ip6::SockAddr &  aServerSockAddr,
-                           const char *           aHostName,
-                           bool                   aNoRecursion,
-                           AddressResponseHandler aHandler,
-                           void *                 aContext);
+    otError ResolveAddress(const Ip6::SockAddr &aServerSockAddr,
+                           const char *         aHostName,
+                           bool                 aNoRecursion,
+                           AddressCallback      aCallback,
+                           void *               aContext);
 
 private:
     enum
@@ -182,13 +182,13 @@ private:
     {
         void ReadFrom(const Query &aQuery) { IgnoreError(aQuery.Read(0, *this)); }
 
-        uint16_t               mMessageId;
-        Ip6::SockAddr          mServerSockAddr;
-        AddressResponseHandler mResponseHandler;
-        void *                 mResponseContext;
-        TimeMilli              mRetransmissionTime;
-        uint8_t                mRetransmissionCount;
-        bool                   mNoRecursion;
+        uint16_t        mMessageId;
+        Ip6::SockAddr   mServerSockAddr;
+        AddressCallback mCallback;
+        void *          mCallbackContext;
+        TimeMilli       mRetransmissionTime;
+        uint8_t         mRetransmissionCount;
+        bool            mNoRecursion;
         // Followed by the host name encoded as a `Dns::Name`.
     };
 

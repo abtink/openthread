@@ -43,19 +43,19 @@ using namespace ot;
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
 
-otError otDnsClientGetAddressResponseHostName(const otDnsClientAddressResponse *aResponse,
-                                              char *                            aNameBuffer,
-                                              uint16_t                          aNameBufferSize)
+otError otDnsAddressResponseGetHostName(const otDnsAddressResponse *aResponse,
+                                        char *                      aNameBuffer,
+                                        uint16_t                    aNameBufferSize)
 {
     const Dns::Client::AddressResponse &response = *static_cast<const Dns::Client::AddressResponse *>(aResponse);
 
     return response.GetHostName(aNameBuffer, aNameBufferSize);
 }
 
-otError otDnsClientGetAddressResponseAddress(const otDnsClientAddressResponse *aResponse,
-                                             uint16_t                          aIndex,
-                                             otIp6Address *                    aAddress,
-                                             uint32_t *                        aTtl)
+otError otDnsAddressResponseGetAddress(const otDnsAddressResponse *aResponse,
+                                       uint16_t                    aIndex,
+                                       otIp6Address *              aAddress,
+                                       uint32_t *                  aTtl)
 {
     const Dns::Client::AddressResponse &response = *static_cast<const Dns::Client::AddressResponse *>(aResponse);
     uint32_t                            ttl;
@@ -63,17 +63,17 @@ otError otDnsClientGetAddressResponseAddress(const otDnsClientAddressResponse *a
     return response.GetAddress(aIndex, *static_cast<Ip6::Address *>(aAddress), (aTtl != nullptr) ? *aTtl : ttl);
 }
 
-otError otDnsClientResolveAddress(otInstance *                      aInstance,
-                                  const otSockAddr *                aServerSockAddr,
-                                  const char *                      aHostName,
-                                  bool                              aNoRecursion,
-                                  otDnsClientAddressResponseHandler aHandler,
-                                  void *                            aContext)
+otError otDnsClientResolveAddress(otInstance *         aInstance,
+                                  const otSockAddr *   aServerSockAddr,
+                                  const char *         aHostName,
+                                  bool                 aNoRecursion,
+                                  otDnsAddressCallback aCallback,
+                                  void *               aContext)
 {
     Instance &instance = *static_cast<Instance *>(aInstance);
 
     return instance.Get<Dns::Client>().ResolveAddress(*static_cast<const Ip6::SockAddr *>(aServerSockAddr), aHostName,
-                                                      aNoRecursion, aHandler, aContext);
+                                                      aNoRecursion, aCallback, aContext);
 }
 
 #endif // OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE

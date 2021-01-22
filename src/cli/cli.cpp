@@ -1366,18 +1366,18 @@ exit:
     return error;
 }
 
-void Interpreter::HandleDnsResponse(otError aError, const otDnsClientAddressResponse *aResponse, void *aContext)
+void Interpreter::HandleDnsResponse(otError aError, const otDnsAddressResponse *aResponse, void *aContext)
 {
     static_cast<Interpreter *>(aContext)->HandleDnsResponse(aError, aResponse);
 }
 
-void Interpreter::HandleDnsResponse(otError aError, const otDnsClientAddressResponse *aResponse)
+void Interpreter::HandleDnsResponse(otError aError, const otDnsAddressResponse *aResponse)
 {
     char         hostName[OT_DNS_MAX_NAME_SIZE];
     otIp6Address address;
     uint32_t     ttl;
 
-    IgnoreError(otDnsClientGetAddressResponseHostName(aResponse, hostName, sizeof(hostName)));
+    IgnoreError(otDnsAddressResponseGetHostName(aResponse, hostName, sizeof(hostName)));
 
     OutputFormat("DNS response for %s - ", hostName);
 
@@ -1385,7 +1385,7 @@ void Interpreter::HandleDnsResponse(otError aError, const otDnsClientAddressResp
     {
         uint16_t index = 0;
 
-        while (otDnsClientGetAddressResponseAddress(aResponse, index, &address, &ttl) == OT_ERROR_NONE)
+        while (otDnsAddressResponseGetAddress(aResponse, index, &address, &ttl) == OT_ERROR_NONE)
         {
             OutputIp6Address(address);
             OutputFormat(" TTL: %d ", ttl);

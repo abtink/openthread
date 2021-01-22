@@ -132,11 +132,11 @@ otError Client::Stop(void)
     return mSocket.Close();
 }
 
-otError Client::ResolveAddress(const Ip6::SockAddr &  aServerSockAddr,
-                               const char *           aHostName,
-                               bool                   aNoRecursion,
-                               AddressResponseHandler aHandler,
-                               void *                 aContext)
+otError Client::ResolveAddress(const Ip6::SockAddr &aServerSockAddr,
+                               const char *         aHostName,
+                               bool                 aNoRecursion,
+                               AddressCallback      aCallback,
+                               void *               aContext)
 {
     otError error;
     Info    info;
@@ -147,8 +147,8 @@ otError Client::ResolveAddress(const Ip6::SockAddr &  aServerSockAddr,
     info.Clear();
     info.mServerSockAddr  = aServerSockAddr;
     info.mNoRecursion     = aNoRecursion;
-    info.mResponseHandler = aHandler;
-    info.mResponseContext = aContext;
+    info.mCallback        = aCallback;
+    info.mCallbackContext = aContext;
 
     SuccessOrExit(error = AllocateQuery(info, aHostName, query));
     mQueries.Enqueue(*query);
@@ -277,8 +277,8 @@ void Client::FinalizeQuery(AddressResponse &aResponse, otError aError)
 
     info.ReadFrom(*aResponse.mQuery);
 
-    VerifyOrExit(info.mResponseHandler != nullptr);
-    info.mResponseHandler(aError, &aResponse, info.mResponseContext);
+    VerifyOrExit(info.mCallback != nullptr);
+    info.mCallback(aError, &aResponse, info.mCallbackContext);
 
 exit:
     FreeQuery(*aResponse.mQuery);

@@ -539,8 +539,8 @@ private:
 #endif
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
-    static void HandleDnsResponse(otError aError, const otDnsClientAddressResponse *aResponse, void *aContext);
-    void        HandleDnsResponse(otError aError, const otDnsClientAddressResponse *aResponse);
+    static void HandleDnsResponse(otError aError, const otDnsAddressResponse *aResponse, void *aContext);
+    void        HandleDnsResponse(otError aError, const otDnsAddressResponse *aResponse);
 #endif
 
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
