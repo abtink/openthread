@@ -1388,7 +1388,7 @@ void Interpreter::HandleDnsResponse(otError aError, const otDnsAddressResponse *
         while (otDnsAddressResponseGetAddress(aResponse, index, &address, &ttl) == OT_ERROR_NONE)
         {
             OutputIp6Address(address);
-            OutputFormat(" TTL: %d ", ttl);
+            OutputFormat(" TTL: %u ", ttl);
             index++;
         }
 

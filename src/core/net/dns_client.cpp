@@ -312,8 +312,6 @@ void Client::HandleUdpReceive(void *aContext, otMessage *aMessage, const otMessa
 {
     OT_UNUSED_VARIABLE(aMessageInfo);
 
-    OT_ASSERT(false);
-
     static_cast<Client *>(aContext)->ProcessResponse(*static_cast<Message *>(aMessage));
 }
 
@@ -337,11 +335,10 @@ void Client::ProcessResponse(const Message &aMessage)
 
     VerifyOrExit(response.mHeader.GetQuestionCount() == 1, error = OT_ERROR_PARSE);
 
+     // The name is encoded after `Info` struct in `query`.
+    SuccessOrExit(error = Name::CompareName(aMessage, offset, *response.mQuery, sizeof(Info)));
     VerifyOrExit(aMessage.Compare(offset, Question(ResourceRecord::kTypeAaaa)), error = OT_ERROR_PARSE);
     offset += sizeof(Question);
-
-    // The name is encoded after `Info` struct in `query`.
-    SuccessOrExit(error = Name::CompareName(aMessage, offset, *response.mQuery, sizeof(Info)));
 
     if (response.mHeader.GetResponseCode() != Header::kResponseSuccess)
     {
