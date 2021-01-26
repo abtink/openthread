@@ -104,7 +104,13 @@ otError Client::Response::FindRecord(Section        aSection,
         fprintf(stderr, "   FindRecord() Start of for() with numRecords=%d\n", numRecords);
         fprintf(stderr, "   FindRecord() startOffset=%d\n", startOffset);
 
-        error = Name::CompareName(*mMessage, offset, aNameMessage, aNameOffset);
+        //error = Name::CompareName(*mMessage, offset, aNameMessage, aNameOffset);
+        {
+            char name[Name::kMaxNameSize];
+            error = Name::ReadName(*mMessage, offset, name, sizeof(name));
+            fprintf(stderr, "Name is \"%s\"\n", name);
+            OT_UNUSED_VARIABLE(aNameMessage);
+        }
 
         fprintf(stderr, "   FindRecord() ComapareName() returned -> %s\n", otThreadErrorToString(error));
 
