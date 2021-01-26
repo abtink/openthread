@@ -156,6 +156,8 @@ exit:
     return error;
 }
 
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
+
 otError Client::Response::FindServiceInfo(Section        aSection,
                                           const Message &aNameMessage,
                                           uint16_t       aNameOffset,
@@ -287,6 +289,8 @@ exit:
     return error;
 }
 
+#endif // OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
+
 //---------------------------------------------------------------------------------------------------------------------
 // Client::AddressResponse
 
@@ -303,6 +307,8 @@ otError Client::AddressResponse::GetAddress(uint16_t aIndex, Ip6::Address &aAddr
 exit:
     return error;
 }
+
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
 
 //---------------------------------------------------------------------------------------------------------------------
 // Client::BrowseResponse
@@ -423,23 +429,31 @@ otError Client::ServiceResponse::GetServiceInfo(ServiceInfo &aServiceInfo) const
     return FindServiceInfo(kAnswerSection, *mQuery, kNameOffsetInQuery, aServiceInfo);
 }
 
+#endif // OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
+
 //---------------------------------------------------------------------------------------------------------------------
 // Client
 
 const uint16_t Client::kAddressQueryRecordTypes[] = {ResourceRecord::kTypeAaaa};
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
 const uint16_t Client::kBrowseQueryRecordTypes[]  = {ResourceRecord::kTypePtr};
 const uint16_t Client::kServiceQueryRecordTypes[] = {ResourceRecord::kTypeSrv, ResourceRecord::kTypeTxt};
+#endif
 
 const uint8_t Client::kQuestionCount[] = {
     /* (0) kAddressQuery -> */ OT_ARRAY_LENGTH(kAddressQueryRecordTypes), // AAAA records
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
     /* (1) kBrowseQuery  -> */ OT_ARRAY_LENGTH(kBrowseQueryRecordTypes),  // PTR records
     /* (2) kServiceQuery -> */ OT_ARRAY_LENGTH(kServiceQueryRecordTypes), // SRV and TXT records
+#endif
 };
 
 const uint16_t *Client::kQuestionRecordTypes[] = {
     /* (0) kAddressQuery -> */ kAddressQueryRecordTypes,
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
     /* (1) kBrowseQuery  -> */ kBrowseQueryRecordTypes,
     /* (2) kServiceQuery -> */ kServiceQueryRecordTypes,
+#endif
 };
 
 Client::Client(Instance &aInstance)
@@ -448,8 +462,10 @@ Client::Client(Instance &aInstance)
     , mTimer(aInstance, Client::HandleTimer, this)
 {
     static_assert(kAddressQuery == 0, "kAddressQuery value is not correct");
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
     static_assert(kBrowseQuery == 1, "kBrowseQuery value is not correct");
     static_assert(kServiceQuery == 2, "kServiceQuery value is not correct");
+#endif
 }
 
 otError Client::Start(void)
@@ -492,6 +508,8 @@ otError Client::ResolveAddress(const Ip6::SockAddr &aServerSockAddr,
     return StartQuery(info, aServerSockAddr, nullptr, aHostName, aContext);
 }
 
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
+
 otError Client::Browse(const Ip6::SockAddr &aServerSockAddr,
                        const char *         aServiceName,
                        BrowseCallback       aCallback,
@@ -520,6 +538,8 @@ otError Client::ResolveService(const Ip6::SockAddr &aServerSockAddr,
 
     return StartQuery(info, aServerSockAddr, aInstanceLabel, aServiceName, aContext);
 }
+
+#endif // OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
 
 otError Client::StartQuery(QueryInfo &          aInfo,
                            const Ip6::SockAddr &aServerSockAddr,
@@ -691,6 +711,7 @@ void Client::FinalizeQuery(Response &aResponse, QueryType aType, otError aError)
         }
         break;
 
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
     case kBrowseQuery:
         if (callback.mBrowseCallback != nullptr)
         {
@@ -704,6 +725,7 @@ void Client::FinalizeQuery(Response &aResponse, QueryType aType, otError aError)
             callback.mServiceCallback(aError, &aResponse, context);
         }
         break;
+#endif
     }
 
     FreeQuery(*aResponse.mQuery);

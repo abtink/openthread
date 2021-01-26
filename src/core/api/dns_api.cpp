@@ -76,7 +76,7 @@ otError otDnsAddressResponseGetAddress(const otDnsAddressResponse *aResponse,
     return response.GetAddress(aIndex, *static_cast<Ip6::Address *>(aAddress), (aTtl != nullptr) ? *aTtl : ttl);
 }
 
-//---------------------------------------------------------------------------------------------------------------------
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
 
 otError otDnsClientBrowse(otInstance *        aInstance,
                           const otSockAddr *  aServerSockAddr,
@@ -174,5 +174,7 @@ otError otDnsServiceResponseGetHostAddress(const otDnsServiceResponse *aResponse
     return response.GetHostAddress(aHostName, aIndex, *static_cast<Ip6::Address *>(aAddress),
                                    (aTtl != nullptr) ? *aTtl : ttl);
 }
+
+#endif // OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
 
 #endif // OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE

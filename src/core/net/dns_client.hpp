@@ -54,6 +54,8 @@ struct otDnsAddressResponse
 {
 };
 
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
+
 /**
  * This struct represents an opaque (and empty) type for a response to browse (service instance enumeration) DNS query.
  *
@@ -70,6 +72,8 @@ struct otDnsServiceResponse
 {
 };
 
+#endif // OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
+
 namespace ot {
 namespace Dns {
 
@@ -82,19 +86,23 @@ class Client : public InstanceLocator, private NonCopyable
     typedef Message Query; // `Message` is used to save `Query` related info.
 
 public:
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
     /**
      * This structure provides info for a DNS service instance.
      *
      */
     typedef otDnsServiceInfo ServiceInfo;
+#endif
 
     /**
      * This class represents a DNS query response.
      *
      */
     class Response : public otDnsAddressResponse,
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
                      public otDnsBrowseResponse,
                      public otDnsServiceResponse,
+#endif
                      public Clearable<Response>
     {
         friend class Client;
@@ -134,12 +142,14 @@ public:
             return FindRecord(aSection, /* aIndex */ 0, aNameMessage, aNameOffset, aRecord, aOffset);
         }
 
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
         otError FindServiceInfo(Section        aSection,
                                 const Message &aNameMessage,
                                 uint16_t       aNameOffset,
                                 ServiceInfo &  aServiceInfo) const;
 
         otError FindHostAddress(const char *aHostName, uint16_t aIndex, Ip6::Address &aAddress, uint32_t &aTtl) const;
+#endif
 
         Query *        mQuery;                 // The associated query.
         const Message *mMessage;               // The response message.
@@ -448,6 +458,8 @@ public:
                            AddressCallback      aCallback,
                            void *               aContext);
 
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
+
     /**
      * This method sends a browse (service instance enumeration) DNS query for a given service name.
      *
@@ -484,6 +496,8 @@ public:
                            otDnsServiceCallback aCallback,
                            void *               aContext);
 
+#endif // OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
+
 private:
     enum
     {
@@ -494,15 +508,19 @@ private:
     enum QueryType : uint8_t
     {
         kAddressQuery, // Address resolution.
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
         kBrowseQuery,  // Browse (service instance enumeration).
         kServiceQuery, // Service instance resolution.
+#endif
     };
 
     union Callback
     {
         AddressCallback mAddressCallback;
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
         BrowseCallback  mBrowseCallback;
         ServiceCallback mServiceCallback;
+#endif
     };
 
     typedef MessageQueue QueryList; // List of queries.
@@ -552,8 +570,10 @@ private:
     static const uint16_t *kQuestionRecordTypes[];
 
     static const uint16_t kAddressQueryRecordTypes[];
+#if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
     static const uint16_t kBrowseQueryRecordTypes[];
     static const uint16_t kServiceQueryRecordTypes[];
+#endif
 
     Ip6::Udp::Socket mSocket;
     QueryList        mQueries;
