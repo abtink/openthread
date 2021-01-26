@@ -296,11 +296,32 @@ exit:
 
 otError Client::AddressResponse::GetAddress(uint16_t aIndex, Ip6::Address &aAddress, uint32_t &aTtl) const
 {
-    otError    error;
-    uint16_t   offset;
-    AaaaRecord aaaaRecord;
+    otError        error;
+    uint16_t       offset;
+    const Message *nameMessage = mQuery;
+    uint16_t       nameOffset  = kNameOffsetInQuery;
+    AaaaRecord     aaaaRecord;
+    CnameRecord    cnameRecord;
 
-    SuccessOrExit(error = FindRecord(kAnswerSection, aIndex, *mQuery, kNameOffsetInQuery, aaaaRecord, offset));
+    // If the response includes a CNAME record mapping the query host
+    // name to a canonical name, we then search for AAAA records
+    // matching the canonical name.
+
+    error = FindFirstRecord(kAnswerSection, *mQuery, kNameOffsetInQuery, cnameRecord, offset);
+
+    if (error == OT_ERROR_NONE)
+    {
+        nameMessage = mMessage;
+        nameOffset  = offset;
+        SuccessOrExit(error = Name::ParseName(*mMessage, offset));
+        VerifyOrExit(offset <= nameOffset + cnameRecord.GetSize() - sizeof(CnameRecord), error = OT_ERROR_PARSE);
+    }
+    else
+    {
+        VerifyOrExit(error == OT_ERROR_NOT_FOUND);
+    }
+
+    SuccessOrExit(error = FindRecord(kAnswerSection, aIndex, *nameMessage, nameOffset, aaaaRecord, offset));
     aAddress = aaaaRecord.GetAddress();
     aTtl     = aaaaRecord.GetTtl();
 

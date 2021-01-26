@@ -821,17 +821,18 @@ public:
      */
     enum : uint16_t
     {
-        kTypeZero = 0,   ///< Zero is used as a special indicator for the SIG RR (SIG(0) from RFC 2931).
-        kTypeA    = 1,   ///< Address record (IPv4).
-        kTypeSoa  = 6,   ///< Start of (zone of) authority.
-        kTypePtr  = 12,  ///< PTR record.
-        kTypeTxt  = 16,  ///< TXT record.
-        kTypeSig  = 24,  ///< SIG record.
-        kTypeKey  = 25,  ///< KEY record.
-        kTypeAaaa = 28,  ///< IPv6 address record.
-        kTypeSrv  = 33,  ///< SRV locator record.
-        kTypeOpt  = 41,  ///< Option record.
-        kTypeAny  = 255, ///< ANY record.
+        kTypeZero  = 0,   ///< Zero is used as a special indicator for the SIG RR (SIG(0) from RFC 2931).
+        kTypeA     = 1,   ///< Address record (IPv4).
+        kTypeSoa   = 6,   ///< Start of (zone of) authority.
+        kTypeCname = 5,   ///< CNAME record.
+        kTypePtr   = 12,  ///< PTR record.
+        kTypeTxt   = 16,  ///< TXT record.
+        kTypeSig   = 24,  ///< SIG record.
+        kTypeKey   = 25,  ///< KEY record.
+        kTypeAaaa  = 28,  ///< IPv6 address record.
+        kTypeSrv   = 33,  ///< SRV locator record.
+        kTypeOpt   = 41,  ///< Option record.
+        kTypeAny   = 255, ///< ANY record.
     };
 
     /**
@@ -1053,6 +1054,60 @@ private:
     uint16_t mClass;  // The class of the data in RDATA section.
     uint32_t mTtl;    // Specifies the maximum time that the resource record may be cached.
     uint16_t mLength; // The length of RDATA section in bytes.
+
+} OT_TOOL_PACKED_END;
+
+/**
+ * This class implements Resource Record body format of CNAME type.
+ *
+ */
+OT_TOOL_PACKED_BEGIN
+class CnameRecord : public ResourceRecord
+{
+public:
+    enum : uint16_t
+    {
+        kType = kTypeCname, ///< The CNAME record type.
+    };
+
+    /**
+     * This method initializes the CNAME Resource Record by setting its type and class.
+     *
+     * Other record fields (TTL, length) remain unchanged/uninitialized.
+     *
+     * @param[in] aClass  The class of the resource record (default is `kClassInternet`).
+     *
+     */
+    void Init(uint16_t aClass = kClassInternet) { ResourceRecord::Init(kTypeCname, aClass); }
+
+    /**
+     * This method parses and reads the CNAME alias name from a message.
+     *
+     * This method also verifies that the CNAME record is well-formed (e.g., the record data length `GetLength()`
+     * matches the CNAME encoded name).
+     *
+     * @param[in]     aMessage          The message to read from. `aMessage.GetOffset()` MUST point to the start of
+     *                                  DNS header.
+     * @param[inout]  aOffset           On input, the offset in @p aMessage to start of CNAME name field.
+     *                                  On exit when successfully read, @p aOffset is updated to point to the byte
+     *                                  after the entire PTR record (skipping over the record).
+     * @param[out]    aNameBuffer       A pointer to a char array to output the read name as a null-terminated C string
+     *                                  (MUST NOT be nullptr).
+     * @param[in]     aNameBufferSize   The size of @p aNameBuffer.
+     *
+     * @retval OT_ERROR_NONE            The CNAME name was read successfully. @p aOffset and @p aNameBuffer are updated.
+     * @retval OT_ERROR_PARSE           The CNAME record in @p aMessage could not be parsed (invalid format).
+     * @retval OT_ERROR_NO_BUFS         Name could not fit in @p aNameBufferSize chars.
+     *
+     */
+    otError ReadCanonicalName(const Message &aMessage,
+                              uint16_t &     aOffset,
+                              char *         aNameBuffer,
+                              uint16_t       aNameBufferSize) const
+    {
+        return ResourceRecord::ReadName(aMessage, aOffset, /* aStartOffset */ aOffset - sizeof(CnameRecord),
+                                        aNameBuffer, aNameBufferSize, /* aSkipRecord */ true);
+    }
 
 } OT_TOOL_PACKED_END;
 
