@@ -75,7 +75,12 @@ otError Client::Response::FindRecord(Section        aSection,
     uint16_t offset;
     uint16_t numRecords = 0;
 
+    fprintf(stderr, "FindRecord(aSection %d, aIndex %d, aRecordType %d, aNameOffset %d\n",
+            aSection, aIndex, aRecordType, aNameOffset);
+
     VerifyOrExit(mMessage != nullptr, error = OT_ERROR_NOT_FOUND);
+
+    fprintf(stderr, "   FindRecord() mMessage is not null\n");
 
     switch (aSection)
     {
@@ -89,24 +94,43 @@ otError Client::Response::FindRecord(Section        aSection,
         break;
     }
 
+    fprintf(stderr, "   FindRecord() offset=%d numRecords=%d\n", offset, numRecords);
+
     for (; numRecords > 0; numRecords--)
     {
         uint16_t       startOffset = offset; // Save the offset to the start of record (including name).
         ResourceRecord record;
 
+        fprintf(stderr, "   FindRecord() Start of for() with numRecords=%d\n", numRecords);
+        fprintf(stderr, "   FindRecord() startOffset=%d\n", startOffset);
+
         error = Name::CompareName(*mMessage, offset, aNameMessage, aNameOffset);
+
+        fprintf(stderr, "   FindRecord() ComapareName() returned -> %s\n", otThreadErrorToString(error));
 
         if (error == OT_ERROR_NONE)
         {
             uint16_t recordOffset = offset; // Save the offset to the start of `ResourceRecod`.
 
-            SuccessOrExit(error = ResourceRecord::ReadRecord(*mMessage, offset, record));
+            fprintf(stderr, "   FindRecord() recordOffset=offset= %d\n", recordOffset);
+            error = ResourceRecord::ReadRecord(*mMessage, offset, record);
+            fprintf(stderr, "   FindRecord() ReadRecord() returned -> %s\n", otThreadErrorToString(error));
+
+            SuccessOrExit(error);
+
+            fprintf(stderr, "   FindRecord() ReadRecord() record type is %d\n", record.GetType());
+            fprintf(stderr, "   FindRecord() ReadRecord() record.GetLength()=%d\n", record.GetLength());
+            fprintf(stderr, "   FindRecord() ReadRecord() record.GetSize()=%u\n", record.GetSize());
 
             if (record.GetType() == aRecordType)
             {
+                fprintf(stderr, "   FindRecord() ReadRecord() record type does match\n");
+
                 if (aIndex == 0)
                 {
                     aOffset = recordOffset;
+                    fprintf(stderr, "   FindRecord() find the record returning with aOffset %d\n", aOffset);
+
                     ExitNow();
                 }
 
@@ -119,8 +143,11 @@ otError Client::Response::FindRecord(Section        aSection,
         // If either the name does not match or the record type does not,
         // go back to the start of the record and skip over it.
 
+
         offset = startOffset;
+        fprintf(stderr, "   FindRecord() RGoing back to start offset=%u\n", offset);
         SuccessOrExit(error = ResourceRecord::ParseRecords(*mMessage, offset, 1));
+        fprintf(stderr, "   FindRecord() After ParseRecords() -> offset=%u\n", offset);
     }
 
     error = OT_ERROR_NOT_FOUND;
@@ -296,11 +323,14 @@ otError Client::AddressResponse::GetAddress(uint16_t aIndex, Ip6::Address &aAddr
     uint16_t   offset;
     AaaaRecord aaaaRecord;
 
+    fprintf(stderr, "Client::AddressResponse::GetAddress(aIndex=%d)\n", aIndex);
+
     SuccessOrExit(error = FindRecord(kAnswerSection, aIndex, *mQuery, kNameOffsetInQuery, aaaaRecord, offset));
     aAddress = aaaaRecord.GetAddress();
     aTtl     = aaaaRecord.GetTtl();
 
 exit:
+    fprintf(stderr, "Client::AddressResponse::GetAddress() -> %s\n", otThreadErrorToString(error));
     return error;
 }
 
@@ -767,6 +797,8 @@ otError Client::ParseResponse(Response &aResponse, QueryType &aType, otError &aR
     Header         header;
     QueryInfo      info;
 
+    fprintf(stderr, "Dns::Client::ParseResponse()\n");
+
     SuccessOrExit(error = message.Read(offset, header));
     offset += sizeof(Header);
 
@@ -801,6 +833,9 @@ otError Client::ParseResponse(Response &aResponse, QueryType &aType, otError &aR
 
     aResponse.mAnswerRecordCount     = header.GetAnswerCount();
     aResponse.mAdditionalRecordCount = header.GetAdditionalRecordCount();
+
+    fprintf(stderr, "Dns::Client::ParseResponse() header counts: answer(%d, %d), add(%d, %d)\n",
+        aResponse.mAnswerOffset, header.GetAnswerCount(), aResponse.mAdditionalOffset, header.GetAdditionalRecordCount());
 
     // Check the response code from server
 
