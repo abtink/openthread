@@ -35,6 +35,12 @@
 
 #include "platform-posix.h"
 
+#if OPENTHREAD_CONFIG_POSIX_TREL_USE_NETLINK_SOCKET
+#ifndef __linux
+#error "netlink socket use is only supported on linux platform"
+#endif
+#endif
+
 #include <arpa/inet.h>
 #include <assert.h>
 #include <fcntl.h>

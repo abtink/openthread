@@ -70,7 +70,11 @@
  * When netlink is used Duplicate Address Detection (DAD) is disabled when a new address is added on the netif.
  *
  */
+#ifdef __linux
 #define OPENTHREAD_CONFIG_POSIX_TREL_USE_NETLINK_SOCKET 1
+#else
+#define OPENTHREAD_CONFIG_POSIX_TREL_USE_NETLINK_SOCKET 0
+#endif
 
 /**
  * @def OPENTHREAD_POSIX_CONFIG_RCP_PTY_ENABLE
