@@ -62,6 +62,17 @@
 #define OPENTHREAD_CONFIG_POSIX_APP_TREL_INTERFACE_NAME "trel"
 
 /**
+ * @def OPENTHREAD_CONFIG_POSIX_TREL_USE_NETLINK_SOCKET
+ *
+ * Defines whether the TREL UDP6 platform would use netlink socket to add/remove addresses on the TREL netif or
+ * `ioctl()` command.
+ *
+ * When netlink is used Duplicate Address Detection (DAD) is disabled when a new address is added on the netif.
+ *
+ */
+#define OPENTHREAD_CONFIG_POSIX_TREL_USE_NETLINK_SOCKET 1
+
+/**
  * @def OPENTHREAD_POSIX_CONFIG_RCP_PTY_ENABLE
  *
  * Define as 1 to enable PTY device support in POSIX app.
