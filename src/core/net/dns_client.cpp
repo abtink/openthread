@@ -49,6 +49,22 @@ namespace Dns {
 //---------------------------------------------------------------------------------------------------------------------
 // Client::Response
 
+void Client::Response::SelectSection(Section aSection, uint16_t &aOffset, uint16_t &aNumRecord) const
+{
+    switch (aSection)
+    {
+    case kAnswerSection:
+        aOffset    = mAnswerOffset;
+        aNumRecord = mAnswerRecordCount;
+        break;
+    case kAdditionalDataSection:
+    default:
+        aOffset    = mAdditionalOffset;
+        aNumRecord = mAdditionalRecordCount;
+        break;
+    }
+}
+
 otError Client::Response::GetName(char *aNameBuffer, uint16_t aNameBufferSize) const
 {
     uint16_t offset = kNameOffsetInQuery;
@@ -56,101 +72,42 @@ otError Client::Response::GetName(char *aNameBuffer, uint16_t aNameBufferSize) c
     return Name::ReadName(*mQuery, offset, aNameBuffer, aNameBufferSize);
 }
 
-otError Client::Response::FindRecord(Section        aSection,
-                                     uint16_t       aIndex,
-                                     uint16_t       aRecordType,
-                                     const Message &aNameMessage,
-                                     uint16_t       aNameOffset,
-                                     uint16_t &     aOffset) const
+otError Client::Response::FindHostAddress(Section       aSection,
+                                          const Name &  aHostName,
+                                          uint16_t      aIndex,
+                                          Ip6::Address &aAddress,
+                                          uint32_t &    aTtl) const
 {
-    // This method searches in the given `aSection` (Answer or
-    // Addition Data) of the response for the `(aIndex + 1)`th
-    // occurrence of a record with `aRecordType` also matching the
-    // record name against the name given from `aNameMessage` at
-    // `aNameOffset`. `aIndex` zero gives the first matching record,
-    // and so on. If found, `aOffset` is updated to point to the start
-    // of `ResourceRecord` fields (after the record name).
-
-    otError  error;
-    uint16_t offset;
-    uint16_t numRecords = 0;
+    otError     error;
+    uint16_t    offset;
+    uint16_t    numRecords;
+    Name        name = aHostName;
+    CnameRecord cnameRecord;
+    AaaaRecord  aaaaRecord;
 
     VerifyOrExit(mMessage != nullptr, error = OT_ERROR_NOT_FOUND);
 
-    switch (aSection)
+    // If the response includes a CNAME record mapping the query host
+    // name to a canonical name, we then search for AAAA records
+    // matching the canonical name.
+
+    SelectSection(aSection, offset, numRecords);
+    error = ResourceRecord::FindRecord(*mMessage, offset, numRecords, /* aIndex */ 0, aHostName, cnameRecord);
+
+    if (error == OT_ERROR_NONE)
     {
-    case kAnswerSection:
-        offset     = mAnswerOffset;
-        numRecords = mAnswerRecordCount;
-        break;
-    case kAdditionalDataSection:
-        offset     = mAdditionalOffset;
-        numRecords = mAdditionalRecordCount;
-        break;
+        name.SetFromMessage(*mMessage, offset);
+        SuccessOrExit(error = Name::ParseName(*mMessage, offset));
+    }
+    else
+    {
+        VerifyOrExit(error = OT_ERROR_NOT_FOUND);
     }
 
-    for (; numRecords > 0; numRecords--)
-    {
-        uint16_t       startOffset = offset; // Save the offset to the start of record (including name).
-        ResourceRecord record;
-
-        error = Name::CompareName(*mMessage, offset, aNameMessage, aNameOffset);
-
-        if (error == OT_ERROR_NONE)
-        {
-            uint16_t recordOffset = offset; // Save the offset to the start of `ResourceRecod`.
-
-            SuccessOrExit(error = ResourceRecord::ReadRecord(*mMessage, offset, record));
-
-            if (record.GetType() == aRecordType)
-            {
-                if (aIndex == 0)
-                {
-                    aOffset = recordOffset;
-                    ExitNow();
-                }
-
-                aIndex--;
-            }
-        }
-
-        VerifyOrExit((error == OT_ERROR_NONE) || (error == OT_ERROR_NOT_FOUND));
-
-        // If either the name does not match or the record type does not,
-        // go back to the start of the record and skip over it.
-
-        offset = startOffset;
-        SuccessOrExit(error = ResourceRecord::ParseRecords(*mMessage, offset, 1));
-    }
-
-    error = OT_ERROR_NOT_FOUND;
-
-exit:
-    return error;
-}
-
-template <class RecordType>
-otError Client::Response::FindRecord(Section        aSection,
-                                     uint16_t       aIndex,
-                                     const Message &aNameMessage,
-                                     uint16_t       aNameOffset,
-                                     RecordType &   aRecord,
-                                     uint16_t &     aOffset) const
-{
-    // This template method searches in the given `aSection` (Answer
-    // or Addition Data) of the response for the `(aIndex + 1)`th
-    // occurrence of a `RecordType` also matching the record name
-    // against the name given from `aNameMessage` at `aNameOffset`.
-    // `aIndex` zero gives the first matching record, and so on. If
-    // found, the record content is read from message and copied into
-    // `aRecord`. `aOffset` is updated to point the is updated to
-    // point to the last read byte in the record (similar to how
-    // `ResourceRecord::ReadRecod<RecordType>()` behaves).
-
-    otError error;
-
-    SuccessOrExit(error = FindRecord(aSection, aIndex, RecordType::kType, aNameMessage, aNameOffset, aOffset));
-    error = ResourceRecord::ReadRecord<RecordType>(*mMessage, aOffset, aRecord);
+    SelectSection(aSection, offset, numRecords);
+    SuccessOrExit(error = ResourceRecord::FindRecord(*mMessage, offset, numRecords, aIndex, name, aaaaRecord));
+    aAddress = aaaaRecord.GetAddress();
+    aTtl     = aaaaRecord.GetTtl();
 
 exit:
     return error;
@@ -158,36 +115,35 @@ exit:
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
 
-otError Client::Response::FindServiceInfo(Section        aSection,
-                                          const Message &aNameMessage,
-                                          uint16_t       aNameOffset,
-                                          ServiceInfo &  aServiceInfo) const
+otError Client::Response::FindServiceInfo(Section aSection, const Name &aName, ServiceInfo &aServiceInfo) const
 {
     // This method searches for SRV and TXT records in the given
-    // section matching the record name against the name given from
-    // `aNameMessage` at `aNameOffset` and updates the `aServiceInfo`
-    // accordingly. It also searches for AAAA record for host name
-    // associated with the service (from SRV record). The search for
-    // AAAA record is always performed in Additional Data section
-    // (independent of the value given in `aSection`).
+    // section matching the record name against `aName`, and updates
+    // the `aServiceInfo` accordingly. It also searches for AAAA
+    // record for host name associated with the service (from SRV
+    // record). The search for AAAA record is always performed in
+    // Additional Data section (independent of the value given in
+    // `aSection`).
 
-    otError    error;
-    uint16_t   offset;
-    uint16_t   hostNameOffset;
-    SrvRecord  srvRecord;
-    TxtRecord  txtRecord;
-    AaaaRecord aaaaRecord;
+    otError   error;
+    uint16_t  offset;
+    uint16_t  numRecords;
+    Name      hostName;
+    SrvRecord srvRecord;
+    TxtRecord txtRecord;
 
     VerifyOrExit(mMessage != nullptr, error = OT_ERROR_NOT_FOUND);
 
     // Search for the a matching SRV record
-    SuccessOrExit(error = FindFirstRecord(aSection, aNameMessage, aNameOffset, srvRecord, offset));
+    SelectSection(aSection, offset, numRecords);
+    SuccessOrExit(error = ResourceRecord::FindRecord(*mMessage, offset, numRecords, /* aIndex */ 0, aName, srvRecord));
 
     aServiceInfo.mTtl      = srvRecord.GetTtl();
     aServiceInfo.mPort     = srvRecord.GetPort();
     aServiceInfo.mPriority = srvRecord.GetPriority();
     aServiceInfo.mWeight   = srvRecord.GetWeight();
-    hostNameOffset         = offset;
+
+    hostName.SetFromMessage(*mMessage, offset);
 
     if (aServiceInfo.mHostNameBuffer != nullptr)
     {
@@ -201,21 +157,17 @@ otError Client::Response::FindServiceInfo(Section        aSection,
 
     // Search in additional section for AAAA record for the host name.
 
-    error = FindFirstRecord(kAdditionalDataSection, *mMessage, hostNameOffset, aaaaRecord, offset);
+    error = FindHostAddress(kAdditionalDataSection, hostName, /* aIndex */ 0,
+                            static_cast<Ip6::Address &>(aServiceInfo.mHostAddress), aServiceInfo.mHostAddressTtl);
 
-    switch (error)
+    if (error == OT_ERROR_NOT_FOUND)
     {
-    case OT_ERROR_NONE:
-        aServiceInfo.mHostAddress    = aaaaRecord.GetAddress();
-        aServiceInfo.mHostAddressTtl = aaaaRecord.GetTtl();
-        break;
-
-    case OT_ERROR_NOT_FOUND:
         static_cast<Ip6::Address &>(aServiceInfo.mHostAddress).Clear();
-        break;
-
-    default:
-        ExitNow();
+        aServiceInfo.mHostAddressTtl = 0;
+    }
+    else
+    {
+        SuccessOrExit(error);
     }
 
     // A null `mTxtData` indicates that caller does not want to retrieve TXT data.
@@ -224,7 +176,8 @@ otError Client::Response::FindServiceInfo(Section        aSection,
     // Search for a matching TXT record. If not found, indicate this by
     // setting `aServiceInfo.mTxtDataSize` to zero.
 
-    error = FindFirstRecord(aSection, aNameMessage, aNameOffset, txtRecord, offset);
+    SelectSection(aSection, offset, numRecords);
+    error = ResourceRecord::FindRecord(*mMessage, offset, numRecords, /* aIndex */ 0, aName, txtRecord);
 
     switch (error)
     {
@@ -247,48 +200,6 @@ exit:
     return error;
 }
 
-otError Client::Response::FindHostAddress(const char *  aHostName,
-                                          uint16_t      aIndex,
-                                          Ip6::Address &aAddress,
-                                          uint32_t &    aTtl) const
-{
-    otError    error;
-    uint16_t   offset     = mAdditionalOffset;
-    uint16_t   numRecords = mAdditionalRecordCount;
-    AaaaRecord aaaaRecord;
-
-    while (true)
-    {
-        SuccessOrExit(error = ResourceRecord::FindRecord(*mMessage, offset, numRecords, Name(aHostName)));
-
-        error = ResourceRecord::ReadRecord(*mMessage, offset, aaaaRecord);
-
-        if (error == OT_ERROR_NOT_FOUND)
-        {
-            // `ReadRecord()` will update the offset to skip over a
-            // non-matching record.
-            continue;
-        }
-
-        SuccessOrExit(error);
-
-        if (aIndex == 0)
-        {
-            aAddress = aaaaRecord.GetAddress();
-            aTtl     = aaaaRecord.GetTtl();
-            ExitNow();
-        }
-
-        aIndex--;
-
-        // Skip over the record.
-        offset += static_cast<uint16_t>(aaaaRecord.GetSize()) - sizeof(aaaaRecord);
-    }
-
-exit:
-    return error;
-}
-
 #endif // OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
 
 //---------------------------------------------------------------------------------------------------------------------
@@ -296,37 +207,7 @@ exit:
 
 otError Client::AddressResponse::GetAddress(uint16_t aIndex, Ip6::Address &aAddress, uint32_t &aTtl) const
 {
-    otError        error;
-    uint16_t       offset;
-    const Message *nameMessage = mQuery;
-    uint16_t       nameOffset  = kNameOffsetInQuery;
-    AaaaRecord     aaaaRecord;
-    CnameRecord    cnameRecord;
-
-    // If the response includes a CNAME record mapping the query host
-    // name to a canonical name, we then search for AAAA records
-    // matching the canonical name.
-
-    error = FindFirstRecord(kAnswerSection, *mQuery, kNameOffsetInQuery, cnameRecord, offset);
-
-    if (error == OT_ERROR_NONE)
-    {
-        nameMessage = mMessage;
-        nameOffset  = offset;
-        SuccessOrExit(error = Name::ParseName(*mMessage, offset));
-        VerifyOrExit(offset <= nameOffset + cnameRecord.GetSize() - sizeof(CnameRecord), error = OT_ERROR_PARSE);
-    }
-    else
-    {
-        VerifyOrExit(error == OT_ERROR_NOT_FOUND);
-    }
-
-    SuccessOrExit(error = FindRecord(kAnswerSection, aIndex, *nameMessage, nameOffset, aaaaRecord, offset));
-    aAddress = aaaaRecord.GetAddress();
-    aTtl     = aaaaRecord.GetTtl();
-
-exit:
-    return error;
+    return FindHostAddress(kAnswerSection, Name(*mQuery, kNameOffsetInQuery), aIndex, aAddress, aTtl);
 }
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
@@ -338,9 +219,14 @@ otError Client::BrowseResponse::GetServiceInstance(uint16_t aIndex, char *aLabel
 {
     otError   error;
     uint16_t  offset;
+    uint16_t  numRecords;
+    Name      serviceName(*mQuery, kNameOffsetInQuery);
     PtrRecord ptrRecord;
 
-    SuccessOrExit(error = FindRecord(kAnswerSection, aIndex, *mQuery, kNameOffsetInQuery, ptrRecord, offset));
+    VerifyOrExit(mMessage != nullptr, error = OT_ERROR_NOT_FOUND);
+
+    SelectSection(kAnswerSection, offset, numRecords);
+    SuccessOrExit(error = ResourceRecord::FindRecord(*mMessage, offset, numRecords, aIndex, serviceName, ptrRecord));
     error = ptrRecord.ReadPtrName(*mMessage, offset, aLabelBuffer, aLabelBufferSize, nullptr, 0);
 
 exit:
@@ -349,42 +235,55 @@ exit:
 
 otError Client::BrowseResponse::GetServiceInfo(const char *aInstanceLabel, ServiceInfo &aServiceInfo) const
 {
-    otError  error;
-    uint16_t instanceNameOffset;
+    otError error;
+    Name    instanceName;
 
     // Find a matching PTR record for the service instance label.
     // Then search and read SRV, TXT and AAAA records in Additional Data section
     // matching the same name to populate `aServiceInfo`.
 
-    SuccessOrExit(error = FindPtrRecord(aInstanceLabel, instanceNameOffset));
-    error = FindServiceInfo(kAdditionalDataSection, *mMessage, instanceNameOffset, aServiceInfo);
+    SuccessOrExit(error = FindPtrRecord(aInstanceLabel, instanceName));
+    error = FindServiceInfo(kAdditionalDataSection, instanceName, aServiceInfo);
 
 exit:
     return error;
 }
 
-otError Client::BrowseResponse::FindPtrRecord(const char *aInstanceLabel, uint16_t &aInstanceNameOffset) const
+otError Client::BrowseResponse::GetHostAddress(const char *  aHostName,
+                                               uint16_t      aIndex,
+                                               Ip6::Address &aAddress,
+                                               uint32_t &    aTtl) const
+{
+    return FindHostAddress(kAdditionalDataSection, Name(aHostName), aIndex, aAddress, aTtl);
+}
+
+otError Client::BrowseResponse::FindPtrRecord(const char *aInstanceLabel, Name &aInstanceName) const
 {
     // This method searches within the Answer Section for a PTR record
     // matching a given instance label @aInstanceLabel. If found, the
-    // start of the encoded instance name in `mMessage` is returned in
-    // `aInstanceNameOffset`.
+    // `aName` is updated to return the name in the message.
 
     otError   error;
-    uint16_t  offset = mAnswerOffset;
+    uint16_t  offset;
+    Name      serviceName(*mQuery, kNameOffsetInQuery);
+    uint16_t  numRecords;
     uint16_t  labelOffset;
     PtrRecord ptrRecord;
 
     VerifyOrExit(mMessage != nullptr, error = OT_ERROR_NOT_FOUND);
 
-    for (uint16_t numRecords = mAnswerRecordCount; numRecords > 0; numRecords--)
+    SelectSection(kAnswerSection, offset, numRecords);
+
+    for (; numRecords > 0; numRecords--)
     {
-        SuccessOrExit(error = Name::CompareName(*mMessage, offset, *mQuery, kNameOffsetInQuery));
+        SuccessOrExit(error = Name::CompareName(*mMessage, offset, serviceName));
 
         error = ResourceRecord::ReadRecord(*mMessage, offset, ptrRecord);
 
         if (error == OT_ERROR_NOT_FOUND)
         {
+            // `ReadRecord()` updates `offset` to skip over a
+            // non-matching record.
             continue;
         }
 
@@ -399,11 +298,11 @@ otError Client::BrowseResponse::FindPtrRecord(const char *aInstanceLabel, uint16
 
         if (error == OT_ERROR_NONE)
         {
-            error = Name::CompareName(*mMessage, labelOffset, *mQuery, kNameOffsetInQuery);
+            error = Name::CompareName(*mMessage, labelOffset, serviceName);
 
             if (error == OT_ERROR_NONE)
             {
-                aInstanceNameOffset = offset;
+                aInstanceName.SetFromMessage(*mMessage, offset);
                 ExitNow();
             }
         }
@@ -411,7 +310,7 @@ otError Client::BrowseResponse::FindPtrRecord(const char *aInstanceLabel, uint16
         VerifyOrExit(error == OT_ERROR_NOT_FOUND);
 
         // Update offset to skip over the PTR record.
-        offset += ptrRecord.GetSize() - sizeof(ptrRecord);
+        offset += static_cast<uint16_t>(ptrRecord.GetSize()) - sizeof(ptrRecord);
     }
 
     error = OT_ERROR_NOT_FOUND;
@@ -447,7 +346,15 @@ otError Client::ServiceResponse::GetServiceInfo(ServiceInfo &aServiceInfo) const
     // Search and read SRV, TXT records in Answer Section
     // matching name from query.
 
-    return FindServiceInfo(kAnswerSection, *mQuery, kNameOffsetInQuery, aServiceInfo);
+    return FindServiceInfo(kAnswerSection, Name(*mQuery, kNameOffsetInQuery), aServiceInfo);
+}
+
+otError Client::ServiceResponse::GetHostAddress(const char *  aHostName,
+                                                uint16_t      aIndex,
+                                                Ip6::Address &aAddress,
+                                                uint32_t &    aTtl) const
+{
+    return FindHostAddress(kAdditionalDataSection, Name(aHostName), aIndex, aAddress, aTtl);
 }
 
 #endif // OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE

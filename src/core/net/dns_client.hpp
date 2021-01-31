@@ -98,12 +98,14 @@ public:
      * This class represents a DNS query response.
      *
      */
-    class Response : public otDnsAddressResponse,
+    class Response : public Clearable<Response>,
+                     public otDnsAddressResponse
 #if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
+        ,
                      public otDnsBrowseResponse,
-                     public otDnsServiceResponse,
+                     public otDnsServiceResponse
 #endif
-                     public Clearable<Response>
+
     {
         friend class Client;
 
@@ -115,40 +117,17 @@ public:
         };
 
         Response(void) { Clear(); }
+
         otError GetName(char *aNameBuffer, uint16_t aNameBufferSize) const;
-
-        otError FindRecord(Section        aSection,
-                           uint16_t       aIndex,
-                           uint16_t       aRecordType,
-                           const Message &aNameMessage,
-                           uint16_t       aNameOffset,
-                           uint16_t &     aOffset) const;
-
-        template <class RecordType>
-        otError FindRecord(Section        aSection,
-                           uint16_t       aIndex,
-                           const Message &aNameMessage,
-                           uint16_t       aNameOffset,
-                           RecordType &   aRecord,
-                           uint16_t &     aOffset) const;
-
-        template <class RecordType>
-        otError FindFirstRecord(Section        aSection,
-                                const Message &aNameMessage,
-                                uint16_t       aNameOffset,
-                                RecordType &   aRecord,
-                                uint16_t &     aOffset) const
-        {
-            return FindRecord(aSection, /* aIndex */ 0, aNameMessage, aNameOffset, aRecord, aOffset);
-        }
+        void    SelectSection(Section aSection, uint16_t &aOffset, uint16_t &aNumRecord) const;
+        otError FindHostAddress(Section       aSection,
+                                const Name &  aHostName,
+                                uint16_t      aIndex,
+                                Ip6::Address &aAddress,
+                                uint32_t &    aTtl) const;
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
-        otError FindServiceInfo(Section        aSection,
-                                const Message &aNameMessage,
-                                uint16_t       aNameOffset,
-                                ServiceInfo &  aServiceInfo) const;
-
-        otError FindHostAddress(const char *aHostName, uint16_t aIndex, Ip6::Address &aAddress, uint32_t &aTtl) const;
+        otError FindServiceInfo(Section aSection, const Name &aName, ServiceInfo &aServiceInfo) const;
 #endif
 
         Query *        mQuery;                 // The associated query.
@@ -318,13 +297,10 @@ public:
          * @retval OT_ERROR_PARSE      Could not parse the records.
          *
          */
-        otError GetHostAddress(const char *aHostName, uint16_t aIndex, Ip6::Address &aAddress, uint32_t &aTtl) const
-        {
-            return FindHostAddress(aHostName, aIndex, aAddress, aTtl);
-        }
+        otError GetHostAddress(const char *aHostName, uint16_t aIndex, Ip6::Address &aAddress, uint32_t &aTtl) const;
 
     private:
-        otError FindPtrRecord(const char *aInstanceLabel, uint16_t &aInstanceNameOffset) const;
+        otError FindPtrRecord(const char *aInstanceLabel, Name &aInstanceName) const;
     };
 
     /**
@@ -404,10 +380,7 @@ public:
          * @retval OT_ERROR_PARSE      Could not parse the records.
          *
          */
-        otError GetHostAddress(const char *aHostName, uint16_t aIndex, Ip6::Address &aAddress, uint32_t &aTtl) const
-        {
-            return FindHostAddress(aHostName, aIndex, aAddress, aTtl);
-        }
+        otError GetHostAddress(const char *aHostName, uint16_t aIndex, Ip6::Address &aAddress, uint32_t &aTtl) const;
     };
 
 #endif // OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
