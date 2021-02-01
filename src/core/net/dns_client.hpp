@@ -551,6 +551,8 @@ private:
     Ip6::Udp::Socket mSocket;
     QueryList        mQueries;
     TimerMilli       mTimer;
+
+    void SignalTest(void);
 };
 
 } // namespace Dns
