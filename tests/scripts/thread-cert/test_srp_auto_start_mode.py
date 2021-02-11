@@ -38,14 +38,16 @@ import thread_cert
 #   correctly discover and connect to SRP server.
 #
 # Topology:
-#     LEADER (SRP server)
-#       |
-#       |
-#     ROUTER (SRP client)
+#
+#   ClIENT (leader) -- SERVER1 (router)
+#      |
+#      |
+#   SERVER2 (router)
 #
 
-SERVER = 1
-CLIENT = 2
+CLIENT = 1
+SERVER1 = 2
+SERVER2 = 3
 
 
 class SrpAutoStartMode(thread_cert.TestCase):
@@ -53,52 +55,97 @@ class SrpAutoStartMode(thread_cert.TestCase):
     SUPPORT_NCP = False
 
     TOPOLOGY = {
-        SERVER: {
-            'name': 'SRP_SERVER',
+        CLINET: {
+            'name': 'SRP_CLIENT',
             'masterkey': '00112233445566778899aabbccddeeff',
             'mode': 'rdn',
             'panid': 0xface
         },
-        CLIENT: {
-            'name': 'SRP_CLIENT',
+        SERVER1: {
+            'name': 'SRP_SERVER1',
             'masterkey': '00112233445566778899aabbccddeeff',
             'mode': 'rdn',
             'panid': 0xface,
             'router_selection_jitter': 1
         },
+        SERVER2: {
+            'name': 'SRP_SERVER2',
+            'masterkey': '00112233445566778899aabbccddeeff',
+            'mode': 'rdn',
+            'panid': 0xface,
+            'router_selection_jitter': 1
+        },
+
     }
 
     def test(self):
-        server = self.nodes[SERVER]
         client = self.nodes[CLIENT]
+        server1 = self.nodes[SERVER1]
+        server2 = self.nodes[SERVER2]
 
         #
         # 0. Start the server & client devices.
         #
 
-        server.srp_server_set_enabled(True)
-        server.start()
-        self.simulator.go(5)
-        self.assertEqual(server.get_state(), 'leader')
-        self.simulator.go(5)
-
         client.srp_server_set_enabled(False)
         client.start()
         self.simulator.go(5)
-        self.assertEqual(client.get_state(), 'router')
+        self.assertEqual(client.get_state(), 'leader')
+
+        server1.srp_server_set_enabled(True)
+        server2.srp_server_set_enabled(False)
+        server1.start()
+        server2.start()
+        self.simulator.go(5)
+        self.assertEqual(server1.get_state(), 'router')
+        self.assertEqual(server2.get_state(), 'router')
 
         #
-        # 1. Enable auto start mode on client and check that selected sever
+        # 1. Enable auto start mode on client and check that server1 is used.
         #
 
-        self.assertEqual(client.srp_client_get_state(), "Disabled")
+        self.assertEqual(client.srp_client_get_state(), 'Disabled')
         client.srp_client_enable_auto_start_mode()
-        self.assertEqual(client.srp_client_get_auto_start_mode(), "Enabled")
+        self.assertEqual(client.srp_client_get_auto_start_mode(), 'Enabled')
         self.simulator.go(2)
 
-        self.assertEqual(client.srp_client_get_state(), "Enabled")
+        self.assertEqual(client.srp_client_get_state(), 'Enabled')
         self.assertEqual(client.srp_client_get_server_port(), client.get_srp_server_port())
 
+        #
+        # 2. Disable server1 and check client is stopped/disabled.
+        #
+
+        server1.srp_server_set_enabled(False)
+        self.simulator.go(5)
+        self.assertEqual(client.srp_client_get_state(), 'Disabled')
+
+        #
+        # 3. Enable server2 and check client starts again.
+        #
+
+        server2.srp_server_set_enabled(True)
+        self.simulator.go(5)
+        self.assertEqual(client.srp_client_get_state(), 'Enabled')
+        prev_port = client.srp_client_get_server_port()
+
+        #
+        # 4. Enable both servers and check client stays with server2.
+        #
+
+        server1.srp_server_set_enabled(True)
+        self.simulator.go(2)
+        self.assertEqual(client.srp_client_get_state(), 'Enabled')
+        self.assertEqual(client.srp_client_get_server_port(), prev_port)
+
+        #
+        # 4. Disable server2 and check client switches to server1.
+        #
+
+        server2.srp_server_set_enabled(False)
+        self.simulator.go(5)
+        self.assertEqual(client.srp_client_get_state(), 'Enabled')
+        self.assertNotEqual(client.srp_client_get_server_port(), prev_port)
 
 if __name__ == '__main__':
     unittest.main()
