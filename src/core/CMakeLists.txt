@@ -115,6 +115,7 @@ set(COMMON_SOURCES
     mac/mac_frame.cpp
     mac/mac_links.cpp
     mac/mac_types.cpp
+    mac/security_handler.cpp
     mac/sub_mac.cpp
     mac/sub_mac_callbacks.cpp
     meshcop/announce_begin_client.cpp

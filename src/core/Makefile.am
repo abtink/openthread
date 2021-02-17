@@ -192,6 +192,7 @@ SOURCES_COMMON                                  = \
     mac/mac_frame.cpp                             \
     mac/mac_links.cpp                             \
     mac/mac_types.cpp                             \
+    mac/security_handler.cpp                      \
     mac/sub_mac.cpp                               \
     mac/sub_mac_callbacks.cpp                     \
     meshcop/announce_begin_client.cpp             \
@@ -308,6 +309,7 @@ libopenthread_radio_a_SOURCES              = \
     mac/link_raw.cpp                         \
     mac/mac_frame.cpp                        \
     mac/mac_types.cpp                        \
+    mac/security_handler.cpp                 \
     mac/sub_mac.cpp                          \
     mac/sub_mac_callbacks.cpp                \
     radio/radio.cpp                          \
@@ -442,6 +444,7 @@ HEADERS_COMMON                                  = \
     mac/mac_frame.hpp                             \
     mac/mac_links.hpp                             \
     mac/mac_types.hpp                             \
+    mac/security_handler.hpp                      \
     mac/sub_mac.hpp                               \
     meshcop/announce_begin_client.hpp             \
     meshcop/border_agent.hpp                      \

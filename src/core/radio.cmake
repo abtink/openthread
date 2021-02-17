@@ -64,6 +64,7 @@ target_sources(openthread-radio PRIVATE
     mac/link_raw.cpp
     mac/mac_frame.cpp
     mac/mac_types.cpp
+    mac/security_handler.cpp
     mac/sub_mac.cpp
     mac/sub_mac_callbacks.cpp
     radio/radio.cpp

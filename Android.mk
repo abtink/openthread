@@ -234,6 +234,7 @@ LOCAL_SRC_FILES                                          := \
     src/core/mac/mac_frame.cpp                              \
     src/core/mac/mac_links.cpp                              \
     src/core/mac/mac_types.cpp                              \
+    src/core/mac/security_handler.cpp                       \
     src/core/mac/sub_mac.cpp                                \
     src/core/mac/sub_mac_callbacks.cpp                      \
     src/core/meshcop/announce_begin_client.cpp              \
