@@ -152,9 +152,6 @@ SOURCES_COMMON                                  = \
     api/udp_api.cpp                               \
     backbone_router/backbone_tmf.cpp              \
     backbone_router/bbr_leader.cpp                \
-    backbone_router/bbr_local.cpp                 \
-    backbone_router/bbr_manager.cpp               \
-    backbone_router/multicast_listeners_table.cpp \
     backbone_router/ndproxy_table.cpp             \
     border_router/infra_if_platform.cpp           \
     border_router/router_advertisement.cpp        \
