@@ -295,122 +295,122 @@ private:
     struct Command
     {
         const char *mName;
-        otError (Interpreter::*mHandler)(uint8_t aArgsLength, char *aArgs[]);
+        otError (Interpreter::*mHandler)(void);
     };
 
     otError        ParsePingInterval(const char *aString, uint32_t &aInterval);
     static otError ParseJoinerDiscerner(char *aString, otJoinerDiscerner &aDiscerner);
 
-    otError ProcessHelp(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessCcaThreshold(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessBufferInfo(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessChannel(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessHelp(void);
+    otError ProcessCcaThreshold(void);
+    otError ProcessBufferInfo(void);
+    otError ProcessChannel(void);
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
-    otError ProcessBorderRouting(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessBorderRouting(void);
 #endif
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
-    otError ProcessBackboneRouter(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessBackboneRouter(void);
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
-    otError ProcessBackboneRouterLocal(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessBackboneRouterLocal(void);
 #if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE && OPENTHREAD_CONFIG_BACKBONE_ROUTER_MULTICAST_ROUTING_ENABLE
-    otError ProcessBackboneRouterMgmtMlr(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessBackboneRouterMgmtMlr(void);
     void    PrintMulticastListenersTable(void);
 #endif
 #endif
 
-    otError ProcessDomainName(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessDomainName(void);
 
 #if OPENTHREAD_CONFIG_DUA_ENABLE
-    otError ProcessDua(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessDua(void);
 #endif
 
 #endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
 
 #if OPENTHREAD_FTD
-    otError ProcessChild(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessChildIp(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessChildMax(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessChild(void);
+    otError ProcessChildIp(void);
+    otError ProcessChildMax(void);
 #endif
 #if OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE
-    otError ProcessChildSupervision(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessChildSupervision(void);
 #endif
-    otError ProcessChildTimeout(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessChildTimeout(void);
 #if OPENTHREAD_CONFIG_COAP_API_ENABLE
-    otError ProcessCoap(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessCoap(void);
 #endif
 #if OPENTHREAD_CONFIG_COAP_SECURE_API_ENABLE
-    otError ProcessCoapSecure(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessCoapSecure(void);
 #endif
 #if OPENTHREAD_CONFIG_PLATFORM_RADIO_COEX_ENABLE
-    otError ProcessCoexMetrics(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessCoexMetrics(void);
 #endif
 #if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
-    otError ProcessCommissioner(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessCommissioner(void);
 #endif
 #if OPENTHREAD_FTD
-    otError ProcessContextIdReuseDelay(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessContextIdReuseDelay(void);
 #endif
-    otError ProcessCounters(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessCsl(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessCounters(void);
+    otError ProcessCsl(void);
 #if OPENTHREAD_FTD
-    otError ProcessDelayTimerMin(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessDelayTimerMin(void);
 #endif
 #if OPENTHREAD_CONFIG_DIAG_ENABLE
-    otError ProcessDiag(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessDiag(void);
 #endif
-    otError ProcessDiscover(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessDiscover(void);
 #if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
-    otError ProcessDns(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessDns(void);
 #endif
 #if OPENTHREAD_FTD
-    otError ProcessEidCache(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessEidCache(void);
 #endif
-    otError ProcessEui64(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessEui64(void);
 #if OPENTHREAD_POSIX
-    otError ProcessExit(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessExit(void);
 #endif
-    otError ProcessLog(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessExtAddress(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessExtPanId(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessFactoryReset(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessLog(void);
+    otError ProcessExtAddress(void);
+    otError ProcessExtPanId(void);
+    otError ProcessFactoryReset(void);
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
-    otError ProcessFake(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessFake(void);
 #endif
-    otError ProcessFem(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessIfconfig(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessIpAddr(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessIpAddrAdd(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessIpAddrDel(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessIpMulticastAddr(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessIpMulticastAddrAdd(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessIpMulticastAddrDel(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessMulticastPromiscuous(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessFem(void);
+    otError ProcessIfconfig(void);
+    otError ProcessIpAddr(void);
+    otError ProcessIpAddrAdd(void);
+    otError ProcessIpAddrDel(void);
+    otError ProcessIpMulticastAddr(void);
+    otError ProcessIpMulticastAddrAdd(void);
+    otError ProcessIpMulticastAddrDel(void);
+    otError ProcessMulticastPromiscuous(void);
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
-    otError ProcessJoiner(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessJoiner(void);
 #endif
 #if OPENTHREAD_FTD
-    otError ProcessJoinerPort(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessJoinerPort(void);
 #endif
-    otError ProcessKeySequence(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessLeaderData(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessKeySequence(void);
+    otError ProcessLeaderData(void);
 #if OPENTHREAD_FTD
-    otError ProcessPartitionId(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessLeaderWeight(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessPartitionId(void);
+    otError ProcessLeaderWeight(void);
 #endif
-    otError ProcessMasterKey(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessMasterKey(void);
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_ENABLE
-    otError ProcessLinkMetrics(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessLinkMetricsQuery(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessLinkMetricsMgmt(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessLinkMetricsProbe(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessLinkMetrics(void);
+    otError ProcessLinkMetricsQuery(void);
+    otError ProcessLinkMetricsMgmt(void);
+    otError ProcessLinkMetricsProbe(void);
 
     otError ParseLinkMetricsFlags(otLinkMetrics &aLinkMetrics, char *aFlags);
 #endif
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_MLR_ENABLE && OPENTHREAD_CONFIG_COMMISSIONER_ENABLE
-    otError ProcessMlr(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessMlr(void);
 
-    otError ProcessMlrReg(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessMlrReg(void);
 
     static void HandleMlrRegResult(void *              aContext,
                                    otError             aError,
@@ -422,15 +422,15 @@ private:
                                    const otIp6Address *aFailedAddresses,
                                    uint8_t             aFailedAddressNum);
 #endif
-    otError ProcessMode(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessMultiRadio(uint8_t aArgsLength, char *aArgsp[]);
+    otError ProcessMode(void);
+    otError ProcessMultiRadio(void);
 #if OPENTHREAD_CONFIG_MULTI_RADIO
     void OutputMultiRadioInfo(const otMultiRadioNeighborInfo &aMultiRadioInfo);
 #endif
 #if OPENTHREAD_FTD
-    otError ProcessNeighbor(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessNeighbor(void);
 #endif
-    otError ProcessNetworkData(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessNetworkData(void);
     otError ProcessNetworkDataPrefix(void);
     otError ProcessNetworkDataRoute(void);
     otError ProcessNetworkDataService(void);
@@ -439,31 +439,31 @@ private:
     void    OutputService(const otServiceConfig &aConfig);
 
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
-    otError ProcessNetif(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessNetif(void);
 #endif
-    otError ProcessNetstat(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessNetstat(void);
     int     OutputSocketAddress(const otSockAddr &aAddress);
 #if OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
-    otError ProcessService(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessService(void);
     otError ProcessServiceList(void);
 #endif
 #if OPENTHREAD_FTD || OPENTHREAD_CONFIG_TMF_NETWORK_DIAG_MTD_ENABLE
-    otError ProcessNetworkDiagnostic(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessNetworkDiagnostic(void);
 #endif
 #if OPENTHREAD_FTD
-    otError ProcessNetworkIdTimeout(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessNetworkIdTimeout(void);
 #endif
-    otError ProcessNetworkName(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessNetworkName(void);
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
-    otError ProcessNetworkTime(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessNetworkTime(void);
 #endif
-    otError ProcessPanId(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessParent(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessPanId(void);
+    otError ProcessParent(void);
 #if OPENTHREAD_FTD
-    otError ProcessParentPriority(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessParentPriority(void);
 #endif
-    otError ProcessPing(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessPollPeriod(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessPing(void);
+    otError ProcessPollPeriod(void);
     void    SignalPingRequest(const Ip6::Address &aPeerAddress,
                               uint16_t            aPingLength,
                               uint32_t            aTimestamp,
@@ -474,61 +474,61 @@ private:
                             uint8_t             aHopLimit);
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
-    otError ProcessPrefix(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessPrefixAdd(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessPrefixRemove(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessPrefix(void);
+    otError ProcessPrefixAdd(void);
+    otError ProcessPrefixRemove(void);
     otError ProcessPrefixList(void);
 #endif
-    otError ProcessPromiscuous(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessPromiscuous(void);
 #if OPENTHREAD_FTD
-    otError ProcessPreferRouterId(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessPskc(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessPreferRouterId(void);
+    otError ProcessPskc(void);
 #endif
-    otError ProcessRcp(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessRegion(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessRcp(void);
+    otError ProcessRegion(void);
 #if OPENTHREAD_FTD
-    otError ProcessReleaseRouterId(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessReleaseRouterId(void);
 #endif
-    otError ProcessReset(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessReset(void);
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
-    otError ProcessRoute(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessRouteAdd(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessRouteRemove(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessRoute(void);
+    otError ProcessRouteAdd(void);
+    otError ProcessRouteRemove(void);
     otError ProcessRouteList(void);
 #endif
 #if OPENTHREAD_FTD
-    otError ProcessRouter(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessRouterDowngradeThreshold(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessRouterEligible(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessRouterSelectionJitter(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessRouterUpgradeThreshold(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessRouter(void);
+    otError ProcessRouterDowngradeThreshold(void);
+    otError ProcessRouterEligible(void);
+    otError ProcessRouterSelectionJitter(void);
+    otError ProcessRouterUpgradeThreshold(void);
 #endif
-    otError ProcessRloc16(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessScan(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessSingleton(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessRloc16(void);
+    otError ProcessScan(void);
+    otError ProcessSingleton(void);
 #if OPENTHREAD_CONFIG_SNTP_CLIENT_ENABLE
-    otError ProcessSntp(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessSntp(void);
 #endif
 #if OPENTHREAD_CONFIG_SRP_CLIENT_ENABLE || OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
-    otError ProcessSrp(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessSrp(void);
 #endif
-    otError ProcessState(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessThread(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessDataset(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessTxPower(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessUdp(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessUnsecurePort(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessVersion(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessState(void);
+    otError ProcessThread(void);
+    otError ProcessDataset(void);
+    otError ProcessTxPower(void);
+    otError ProcessUdp(void);
+    otError ProcessUnsecurePort(void);
+    otError ProcessVersion(void);
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
-    otError ProcessMacFilter(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessMacFilter(void);
     void    PrintMacFilter(void);
-    otError ProcessMacFilterAddress(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessMacFilterRss(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessMacFilterAddress(void);
+    otError ProcessMacFilterRss(void);
 #endif
-    otError ProcessMac(uint8_t aArgsLength, char *aArgs[]);
-    otError ProcessMacRetries(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessMac(void);
+    otError ProcessMacRetries(void);
 #if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
-    otError ProcessMacSend(uint8_t aArgsLength, char *aArgs[]);
+    otError ProcessMacSend(void);
 #endif
 
     static void HandleIcmpReceive(void *               aContext,
@@ -559,7 +559,7 @@ private:
     void OutputDnsTxtData(const uint8_t *aTxtData, uint16_t aTxtDataLength);
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_ENABLE
-    otError     GetDnsConfig(uint8_t aArgsLength, char *aArgs[], otDnsQueryConfig *&aConfig, uint8_t aStartArgsIndex);
+    otError     GetDnsConfig(otDnsQueryConfig *&aConfig, uint8_t aStartArgsIndex);
     static void HandleDnsAddressResponse(otError aError, const otDnsAddressResponse *aResponse, void *aContext);
     void        HandleDnsAddressResponse(otError aError, const otDnsAddressResponse *aResponse);
 #if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
@@ -792,6 +792,8 @@ private:
     static_assert(Utils::LookupTable::IsSorted(sCommands), "Command Table is not sorted");
 
     Instance *          mInstance;
+    char **             mArgs;
+    uint8_t             mArgsLength;
     const otCliCommand *mUserCommands;
     uint8_t             mUserCommandsLength;
     void *              mUserCommandsContext;
