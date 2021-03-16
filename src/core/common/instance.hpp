@@ -732,15 +732,19 @@ template <> inline Sntp::Client &Instance::Get(void)
 }
 #endif
 
+#if OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE
+#if OPENTHREAD_FTD
 template <> inline Utils::ChildSupervisor &Instance::Get(void)
 {
     return mThreadNetif.mChildSupervisor;
 }
+#endif
 
 template <> inline Utils::SupervisionListener &Instance::Get(void)
 {
     return mThreadNetif.mSupervisionListener;
 }
+#endif
 
 #if OPENTHREAD_CONFIG_CHANNEL_MONITOR_ENABLE
 template <> inline Utils::ChannelMonitor &Instance::Get(void)

@@ -425,7 +425,9 @@ void IndirectSender::HandleSentFrameToChild(const Mac::TxFrame &aFrame,
     switch (aError)
     {
     case kErrorNone:
+#if OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE
         Get<Utils::ChildSupervisor>().UpdateOnSend(aChild);
+#endif
         break;
 
     case kErrorNoAck:

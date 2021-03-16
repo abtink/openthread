@@ -33,6 +33,8 @@
 
 #include "child_supervision.hpp"
 
+#if OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE
+
 #include "openthread-core-config.h"
 #include "common/code_utils.hpp"
 #include "common/instance.hpp"
@@ -42,8 +44,6 @@
 
 namespace ot {
 namespace Utils {
-
-#if OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE
 
 #if OPENTHREAD_FTD
 
@@ -221,7 +221,7 @@ exit:
     RestartTimer();
 }
 
-#endif // #if OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE
-
 } // namespace Utils
 } // namespace ot
+
+#endif // #if OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE

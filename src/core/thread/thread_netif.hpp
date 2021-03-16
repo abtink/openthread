@@ -101,7 +101,9 @@
 #include "thread/panid_query_server.hpp"
 #include "thread/radio_selector.hpp"
 #include "thread/time_sync_service.hpp"
+#if OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE
 #include "utils/child_supervision.hpp"
+#endif
 
 #if OPENTHREAD_CONFIG_IP6_SLAAC_ENABLE
 #include "utils/slaac_address.hpp"
@@ -235,7 +237,7 @@ private:
     NetworkData::Service::Manager mNetworkDataServiceManager;
 #if OPENTHREAD_FTD || OPENTHREAD_CONFIG_TMF_NETWORK_DIAG_MTD_ENABLE
     NetworkDiagnostic::NetworkDiagnostic mNetworkDiagnostic;
-#endif // OPENTHREAD_FTD || OPENTHREAD_CONFIG_TMF_NETWORK_DIAG_MTD_ENABLE
+#endif
     bool mIsUp;
 
 #if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
@@ -247,15 +249,15 @@ private:
 
 #if OPENTHREAD_CONFIG_DTLS_ENABLE
     Coap::CoapSecure mCoapSecure;
-#endif // OPENTHREAD_CONFIG_DTLS_ENABLE
+#endif
 
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
     MeshCoP::Joiner mJoiner;
-#endif // OPENTHREAD_CONFIG_JOINER_ENABLE
+#endif
 
 #if OPENTHREAD_CONFIG_JAM_DETECTION_ENABLE
     Utils::JamDetector mJamDetector;
-#endif // OPENTHREAD_CONFIG_JAM_DETECTION_ENABLE
+#endif
 
 #if OPENTHREAD_FTD
     MeshCoP::JoinerRouter mJoinerRouter;
@@ -280,11 +282,16 @@ private:
     Srp::Server mSrpServer;
 #endif
 
-    Utils::ChildSupervisor     mChildSupervisor;
+#if OPENTHREAD_CONFIG_CHILD_SUPERVISION_ENABLE
+#if OPENTHREAD_FTD
+    Utils::ChildSupervisor mChildSupervisor;
+#endif
     Utils::SupervisionListener mSupervisionListener;
-    AnnounceBeginServer        mAnnounceBegin;
-    PanIdQueryServer           mPanIdQuery;
-    EnergyScanServer           mEnergyScan;
+#endif
+
+    AnnounceBeginServer mAnnounceBegin;
+    PanIdQueryServer    mPanIdQuery;
+    EnergyScanServer    mEnergyScan;
 
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
     TimeSync mTimeSync;
