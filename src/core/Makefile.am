@@ -129,6 +129,7 @@ SOURCES_COMMON                                  = \
     api/heap_api.cpp                              \
     api/icmp6_api.cpp                             \
     api/instance_api.cpp                          \
+    api/ip4_api.cpp                               \
     api/ip6_api.cpp                               \
     api/jam_detection_api.cpp                     \
     api/joiner_api.cpp                            \
@@ -222,6 +223,7 @@ SOURCES_COMMON                                  = \
     net/dns_types.cpp                             \
     net/dnssd_server.cpp                          \
     net/icmp6.cpp                                 \
+    net/ip4_address.cpp                           \
     net/ip6.cpp                                   \
     net/ip6_address.cpp                           \
     net/ip6_filter.cpp                            \
@@ -476,6 +478,7 @@ HEADERS_COMMON                                  = \
     net/dns_types.hpp                             \
     net/dnssd_server.hpp                          \
     net/icmp6.hpp                                 \
+    net/ip4_address.hpp                           \
     net/ip6.hpp                                   \
     net/ip6_address.hpp                           \
     net/ip6_filter.hpp                            \

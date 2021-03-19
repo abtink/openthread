@@ -176,6 +176,7 @@ LOCAL_SRC_FILES                                          := \
     src/core/api/heap_api.cpp                               \
     src/core/api/icmp6_api.cpp                              \
     src/core/api/instance_api.cpp                           \
+    src/core/api/ip4_api.cpp                                \
     src/core/api/ip6_api.cpp                                \
     src/core/api/jam_detection_api.cpp                      \
     src/core/api/joiner_api.cpp                             \
@@ -269,6 +270,7 @@ LOCAL_SRC_FILES                                          := \
     src/core/net/dns_types.cpp                              \
     src/core/net/dnssd_server.cpp                           \
     src/core/net/icmp6.cpp                                  \
+    src/core/net/ip4_address.cpp                            \
     src/core/net/ip6.cpp                                    \
     src/core/net/ip6_address.cpp                            \
     src/core/net/ip6_filter.cpp                             \

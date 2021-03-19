@@ -59,6 +59,7 @@ openthread_headers                      = \
     openthread/heap.h                     \
     openthread/icmp6.h                    \
     openthread/instance.h                 \
+    openthread/ip4.h                      \
     openthread/ip6.h                      \
     openthread/jam_detection.h            \
     openthread/joiner.h                   \

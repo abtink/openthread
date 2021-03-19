@@ -568,7 +568,7 @@ bool otIp6IsAddressEqual(const otIp6Address *aFirst, const otIp6Address *aSecond
  * @param[out]  aAddress  A pointer to an IPv6 address.
  *
  * @retval OT_ERROR_NONE          Successfully parsed the string.
- * @retval OT_ERROR_INVALID_ARGS  Failed to parse the string.
+ * @retval OT_ERROR_PARSE         Failed to parse the string.
  *
  */
 otError otIp6AddressFromString(const char *aString, otIp6Address *aAddress);
