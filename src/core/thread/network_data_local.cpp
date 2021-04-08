@@ -125,8 +125,14 @@ Error Local::RemoveOnMeshPrefix(const Ip6::Prefix &aPrefix)
 
 Error Local::AddHasRoutePrefix(const ExternalRouteConfig &aConfig)
 {
-    return AddPrefix(aConfig.GetPrefix(), NetworkDataTlv::kTypeHasRoute, aConfig.mPreference, /* aFlags */ 0,
-                     aConfig.mStable);
+    uint8_t flags = 0;
+
+    if (aConfig.mNat64)
+    {
+        flags |= HasRouteEntry::kNat64Flag;
+    }
+
+    return AddPrefix(aConfig.GetPrefix(), NetworkDataTlv::kTypeHasRoute, aConfig.mPreference, flags, aConfig.mStable);
 }
 
 Error Local::RemoveHasRoutePrefix(const Ip6::Prefix &aPrefix)
@@ -186,6 +192,7 @@ Error Local::AddPrefix(const Ip6::Prefix &  aPrefix,
         hasRouteTlv->SetLength(hasRouteTlv->GetLength() + sizeof(HasRouteEntry));
         hasRouteTlv->GetEntry(0)->Init();
         hasRouteTlv->GetEntry(0)->SetPreference(aPrf);
+        hasRouteTlv->GetEntry(0)->SetFlags(static_cast<uint8_t>(aFlags));
     }
 
     if (aStable)
