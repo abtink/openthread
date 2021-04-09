@@ -55,57 +55,117 @@ NetworkData::NetworkData(Interpreter &aInterpreter)
 
 void NetworkData::OutputPrefix(const otBorderRouterConfig &aConfig)
 {
-    mInterpreter.OutputFormat("%x:%x:%x:%x::/%d ", HostSwap16(aConfig.mPrefix.mPrefix.mFields.m16[0]),
-                              HostSwap16(aConfig.mPrefix.mPrefix.mFields.m16[1]),
-                              HostSwap16(aConfig.mPrefix.mPrefix.mFields.m16[2]),
-                              HostSwap16(aConfig.mPrefix.mPrefix.mFields.m16[3]), aConfig.mPrefix.mLength);
+    enum
+    {
+        kMaxFlagStringSize = 17,
+    };
+
+    char  flagsString[kMaxFlagStringSize];
+    char *flagsPtr = &flagsString[0];
+
+    OutputIp6Prefix(aConfig.mPrefix);
 
     if (aConfig.mPreferred)
     {
-        mInterpreter.OutputFormat("p");
+        *flagsPtr++ = 'p';
     }
 
     if (aConfig.mSlaac)
     {
-        mInterpreter.OutputFormat("a");
+        *flagsPtr++ = 'a';
     }
 
     if (aConfig.mDhcp)
     {
-        mInterpreter.OutputFormat("d");
+        *flagsPtr++ = 'd';
     }
 
     if (aConfig.mConfigure)
     {
-        mInterpreter.OutputFormat("c");
+        *flagsPtr++ = 'c';
     }
 
     if (aConfig.mDefaultRoute)
     {
-        mInterpreter.OutputFormat("r");
+        *flagsPtr++ = 'r';
     }
 
     if (aConfig.mOnMesh)
     {
-        mInterpreter.OutputFormat("o");
+        *flagsPtr++ = 'o';
     }
 
     if (aConfig.mStable)
     {
-        mInterpreter.OutputFormat("s");
+        *flagsPtr++ = 's';
     }
 
     if (aConfig.mNdDns)
     {
-        mInterpreter.OutputFormat("n");
+        *flagsPtr++ = 'n';
     }
 
     if (aConfig.mDp)
     {
-        mInterpreter.OutputFormat("D");
+        *flagsPtr++ = 'D';
     }
 
-    switch (aConfig.mPreference)
+    *flagsPtr = '\0';
+
+    if (flagsPtr != &flagsString[0])
+    {
+        mInterpreter.OutputFormat(" %s", flagsString);
+    }
+
+    OutputPreference(aConfig.mPreference);
+
+    mInterpreter.OutputLine(" %04x", aConfig.mRloc16);
+}
+
+void NetworkData::OutputRoute(const otExternalRouteConfig &aConfig)
+{
+    enum
+    {
+        kMaxFlagStringSize = 9,
+    };
+
+    char  flagsString[kMaxFlagStringSize];
+    char *flagsPtr = &flagsString[0];
+
+    OutputIp6Prefix(aConfig.mPrefix);
+
+    if (aConfig.mStable)
+    {
+        *flagsPtr++ = 's';
+    }
+
+    if (aConfig.mNat64)
+    {
+        *flagsPtr++ = 'n';
+    }
+
+    *flagsPtr = '\0';
+
+    if (flagsPtr != &flagsString[0])
+    {
+        mInterpreter.OutputFormat(" %s", flagsString);
+    }
+
+    OutputPreference(aConfig.mPreference);
+
+    mInterpreter.OutputLine(" %04x", aConfig.mRloc16);
+}
+
+void NetworkData::OutputIp6Prefix(const otIp6Prefix &aPrefix)
+{
+    mInterpreter.OutputFormat("%x:%x:%x:%x::/%d", HostSwap16(aPrefix.mPrefix.mFields.m16[0]),
+                              HostSwap16(aPrefix.mPrefix.mFields.m16[1]), HostSwap16(aPrefix.mPrefix.mFields.m16[2]),
+                              HostSwap16(aPrefix.mPrefix.mFields.m16[3]), aPrefix.mLength);
+}
+
+void NetworkData::OutputPreference(signed int aPreference)
+{
+    switch (aPreference)
     {
     case OT_ROUTE_PREFERENCE_LOW:
         mInterpreter.OutputFormat(" low");
@@ -118,39 +178,10 @@ void NetworkData::OutputPrefix(const otBorderRouterConfig &aConfig)
     case OT_ROUTE_PREFERENCE_HIGH:
         mInterpreter.OutputFormat(" high");
         break;
-    }
 
-    mInterpreter.OutputLine(" %04x", aConfig.mRloc16);
-}
-
-void NetworkData::OutputRoute(const otExternalRouteConfig &aConfig)
-{
-    mInterpreter.OutputFormat("%x:%x:%x:%x::/%d ", HostSwap16(aConfig.mPrefix.mPrefix.mFields.m16[0]),
-                              HostSwap16(aConfig.mPrefix.mPrefix.mFields.m16[1]),
-                              HostSwap16(aConfig.mPrefix.mPrefix.mFields.m16[2]),
-                              HostSwap16(aConfig.mPrefix.mPrefix.mFields.m16[3]), aConfig.mPrefix.mLength);
-
-    if (aConfig.mStable)
-    {
-        mInterpreter.OutputFormat("s ");
-    }
-
-    switch (aConfig.mPreference)
-    {
-    case OT_ROUTE_PREFERENCE_LOW:
-        mInterpreter.OutputFormat("low");
-        break;
-
-    case OT_ROUTE_PREFERENCE_MED:
-        mInterpreter.OutputFormat("med");
-        break;
-
-    case OT_ROUTE_PREFERENCE_HIGH:
-        mInterpreter.OutputFormat("high");
+    default:
         break;
     }
-
-    mInterpreter.OutputLine(" %04x", aConfig.mRloc16);
 }
 
 void NetworkData::OutputService(const otServiceConfig &aConfig)
