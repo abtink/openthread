@@ -71,6 +71,19 @@
 #endif
 
 /**
+ * @def OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_DEFAULT_ANYCAST_SERVER_PORT
+ *
+ * Specifies the default port number to use to connect to a SRP server selected using anycast address from a related
+ * service entry in Thread Network Data.
+ *
+ * This config is applicable only when `OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_API_ENABLE` is enabled.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_DEFAULT_ANYCAST_SERVER_PORT
+#define OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_DEFAULT_ANYCAST_SERVER_PORT 53
+#endif
+
+/**
  * @def OPENTHREAD_CONFIG_SRP_CLIENT_DOMAIN_NAME_API_ENABLE
  *
  * Define to 1 for the SRP client implementation to provide APIs that get/set the domain name.

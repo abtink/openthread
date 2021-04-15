@@ -140,6 +140,7 @@ Client::Client(Instance &aInstance)
 #if OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_API_ENABLE
     , mAutoStartModeEnabled(kAutoStartDefaultMode)
     , mAutoStartDidSelectServer(false)
+    , mAutoStartIsUsingAnycastAddress(false)
 #endif
 #if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
     , mServiceKeyRecordEnabled(false)
@@ -155,6 +156,8 @@ Client::Client(Instance &aInstance)
 #if OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_API_ENABLE
     , mAutoStartCallback(nullptr)
     , mAutoStartContext(nullptr)
+    , mAnycastServerPort(kDefaultAnycastServerPort)
+    , mServerInstanceNumber(0)
 #endif
     , mDomainName(kDefaultDomainName)
     , mTimer(aInstance, Client::HandleTimer)
@@ -301,7 +304,7 @@ void Client::HandleNotifierEvents(Events aEvents)
     }
 
 #if OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_API_ENABLE
-    if (aEvents.Contains(kEventThreadNetdataChanged))
+    if (aEvents.ContainsAny(kEventThreadNetdataChanged | kEventThreadMeshLocalAddrChanged))
     {
         ProcessAutoStart();
     }
@@ -1500,51 +1503,86 @@ exit:
 
 void Client::ProcessAutoStart(void)
 {
-    uint16_t                                numServers = 0;
-    NetworkData::Service::SrpServer::Info   selectedServer;
-    NetworkData::Service::SrpServer::Info   server;
-    NetworkData::Service::Manager::Iterator iterator;
+    Ip6::SockAddr                             serverSockAddr;
+    bool                                      serverIsAnycast = false;
+    NetworkData::Service::DnsSrpAnycast::Info anycastInfo;
 
     VerifyOrExit(mAutoStartModeEnabled);
 
-    // If the client is not running we check if there is any SRP sever
-    // info in Network Data and select one randomly and then start the
-    // client. If the client is already running with a server that was
-    // selected by the auto-start feature, we verify that the selected
-    // server is still present in the Network Data.
+    serverSockAddr.Clear();
+
+    // If the SRP client is not running and auto start mode is
+    // enabled, we check if we can find any SRP server info in the
+    // Thread Network Data. If it is already running and the server
+    // was chosen by the auto-start feature, then we ensure that the
+    // selected server is still present in the Network Data.
+    //
+    // Two types of "DNS/SRP Service" entries can be present in
+    // Network Data, "DNS/SRP Service Anycast Address" model and
+    // "DNS/SRP Service Unicast" model. The Anycast entries are
+    // preferred over the Unicast entries.
 
     VerifyOrExit(!IsRunning() || mAutoStartDidSelectServer);
 
-    while (Get<NetworkData::Service::Manager>().GetNextSrpServerInfo(iterator, server) == kErrorNone)
+    if (Get<NetworkData::Service::Manager>().FindPreferredDnsSrpAnycastInfo(anycastInfo) == kErrorNone)
     {
-        numServers++;
-
-        // Choose a server randomly (with uniform distribution) from
-        // the list of servers. As we iterate through server entries,
-        // with probability `1/numServers`, we choose to switch the
-        // current selected server with the new entry. This approach
-        // results in a uniform/same probability of selection among
-        // all server entries.
-
-        if ((numServers == 1) || (Random::NonCrypto::GetUint16InRange(0, numServers) == 0))
+        if (IsRunning() && mAutoStartDidSelectServer && mAutoStartIsUsingAnycastAddress)
         {
-            selectedServer = server;
+            if ((mServerInstanceNumber == anycastInfo.mSerialNumber) &&
+                (GetServerAddress().GetAddress() == anycastInfo.mAnycastAddress))
+            {
+                // Client is already using the same anycast address.
+                ExitNow();
+            }
         }
 
-        if (IsRunning() && mAutoStartDidSelectServer && (GetServerAddress() == server.mSockAddr))
+        otLogInfoSrp("[client] Found anycast server %d", anycastInfo.mSerialNumber);
+
+        serverSockAddr.SetAddress(anycastInfo.mAnycastAddress);
+        serverSockAddr.SetPort(mAnycastServerPort);
+        mServerInstanceNumber = anycastInfo.mSerialNumber;
+        serverIsAnycast       = true;
+    }
+    else
+    {
+        uint16_t                                  numServers = 0;
+        NetworkData::Service::DnsSrpUnicast::Info unicastInfo;
+        NetworkData::Service::Manager::Iterator   iterator;
+
+        while (Get<NetworkData::Service::Manager>().GetNextDnsSrpUnicastInfo(iterator, unicastInfo) == kErrorNone)
         {
-            ExitNow();
+            if (IsRunning() && mAutoStartDidSelectServer && !mAutoStartIsUsingAnycastAddress &&
+                (GetServerAddress() == unicastInfo.mSockAddr))
+            {
+                ExitNow();
+            }
+
+            numServers++;
+
+            // Choose a server randomly (with uniform distribution) from
+            // the list of servers. As we iterate through server entries,
+            // with probability `1/numServers`, we choose to switch the
+            // current selected server with the new entry. This approach
+            // results in a uniform/same probability of selection among
+            // all server entries.
+
+            if ((numServers == 1) || (Random::NonCrypto::GetUint16InRange(0, numServers) == 0))
+            {
+                serverSockAddr  = unicastInfo.mSockAddr;
+                serverIsAnycast = false;
+            }
         }
     }
 
     if (IsRunning())
     {
-        otLogInfoSrp("[client] Server %s is no longer present in net data", GetServerAddress().ToString().AsCString());
         Stop(kRequesterAuto);
     }
 
-    VerifyOrExit(numServers > 0);
-    IgnoreError(Start(selectedServer.mSockAddr, kRequesterAuto));
+    VerifyOrExit(!serverSockAddr.GetAddress().IsUnspecified());
+
+    mAutoStartIsUsingAnycastAddress = serverIsAnycast;
+    IgnoreError(Start(serverSockAddr, kRequesterAuto));
 
 exit:
     return;
