@@ -131,10 +131,8 @@ const NetworkDataTlv *NetworkData::FindTlv(const NetworkDataTlv *aStart,
 {
     const NetworkDataTlv *tlv;
 
-    for (tlv = aStart; tlv < aEnd; tlv = tlv->GetNext())
+    for (tlv = aStart; tlv->IsContainedBy(aEnd); tlv = tlv->GetNext())
     {
-        VerifyOrExit((tlv + 1) <= aEnd && tlv->GetNext() <= aEnd, tlv = nullptr);
-
         if (tlv->GetType() == aType)
         {
             ExitNow();
@@ -154,10 +152,8 @@ const NetworkDataTlv *NetworkData::FindTlv(const NetworkDataTlv *aStart,
 {
     const NetworkDataTlv *tlv;
 
-    for (tlv = aStart; tlv < aEnd; tlv = tlv->GetNext())
+    for (tlv = aStart; tlv->IsContainedBy(aEnd); tlv = tlv->GetNext())
     {
-        VerifyOrExit((tlv + 1) <= aEnd && tlv->GetNext() <= aEnd, tlv = nullptr);
-
         if ((tlv->GetType() == aType) && (tlv->IsStable() == aStable))
         {
             ExitNow();
@@ -252,7 +248,8 @@ Error NetworkData::Iterate(Iterator &aIterator, uint16_t aRloc16, Config &aConfi
     Error               error = kErrorNotFound;
     NetworkDataIterator iterator(aIterator);
 
-    for (const NetworkDataTlv *cur; (cur = iterator.GetTlv(mTlvs)) < GetTlvsEnd(); iterator.AdvanceTlv(mTlvs))
+    for (const NetworkDataTlv *cur; (cur = iterator.GetTlv(mTlvs))->IsContainedBy(GetTlvsEnd());
+         iterator.AdvanceTlv(mTlvs))
     {
         const NetworkDataTlv *subTlvs = nullptr;
 
@@ -279,7 +276,7 @@ Error NetworkData::Iterate(Iterator &aIterator, uint16_t aRloc16, Config &aConfi
             continue;
         }
 
-        for (const NetworkDataTlv *subCur; (subCur = iterator.GetSubTlv(subTlvs)) < cur->GetNext();
+        for (const NetworkDataTlv *subCur; (subCur = iterator.GetSubTlv(subTlvs))->IsContainedBy(cur->GetNext());
              iterator.AdvaceSubTlv(subTlvs))
         {
             if (cur->GetType() == NetworkDataTlv::kTypePrefix)
@@ -504,8 +501,9 @@ exit:
 void NetworkData::RemoveTemporaryData(uint8_t *aData, uint8_t &aDataLength)
 {
     NetworkDataTlv *cur = reinterpret_cast<NetworkDataTlv *>(aData);
+    NetworkDataTlv *end = reinterpret_cast<NetworkDataTlv *>(aData + aDataLength);
 
-    while (cur < reinterpret_cast<NetworkDataTlv *>(aData + aDataLength))
+    while (cur->IsContainedBy(end))
     {
         switch (cur->GetType())
         {
@@ -561,7 +559,7 @@ void NetworkData::RemoveTemporaryData(uint8_t *aData, uint8_t &aDataLength, Pref
 {
     NetworkDataTlv *cur = aPrefix.GetSubTlvs();
 
-    while (cur < aPrefix.GetNext())
+    while (cur->IsContainedBy(aPrefix.GetNext()))
     {
         if (cur->IsStable())
         {
@@ -624,7 +622,7 @@ void NetworkData::RemoveTemporaryData(uint8_t *aData, uint8_t &aDataLength, Serv
 {
     NetworkDataTlv *cur = aService.GetSubTlvs();
 
-    while (cur < aService.GetNext())
+    while (cur->IsContainedBy(aService.GetNext()))
     {
         if (cur->IsStable())
         {
@@ -693,7 +691,7 @@ const PrefixTlv *NetworkData::FindPrefix(const uint8_t *aPrefix,
     const NetworkDataTlv *end   = reinterpret_cast<const NetworkDataTlv *>(aTlvs + aTlvsLength);
     const PrefixTlv *     prefixTlv;
 
-    while (start < end)
+    while (start->IsContainedBy(end))
     {
         prefixTlv = FindTlv<PrefixTlv>(start, end);
 
@@ -730,7 +728,7 @@ const ServiceTlv *NetworkData::FindService(uint32_t       aEnterpriseNumber,
     const NetworkDataTlv *end   = reinterpret_cast<const NetworkDataTlv *>(aTlvs + aTlvsLength);
     const ServiceTlv *    serviceTlv;
 
-    while (start < end)
+    while (start->IsContainedBy(end))
     {
         serviceTlv = FindTlv<ServiceTlv>(start, end);
 

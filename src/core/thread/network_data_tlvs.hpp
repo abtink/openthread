@@ -208,6 +208,18 @@ public:
      */
     void SetStable(void) { mType |= kStableMask; }
 
+    /**
+     * This method checks whether or not the entire TLV is contained within the range given up to (and excluding) a
+     * given end pointer.
+     *
+     * @param[in] aEnd  A pointer to end of buffer to compare with the TLV.
+     *
+     * @retval TRUE   If the TLV is contained with range up to (and excluding) @p aEnd pointer.
+     * @retval FALSE  If the TLV is not contained with range up to (and excluding) @p aEnd pointer.
+     *
+     */
+    bool IsContainedBy(const void *aEnd) const;
+
 private:
     enum
     {
@@ -317,12 +329,7 @@ public:
      * This method initializes the TLV.
      *
      */
-    void Init(void)
-    {
-        NetworkDataTlv::Init();
-        SetType(kTypeHasRoute);
-        SetLength(0);
-    }
+    void Init(void);
 
     /**
      * This method returns the number of HasRoute entries.
@@ -423,15 +430,7 @@ public:
      * @param[in]  aPrefix        A pointer to the prefix.
      *
      */
-    void Init(uint8_t aDomainId, uint8_t aPrefixLength, const uint8_t *aPrefix)
-    {
-        NetworkDataTlv::Init();
-        SetType(kTypePrefix);
-        mDomainId     = aDomainId;
-        mPrefixLength = aPrefixLength;
-        memcpy(GetPrefix(), aPrefix, Ip6::Prefix::SizeForLength(aPrefixLength));
-        SetSubTlvsLength(0);
-    }
+    void Init(uint8_t aDomainId, uint8_t aPrefixLength, const uint8_t *aPrefix);
 
     /**
      * This method initializes the TLV.
@@ -452,12 +451,7 @@ public:
      * @retval FALSE  If the TLV does not appear to be well-formed.
      *
      */
-    bool IsValid(void) const
-    {
-        return ((GetLength() >= sizeof(*this) - sizeof(NetworkDataTlv)) &&
-                (GetLength() >= Ip6::Prefix::SizeForLength(mPrefixLength) + sizeof(*this) - sizeof(NetworkDataTlv)) &&
-                (Ip6::Prefix::SizeForLength(mPrefixLength) <= sizeof(Ip6::Address)));
-    }
+    bool IsValid(void) const;
 
     /**
      * This method returns the Domain ID value.
@@ -520,12 +514,7 @@ public:
      * @retval FALSE  The TLV's Prefix is not euqal @p aPrefix.
      *
      */
-    bool IsEqual(const uint8_t *aPrefix, uint8_t aPrefixLength) const
-    {
-        return (aPrefixLength == mPrefixLength) &&
-               (Ip6::Prefix::MatchLength(GetPrefix(), aPrefix, Ip6::Prefix::SizeForLength(aPrefixLength)) >=
-                mPrefixLength);
-    }
+    bool IsEqual(const uint8_t *aPrefix, uint8_t aPrefixLength) const;
 
     /**
      * This method returns a pointer to the Sub-TLVs.
@@ -790,12 +779,7 @@ public:
      * This method initializes the TLV.
      *
      */
-    void Init(void)
-    {
-        NetworkDataTlv::Init();
-        SetType(kTypeBorderRouter);
-        SetLength(0);
-    }
+    void Init(void);
 
     /**
      * This method returns the number of Border Router entries.
@@ -898,14 +882,7 @@ public:
      * @param[in]  aLength     The Context Length value.
      *
      */
-    void Init(uint8_t aContextId, uint8_t aConextLength)
-    {
-        NetworkDataTlv::Init();
-        SetType(kTypeContext);
-        SetLength(sizeof(ContextTlv) - sizeof(NetworkDataTlv));
-        mFlags         = ((aContextId << kContextIdOffset) & kContextIdMask);
-        mContextLength = aConextLength;
-    }
+    void Init(uint8_t aContextId, uint8_t aConextLength);
 
     /**
      * This method indicates whether or not the Compress flag is set.
@@ -1007,28 +984,7 @@ public:
      * @param[in]  aServiceDataLength  The Service Data length (number of bytes).
      *
      */
-    void Init(uint8_t aServiceId, uint32_t aEnterpriseNumber, const uint8_t *aServiceData, uint8_t aServiceDataLength)
-    {
-        NetworkDataTlv::Init();
-        SetType(kTypeService);
-
-        mFlagsServiceId = (aEnterpriseNumber == kThreadEnterpriseNumber) ? kThreadEnterpriseFlag : 0;
-        mFlagsServiceId |= (aServiceId & kServiceIdMask);
-
-        if (aEnterpriseNumber != kThreadEnterpriseNumber)
-        {
-            mShared.mEnterpriseNumber = HostSwap32(aEnterpriseNumber);
-            mServiceDataLength        = aServiceDataLength;
-            memcpy(&mServiceDataLength + sizeof(uint8_t), aServiceData, aServiceDataLength);
-        }
-        else
-        {
-            mShared.mServiceDataLengthThreadEnterprise = aServiceDataLength;
-            memcpy(&mShared.mServiceDataLengthThreadEnterprise + sizeof(uint8_t), aServiceData, aServiceDataLength);
-        }
-
-        SetLength(GetFieldsLength());
-    }
+    void Init(uint8_t aServiceId, uint32_t aEnterpriseNumber, const uint8_t *aServiceData, uint8_t aServiceDataLength);
 
     /**
      * This method indicates whether or not the TLV appears to be well-formed.
@@ -1037,15 +993,7 @@ public:
      * @retval FALSE  If the TLV does not appear to be well-formed.
      *
      */
-    bool IsValid(void) const
-    {
-        uint8_t length = GetLength();
-
-        return (length >= sizeof(mFlagsServiceId)) &&
-               (length >= kMinLength + (IsThreadEnterprise() ? 0 : sizeof(uint32_t))) &&
-               (static_cast<uint16_t>(length) + sizeof(NetworkDataTlv) >=
-                CalculateSize(GetEnterpriseNumber(), GetServiceDataLength()));
-    }
+    bool IsValid(void) const;
 
     /**
      * This method returns the Service ID. It is in range 0x00-0x0f.
@@ -1210,14 +1158,7 @@ public:
      * @param[in] aServerDataLength  Server Data length in bytes.
      *
      */
-    void Init(uint16_t aServer16, const uint8_t *aServerData, uint8_t aServerDataLength)
-    {
-        NetworkDataTlv::Init();
-        SetType(kTypeServer);
-        SetServer16(aServer16);
-        memcpy(reinterpret_cast<uint8_t *>(this) + sizeof(*this), aServerData, aServerDataLength);
-        SetLength(sizeof(*this) - sizeof(NetworkDataTlv) + aServerDataLength);
-    }
+    void Init(uint16_t aServer16, const uint8_t *aServerData, uint8_t aServerDataLength);
 
     /**
      * This method indicates whether or not the TLV appears to be well-formed.
@@ -1269,10 +1210,7 @@ public:
      * @retval FALSE The two TLVs are not equal.
      *
      */
-    bool operator==(const ServerTlv &aOther) const
-    {
-        return (GetLength() == aOther.GetLength()) && (memcmp(GetValue(), aOther.GetValue(), GetLength()) == 0);
-    }
+    bool operator==(const ServerTlv &aOther) const;
 
     /**
      * This static method calculates the total size (number of bytes) of a Service TLV with a given Server Data length.
