@@ -73,18 +73,21 @@ Error LeaderBase::GetServiceId(uint32_t       aEnterpriseNumber,
                                bool           aServerStable,
                                uint8_t &      aServiceId) const
 {
-    Error         error    = kErrorNotFound;
-    Iterator      iterator = kIteratorInit;
-    ServiceConfig serviceConfig;
+    Error                 error = kErrorNotFound;
+    const ServiceTlv *    serviceTlv;
+    const NetworkDataTlv *end;
 
-    while (GetNextService(iterator, serviceConfig) == kErrorNone)
+    serviceTlv = FindService(aEnterpriseNumber, aServiceData, aServiceDataLength);
+    VerifyOrExit(serviceTlv != nullptr);
+
+    end = serviceTlv->GetNext();
+
+    for (const NetworkDataTlv *cur = serviceTlv->GetSubTlvs(); cur < end; cur = cur->GetNext())
     {
-        if (aEnterpriseNumber == serviceConfig.mEnterpriseNumber &&
-            aServiceDataLength == serviceConfig.mServiceDataLength &&
-            memcmp(aServiceData, serviceConfig.mServiceData, aServiceDataLength) == 0 &&
-            aServerStable == serviceConfig.mServerConfig.mStable)
+        if ((cur + 1 <= end) && (cur->GetNext() <= end) && (cur->GetType() == NetworkDataTlv::kTypeServer) &&
+            (cur->IsStable() == aServerStable))
         {
-            aServiceId = serviceConfig.mServiceId;
+            aServiceId = serviceTlv->GetServiceId();
             ExitNow(error = kErrorNone);
         }
     }
