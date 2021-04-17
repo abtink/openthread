@@ -479,6 +479,21 @@ protected:
     const NetworkDataTlv *GetTlvsEnd(void) const { return reinterpret_cast<const NetworkDataTlv *>(mTlvs + mLength); }
 
     /**
+     * This static method checks whether or not the entire TLV is contained within the range given up to (and excluding)
+     * a given end pointer.
+     *
+     * @param[in] aEnd  A pointer to end of buffer to compare with the TLV.
+     *
+     * @retval TRUE   If the TLV is contained with range up to (and excluding) @p aEnd pointer.
+     * @retval FALSE  If the TLV is not contained with range up to (and excluding) @p aEnd pointer.
+     *
+     */
+    static bool IsTlvContainedBy(const NetworkDataTlv *aTlv, const NetworkDataTlv *aEnd)
+    {
+        return ((aTlv + 1) <= aEnd) && (aTlv->GetNext() <= aEnd);
+    }
+
+    /**
      * This method returns a pointer to the Border Router TLV within a given Prefix TLV.
      *
      * @param[in]  aPrefix  A reference to the Prefix TLV.

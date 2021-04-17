@@ -410,7 +410,7 @@ Error Leader::Validate(const uint8_t *aTlvs, uint8_t aTlvsLength, uint16_t aRloc
     {
         uint8_t offset;
 
-        VerifyOrExit((cur + 1) <= end && cur->GetNext() <= end, error = kErrorParse);
+        VerifyOrExit(IsTlvContainedBy(cur, end), error = kErrorParse);
 
         offset = static_cast<uint8_t>(reinterpret_cast<const uint8_t *>(cur) - aTlvs);
 
@@ -470,7 +470,7 @@ Error Leader::ValidatePrefix(const PrefixTlv &aPrefix, uint16_t aRloc16)
 
     for (const NetworkDataTlv *subCur = aPrefix.GetSubTlvs(); subCur < subEnd; subCur = subCur->GetNext())
     {
-        VerifyOrExit((subCur + 1) <= subEnd && subCur->GetNext() <= subEnd);
+        VerifyOrExit(IsTlvContainedBy(subCur, subEnd));
 
         switch (subCur->GetType())
         {
@@ -547,7 +547,7 @@ Error Leader::ValidateService(const ServiceTlv &aService, uint16_t aRloc16)
 
     for (const NetworkDataTlv *subCur = aService.GetSubTlvs(); subCur < subEnd; subCur = subCur->GetNext())
     {
-        VerifyOrExit((subCur + 1) <= subEnd && subCur->GetNext() <= subEnd);
+        VerifyOrExit(IsTlvContainedBy(subCur, subEnd));
 
         switch (subCur->GetType())
         {
