@@ -246,6 +246,7 @@ SOURCES_COMMON                                  = \
     thread/address_resolver.cpp                   \
     thread/announce_begin_server.cpp              \
     thread/announce_sender.cpp                    \
+    thread/anycast_locator.cpp                    \
     thread/child_table.cpp                        \
     thread/csl_tx_scheduler.cpp                   \
     thread/discover_scanner.cpp                   \
@@ -506,6 +507,7 @@ HEADERS_COMMON                                  = \
     thread/address_resolver.hpp                   \
     thread/announce_begin_server.hpp              \
     thread/announce_sender.hpp                    \
+    thread/anycast_locator.hpp                    \
     thread/child_mask.hpp                         \
     thread/child_table.hpp                        \
     thread/csl_tx_scheduler.hpp                   \
