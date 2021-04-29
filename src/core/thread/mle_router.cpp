@@ -2360,9 +2360,9 @@ void MleRouter::HandleChildUpdateRequest(const Message &         aMessage,
 
     tlvs[tlvslength++] = Tlv::kSourceAddress;
 
-    // Not proceed if the Child Update Request is from the peer which is not the device's child or
-    // which was the device's child but becomes invalid.
-    if (child == nullptr || child->IsStateInvalid())
+    // TODO: should we accept child in other states?
+
+    if (child == nullptr)
     {
         // For invalid non-sleepy child, Send Child Update Response with status TLV (error)
         if (mode.IsRxOnWhenIdle())
@@ -2373,6 +2373,10 @@ void MleRouter::HandleChildUpdateRequest(const Message &         aMessage,
 
         ExitNow();
     }
+
+    VerifyOrExit(child->IsValid());
+    OT_UNUSED_VARIABLE(aKeySequence);
+
 
     oldMode = child->GetDeviceMode();
     child->SetDeviceMode(mode);
@@ -2493,17 +2497,9 @@ void MleRouter::HandleChildUpdateRequest(const Message &         aMessage,
         Get<IndirectSender>().HandleChildModeChange(*child, oldMode);
     }
 
-    if (child->IsStateRestoring())
+    if (child->IsStateValid() && childDidChange)
     {
-        SetChildStateToValid(*child);
-        child->SetKeySequence(aKeySequence);
-    }
-    else if (child->IsStateValid())
-    {
-        if (childDidChange)
-        {
-            IgnoreError(mChildTable.StoreChild(*child));
-        }
+        IgnoreError(mChildTable.StoreChild(*child));
     }
 
 #if OPENTHREAD_CONFIG_MULTI_RADIO
