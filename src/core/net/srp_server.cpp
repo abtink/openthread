@@ -41,7 +41,7 @@
 #include "common/new.hpp"
 #include "common/random.hpp"
 #include "net/dns_types.hpp"
-#include "thread/network_data_service.hpp"
+#include "thread/network_data_publisher.hpp"
 #include "thread/thread_netif.hpp"
 
 namespace ot {
@@ -471,7 +471,10 @@ void Server::Start(void)
 
     SuccessOrExit(error = mSocket.Open(HandleUdpReceive, this));
     SuccessOrExit(error = mSocket.Bind(port, OT_NETIF_THREAD));
-    SuccessOrExit(error = PublishServerData());
+
+    // Publish "DNS/SRP Unicast Address Service" in Thread Network
+    // Data using the device's mesh-local EID as the address.
+    Get<NetworkData::Publisher>().PublishDnsSrpServiceUnicast(port);
 
     otLogInfoSrp("[server] start listening on port %hu", mSocket.GetSockName().mPort);
 
@@ -488,7 +491,7 @@ void Server::Stop(void)
 {
     VerifyOrExit(IsRunning());
 
-    UnpublishServerData();
+    Get<NetworkData::Publisher>().UnpublishDnsSrpService();
 
     while (!mHosts.IsEmpty())
     {
@@ -528,26 +531,6 @@ void Server::HandleNotifierEvents(Events aEvents)
 
 exit:
     return;
-}
-
-Error Server::PublishServerData(void)
-{
-    NetworkData::Service::DnsSrpUnicast::ServerData serverData(Get<Mle::Mle>().GetMeshLocal64(),
-                                                               mSocket.GetSockName().GetPort());
-
-    OT_ASSERT(mSocket.IsBound());
-
-    return Get<NetworkData::Service::Manager>().Add<NetworkData::Service::DnsSrpUnicast>(serverData);
-}
-
-void Server::UnpublishServerData(void)
-{
-    Error error = Get<NetworkData::Service::Manager>().Remove<NetworkData::Service::DnsSrpUnicast>();
-
-    if (error != kErrorNone)
-    {
-        otLogWarnSrp("[server] failed to unpublish SRP service: %s", ErrorToString(error));
-    }
 }
 
 const Server::UpdateMetadata *Server::FindOutstandingUpdate(const Ip6::MessageInfo &aMessageInfo,
