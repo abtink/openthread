@@ -188,6 +188,7 @@ LOCAL_SRC_FILES                                          := \
     src/core/api/message_api.cpp                            \
     src/core/api/multi_radio_api.cpp                        \
     src/core/api/netdata_api.cpp                            \
+    src/core/api/netdata_publisher_api.cpp                  \
     src/core/api/netdiag_api.cpp                            \
     src/core/api/network_time_api.cpp                       \
     src/core/api/ping_sender_api.cpp                        \
@@ -317,6 +318,7 @@ LOCAL_SRC_FILES                                          := \
     src/core/thread/network_data_leader_ftd.cpp             \
     src/core/thread/network_data_local.cpp                  \
     src/core/thread/network_data_notifier.cpp               \
+    src/core/thread/network_data_publisher.cpp              \
     src/core/thread/network_data_service.cpp                \
     src/core/thread/network_diagnostic.cpp                  \
     src/core/thread/panid_query_server.cpp                  \

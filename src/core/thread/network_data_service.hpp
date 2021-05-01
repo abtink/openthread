@@ -419,9 +419,6 @@ public:
     /**
      * This method adds a Thread Service entry to the local Thread Network Data.
      *
-     * When successfully added, this method also invokes `Notifier::HandleServerDataUpdated()` to register the changes
-     * in local Network Data with leader.
-     *
      * This version of `Add<SeviceType>()` is intended for use with a `ServiceType` that has a constant service data
      * format with a non-empty and potentially non-const server data format (provided as input parameter).
      *
@@ -430,27 +427,30 @@ public:
      *   - It MUST define nested type `ServiceType::ServerData` representing the server data (and its format).
      *   - The `ServiceType::ServerData` MUST provide `GetLength()` method returning the length of server data.
      *
-     * @tparam    ServiceType    The service type to be added.
+     * @tparam    ServiceType          The service type to be added.
      *
-     * @param[in] aServerData    The server data.
-     * @param[in] aServerStable  The Stable flag value for Server TLV.
+     * @param[in] aServerData          The server data.
+     * @param[in] aServerStable        The Stable flag value for Server TLV.
+     * @param[in] aRegisterWithLeader  Indicates whether or not to register the changes in the local Network Data with
+     *                                 the leader. If set to TRUE and if the entry is added successfully, this method
+     *                                 also invokes `Notifier::HandleServerDataUpdated()`.
      *
      * @retval kErrorNone     Successfully added the Service entry.
      * @retval kErrorNoBufs   Insufficient space to add the Service entry.
      *
      */
     template <typename ServiceType>
-    Error Add(const typename ServiceType::ServerData &aServerData, bool aServerStable = true)
+    Error Add(const typename ServiceType::ServerData &aServerData,
+              bool                                    aServerStable       = true,
+              bool                                    aRegisterWithLeader = true)
     {
         return AddService(&ServiceType::kServiceData, sizeof(ServiceType::kServiceData), aServerStable, &aServerData,
-                          aServerData.GetLength());
+                          aServerData.GetLength(), aRegisterWithLeader);
     }
 
     /**
      * This method adds a Thread Service entry to the local Thread Network Data.
      *
-     * When successfully added, this method also invokes `Notifier::HandleServerDataUpdated()` to register the changes
-     * in local Network Data with leader.
      *
      * This version of `Add<SeviceType>()` is intended for use with a `ServiceType` that has a non-const service data
      * format (provided as input parameter) with an empty server data.
@@ -461,24 +461,27 @@ public:
      *
      * @tparam    ServiceType    The service type to be added.
      *
-     * @param[in] aServiceData   The service data.
-     * @param[in] aServerStable  The Stable flag value for Server TLV.
+     * @param[in] aServiceData         The service data.
+     * @param[in] aServerStable        The Stable flag value for Server TLV.
+     * @param[in] aRegisterWithLeader  Indicates whether or not to register the changes in the local Network Data with
+     *                                 the leader. If set to TRUE and if the entry is added successfully, this method
+     *                                 also invokes `Notifier::HandleServerDataUpdated()`.
+
      *
      * @retval kErrorNone     Successfully added the Service entry.
      * @retval kErrorNoBufs   Insufficient space to add the Service entry.
      *
      */
     template <typename ServiceType>
-    Error Add(const typename ServiceType::ServiceData &aServiceData, bool aServerStable = true)
+    Error Add(const typename ServiceType::ServiceData &aServiceData,
+              bool                                     aServerStable       = true,
+              bool                                     aRegisterWithLeader = true)
     {
-        return AddService(&aServiceData, aServiceData.GetLength(), aServerStable, nullptr, 0);
+        return AddService(&aServiceData, aServiceData.GetLength(), aServerStable, nullptr, 0, aRegisterWithLeader);
     }
 
     /**
      * This method removes a Thread Service entry from the local Thread Network Data.
-     *
-     * When successfully removed, this method also invokes `Notifier::HandleServerDataUpdated()` to register the
-     * changes in local Network Data with leader.
      *
      * This version of `Remove<SeviceType>()` is intended for use with a `ServiceType` that has a constant service data
      * format.
@@ -486,22 +489,23 @@ public:
      * The template type `ServiceType` has the following requirements:
      *   - It MUST have a constant variable `ServiceType::kServiceData` specifying the service data.
      *
-     * @tparam   ServiceType       The service type to be removed.
+     * @tparam   ServiceType           The service type to be removed.
+     *
+     * @param[in] aRegisterWithLeader  Indicates whether or not to register the changes in the local Network Data with
+     *                                 the leader. If set to TRUE and if the entry is removed successfully, this method
+     *                                 also invokes `Notifier::HandleServerDataUpdated()`.
      *
      * @retval kErrorNone       Successfully removed the Service entry.
      * @retval kErrorNotFound   Could not find the Service entry.
      *
      */
-    template <typename ServiceType> Error Remove(void)
+    template <typename ServiceType> Error Remove(bool aRegisterWithLeader = true)
     {
-        return RemoveService(&ServiceType::kServiceData, sizeof(ServiceType::kServiceData));
+        return RemoveService(&ServiceType::kServiceData, sizeof(ServiceType::kServiceData), aRegisterWithLeader);
     }
 
     /**
      * This method removes a Thread Service entry from the local Thread Network Data.
-     *
-     * When successfully removed, this method also invokes `Notifier::HandleServerDataUpdated()` to register the
-     * changes in local Network Data with leader.
      *
      * This version of `Remove<SeviceType>()` is intended for use with a `ServiceType` that has a non-const service data
      * format (provided as input parameter).
@@ -512,13 +516,19 @@ public:
      *
      * @tparam   ServiceType       The service type to be removed.
      *
+     * @param[in] aServiceData         The service data.
+     * @param[in] aRegisterWithLeader  Indicates whether or not to register the changes in the local Network Data with
+     *                                 the leader. If set to TRUE and if the entry is removed successfully, this method
+     *                                 also invokes `Notifier::HandleServerDataUpdated()`.
+     *
      * @retval kErrorNone       Successfully removed the Service entry.
      * @retval kErrorNotFound   Could not find the Service entry.
      *
      */
-    template <typename ServiceType> Error Remove(const typename ServiceType::ServiceData &aServiceData)
+    template <typename ServiceType>
+    Error Remove(const typename ServiceType::ServiceData &aServiceData, bool aRegisterWithLeader)
     {
-        return RemoveService(&aServiceData, aServiceData.GetLength());
+        return RemoveService(&aServiceData, aServiceData.GetLength(), aRegisterWithLeader);
     }
 
 #endif // OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
@@ -604,8 +614,9 @@ private:
                      uint8_t     aServiceDataLength,
                      bool        aServerStable,
                      const void *aServerData,
-                     uint8_t     aServerDataLength);
-    Error RemoveService(const void *aServiceData, uint8_t aServiceDataLength);
+                     uint8_t     aServerDataLength,
+                     bool        aRegisterWithLeader);
+    Error RemoveService(const void *aServiceData, uint8_t aServiceDataLength, bool aRegisterWithLeader);
 #endif
 
     Error GetServiceId(const void *aServiceData,
