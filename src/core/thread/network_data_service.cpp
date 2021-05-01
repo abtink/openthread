@@ -57,7 +57,8 @@ Error Manager::AddService(const void *aServiceData,
                           uint8_t     aServiceDataLength,
                           bool        aServerStable,
                           const void *aServerData,
-                          uint8_t     aServerDataLength)
+                          uint8_t     aServerDataLength,
+                          bool        aRegisterWithLeader)
 {
     Error error;
 
@@ -65,18 +66,21 @@ Error Manager::AddService(const void *aServiceData,
                       kThreadEnterpriseNumber, reinterpret_cast<const uint8_t *>(aServiceData), aServiceDataLength,
                       aServerStable, reinterpret_cast<const uint8_t *>(aServerData), aServerDataLength));
 
+    VerifyOrExit(aRegisterWithLeader);
     Get<Notifier>().HandleServerDataUpdated();
 
 exit:
     return error;
 }
 
-Error Manager::RemoveService(const void *aServiceData, uint8_t aServiceDataLength)
+Error Manager::RemoveService(const void *aServiceData, uint8_t aServiceDataLength, bool aRegisterWithLeader)
 {
     Error error;
 
     SuccessOrExit(error = Get<Local>().RemoveService(
                       kThreadEnterpriseNumber, reinterpret_cast<const uint8_t *>(aServiceData), aServiceDataLength));
+
+    VerifyOrExit(aRegisterWithLeader);
     Get<Notifier>().HandleServerDataUpdated();
 
 exit:
