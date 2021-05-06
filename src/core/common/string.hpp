@@ -104,6 +104,12 @@ template <uint16_t kSize> class String
 
 public:
     /**
+     * This constructor initializes the `String` as an empty string.
+     *
+     */
+    String(void) { mBuffer[0] = '\0'; }
+
+    /**
      * This method returns the string as a null-terminated C string.
      *
      * @returns The null-terminated C string.
