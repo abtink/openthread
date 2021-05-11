@@ -68,20 +68,10 @@ class NetworkDataTlv
 {
 public:
     /**
-     * This method initializes TLV.
-     *
-     */
-    void Init(void)
-    {
-        mType   = 0;
-        mLength = 0;
-    }
-
-    /**
      * Thread Network Data Type values.
      *
      */
-    enum Type
+    enum Type : uint8_t
     {
         kTypeHasRoute          = 0, ///< Has Route TLV
         kTypePrefix            = 1, ///< Prefix TLV
@@ -91,6 +81,16 @@ public:
         kTypeService           = 5, ///< Service TLV
         kTypeServer            = 6, ///< Server TLV
     };
+
+    /**
+     * This method initializes the TLV.
+     *
+     */
+    void Init(void)
+    {
+        mType   = 0;
+        mLength = 0;
+    }
 
     /**
      * This method returns the Type value.
@@ -207,6 +207,138 @@ public:
      *
      */
     void SetStable(void) { mType |= kStableMask; }
+
+    /**
+     * This static method searches in a given sequence of TLVs to find the first TLV with a given type.
+     *
+     * @param[in]  aStart  A pointer to the start of the sequence of TLVs to search within.
+     * @param[in]  aEnd    A pointer to the end of the sequence of TLVs.
+     * @param[in]  aType   The TLV type to find.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    static NetworkDataTlv *Find(NetworkDataTlv *aStart, NetworkDataTlv *aEnd, Type aType)
+    {
+        return const_cast<NetworkDataTlv *>(
+            Find(const_cast<const NetworkDataTlv *>(aStart), const_cast<const NetworkDataTlv *>(aEnd), aType));
+    }
+
+    /**
+     * This static method searches in a given sequence of TLVs to find the first TLV with a given type.
+     *
+     * @param[in]  aStart  A pointer to the start of the sequence of TLVs to search within.
+     * @param[in]  aEnd    A pointer to the end of the sequence of TLVs.
+     * @param[in]  aType   The TLV type to find.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    static const NetworkDataTlv *Find(const NetworkDataTlv *aStart, const NetworkDataTlv *aEnd, Type aType);
+
+    /**
+     * This template static method searches in a given sequence of TLVs to find the first TLV with a given type.
+     *
+     * @tparam     TlvType The TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @param[in]  aStart  A pointer to the start of the sequence of TLVs to search within.
+     * @param[in]  aEnd    A pointer to the end of the sequence of TLVs.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename TlvType> static TlvType *Find(NetworkDataTlv *aStart, NetworkDataTlv *aEnd)
+    {
+        return static_cast<TlvType *>(Find(aStart, aEnd, static_cast<Type>(TlvType::kType)));
+    }
+
+    /**
+     * This template static method searches in a given sequence of TLVs to find the first TLV with a given type.
+     *
+     * @tparam     TlvType The TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @param[in]  aStart  A pointer to the start of the sequence of TLVs to search within.
+     * @param[in]  aEnd    A pointer to the end of the sequence of TLVs.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename TlvType> static const TlvType *Find(const NetworkDataTlv *aStart, const NetworkDataTlv *aEnd)
+    {
+        return static_cast<const TlvType *>(Find(aStart, aEnd, static_cast<Type>(TlvType::kType)));
+    }
+
+    /**
+     * This static method searches in a given sequence of TLVs to find the first TLV with a given TLV type and stable
+     * flag.
+     *
+     * @param[in]  aStart  A pointer to the start of the sequence of TLVs to search within.
+     * @param[in]  aEnd    A pointer to the end of the sequence of TLVs.
+     * @param[in]  aType   The TLV type to find.
+     * @param[in]  aStable TRUE to find a stable TLV, FALSE to find a TLV not marked as stable.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    static NetworkDataTlv *Find(NetworkDataTlv *aStart, NetworkDataTlv *aEnd, Type aType, bool aStable)
+    {
+        return const_cast<NetworkDataTlv *>(
+            Find(const_cast<const NetworkDataTlv *>(aStart), const_cast<const NetworkDataTlv *>(aEnd), aType, aStable));
+    }
+
+    /**
+     * This static method searches in a given sequence of TLVs to find the first TLV with a given TLV type and stable
+     * flag.
+     *
+     * @param[in]  aStart  A pointer to the start of the sequence of TLVs to search within.
+     * @param[in]  aEnd    A pointer to the end of the sequence of TLVs.
+     * @param[in]  aType   The TLV type to find.
+     * @param[in]  aStable TRUE to find a stable TLV, FALSE to find a TLV not marked as stable.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    static const NetworkDataTlv *Find(const NetworkDataTlv *aStart,
+                                      const NetworkDataTlv *aEnd,
+                                      Type                  aType,
+                                      bool                  aStable);
+
+    /**
+     * This template static method searches in a given sequence of TLVs to find the first TLV with a given TLV type and
+     * stable flag.
+     *
+     * @tparam     TlvType The TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @param[in]  aStart  A pointer to the start of the sequence of TLVs to search within.
+     * @param[in]  aEnd    A pointer to the end of the sequence of TLVs.
+     * @param[in]  aStable TRUE to find a stable TLV, FALSE to find a TLV not marked as stable.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename TlvType> static TlvType *Find(NetworkDataTlv *aStart, NetworkDataTlv *aEnd, bool aStable)
+    {
+        return static_cast<TlvType *>(Find(aStart, aEnd, static_cast<Type>(TlvType::kType), aStable));
+    }
+
+    /**
+     * This template static method searches in a given sequence of TLVs to find the first TLV with a given TLV type and
+     * stable flag.
+     *
+     * @tparam     TlvType The TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @param[in]  aStart  A pointer to the start of the sequence of TLVs to search within.
+     * @param[in]  aEnd    A pointer to the end of the sequence of TLVs.
+     * @param[in]  aStable TRUE to find a stable TLV, FALSE to find a TLV not marked as stable.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename TlvType>
+    static const TlvType *Find(const NetworkDataTlv *aStart, const NetworkDataTlv *aEnd, bool aStable)
+    {
+        return static_cast<const TlvType *>(Find(aStart, aEnd, static_cast<Type>(TlvType::kType), aStable));
+    }
 
 private:
     enum
@@ -599,6 +731,59 @@ public:
     void SetSubTlvsLength(uint8_t aLength)
     {
         SetLength(sizeof(*this) - sizeof(NetworkDataTlv) + Ip6::Prefix::SizeForLength(mPrefixLength) + aLength);
+    }
+
+    /**
+     * This template method searches in the sub-TLVs to find the first one matching a given TLV type.
+     *
+     * @tparam     SubTlvType    The sub-TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename SubTlvType> SubTlvType *FindSubTlv(void) { return Find<SubTlvType>(GetSubTlvs(), GetNext()); }
+
+    /**
+     * This template method searches in the sub-TLVs to find the first one matching a given TLV Type.
+     *
+     * @tparam     SubTlvType   The sub-TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename SubTlvType> const SubTlvType *FindSubTlv(void) const
+    {
+        return Find<SubTlvType>(GetSubTlvs(), GetNext());
+    }
+
+    /**
+     * This template method searches in the sub-TLVs to find the first one matching a given TLV type and stable flag.
+     *
+     * @tparam     SubTlvType    The sub-TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @param[in]  aStable       TRUE to find a stable TLV, FALSE to find a TLV not marked as stable.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename SubTlvType> SubTlvType *FindSubTlv(bool aStable)
+    {
+        return Find<SubTlvType>(GetSubTlvs(), GetNext(), aStable);
+    }
+
+    /**
+     * This template method searches in the sub-TLVs to find the first one matching a given TLV type and stable flag.
+     *
+     * @tparam     SubTlvType   The sub-TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @param[in]  aStable      TRUE to find a stable TLV, FALSE to find a TLV not marked as stable.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename SubTlvType> const SubTlvType *FindSubTlv(bool aStable) const
+    {
+        return Find<SubTlvType>(GetSubTlvs(), GetNext(), aStable);
     }
 
     /**
@@ -1168,6 +1353,59 @@ public:
     }
 
     /**
+     * This template method searches in the sub-TLVs to find the first one matching a given TLV type.
+     *
+     * @tparam     SubTlvType    The sub-TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename SubTlvType> SubTlvType *FindSubTlv(void) { return Find<SubTlvType>(GetSubTlvs(), GetNext()); }
+
+    /**
+     * This template method searches in the sub-TLVs to find the first one matching a given TLV type.
+     *
+     * @tparam     SubTlvType   The sub-TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename SubTlvType> const SubTlvType *FindSubTlv(void) const
+    {
+        return Find<SubTlvType>(GetSubTlvs(), GetNext());
+    }
+
+    /**
+     * This template method searches in the sub-TLVs to find the first one matching a given TLV type and stable flag.
+     *
+     * @tparam     SubTlvType    The sub-TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @param[in]  aStable       TRUE to find a stable TLV, FALSE to find a TLV not marked as stable.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename SubTlvType> SubTlvType *FindSubTlv(bool aStable)
+    {
+        return Find<SubTlvType>(GetSubTlvs(), GetNext(), aStable);
+    }
+
+    /**
+     * This template method searches in the sub-TLVs to find the first one matching a given TLV type and stable flag.
+     *
+     * @tparam     SubTlvType   The sub-TLV type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @param[in]  aStable      TRUE to find a stable TLV, FALSE to find a TLV not marked as stable.
+     *
+     * @returns A pointer to the TLV if found, or nullptr if not found.
+     *
+     */
+    template <typename SubTlvType> const SubTlvType *FindSubTlv(bool aStable) const
+    {
+        return Find<SubTlvType>(GetSubTlvs(), GetNext(), aStable);
+    }
+
+    /**
      * This static method calculates the total size (number of bytes) of a Service TLV with a given Enterprise Number
      * and Service Data length.
      *
@@ -1319,6 +1557,97 @@ public:
 private:
     uint16_t mServer16;
 } OT_TOOL_PACKED_END;
+
+/**
+ * This class represents a Network Data TLV iterator.
+ *
+ */
+class TlvIterator
+{
+public:
+    /**
+     * This constructor initializes the `TlvIterator` to iterate over a given sequence of TLVs.
+     *
+     * @param[in] aStart  A pointer to the start of the TLV sequence.
+     * @param[in] aEnd    A pointer to the end of the TLV sequence.
+     *
+     */
+    TlvIterator(const NetworkDataTlv *aStart, const NetworkDataTlv *aEnd)
+        : mStart(aStart)
+        , mEnd(aEnd)
+    {
+    }
+
+    /**
+     * This constructor initializes the `TlvIterator` iterate over TLVs from a given buffer.
+     *
+     * @param[in] aBuffer   A pointer to a buffer containing the TLVs.
+     * @param[in] aLength   The length (number of bytes) of @p aBuffer.
+     *
+     */
+    TlvIterator(const uint8_t *aBuffer, uint8_t aLength)
+        : TlvIterator(reinterpret_cast<const NetworkDataTlv *>(aBuffer),
+                      reinterpret_cast<const NetworkDataTlv *>(aBuffer + aLength))
+    {
+    }
+
+    /**
+     * This constructor initializes the `TlvIterator` to iterate over sub-TLVs of a given Prefix TLV.
+     *
+     * @param[in] aPrefixTlv   A Prefix TLV to iterate over its sub-TLVs.
+     *
+     */
+    TlvIterator(const PrefixTlv &aPrefixTlv)
+        : TlvIterator(aPrefixTlv.GetSubTlvs(), aPrefixTlv.GetNext())
+    {
+    }
+
+    /**
+     * This constructor initializes the `TlvIterator` to iterate over sub-TLVs of a given Service TLV.
+     *
+     * @param[in] aServiceTlv   A Service TLV to iterate over its sub-TLVs.
+     *
+     */
+    TlvIterator(const ServiceTlv &aServiceTlv)
+        : TlvIterator(aServiceTlv.GetSubTlvs(), aServiceTlv.GetNext())
+    {
+    }
+
+    /**
+     * This template method iterates to the next TLV with a given type.
+     *
+     * @tparam  TlvType The TLV Type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @returns A pointer to the next TLV, or nullptr if it can not be found.
+     *
+     */
+    template <typename TlvType> const TlvType *Iterate(void)
+    {
+        return static_cast<const TlvType *>(Iterate(static_cast<NetworkDataTlv::Type>(TlvType::kType)));
+    }
+
+    /**
+     * This template method iterates to the next TLV with a given type and stable flag.
+     *
+     * @tparam  TlvType The TLV Type to search for (MUST be a sub-class of `NetworkDataTlv`).
+     *
+     * @param[in]  aStable      TRUE to find a stable TLV, FALSE to find a TLV not marked as stable.
+     *
+     * @returns A pointer to the next TLV, or nullptr if it can not be found.
+     *
+     */
+    template <typename TlvType> const TlvType *Iterate(bool aStable)
+    {
+        return static_cast<const TlvType *>(Iterate(static_cast<NetworkDataTlv::Type>(TlvType::kType), aStable));
+    }
+
+private:
+    const NetworkDataTlv *Iterate(NetworkDataTlv::Type aType);
+    const NetworkDataTlv *Iterate(NetworkDataTlv::Type aType, bool aStable);
+
+    const NetworkDataTlv *mStart;
+    const NetworkDataTlv *mEnd;
+};
 
 /**
  * @}

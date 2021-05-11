@@ -240,7 +240,8 @@ Error Local::RemovePrefix(const Ip6::Prefix &aPrefix, NetworkDataTlv::Type aSubT
     PrefixTlv *tlv;
 
     VerifyOrExit((tlv = FindPrefix(aPrefix)) != nullptr, error = kErrorNotFound);
-    VerifyOrExit(FindTlv(tlv->GetSubTlvs(), tlv->GetNext(), aSubTlvType) != nullptr, error = kErrorNotFound);
+    VerifyOrExit(NetworkDataTlv::Find(tlv->GetSubTlvs(), tlv->GetNext(), aSubTlvType) != nullptr,
+                 error = kErrorNotFound);
     RemoveTlv(tlv);
 
 exit:
