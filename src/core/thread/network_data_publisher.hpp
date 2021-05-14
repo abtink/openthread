@@ -45,6 +45,7 @@
 #include "common/string.hpp"
 #include "common/timer.hpp"
 #include "net/ip6_address.hpp"
+#include "thread/network_data_types.hpp"
 
 namespace ot {
 namespace NetworkData {
@@ -124,8 +125,53 @@ public:
 
 #endif // OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
 
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+    /**
+     * This method requests an on-mesh prefix to be published in the Thread Network Data.
+     *
+     * @param[in] aConfig         The on-mesh prefix config to publish.
+     *
+     * @retval kErrorNone         The on-mesh prefix is published successfully.
+     * @retval kErrorInvalidArgs  The @p aConfig is not valid (bad prefix or invalid flag combinations).
+     * @retval kErrorAlready      An entry with the same prefix is already in the published list.
+     * @retval kErrorNoBufs       Could not allocate an entry for the new request. Publisher supports a limited number
+     *                            of entries (shared between on-mesh prefix and external route) determined by config
+     *                            `OPENTHREAD_CONFIG_NETDATA_PUBLISHER_MAX_PREFIX_ENTRIES`.
+     *
+     *
+     */
+    Error PublishOnMeshPrefix(const OnMeshPrefixConfig &aConfig);
+
+    /**
+     * This method requests an external route prefix to be published in the Thread Network Data.
+     *
+     * @param[in] aConfig         The external route config to publish.
+     *
+     * @retval kErrorNone         The external route is published successfully.
+     * @retval kErrorInvalidArgs  The @p aConfig is not valid (bad prefix or invalid flag combinations).
+     * @retval kErrorAlready      An entry with the same prefix is already in the published list.
+     * @retval kErrorNoBufs       Could not allocate an entry for the new request. Publisher supports a limited number
+     *                            of entries (shared between on-mesh prefix and external route) determined by config
+     *                            `OPENTHREAD_CONFIG_NETDATA_PUBLISHER_MAX_PREFIX_ENTRIES`.
+     *
+     *
+     */
+    Error PublishExternalRoute(const ExternalRouteConfig &aConfig);
+
+    /**
+     * This method unpublishes a previously published prefix (on-mesh or external route).
+     *
+     * @param[in] aPrefix       The prefix to unpublish.
+     *
+     * @retval kErrorNone       The prefix was unpublished successfully.
+     * @retval kErrorNotFound   Could not find the prefix in the published list.
+     *
+     */
+    Error UnpublishPrefix(const Ip6::Prefix &aPrefix);
+#endif // OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+
 private:
-    class Entry : public InstanceLocator
+    class Entry : public InstanceLocatorInit
     {
     protected:
         enum State : uint8_t
@@ -152,7 +198,12 @@ private:
 
         typedef String<kInfoStringSize> InfoString;
 
-        explicit Entry(Instance &aInstance);
+        Entry(void)
+            : mState(kNoEntry)
+        {
+        }
+
+        void Init(Instance &aInstance) { InstanceLocatorInit::Init(aInstance); }
 
         State GetState(void) const { return mState; }
         void  SetState(State aState);
@@ -160,12 +211,16 @@ private:
         const TimeMilli &GetUpdateTime(void) const { return mUpdateTime; }
 
         void UpdateState(uint8_t aNumEntries, uint8_t aNumPreferredEntries, uint8_t aDesiredNumEntries);
+        bool HandleTimer(void);
 
         void               LogUpdateTime(void) const;
         InfoString         ToString(bool aIncludeState = true) const;
         static const char *StateToString(State aState);
 
     private:
+        bool Add(bool aRegisterWithLeader);
+        bool Remove(bool aRegisterWithLeader, State aNextState);
+
         TimeMilli mUpdateTime;
         State     mState;
     };
@@ -173,14 +228,16 @@ private:
 #if OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
     class DnsSrpServiceEntry : public Entry, private NonCopyable
     {
+        friend class Entry;
+
     public:
-        explicit DnsSrpServiceEntry(Instance &aInstance);
+        explicit DnsSrpServiceEntry(Instance &aInstance) { Init(aInstance); }
 
         void PublishAnycast(uint8_t aSequenceNumber);
         void PublishUnicast(const Ip6::Address &aAddress, uint16_t aPort);
         void PublishUnicast(uint16_t aPort);
         void Unpublish(void);
-        bool HandleTimer(void);
+        bool HandleTimer(void) { return Entry::HandleTimer(); }
         bool HandleNotifierEvents(Events aEvents);
 
     private:
@@ -222,6 +279,58 @@ private:
     };
 #endif // OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
 
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+    enum : uint8_t
+    {
+        // Max number of prefix (on-mesh or external route) entries.
+        kMaxPrefixEntries = OPENTHREAD_CONFIG_NETDATA_PUBLISHER_MAX_PREFIX_ENTRIES,
+    };
+
+    class PrefixEntry : public Entry, private NonCopyable
+    {
+        friend class Entry;
+
+    public:
+        void Init(Instance &aInstance) { Entry::Init(aInstance); }
+
+        bool IsInUse(void) const { return GetState() != kNoEntry; }
+        bool Matches(const Ip6::Prefix &aPrefix) const { return mPrefix == aPrefix; }
+
+        void Publish(const OnMeshPrefixConfig &aConfig);
+        void Publish(const ExternalRouteConfig &aConfig);
+        void Unpublish(void);
+        bool HandleTimer(void) { return Entry::HandleTimer(); }
+        void HandleNotifierEvents(Events aEvents);
+
+    private:
+        enum : uint8_t
+        {
+            kDesiredNumOnMeshPrefix  = OPENTHREAD_CONFIG_NETDATA_PUBLISHER_DESIRED_NUM_ON_MESH_PREFIX_ENTRIES,
+            kDesiredNumExternalRoute = OPENTHREAD_CONFIG_NETDATA_PUBLISHER_DESIRED_NUM_EXTERNAL_ROUTE_ENTRIES,
+        };
+
+        enum Type : uint8_t
+        {
+            kTypeOnMeshPrefix,
+            kTypeExternalRoute,
+        };
+
+        bool Add(bool aRegisterWithLeader);
+        bool Remove(bool aRegisterWithLeader, State aNextState = kNoEntry);
+        void Process(void);
+        void CountOnMeshPrefixEntries(uint8_t &aNumEntries, uint8_t &aNumPreferredEntries) const;
+        void CountExternalRouteEntries(uint8_t &aNumEntries, uint8_t &aNumPreferredEntries) const;
+
+        Type        mType;
+        Ip6::Prefix mPrefix;
+        bool        mStable;
+        uint16_t    mFlags;
+    };
+
+    Error        AllocatePrefixEntry(const Ip6::Prefix &aPrefix, PrefixEntry *&aEntry);
+    PrefixEntry *FindMatchingPrefixEntry(const Ip6::Prefix &aPrefix);
+#endif // OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+
     TimerMilli &GetTimer(void) { return mTimer; }
     void        HandleNotifierEvents(Events aEvents);
     static void HandleTimer(Timer &aTimer);
@@ -230,6 +339,11 @@ private:
 #if OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
     DnsSrpServiceEntry mDnsSrpServiceEntry;
 #endif
+
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+    PrefixEntry mPrefixEntries[kMaxPrefixEntries];
+#endif
+
     TimerMilli mTimer;
 };
 

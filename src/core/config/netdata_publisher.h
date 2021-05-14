@@ -107,4 +107,38 @@
 #define OPENTHREAD_CONFIG_NETDATA_PUBLISHER_DESIRED_NUM_UNICAST_DNS_SRP_SERVICE_ENTRIES 2
 #endif
 
+/**
+ * @def OPENTHREAD_CONFIG_NETDATA_PUBLISHER_DESIRED_NUM_ON_MESH_PREFIX_ENTRIES
+ *
+ * Specifies the desired number of On-mesh Prefix entries in the Thread Network Data.
+ *
+ * Publisher attempts to limit the number of such entries to this value.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_NETDATA_PUBLISHER_DESIRED_NUM_ON_MESH_PREFIX_ENTRIES
+#define OPENTHREAD_CONFIG_NETDATA_PUBLISHER_DESIRED_NUM_ON_MESH_PREFIX_ENTRIES 3
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_NETDATA_PUBLISHER_DESIRED_NUM_EXTERNAL_ROUTE_ENTRIES
+ *
+ * Specifies the desired number of External Route entries in the Thread Network Data.
+ *
+ * Publisher attempts to limit the number of such entries to this value.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_NETDATA_PUBLISHER_DESIRED_NUM_EXTERNAL_ROUTE_ENTRIES
+#define OPENTHREAD_CONFIG_NETDATA_PUBLISHER_DESIRED_NUM_EXTERNAL_ROUTE_ENTRIES 10
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_NETDATA_PUBLISHER_MAX_PREFIX_ENTRIES
+ *
+ * Specifies maximum number of prefix (on-mesh prefix or external route) entries supported by Publisher.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_NETDATA_PUBLISHER_MAX_PREFIX_ENTRIES
+#define OPENTHREAD_CONFIG_NETDATA_PUBLISHER_MAX_PREFIX_ENTRIES 3
+#endif
+
 #endif // CONFIG_NETDATA_PUBLISHER_H_

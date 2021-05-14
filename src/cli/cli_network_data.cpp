@@ -263,6 +263,26 @@ otError NetworkData::ProcessPublish(uint8_t aArgsLength, Arg aArgs[])
     }
 #endif // OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
 
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+    if (aArgs[0] == "prefix")
+    {
+        otBorderRouterConfig config;
+
+        SuccessOrExit(error = Interpreter::ParsePrefix(aArgsLength - 1, aArgs + 1, config));
+        error = otNetDataPublishOnMeshPrefix(mInterpreter.mInstance, &config);
+        ExitNow();
+    }
+
+    if (aArgs[0] == "route")
+    {
+        otExternalRouteConfig config;
+
+        SuccessOrExit(error = Interpreter::ParseRoute(aArgsLength - 1, aArgs + 1, config));
+        error = otNetDataPublishExternalRoute(mInterpreter.mInstance, &config);
+        ExitNow();
+    }
+#endif // OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+
     error = OT_ERROR_INVALID_ARGS;
 
 exit:
@@ -283,6 +303,18 @@ otError NetworkData::ProcessUnpublish(uint8_t aArgsLength, Arg aArgs[])
         VerifyOrExit(aArgsLength == 1, error = OT_ERROR_INVALID_ARGS);
         otNetDataUnpublishDnsSrpService(mInterpreter.mInstance);
         ExitNow();
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+    {
+        otIp6Prefix prefix;
+
+        if (aArgs[0].ParseAsIp6Prefix(prefix) == OT_ERROR_NONE)
+        {
+            error = otNetDataUnpublishPrefix(mInterpreter.mInstance, &prefix);
+            ExitNow();
+        }
     }
 #endif
 

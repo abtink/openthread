@@ -116,6 +116,58 @@ void otNetDataPublishDnsSrpServiceUnicastMeshLocalEid(otInstance *aInstance, uin
 void otNetDataUnpublishDnsSrpService(otInstance *aInstance);
 
 /**
+ * This function requests an on-mesh prefix to be published in the Thread Network Data.
+ *
+ * This function requires the feature `OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE` to be enabled.
+ *
+ * @param[in] aInstance           A pointer to an OpenThread instance.
+ * @param[in] aConfig             The on-mesh prefix config to publish (MUST NOT be NULL).
+ *
+ * @retval OT_ERROR_NONE          The on-mesh prefix is published successfully.
+ * @retval OT_ERROR_INVALID_ARGS  The @p aConfig is not valid (bad prefix or invalid flag combinations).
+ * @retval OT_ERROR_ALREADY       An entry with the same prefix is already in the published list.
+ * @retval OT_ERROR_NO_BUFS       Could not allocate an entry for the new request. Publisher supports a limited number
+ *                                of entries (shared between on-mesh prefix and external route) determined by config
+ *                                `OPENTHREAD_CONFIG_NETDATA_PUBLISHER_MAX_PREFIX_ENTRIES`.
+ *
+ *
+ */
+otError otNetDataPublishOnMeshPrefix(otInstance *aInstance, const otBorderRouterConfig *aConfig);
+
+/**
+ * This function requests an external route prefix to be published in the Thread Network Data.
+ *
+ * This function requires the feature `OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE` to be enabled.
+ *
+ * @param[in] aInstance           A pointer to an OpenThread instance.
+ * @param[in] aConfig             The external route config to publish (MUST NOT be NULL).
+ *
+ * @retval OT_ERROR_NONE          The external route is published successfully.
+ * @retval OT_ERROR_INVALID_ARGS  The @p aConfig is not valid (bad prefix or invalid flag combinations).
+ * @retval OT_ERROR_ALREADY       An entry with the same prefix is already in the published list.
+ * @retval OT_ERROR_NO_BUFS       Could not allocate an entry for the new request. Publisher supports a limited number
+ *                                of entries (shared between on-mesh prefix and external route) determined by config
+ *                                `OPENTHREAD_CONFIG_NETDATA_PUBLISHER_MAX_PREFIX_ENTRIES`.
+ *
+ *
+ */
+otError otNetDataPublishExternalRoute(otInstance *aInstance, const otExternalRouteConfig *aConfig);
+
+/**
+ * This function unpublishes a previously published prefix (on-mesh or external route).
+ *
+ * This function requires the feature `OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE` to be enabled.
+ *
+ * @param[in] aInstance          A pointer to an OpenThread instance.
+ * @param[in] aPrefix            The prefix to unpublish (MUST NOT be NULL).
+ *
+ * @retval OT_ERROR_NONE         The prefix was unpublished successfully.
+ * @retval OT_ERROR_NOT_FOUND    Could not find the prefix in the published list.
+ *
+ */
+otError otNetDataUnpublishPrefix(otInstance *aInstance, const otIp6Prefix *aPrefix);
+
+/**
  * @}
  *
  */

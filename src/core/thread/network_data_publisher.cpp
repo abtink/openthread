@@ -56,7 +56,99 @@ Publisher::Publisher(Instance &aInstance)
 #endif
     , mTimer(aInstance, Publisher::HandleTimer)
 {
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+    // Since the `PrefixEntry` type is used in an array,
+    // we cannot use a constructor with an argument (e.g.,
+    // we cannot use `InstacneLocator`) so we use `IntanceLocatorInit`
+    // and `Init()` the entries one by one.
+
+    for (PrefixEntry &entry : mPrefixEntries)
+    {
+        entry.Init(aInstance);
+    }
+#endif
 }
+
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+
+Error Publisher::PublishOnMeshPrefix(const OnMeshPrefixConfig &aConfig)
+{
+    Error        error;
+    PrefixEntry *entry;
+
+    VerifyOrExit(aConfig.IsValid(GetInstance()), error = kErrorInvalidArgs);
+
+    SuccessOrExit(error = AllocatePrefixEntry(aConfig.GetPrefix(), entry));
+    entry->Publish(aConfig);
+
+exit:
+    return error;
+}
+
+Error Publisher::PublishExternalRoute(const ExternalRouteConfig &aConfig)
+{
+    Error        error;
+    PrefixEntry *entry;
+
+    VerifyOrExit(aConfig.IsValid(GetInstance()), error = kErrorInvalidArgs);
+
+    SuccessOrExit(error = AllocatePrefixEntry(aConfig.GetPrefix(), entry));
+    entry->Publish(aConfig);
+
+exit:
+    return error;
+}
+
+Error Publisher::UnpublishPrefix(const Ip6::Prefix &aPrefix)
+{
+    Error        error = kErrorNone;
+    PrefixEntry *entry;
+
+    entry = FindMatchingPrefixEntry(aPrefix);
+    VerifyOrExit(entry != nullptr, error = kErrorNotFound);
+
+    entry->Unpublish();
+
+exit:
+    return error;
+}
+
+Error Publisher::AllocatePrefixEntry(const Ip6::Prefix &aPrefix, PrefixEntry *&aEntry)
+{
+    Error error = kErrorNoBufs;
+
+    VerifyOrExit(FindMatchingPrefixEntry(aPrefix) == nullptr, error = kErrorAlready);
+
+    for (PrefixEntry &entry : mPrefixEntries)
+    {
+        if (!entry.IsInUse())
+        {
+            aEntry = &entry;
+            ExitNow(error = kErrorNone);
+        }
+    }
+
+exit:
+    return error;
+}
+
+Publisher::PrefixEntry *Publisher::FindMatchingPrefixEntry(const Ip6::Prefix &aPrefix)
+{
+    PrefixEntry *prefixEntry = nullptr;
+
+    for (PrefixEntry &entry : mPrefixEntries)
+    {
+        if (entry.IsInUse() && entry.Matches(aPrefix))
+        {
+            prefixEntry = &entry;
+            break;
+        }
+    }
+
+    return prefixEntry;
+}
+
+#endif // OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
 
 void Publisher::HandleNotifierEvents(Events aEvents)
 {
@@ -68,6 +160,13 @@ void Publisher::HandleNotifierEvents(Events aEvents)
     if (mDnsSrpServiceEntry.HandleNotifierEvents(aEvents))
     {
         registerWithLeader = true;
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+    for (PrefixEntry &entry : mPrefixEntries)
+    {
+        entry.HandleNotifierEvents(aEvents);
     }
 #endif
 
@@ -93,6 +192,16 @@ void Publisher::HandleTimer(void)
     }
 #endif
 
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+    for (PrefixEntry &entry : mPrefixEntries)
+    {
+        if (entry.HandleTimer())
+        {
+            registerWithLeader = true;
+        }
+    }
+#endif
+
     if (registerWithLeader)
     {
         Get<Notifier>().HandleServerDataUpdated();
@@ -101,12 +210,6 @@ void Publisher::HandleTimer(void)
 
 //---------------------------------------------------------------------------------------------------------------------
 // Publisher::Entry
-
-Publisher::Entry::Entry(Instance &aInstance)
-    : InstanceLocator(aInstance)
-    , mState(kNoEntry)
-{
-}
 
 void Publisher::Entry::SetState(State aState)
 {
@@ -198,10 +301,81 @@ void Publisher::Entry::UpdateState(uint8_t aNumEntries, uint8_t aNumPreferredEnt
     }
 }
 
+bool Publisher::Entry::HandleTimer(void)
+{
+    bool registerWithLeader = false;
+
+    // Timer is used to delay adding/removing the entry. If we have
+    // reached `mUpdateTime` add or remove the entry. Otherwise,
+    // restart the timer (note that timer can be shared between
+    // different published entries). This method returns a `bool`
+    // indicating whether or not anything in local Network Data got
+    // changed so to notify the leader and register the changes.
+
+    VerifyOrExit((GetState() == kAdding) || (GetState() == kRemoving));
+
+    if (mUpdateTime <= TimerMilli::GetNow())
+    {
+        registerWithLeader =
+            (GetState() == kAdding) ? Add(registerWithLeader) : Remove(registerWithLeader, /* aNextState */ kToAdd);
+        ;
+    }
+    else
+    {
+        Get<Publisher>().GetTimer().FireAtIfEarlier(mUpdateTime);
+    }
+
+exit:
+    return registerWithLeader;
+}
+
+bool Publisher::Entry::Add(bool aRegisterWithLeader)
+{
+    bool registerWithLeader = false;
+
+#if OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
+    if (this == &Get<Publisher>().mDnsSrpServiceEntry)
+    {
+        registerWithLeader = static_cast<DnsSrpServiceEntry *>(this)->Add(aRegisterWithLeader);
+        ExitNow();
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+    registerWithLeader = static_cast<PrefixEntry *>(this)->Add(aRegisterWithLeader);
+#endif
+
+    ExitNow();
+
+exit:
+    return registerWithLeader;
+}
+
+bool Publisher::Entry::Remove(bool aRegisterWithLeader, State aNextState)
+{
+    bool registerWithLeader = false;
+
+#if OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
+    if (this == &Get<Publisher>().mDnsSrpServiceEntry)
+    {
+        registerWithLeader = static_cast<DnsSrpServiceEntry *>(this)->Remove(aRegisterWithLeader, aNextState);
+        ExitNow();
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+    registerWithLeader = static_cast<PrefixEntry *>(this)->Remove(aRegisterWithLeader, aNextState);
+#endif
+
+    ExitNow();
+
+exit:
+    return registerWithLeader;
+}
+
 void Publisher::Entry::LogUpdateTime(void) const
 {
-    otLogInfoNetData("Publisher: %s - update in %u msec", ToString().AsCString(),
-                     GetUpdateTime() - TimerMilli::GetNow());
+    otLogInfoNetData("Publisher: %s - update in %u msec", ToString().AsCString(), mUpdateTime - TimerMilli::GetNow());
 }
 
 Publisher::Entry::InfoString Publisher::Entry::ToString(bool aIncludeState) const
@@ -213,6 +387,25 @@ Publisher::Entry::InfoString Publisher::Entry::ToString(bool aIncludeState) cons
     if (this == &Get<Publisher>().mDnsSrpServiceEntry)
     {
         writer.Append("DNS/SRP service");
+    }
+#endif
+
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+    {
+        const PrefixEntry &prefixEntry = *static_cast<const PrefixEntry *>(this);
+
+        switch (prefixEntry.mType)
+        {
+        case PrefixEntry::kTypeOnMeshPrefix:
+            writer.Append("OnMeshPrefix ");
+            break;
+
+        case PrefixEntry::kTypeExternalRoute:
+            writer.Append("ExternalRoute ");
+            break;
+        }
+
+        writer.Append(prefixEntry.mPrefix.ToString().AsCString());
     }
 #endif
 
@@ -247,11 +440,6 @@ const char *Publisher::Entry::StateToString(State aState)
 
 //---------------------------------------------------------------------------------------------------------------------
 // Publisher::DnsSrpServiceEntry
-
-Publisher::DnsSrpServiceEntry::DnsSrpServiceEntry(Instance &aInstance)
-    : Entry(aInstance)
-{
-}
 
 void Publisher::DnsSrpServiceEntry::PublishAnycast(uint8_t aSequenceNumber)
 {
@@ -336,33 +524,6 @@ void Publisher::DnsSrpServiceEntry::Unpublish(void)
     otLogInfoNetData("Publisher: Unpublishing DNS/SRP service");
 
     Remove(/* aRegisterWithLeader */ true);
-}
-
-bool Publisher::DnsSrpServiceEntry::HandleTimer(void)
-{
-    bool registerWithLeader = false;
-
-    // Timer is used to delay adding/removing the entry. If we have
-    // reached `GetUpdateTime()` add or remove the entry. Otherwise,
-    // restart the timer (note that timer can be shared between
-    // different published entries). This method returns a `bool`
-    // indicating whether or not anything in local Network Data got
-    // changed so to notify the leader and register the changes.
-
-    VerifyOrExit((GetState() == kAdding) || (GetState() == kRemoving));
-
-    if (GetUpdateTime() <= TimerMilli::GetNow())
-    {
-        registerWithLeader =
-            (GetState() == kAdding) ? Add(registerWithLeader) : Remove(registerWithLeader, /* aNextState */ kToAdd);
-    }
-    else
-    {
-        Get<Publisher>().GetTimer().FireAtIfEarlier(GetUpdateTime());
-    }
-
-exit:
-    return registerWithLeader;
 }
 
 bool Publisher::DnsSrpServiceEntry::HandleNotifierEvents(Events aEvents)
@@ -594,6 +755,257 @@ void Publisher::DnsSrpServiceEntry::CountUnicastEntries(uint8_t &aNumEntries, ui
 }
 
 #endif // OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
+
+//---------------------------------------------------------------------------------------------------------------------
+// Publisher::PrefixEntry
+
+void Publisher::PrefixEntry::Publish(const OnMeshPrefixConfig &aConfig)
+{
+    otLogInfoNetData("Publisher: Publishing OnMeshPrefix %s", aConfig.GetPrefix().ToString().AsCString());
+
+    mType   = kTypeOnMeshPrefix;
+    mPrefix = aConfig.GetPrefix();
+    mStable = aConfig.mStable;
+    mFlags  = aConfig.ConvertToTlvFlags();
+
+    SetState(kToAdd);
+
+    Process();
+}
+
+void Publisher::PrefixEntry::Publish(const ExternalRouteConfig &aConfig)
+{
+    otLogInfoNetData("Publisher: Publishing ExternalRoute %s", aConfig.GetPrefix().ToString().AsCString());
+
+    mType   = kTypeExternalRoute;
+    mPrefix = aConfig.GetPrefix();
+    mStable = aConfig.mStable;
+    mFlags  = aConfig.ConvertToTlvFlags();
+
+    SetState(kToAdd);
+
+    Process();
+}
+
+void Publisher::PrefixEntry::Unpublish(void)
+{
+    otLogInfoNetData("Publisher: Unpublishing %s", mPrefix.ToString().AsCString());
+
+    Remove(/* aRegisterWithLeader */ true);
+}
+
+void Publisher::PrefixEntry::HandleNotifierEvents(Events aEvents)
+{
+    if (aEvents.ContainsAny(kEventThreadNetdataChanged | kEventThreadRoleChanged))
+    {
+        Process();
+    }
+}
+
+bool Publisher::PrefixEntry::Add(bool aRegisterWithLeader)
+{
+    // Adds the prefix entry to the network data.
+
+    bool registerWithLeader = false;
+
+    union
+    {
+        OnMeshPrefixConfig  mOnMeshPrefix;
+        ExternalRouteConfig mExternalRoute;
+    } config;
+
+    switch (mType)
+    {
+    case kTypeOnMeshPrefix:
+        config.mOnMeshPrefix.mPrefix = mPrefix;
+        config.mOnMeshPrefix.mStable = mStable;
+        config.mOnMeshPrefix.SetFromTlvFlags(mFlags);
+        SuccessOrExit(Get<Local>().AddOnMeshPrefix(config.mOnMeshPrefix));
+        break;
+
+    case kTypeExternalRoute:
+        config.mExternalRoute.mPrefix = mPrefix;
+        config.mExternalRoute.mStable = mStable;
+        config.mExternalRoute.SetFromTlvFlags(static_cast<uint8_t>(mFlags));
+        SuccessOrExit(Get<Local>().AddHasRoutePrefix(config.mExternalRoute));
+        break;
+    }
+
+    SetState(kAdded);
+
+    if (aRegisterWithLeader)
+    {
+        Get<Notifier>().HandleServerDataUpdated();
+    }
+    else
+    {
+        registerWithLeader = true;
+    }
+
+exit:
+    return registerWithLeader;
+}
+
+bool Publisher::PrefixEntry::Remove(bool aRegisterWithLeader, State aNextState)
+{
+    // Remove the prefix entry to the network data.
+
+    bool registerWithLeader = false;
+
+    VerifyOrExit((GetState() == kAdded) || (GetState() == kRemoving));
+
+    switch (mType)
+    {
+    case kTypeOnMeshPrefix:
+        IgnoreError(Get<Local>().RemoveOnMeshPrefix(mPrefix));
+        break;
+
+    case kTypeExternalRoute:
+        IgnoreError(Get<Local>().RemoveHasRoutePrefix(mPrefix));
+        break;
+    }
+
+    if (aRegisterWithLeader)
+    {
+        Get<Notifier>().HandleServerDataUpdated();
+    }
+    else
+    {
+        registerWithLeader = true;
+    }
+
+exit:
+    SetState(aNextState);
+    return registerWithLeader;
+}
+
+void Publisher::PrefixEntry::Process(void)
+{
+    // This method checks the entries currently present in Network Data
+    // based on which it then decides whether or not take action
+    // (add/remove or keep monitoring).
+
+    uint8_t numEntries          = 0;
+    uint8_t numPreferredEntries = 0;
+    uint8_t desiredNumEntries   = 0;
+
+    // Do not make any changes if device is not attached, and wait
+    // for role change event.
+    VerifyOrExit(Get<Mle::Mle>().IsAttached());
+
+    VerifyOrExit(GetState() != kNoEntry);
+
+    switch (mType)
+    {
+    case kTypeOnMeshPrefix:
+        CountOnMeshPrefixEntries(numEntries, numPreferredEntries);
+        desiredNumEntries = kDesiredNumOnMeshPrefix;
+        break;
+    case kTypeExternalRoute:
+        CountExternalRouteEntries(numEntries, numPreferredEntries);
+        desiredNumEntries = kDesiredNumExternalRoute;
+        break;
+    }
+
+    UpdateState(numEntries, numPreferredEntries, desiredNumEntries);
+
+exit:
+    return;
+}
+
+void Publisher::PrefixEntry::CountOnMeshPrefixEntries(uint8_t &aNumEntries, uint8_t &aNumPreferredEntries) const
+{
+    const PrefixTlv *      prefixTlv;
+    const BorderRouterTlv *brSubTlv;
+    int8_t                 preference             = BorderRouterEntry::PreferenceFromFlags(mFlags);
+    uint16_t               flagsWithoutPreference = BorderRouterEntry::FlagsWithoutPreference(mFlags);
+
+    prefixTlv = Get<Leader>().FindPrefix(mPrefix);
+    VerifyOrExit(prefixTlv != nullptr);
+
+    brSubTlv = NetworkData::FindBorderRouter(*prefixTlv, mStable);
+    VerifyOrExit(brSubTlv != nullptr);
+
+    for (const BorderRouterEntry *entry = brSubTlv->GetFirstEntry(); entry <= brSubTlv->GetLastEntry();
+         entry                          = entry->GetNext())
+    {
+        uint16_t entryFlags      = entry->GetFlags();
+        int8_t   entryPreference = BorderRouterEntry::PreferenceFromFlags(entryFlags);
+
+        // Count an existing entry in the network data if its flags
+        // match ours and and its preference is same or higher than our
+        // preference. We do not count matching entries at a lower
+        // preference than ours. This ensures that a device with higher
+        // preference entry publishes its entry even when there are many
+        // lower preference similar entries in the network data
+        // (potentially causing a lower preference entry to be removed).
+
+        if ((BorderRouterEntry::FlagsWithoutPreference(entryFlags) == flagsWithoutPreference) &&
+            (entryPreference >= preference))
+        {
+            aNumEntries++;
+
+            // We prefer an entry if it has strictly higher preference
+            // than ours or if it has same preference with a smaller
+            // RLOC16.
+
+            if ((entryPreference > preference) || (entry->GetRloc() < Get<Mle::Mle>().GetRloc16()))
+            {
+                aNumPreferredEntries++;
+            }
+        }
+    }
+
+exit:
+    return;
+}
+
+void Publisher::PrefixEntry::CountExternalRouteEntries(uint8_t &aNumEntries, uint8_t &aNumPreferredEntries) const
+{
+    const PrefixTlv *  prefixTlv;
+    const HasRouteTlv *hrSubTlv;
+    int8_t             preference             = HasRouteEntry::PreferenceFromFlags(static_cast<uint8_t>(mFlags));
+    uint8_t            flagsWithoutPreference = HasRouteEntry::FlagsWithoutPreference(static_cast<uint8_t>(mFlags));
+
+    prefixTlv = Get<Leader>().FindPrefix(mPrefix);
+    VerifyOrExit(prefixTlv != nullptr);
+
+    hrSubTlv = NetworkData::FindHasRoute(*prefixTlv, mStable);
+    VerifyOrExit(hrSubTlv != nullptr);
+
+    for (const HasRouteEntry *entry = hrSubTlv->GetFirstEntry(); entry <= hrSubTlv->GetLastEntry();
+         entry                      = entry->GetNext())
+    {
+        uint8_t entryFlags      = entry->GetFlags();
+        int8_t  entryPreference = BorderRouterEntry::PreferenceFromFlags(entryFlags);
+
+        // Count an existing entry in the network data if its flags
+        // match ours and and its preference is same or higher than our
+        // preference. We do not count matching entries at a lower
+        // preference than ours. This ensures that a device with higher
+        // preference entry publishes its entry even when there are many
+        // lower preference similar entries in the network data
+        // (potentially causing a lower preference entry to be removed).
+
+        if ((HasRouteEntry::FlagsWithoutPreference(entryFlags) == flagsWithoutPreference) &&
+            (entryPreference >= preference))
+        {
+            aNumEntries++;
+
+            // We prefer an entry if it has strictly higher preference
+            // than ours or if it has same preference with a smaller
+            // RLOC16.
+
+            if ((entryPreference > preference) || (entry->GetRloc() < Get<Mle::Mle>().GetRloc16()))
+            {
+                aNumPreferredEntries++;
+            }
+        }
+    }
+
+exit:
+    return;
+}
 
 } // namespace NetworkData
 } // namespace ot

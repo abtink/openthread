@@ -3491,32 +3491,31 @@ void Interpreter::HandleLinkPcapReceive(const otRadioFrame *aFrame, bool aIsTx)
 }
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
-otError Interpreter::ProcessPrefixAdd(uint8_t aArgsLength, Arg aArgs[])
+otError Interpreter::ParsePrefix(uint8_t aArgsLength, Arg aArgs[], otBorderRouterConfig &aConfig)
 {
-    otError              error = OT_ERROR_NONE;
-    otBorderRouterConfig config;
-    uint8_t              argcur = 0;
+    otError error  = OT_ERROR_NONE;
+    uint8_t argcur = 0;
 
     VerifyOrExit(aArgsLength > 0, error = OT_ERROR_INVALID_ARGS);
 
-    memset(&config, 0, sizeof(otBorderRouterConfig));
+    memset(&aConfig, 0, sizeof(otBorderRouterConfig));
 
-    SuccessOrExit(error = aArgs[argcur].ParseAsIp6Prefix(config.mPrefix));
+    SuccessOrExit(error = aArgs[argcur].ParseAsIp6Prefix(aConfig.mPrefix));
     argcur++;
 
     for (; argcur < aArgsLength; argcur++)
     {
         if (aArgs[argcur] == "high")
         {
-            config.mPreference = OT_ROUTE_PREFERENCE_HIGH;
+            aConfig.mPreference = OT_ROUTE_PREFERENCE_HIGH;
         }
         else if (aArgs[argcur] == "med")
         {
-            config.mPreference = OT_ROUTE_PREFERENCE_MED;
+            aConfig.mPreference = OT_ROUTE_PREFERENCE_MED;
         }
         else if (aArgs[argcur] == "low")
         {
-            config.mPreference = OT_ROUTE_PREFERENCE_LOW;
+            aConfig.mPreference = OT_ROUTE_PREFERENCE_LOW;
         }
         else
         {
@@ -3525,40 +3524,40 @@ otError Interpreter::ProcessPrefixAdd(uint8_t aArgsLength, Arg aArgs[])
                 switch (*arg)
                 {
                 case 'p':
-                    config.mPreferred = true;
+                    aConfig.mPreferred = true;
                     break;
 
                 case 'a':
-                    config.mSlaac = true;
+                    aConfig.mSlaac = true;
                     break;
 
                 case 'd':
-                    config.mDhcp = true;
+                    aConfig.mDhcp = true;
                     break;
 
                 case 'c':
-                    config.mConfigure = true;
+                    aConfig.mConfigure = true;
                     break;
 
                 case 'r':
-                    config.mDefaultRoute = true;
+                    aConfig.mDefaultRoute = true;
                     break;
 
                 case 'o':
-                    config.mOnMesh = true;
+                    aConfig.mOnMesh = true;
                     break;
 
                 case 's':
-                    config.mStable = true;
+                    aConfig.mStable = true;
                     break;
 
                 case 'n':
-                    config.mNdDns = true;
+                    aConfig.mNdDns = true;
                     break;
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
                 case 'D':
-                    config.mDp = true;
+                    aConfig.mDp = true;
                     break;
 #endif
                 default:
@@ -3568,6 +3567,16 @@ otError Interpreter::ProcessPrefixAdd(uint8_t aArgsLength, Arg aArgs[])
         }
     }
 
+exit:
+    return error;
+}
+
+otError Interpreter::ProcessPrefixAdd(uint8_t aArgsLength, Arg aArgs[])
+{
+    otError              error = OT_ERROR_NONE;
+    otBorderRouterConfig config;
+
+    SuccessOrExit(error = ParsePrefix(aArgsLength, aArgs, config));
     error = otBorderRouterAddOnMeshPrefix(mInstance, &config);
 
 exit:
@@ -3740,40 +3749,40 @@ otError Interpreter::ProcessRloc16(uint8_t aArgsLength, Arg aArgs[])
 }
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
-otError Interpreter::ProcessRouteAdd(uint8_t aArgsLength, Arg aArgs[])
-{
-    otError               error = OT_ERROR_NONE;
-    otExternalRouteConfig config;
-    uint8_t               argcur = 0;
 
-    memset(&config, 0, sizeof(otExternalRouteConfig));
+otError Interpreter::ParseRoute(uint8_t aArgsLength, Arg aArgs[], otExternalRouteConfig &aConfig)
+{
+    otError error  = OT_ERROR_NONE;
+    uint8_t argcur = 0;
+
+    memset(&aConfig, 0, sizeof(otExternalRouteConfig));
 
     VerifyOrExit(aArgsLength > 0, error = OT_ERROR_INVALID_ARGS);
 
-    SuccessOrExit(error = aArgs[argcur].ParseAsIp6Prefix(config.mPrefix));
+    SuccessOrExit(error = aArgs[argcur].ParseAsIp6Prefix(aConfig.mPrefix));
     argcur++;
 
     for (; argcur < aArgsLength; argcur++)
     {
         if (aArgs[argcur] == "s")
         {
-            config.mStable = true;
+            aConfig.mStable = true;
         }
         else if (aArgs[argcur] == "n")
         {
-            config.mNat64 = true;
+            aConfig.mNat64 = true;
         }
         else if (aArgs[argcur] == "high")
         {
-            config.mPreference = OT_ROUTE_PREFERENCE_HIGH;
+            aConfig.mPreference = OT_ROUTE_PREFERENCE_HIGH;
         }
         else if (aArgs[argcur] == "med")
         {
-            config.mPreference = OT_ROUTE_PREFERENCE_MED;
+            aConfig.mPreference = OT_ROUTE_PREFERENCE_MED;
         }
         else if (aArgs[argcur] == "low")
         {
-            config.mPreference = OT_ROUTE_PREFERENCE_LOW;
+            aConfig.mPreference = OT_ROUTE_PREFERENCE_LOW;
         }
         else
         {
@@ -3781,6 +3790,16 @@ otError Interpreter::ProcessRouteAdd(uint8_t aArgsLength, Arg aArgs[])
         }
     }
 
+exit:
+    return error;
+}
+
+otError Interpreter::ProcessRouteAdd(uint8_t aArgsLength, Arg aArgs[])
+{
+    otError               error;
+    otExternalRouteConfig config;
+
+    SuccessOrExit(error = ParseRoute(aArgsLength, aArgs, config));
     error = otBorderRouterAddRoute(mInstance, &config);
 
 exit:

@@ -75,4 +75,31 @@ void otNetDataUnpublishDnsSrpService(otInstance *aInstance)
 
 #endif // OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
 
+#if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+
+otError otNetDataPublishOnMeshPrefix(otInstance *aInstance, const otBorderRouterConfig *aConfig)
+{
+    Instance &instance = *static_cast<Instance *>(aInstance);
+
+    return instance.Get<NetworkData::Publisher>().PublishOnMeshPrefix(
+        *static_cast<const NetworkData::OnMeshPrefixConfig *>(aConfig));
+}
+
+otError otNetDataPublishExternalRoute(otInstance *aInstance, const otExternalRouteConfig *aConfig)
+{
+    Instance &instance = *static_cast<Instance *>(aInstance);
+
+    return instance.Get<NetworkData::Publisher>().PublishExternalRoute(
+        *static_cast<const NetworkData::ExternalRouteConfig *>(aConfig));
+}
+
+otError otNetDataUnpublishPrefix(otInstance *aInstance, const otIp6Prefix *aPrefix)
+{
+    Instance &instance = *static_cast<Instance *>(aInstance);
+
+    return instance.Get<NetworkData::Publisher>().UnpublishPrefix(*static_cast<const Ip6::Prefix *>(aPrefix));
+}
+
+#endif // OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
+
 #endif // OPENTHREAD_CONFIG_NETDATA_PUBLISHER_ENABLE
