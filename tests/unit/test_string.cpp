@@ -97,7 +97,8 @@ void TestStringWriter(void)
     VerifyOrQuit(strcmp(str.AsCString(), "12") == 0, "String content is incorrect");
     PrintString("str", str);
 
-    writer.Clear().Append(kLongString);
+    writer.Clear();
+    writer.Append(kLongString);
     VerifyOrQuit(writer.IsTruncated() && writer.GetLength() == sizeof(kLongString) - 1,
                  "String::Clear() + String::Append() did not handle overflow buffer correctly");
     PrintString("str", str);

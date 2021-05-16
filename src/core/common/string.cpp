@@ -81,24 +81,21 @@ StringWriter::StringWriter(char *aBuffer, uint16_t aSize)
     mBuffer[0] = '\0';
 }
 
-StringWriter &StringWriter::Clear(void)
+void StringWriter::Clear(void)
 {
     mBuffer[0] = '\0';
     mLength    = 0;
-    return *this;
 }
 
-StringWriter &StringWriter::Append(const char *aFormat, ...)
+void StringWriter::Append(const char *aFormat, ...)
 {
     va_list args;
     va_start(args, aFormat);
     AppendVarArgs(aFormat, args);
     va_end(args);
-
-    return *this;
 }
 
-StringWriter &StringWriter::AppendVarArgs(const char *aFormat, va_list aArgs)
+void StringWriter::AppendVarArgs(const char *aFormat, va_list aArgs)
 {
     int len;
 
@@ -111,18 +108,14 @@ StringWriter &StringWriter::AppendVarArgs(const char *aFormat, va_list aArgs)
     {
         mBuffer[mSize - 1] = '\0';
     }
-
-    return *this;
 }
 
-StringWriter &StringWriter::AppendHexBytes(const uint8_t *aBytes, uint16_t aLength)
+void StringWriter::AppendHexBytes(const uint8_t *aBytes, uint16_t aLength)
 {
     while (aLength--)
     {
         Append("%02x", *aBytes++);
     }
-
-    return *this;
 }
 
 bool IsValidUtf8String(const char *aString)

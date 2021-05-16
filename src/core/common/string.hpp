@@ -131,11 +131,18 @@ public:
     /**
      * This constructor initializes the object as cleared on the provided buffer.
      *
+     * @param[in] aBuffer  A pointer to the char buffer to write into.
+     * @param[in] aSize    The size of @p aBuffer.
+     *
      */
     StringWriter(char *aBuffer, uint16_t aSize);
 
     /**
      * This constructor initializes the object as cleared on a fixed-size string.
+     *
+     * @tparam kSize  The size of the string (number of chars).
+     *
+     * @param[in] aStringBuffer   A reference to a `String<kSize` to write into.
      *
      */
     template <uint16_t kSize>
@@ -147,10 +154,8 @@ public:
     /**
      * This method clears the string writer.
      *
-     * @returns The string writer.
-     *
      */
-    StringWriter &Clear(void);
+    void Clear(void);
 
     /**
      * This method returns whether the output is truncated.
@@ -187,10 +192,8 @@ public:
      * @param[in] aFormat    A pointer to the format string.
      * @param[in] ...        Arguments for the format specification.
      *
-     * @returns The string writer.
-     *
      */
-    StringWriter &Append(const char *aFormat, ...);
+    void Append(const char *aFormat, ...);
 
     /**
      * This method appends `printf()` style formatted data to the buffer.
@@ -198,10 +201,8 @@ public:
      * @param[in] aFormat    A pointer to the format string.
      * @param[in] aArgs      Arguments for the format specification (as `va_list`).
      *
-     * @returns The string writer.
-     *
      */
-    StringWriter &AppendVarArgs(const char *aFormat, va_list aArgs);
+    void AppendVarArgs(const char *aFormat, va_list aArgs);
 
     /**
      * This method appends an array of bytes in hex representation (using "%02x" style) to the buffer.
@@ -209,10 +210,8 @@ public:
      * @param[in] aBytes    A pointer to buffer containing the bytes to append.
      * @param[in] aLength   The length of @p aBytes buffer (in bytes).
      *
-     * @returns The string writer.
-     *
      */
-    StringWriter &AppendHexBytes(const uint8_t *aBytes, uint16_t aLength);
+    void AppendHexBytes(const uint8_t *aBytes, uint16_t aLength);
 
 private:
     char *         mBuffer;
