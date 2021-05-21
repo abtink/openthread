@@ -51,7 +51,7 @@
  * Define to 1 to enable SRP Client auto-start feature and its APIs.
  *
  * When enabled, the SRP client can be configured to automatically start when it detects the presence of an SRP server
- *  (by monitoring the Thread Network Data for SRP Server Service entries).
+ * (by monitoring the Thread Network Data for SRP Server Service entries).
  *
  */
 #ifndef OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_API_ENABLE
@@ -78,6 +78,19 @@
  */
 #ifndef OPENTHREAD_CONFIG_SRP_CLIENT_DOMAIN_NAME_API_ENABLE
 #define OPENTHREAD_CONFIG_SRP_CLIENT_DOMAIN_NAME_API_ENABLE 0
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_SRP_CLIENT_SAVE_SELECTED_SERVER_ENABLE
+ *
+ * Define to 1 to enable SRP client feature to save the selected server in non-volatile settings.
+ *
+ * When enabled, the SRP client will save the selected server info by auto-start feature in the non-volatile settings
+ * and on a reset/restart it will try to connect to same server if it is found in the network data.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_SRP_CLIENT_SAVE_SELECTED_SERVER_ENABLE
+#define OPENTHREAD_CONFIG_SRP_CLIENT_SAVE_SELECTED_SERVER_ENABLE 1
 #endif
 
 /**

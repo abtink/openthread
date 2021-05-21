@@ -542,12 +542,36 @@ exit:
 
 void Client::ChangeHostAndServiceStates(const ItemState *aNewStates)
 {
+#if OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_API_ENABLE && OPENTHREAD_CONFIG_SRP_CLIENT_SAVE_SELECTED_SERVER_ENABLE
+    ItemState oldHostState = mHostInfo.GetState();
+#endif
+
     mHostInfo.SetState(aNewStates[mHostInfo.GetState()]);
 
     for (Service *service = mServices.GetHead(); service != nullptr; service = service->GetNext())
     {
         service->SetState(aNewStates[service->GetState()]);
     }
+
+#if OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_API_ENABLE && OPENTHREAD_CONFIG_SRP_CLIENT_SAVE_SELECTED_SERVER_ENABLE
+    if (mAutoStartModeEnabled && mAutoStartDidSelectServer && (oldHostState == kAdding) &&
+        (mHostInfo.GetState() == kRegistered))
+    {
+        if (mAutoStartIsUsingAnycastAddress)
+        {
+            IgnoreError(Get<Settings>().DeleteSrpClientInfo());
+        }
+        else
+        {
+            Settings::SrpClientInfo info;
+
+            info.SetServerAddress(GetServerAddress().GetAddress());
+            info.SetServerPort(GetServerAddress().GetPort());
+
+            IgnoreError(Get<Settings>().SaveSrpClientInfo(info));
+        }
+    }
+#endif
 }
 
 void Client::InvokeCallback(Error aError) const
