@@ -313,6 +313,31 @@ private:
         otError (Interpreter::*mHandler)(uint8_t aArgsLength, Arg aArgs[]);
     };
 
+    template <typename ValueType> using GetHandler         = ValueType (&)(otInstance *);
+    template <typename ValueType> using SetHandler         = void (&)(otInstance *, ValueType);
+    template <typename ValueType> using SetHandlerFailable = otError (&)(otInstance *, ValueType);
+
+    template <typename ValueType> otError ProcessGet(uint8_t aArgsLength, GetHandler<ValueType> aGetHandler);
+
+    template <typename ValueType> otError ParseValue(uint8_t aArgsLength, Arg aArgs[], ValueType &aValue);
+
+    template <typename ValueType>
+    otError ProcessSet(uint8_t aArgsLength, Arg aArgs[], SetHandler<ValueType> aSetHandler);
+    template <typename ValueType>
+    otError ProcessSet(uint8_t aArgsLength, Arg aArgs[], SetHandlerFailable<ValueType> aSetHandler);
+
+    template <typename ValueType>
+    otError ProcessGetSet(uint8_t               aArgsLength,
+                          Arg                   aArgs[],
+                          GetHandler<ValueType> aGetHandler,
+                          SetHandler<ValueType> aSetHandler);
+
+    template <typename ValueType>
+    otError ProcessGetSet(uint8_t                       aArgsLength,
+                          Arg                           aArgs[],
+                          GetHandler<ValueType>         aGetHandler,
+                          SetHandlerFailable<ValueType> aSetHandler);
+
 #if OPENTHREAD_CONFIG_PING_SENDER_ENABLE
     otError ParsePingInterval(const Arg &aArg, uint32_t &aInterval);
 #endif
