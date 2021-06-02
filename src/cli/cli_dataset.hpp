@@ -72,6 +72,11 @@ public:
     otError Process(uint8_t aArgsLength, Arg aArgs[]);
 
 private:
+    enum : uint8_t
+    {
+        kMaxTlvsSize = 128,
+    };
+
     struct Command
     {
         const char *mName;
@@ -101,6 +106,13 @@ private:
     otError ProcessPskc(uint8_t aArgsLength, Arg aArgs[]);
     otError ProcessSecurityPolicy(uint8_t aArgsLength, Arg aArgs[]);
     otError ProcessSet(uint8_t aArgsLength, Arg aArgs[]);
+
+    otError ParseDataset(uint8_t               aArgsLength,
+                         Arg                   aArgs[],
+                         otOperationalDataset &aDataset,
+                         uint8_t (&aTlvs)[kMaxTlvsSize],
+                         uint8_t &     aTlvsLength,
+                         otIp6Address *aDestAddress);
 
 #if OPENTHREAD_CONFIG_DATASET_UPDATER_ENABLE && OPENTHREAD_FTD
     otError     ProcessUpdater(uint8_t aArgsLength, Arg aArgs[]);
