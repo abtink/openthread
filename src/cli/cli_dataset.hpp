@@ -57,10 +57,7 @@ class Dataset
 public:
     typedef Utils::CmdLineParser::Arg Arg;
 
-    explicit Dataset(Interpreter &aInterpreter)
-        : mInterpreter(aInterpreter)
-    {
-    }
+    explicit Dataset(Interpreter &aInterpreter);
 
     /**
      * This method interprets a list of CLI arguments.
@@ -141,8 +138,7 @@ private:
     static_assert(Utils::LookupTable::IsSorted(sCommands), "Command Table is not sorted");
 
     Interpreter &mInterpreter;
-
-    static otOperationalDataset sDataset;
+    otOperationalDataset mDataset;
 };
 
 } // namespace Cli
