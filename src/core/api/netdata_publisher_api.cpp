@@ -66,6 +66,22 @@ void otNetDataPublishDnsSrpServiceUnicastMeshLocalEid(otInstance *aInstance, uin
     instance.Get<NetworkData::Publisher>().PublishDnsSrpServiceUnicast(aPort);
 }
 
+bool otNetDataIsDnsSrpServiceAdded(otInstance *aInstance)
+{
+    Instance &instance = *static_cast<Instance *>(aInstance);
+
+    return instance.Get<NetworkData::Publisher>().IsDnsSrpServiceAdded();
+}
+
+void otNetDataSetDnsSrpServiceCallback(otInstance *                            aInstance,
+                                       otNetDataDnsSrpServicePublisherCallback aCallback,
+                                       void *                                  aContext)
+{
+    Instance &instance = *static_cast<Instance *>(aInstance);
+
+    return instance.Get<NetworkData::Publisher>().SetDnsSrpServiceCallback(aCallback, aContext);
+}
+
 void otNetDataUnpublishDnsSrpService(otInstance *aInstance)
 {
     Instance &instance = *static_cast<Instance *>(aInstance);
