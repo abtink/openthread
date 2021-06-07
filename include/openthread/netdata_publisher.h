@@ -46,12 +46,26 @@ extern "C" {
  *
  * @{
  *
- * The Network Data Publisher provides mechanisms to limit the number of similar DNS/SRP service entries in the Thread
+ * The Network Data Publisher provides mechanisms to limit the number of similar DNS/SRP Service entries in the Thread
  * Network Data by monitoring the Network Data and managing if or when to add or remove entries.
  *
  * All the functions in this module require `OPENTHREAD_CONFIG_NETDATA_PUBLISHER_ENABLE` to be enabled.
  *
  */
+
+/**
+ * This function pointer type defines the callback used to notify when a "DNS/SRP Service" entry is added to or removed
+ * from the Thread Network Data.
+ *
+ * On remove the callback is invoked independent of whether the entry is removed by `Publisher` (e.g., when there too
+ * many similar entries already present in the Network Data) or through an explicit call to unpublish the entry (i.e.,
+ * a call to `otNetDataUnpublishDnsSrpService()`).
+ *
+ * @param[in] aAdded     Indicates whether the entry was added (TRUE) or removed (FALSE).
+ * @param[in] aContext   A pointer to application-specific context.
+ *
+ */
+typedef void (*otNetDataDnsSrpServicePublisherCallback)(bool aAdded, void *aContext);
 
 /**
  * This function requests "DNS/SRP Service Anycast Address" to be published in the Thread Network Data.
@@ -104,10 +118,39 @@ void otNetDataPublishDnsSrpServiceUnicast(otInstance *aInstance, const otIp6Addr
 void otNetDataPublishDnsSrpServiceUnicastMeshLocalEid(otInstance *aInstance, uint16_t aPort);
 
 /**
+ * This function indicates whether or not currently the "DNS/SRP Service" entry is added to the Thread Network Data.
+ *
+ * @param[in] aInstance  A pointer to an OpenThread instance.
+ *
+ * @retval TRUE    The published DNS/SRP Service entry is added to the Thread Network Data.
+ * @retval FLASE   The entry is not added to Thread NetworkData or there is no entry to publish.
+ *
+ */
+bool otNetDataIsDnsSrpServiceAdded(otInstance *aInstance);
+
+/**
+ * This function sets a callback for notifying when a published "DNS/SRP Service" is actually added to or removed from
+ * the Thread Network Data.
+ *
+ * A subsequent call to this function replaces any previously set callback function.
+ *
+ * @param[in] aInstance        A pointer to an OpenThread instance.
+ * @param[in] aCallback        The callback function pointer (can be NULL if not needed).
+ * @param[in] aContext         A pointer to application-specific context (used when @p aCallback is invoked).
+ *
+ */
+void otNetDataSetDnsSrpServiceCallback(otInstance *                            aInstance,
+                                       otNetDataDnsSrpServicePublisherCallback aCallback,
+                                       void *                                  aContext);
+
+/**
  * This function unpublishes any previously added "DNS/SRP (Anycast or Unicast) Service" entry from the Thread Network
  * Data.
  *
  * This function requires the feature `OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE` to be enabled.
+ *
+ * If calling this function triggers the entry to be removed from the Thread Network Data (i.e., it was added earlier),
+ * and a callback is set, the callback will be invoked to notify the removal of the entry.
  *
  * @param[in] aInstance  A pointer to an OpenThread instance.
  *

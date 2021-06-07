@@ -42,6 +42,8 @@
 #error "OPENTHREAD_CONFIG_NETDATA_PUBLISHER_ENABLE requires OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE"
 #endif
 
+#include <openthread/netdata_publisher.h>
+
 #include "common/clearable.hpp"
 #include "common/equatable.hpp"
 #include "common/error.hpp"
@@ -68,6 +70,17 @@ class Publisher : public InstanceLocator, private NonCopyable
     friend class ot::Notifier;
 
 public:
+    /**
+     * This type represents the callback function pointer used to notify when a "DNS/SRP Service" entry is added to or
+     * removed from the Thread Network Data.
+     *
+     * On remove the callback is invoked independent of whether the entry is removed by `Publisher` (e.g., when there
+     * too many similar entries already present in the Network Data) or through an explicit call to unpublish the entry
+     * (i.e., a call to `UnpublishDnsSrpService()`).
+
+     */
+    typedef otNetDataDnsSrpServicePublisherCallback DnsSrpServiceCallback;
+
     /**
      * This constructor initializes `Publisher` object.
      *
@@ -118,8 +131,32 @@ public:
     void PublishDnsSrpServiceUnicast(uint16_t aPort);
 
     /**
+     * This method indicates whether or not currently the "DNS/SRP Service" entry is added to the Thread Network Data.
+     *
+     * @retval TRUE    The published DNS/SRP Service entry is added to the Thread Network Data.
+     * @retval FLASE   The entry is not added to Thread NetworkData or there is no entry to publish.
+     *
+     */
+    bool IsDnsSrpServiceAdded(void) const { return mState == kAdded; }
+
+    /**
+     * This method sets a callback for notifying when a published "DNS/SRP Service" is actually added to or removed
+     * from the Thread Network Data.
+     *
+     * A subsequent call to this method replaces any previously set callback function.
+     *
+     * @param[in] aCallback        The callback function pointer (can be NULL if not needed).
+     * @param[in] aContext         A pointer to application-specific context (used when @p aCallback is invoked).
+     *
+     */
+    void SetDnsSrpServiceCallback(DnsSrpServiceCallback aCallback, void *aContext);
+
+    /**
      * This method unpublishes any previously added "DNS/SRP (Anycast or Unicast) Service" entry from the Thread
      * Network Data.
+     *
+     * If calling this method triggers the entry to be removed from the Thread Network Data (i.e., it was added
+     * earlier), and a callback is set, the callback will be invoked to notify the removal of the entry.
      *
      */
     void UnpublishDnsSrpService(void);
@@ -171,11 +208,13 @@ private:
     static const char *StateToString(State aState);
     static void        HandleTimer(Timer &aTimer);
 
-    State        mState;
-    Type         mType;
-    uint16_t     mPortOrSeqNumber;
-    Ip6::Address mAddress;
-    TimerMilli   mTimer;
+    State                 mState;
+    Type                  mType;
+    uint16_t              mPortOrSeqNumber;
+    Ip6::Address          mAddress;
+    TimerMilli            mTimer;
+    DnsSrpServiceCallback mCallback;
+    void *                mContext;
 };
 
 } // namespace NetworkData

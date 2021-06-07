@@ -50,6 +50,8 @@ Publisher::Publisher(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mState(kNoEntry)
     , mTimer(aInstance, Publisher::HandleTimer)
+    , mCallback(nullptr)
+    , mContext(nullptr)
 {
 }
 
@@ -70,6 +72,12 @@ void Publisher::PublishDnsSrpServiceUnicast(uint16_t aPort)
 {
     otLogInfoNetData("Publisher: Publishing DNS/SRP service unicast (ml-eid, port:%d)", aPort);
     Publish(kTypeUincastMeshLocalEid, aPort, &Get<Mle::Mle>().GetMeshLocal64());
+}
+
+void Publisher::SetDnsSrpServiceCallback(DnsSrpServiceCallback aCallback, void *aContext)
+{
+    mCallback = aCallback;
+    mContext  = aContext;
 }
 
 void Publisher::UnpublishDnsSrpService(void)
@@ -110,10 +118,19 @@ exit:
 
 void Publisher::SetState(State aState)
 {
+    State oldState = aState;
+
     VerifyOrExit(mState != aState);
 
     otLogInfoNetData("Publisher: State: %s -> %s", StateToString(mState), StateToString(aState));
     mState = aState;
+
+    // Invoke callback to notify the change to the Network Data, when
+    // the entry is added (on transition to new state `kAdded`), or
+    // when it is removed (on transition from state `kAdded`).
+
+    VerifyOrExit((mCallback != nullptr) && ((mState == kAdded) || (oldState == kAdded)));
+    mCallback((mState == kAdded), mContext);
 
 exit:
     return;
