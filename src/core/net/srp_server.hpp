@@ -74,7 +74,6 @@ namespace Srp {
  */
 class Server : public InstanceLocator, private NonCopyable
 {
-    friend class ot::Notifier;
     friend class UpdateMetadata;
     friend class Service;
     friend class Host;
@@ -485,7 +484,7 @@ public:
      * @returns  A boolean that indicates whether the server is running.
      *
      */
-    bool IsRunning(void) const;
+    bool IsRunning(void) const { return mRunning; }
 
     /**
      * This method enables/disables the SRP server.
@@ -588,7 +587,10 @@ private:
 
     void Start(void);
     void Stop(void);
-    void HandleNotifierEvents(Events aEvents);
+    void SelectPort(void);
+
+    static void HandleNetDataPublisherEntryChange(bool aAdded, void *aContext);
+    void        HandleNetDataPublisherEntryChange(bool aAdded);
 
     ServiceUpdateId AllocateId(void) { return mServiceUpdateId++; }
 
@@ -675,7 +677,9 @@ private:
     LinkedList<UpdateMetadata> mOutstandingUpdates;
 
     ServiceUpdateId mServiceUpdateId;
+    uint16_t        mPort;
     bool            mEnabled : 1;
+    bool            mRunning : 1;
     bool            mHasRegisteredAnyService : 1;
 };
 
