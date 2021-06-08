@@ -62,7 +62,7 @@ DNSSRP_ADDRESS = 'fd00::cdef'
 DNSSRP_PORT = '8765'
 
 # The desired number of entries (based on related config).
-DESIRED_NUM_ANYCAST = 8
+DESIRED_NUM_DNSSRP_ANYCAST = 8
 DESIRED_NUM_DNSSRP_UNCIAST = 2
 
 THREAD_ENTERPRISE_NUMBER = 44970
@@ -191,79 +191,134 @@ class NetDataPublisher(thread_cert.TestCase):
             self.simulator.go(5)
             self.assertEqual(end_dev.get_state(), 'child')
 
-        #---------------------------------------------------------------------------------
-        # DNS/SRP anycast entries
+        if 0:
+            #---------------------------------------------------------------------------------
+            # DNS/SRP anycast entries
 
-        # Publish DNS/SRP anycast on leader and all routers (6 nodes).
+            # Publish DNS/SRP anycast on leader and all routers (6 nodes).
 
-        leader.netdata_publish_dnssrp_anycast(ANYCAST_SEQ_NUM)
-        for node in routers:
-            node.netdata_publish_dnssrp_anycast(ANYCAST_SEQ_NUM)
-        self.simulator.go(WAIT_TIME)
-
-        # Check all entries are present in the network data
-
-        services = leader.get_services()
-        self.assertEqual(len(services), min(1 + len(routers), DESIRED_NUM_ANYCAST))
-        self.verify_anycast_services(services)
-
-        # Publish same entry on all end-devices (5 nodes).
-
-        for node in end_devs:
-            node.netdata_publish_dnssrp_anycast(ANYCAST_SEQ_NUM)
-            print(node.name)
-        self.simulator.go(WAIT_TIME)
-
-        # Check number of entries in the network data is limited to
-        # the desired number (8 entries).
-
-        services = leader.get_services()
-        self.assertEqual(len(leader.get_services()), min(len(nodes), DESIRED_NUM_ANYCAST))
-        self.verify_anycast_services(services)
-
-        # Unpublish the entry from nodes one by one starting from leader
-        # and check that number of entries is correct in each step.
-
-        num = len(nodes)
-        for node in nodes:
-            node.netdata_unpublish_dnssrp()
+            leader.netdata_publish_dnssrp_anycast(ANYCAST_SEQ_NUM)
+            for node in routers:
+                node.netdata_publish_dnssrp_anycast(ANYCAST_SEQ_NUM)
             self.simulator.go(WAIT_TIME)
-            num -= 1
+
+            # Check all entries are present in the network data
+
             services = leader.get_services()
-            self.assertEqual(len(services), min(num, DESIRED_NUM_ANYCAST))
+            self.assertEqual(len(services), min(1 + len(routers), DESIRED_NUM_DNSSRP_ANYCAST))
             self.verify_anycast_services(services)
+
+            # Publish same entry on all end-devices (5 nodes).
+
+            for node in end_devs:
+                node.netdata_publish_dnssrp_anycast(ANYCAST_SEQ_NUM)
+
+            self.simulator.go(WAIT_TIME)
+
+            # Check number of entries in the network data is limited to
+            # the desired number (8 entries).
+
+            services = leader.get_services()
+            self.assertEqual(len(leader.get_services()), min(len(nodes), DESIRED_NUM_DNSSRP_ANYCAST))
+            self.verify_anycast_services(services)
+
+            # Unpublish the entry from nodes one by one starting from leader
+            # and check that number of entries is correct in each step.
+
+            num = len(nodes)
+            for node in nodes:
+                node.netdata_unpublish_dnssrp()
+                self.simulator.go(WAIT_TIME)
+                num -= 1
+                services = leader.get_services()
+                self.assertEqual(len(services), min(num, DESIRED_NUM_DNSSRP_ANYCAST))
+                self.verify_anycast_services(services)
+
+            #---------------------------------------------------------------------------------
+            # DNS/SRP unicast entries
+
+            # Publish DNS/SRP unicast address on all routers, first using
+            # ML-EID address, then change to use specific address. Verify
+            # that number of entries in network data is correct in each step
+            # and that entries are switched correctly.
+
+            num = 0
+            for node in routers:
+                node.netdata_publish_dnssrp_unicast_mleid(DNSSRP_PORT)
+                self.simulator.go(WAIT_TIME)
+                num += 1
+                services = leader.get_services()
+                self.assertEqual(len(services), min(num, DESIRED_NUM_DNSSRP_UNCIAST))
+                self.verify_unicast_services(services)
+
+            for node in routers:
+                node.netdata_publish_dnssrp_unicast(DNSSRP_ADDRESS, DNSSRP_PORT)
+                self.simulator.go(WAIT_TIME)
+                services = leader.get_services()
+                self.assertEqual(len(services), min(num, DESIRED_NUM_DNSSRP_UNCIAST))
+                self.verify_unicast_services(services)
+
+            for node in routers:
+                node.netdata_unpublish_dnssrp()
+                self.simulator.go(WAIT_TIME)
+                num -= 1
+                services = leader.get_services()
+                self.assertEqual(len(services), min(num, DESIRED_NUM_DNSSRP_UNCIAST))
+                self.verify_unicast_services(services)
 
         #---------------------------------------------------------------------------------
         # DNS/SRP unicast entries
 
-        # Publish DNS/SRP unicast address on all routers, first using
-        # ML-EID address, then change to use specific address. Verify
-        # that number of entries in network data is correct in each step
-        # and that entries are switched correctly.
+        # Publish DNS/SRP anycast on all routers first, then publish same on
+        # 3 nodes.
 
         num = 0
         for node in routers:
-            node.netdata_publish_dnssrp_unicast_mleid(DNSSRP_PORT)
+            node.netdata_publish_dnssrp_anycast(ANYCAST_SEQ_NUM)
             self.simulator.go(WAIT_TIME)
             num += 1
             services = leader.get_services()
-            self.assertEqual(len(services), min(num, DESIRED_NUM_DNSSRP_UNCIAST))
-            self.verify_unicast_services(services)
+            self.assertEqual(len(services), num)
+            self.verify_anycast_services(services)
 
-        for node in routers:
-            node.netdata_publish_dnssrp_unicast(DNSSRP_ADDRESS, DNSSRP_PORT)
+        for node in [end_dev1, end_dev2, end_dev3]:
+            node.netdata_publish_dnssrp_anycast(ANYCAST_SEQ_NUM)
             self.simulator.go(WAIT_TIME)
+            num += 1
             services = leader.get_services()
-            self.assertEqual(len(services), min(num, DESIRED_NUM_DNSSRP_UNCIAST))
-            self.verify_unicast_services(services)
+            self.assertEqual(len(services), num)
+            self.verify_anycast_services(services)
 
-        for node in routers:
-            node.netdata_unpublish_dnssrp()
+        self.assertEqual(num, DESIRED_NUM_DNSSRP_ANYCAST)
+
+        service_data = '%02x%02x' % (ANYCAST_SERVICE_NUM, int(ANYCAST_SEQ_NUM))
+
+        for node in [leader, end_dev4, end_dev5]:
+            node.add_service(str(THREAD_ENTERPRISE_NUMBER), service_data, '00')
+            node.register_netdata()
             self.simulator.go(WAIT_TIME)
-            num -= 1
+
             services = leader.get_services()
-            self.assertEqual(len(services), min(num, DESIRED_NUM_DNSSRP_UNCIAST))
-            self.verify_unicast_services(services)
+            self.assertEqual(len(services), num)
+            self.verify_anycast_services(services)
+
+            service_rlocs = [int(service[4], 16) for service in services]
+
+            print(['0x%04x' % rloc for rloc in service_rlocs])
+            print(['rloc:%04x' % router.get_addr16() for router in routers])
+
+            for router in routers:
+                self.assertIn(router.get_addr16(), service_rlocs)
+
+
+
+
+
+
+
+
+
+
 
 
 if __name__ == '__main__':
