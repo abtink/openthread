@@ -118,7 +118,7 @@ exit:
 
 void Publisher::SetState(State aState)
 {
-    State oldState = aState;
+    State oldState = mState;
 
     VerifyOrExit(mState != aState);
 

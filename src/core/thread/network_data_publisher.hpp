@@ -75,9 +75,9 @@ public:
      * removed from the Thread Network Data.
      *
      * On remove the callback is invoked independent of whether the entry is removed by `Publisher` (e.g., when there
-     * too many similar entries already present in the Network Data) or through an explicit call to unpublish the entry
-     * (i.e., a call to `UnpublishDnsSrpService()`).
-
+     * are too many similar entries already present in the Network Data) or through an explicit call to unpublish the
+     * entry (i.e., a call to `UnpublishDnsSrpService()`).
+     *
      */
     typedef otNetDataDnsSrpServicePublisherCallback DnsSrpServiceCallback;
 

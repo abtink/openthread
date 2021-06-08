@@ -39,7 +39,7 @@ import thread_cert
 #
 # Topology:
 #
-#   1 leader, 5 routers and 4 end-devices all connected
+#   1 leader, 5 routers and 5 end-devices all connected
 #
 
 LEADER = 1
@@ -192,7 +192,7 @@ class NetDataPublisher(thread_cert.TestCase):
             self.assertEqual(end_dev.get_state(), 'child')
 
         #---------------------------------------------------------------------------------
-        # DNS/RSP anycast entries
+        # DNS/SRP anycast entries
 
         # Publish DNS/SRP anycast on leader and all routers (6 nodes).
 
@@ -237,7 +237,7 @@ class NetDataPublisher(thread_cert.TestCase):
         # DNS/SRP unicast entries
 
         # Publish DNS/SRP unicast address on all routers, first using
-        # MLE-EID address, then change to use specific address. Verify
+        # ML-EID address, then change to use specific address. Verify
         # that number of entries in network data is correct in each step
         # and that entries are switched correctly.
 

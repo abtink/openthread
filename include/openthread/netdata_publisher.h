@@ -57,9 +57,9 @@ extern "C" {
  * This function pointer type defines the callback used to notify when a "DNS/SRP Service" entry is added to or removed
  * from the Thread Network Data.
  *
- * On remove the callback is invoked independent of whether the entry is removed by `Publisher` (e.g., when there too
- * many similar entries already present in the Network Data) or through an explicit call to unpublish the entry (i.e.,
- * a call to `otNetDataUnpublishDnsSrpService()`).
+ * On remove the callback is invoked independent of whether the entry is removed by `Publisher` (e.g., when there are
+ * too many similar entries already present in the Network Data) or through an explicit call to unpublish the entry
+ * (i.e., a call to `otNetDataUnpublishDnsSrpService()`).
  *
  * @param[in] aAdded     Indicates whether the entry was added (TRUE) or removed (FALSE).
  * @param[in] aContext   A pointer to application-specific context.

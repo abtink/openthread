@@ -114,7 +114,7 @@ void Server::SetEnabled(bool aEnabled)
         // Select a port and then publish "DNS/SRP Unicast Address
         // Service" in Thread Network Data using the device's
         // mesh-local EID as the address. Then wait for callback to
-        // start server operation when entry is is published (i.e.,
+        // start server operation when entry is published (i.e.,
         // added to the Network Data).
 
         SelectPort();
