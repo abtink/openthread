@@ -384,6 +384,7 @@ otError SrpClient::ProcessServiceAdd(uint8_t aArgsLength, Arg aArgs[])
     uint16_t                        size;
     char *                          string;
     otError                         error;
+    char *                          label;
 
     VerifyOrExit(4 <= aArgsLength && aArgsLength <= 7, error = OT_ERROR_INVALID_ARGS);
 
@@ -396,6 +397,33 @@ otError SrpClient::ProcessServiceAdd(uint8_t aArgsLength, Arg aArgs[])
 
     string = otSrpClientBuffersGetServiceEntryServiceNameString(entry, &size);
     SuccessOrExit(error = CopyString(string, size, aArgs[2].GetCString()));
+
+    // Service subtypes are added as part of service name as a comma separated list
+    // e.g., "_service._udp,_sub1,_sub2"
+
+    label = strchr(string, ',');
+
+    if (label != nullptr)
+    {
+        uint16_t     arrayLength;
+        const char **subTypeLabels = otSrpClientBuffersGetSubTypeLabelsArray(entry, &arrayLength);
+
+        // Leave the last array element as `nullptr` to indicate end of array.
+        for (uint16_t index = 0; index + 1 < arrayLength; index++)
+        {
+            *label++             = '\0';
+            subTypeLabels[index] = label;
+
+            label = strchr(label, ',');
+
+            if (label == nullptr)
+            {
+                break;
+            }
+        }
+
+        VerifyOrExit(label == nullptr, error = OT_ERROR_INVALID_ARGS);
+    }
 
     SuccessOrExit(error = aArgs[3].ParseAsUint16(entry->mService.mPort));
 
@@ -475,9 +503,19 @@ void SrpClient::OutputServiceList(uint8_t aIndentSize, const otSrpClientService 
 
 void SrpClient::OutputService(uint8_t aIndentSize, const otSrpClientService &aService)
 {
-    mInterpreter.OutputLine(aIndentSize, "instance:\"%s\", name:\"%s\", state:%s, port:%d, priority:%d, weight:%d",
-                            aService.mInstanceName, aService.mName, otSrpClientItemStateToString(aService.mState),
-                            aService.mPort, aService.mPriority, aService.mWeight);
+    mInterpreter.OutputFormat(aIndentSize, "instance:\"%s\", name:\"%s", aService.mInstanceName, aService.mName);
+
+    if (aService.mSubTypeLabels != nullptr)
+    {
+        for (uint16_t index = 0; aService.mSubTypeLabels[index] != nullptr; index++)
+        {
+            mInterpreter.OutputFormat(",%s", aService.mSubTypeLabels[index]);
+        }
+    }
+
+    mInterpreter.OutputLine("\", state:%s, port:%d, priority:%d, weight:%d",
+                            otSrpClientItemStateToString(aService.mState), aService.mPort, aService.mPriority,
+                            aService.mWeight);
 }
 
 otError SrpClient::ProcessStart(uint8_t aArgsLength, Arg aArgs[])
