@@ -1011,14 +1011,14 @@ otError Interpreter::ProcessChildTimeout(Arg aArgs[])
 #if OPENTHREAD_CONFIG_COAP_API_ENABLE
 otError Interpreter::ProcessCoap(Arg aArgs[])
 {
-    return mCoap.Process(Arg::GetArgsLength(aArgs), aArgs);
+    return mCoap.Process(aArgs);
 }
 #endif
 
 #if OPENTHREAD_CONFIG_COAP_SECURE_API_ENABLE
 otError Interpreter::ProcessCoapSecure(Arg aArgs[])
 {
-    return mCoapSecure.Process(Arg::GetArgsLength(aArgs), aArgs);
+    return mCoapSecure.Process(aArgs);
 }
 #endif
 
