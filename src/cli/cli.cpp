@@ -4115,7 +4115,7 @@ exit:
 #if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
 otError Interpreter::ProcessCommissioner(Arg aArgs[])
 {
-    return mCommissioner.Process(Arg::GetArgsLength(aArgs), aArgs);
+    return mCommissioner.Process(aArgs);
 }
 #endif
 
