@@ -131,8 +131,8 @@ otError Commissioner::ProcessJoiner(Arg aArgs[])
 
         if (discerner.mLength)
         {
-            error = otCommissionerAddJoinerWithDiscerner(mInterpreter.mInstance, &discerner,
-                                                                       aArgs[2].GetCString(), timeout);
+            error = otCommissionerAddJoinerWithDiscerner(mInterpreter.mInstance, &discerner, aArgs[2].GetCString(),
+                                                         timeout);
         }
         else
         {
@@ -279,8 +279,8 @@ otError Commissioner::ProcessPanId(Arg aArgs[])
     SuccessOrExit(error = aArgs[1].ParseAsUint32(mask));
     SuccessOrExit(error = aArgs[2].ParseAsIp6Address(address));
 
-    error = otCommissionerPanIdQuery(mInterpreter.mInstance, panId, mask, &address,
-                                                   &Commissioner::HandlePanIdConflict, this);
+    error = otCommissionerPanIdQuery(mInterpreter.mInstance, panId, mask, &address, &Commissioner::HandlePanIdConflict,
+                                     this);
 
 exit:
     return error;

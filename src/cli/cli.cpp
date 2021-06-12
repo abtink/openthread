@@ -4016,7 +4016,7 @@ otError Interpreter::ProcessThread(Arg aArgs[])
 
 otError Interpreter::ProcessDataset(Arg aArgs[])
 {
-    return mDataset.Process(Arg::GetArgsLength(aArgs), aArgs);
+    return mDataset.Process(aArgs);
 }
 
 otError Interpreter::ProcessTxPower(Arg aArgs[])

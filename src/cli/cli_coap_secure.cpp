@@ -167,8 +167,8 @@ otError CoapSecure::ProcessStart(Arg aArgs[])
 
     if (aArgs[0] == "false")
     {
-       verifyPeerCert = false;
-   }
+        verifyPeerCert = false;
+    }
     else if (aArgs[0] == "true")
     {
         verifyPeerCert = true;
@@ -465,9 +465,9 @@ otError CoapSecure::Process(Arg aArgs[])
 
     if (aArgs[0].IsEmpty())
     {
-         IgnoreError(ProcessHelp(aArgs));
-         ExitNow();
-     }
+        IgnoreError(ProcessHelp(aArgs));
+        ExitNow();
+    }
 
     command = Utils::LookupTable::Find(aArgs[0].GetCString(), sCommands);
     VerifyOrExit(command != nullptr, error = OT_ERROR_INVALID_COMMAND);
