@@ -4045,7 +4045,7 @@ exit:
 
 otError Interpreter::ProcessUdp(Arg aArgs[])
 {
-    return mUdp.Process(Arg::GetArgsLength(aArgs), aArgs);
+    return mUdp.Process(aArgs);
 }
 
 otError Interpreter::ProcessUnsecurePort(Arg aArgs[])
