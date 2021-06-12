@@ -3917,7 +3917,7 @@ otError Interpreter::ProcessSrp(Arg aArgs[])
 #if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
     if (aArgs[0] == "server")
     {
-        ExitNow(error = mSrpServer.Process(Arg::GetArgsLength(aArgs) - 1, aArgs + 1));
+        ExitNow(error = mSrpServer.Process(aArgs + 1));
     }
 #endif
 
