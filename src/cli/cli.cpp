@@ -4122,7 +4122,7 @@ otError Interpreter::ProcessCommissioner(Arg aArgs[])
 #if OPENTHREAD_CONFIG_JOINER_ENABLE
 otError Interpreter::ProcessJoiner(Arg aArgs[])
 {
-    return mJoiner.Process(Arg::GetArgsLength(aArgs), aArgs);
+    return mJoiner.Process(aArgs);
 }
 #endif
 
