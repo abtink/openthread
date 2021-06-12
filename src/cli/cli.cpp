@@ -230,8 +230,12 @@ otError Interpreter::ParseEnableOrDisable(const Arg &aArg, bool &aEnable)
 
 otError Interpreter::ParseJoinerDiscerner(Arg &aArg, otJoinerDiscerner &aDiscerner)
 {
-    otError error     = OT_ERROR_NONE;
-    char *  separator = strstr(aArg.GetCString(), "/");
+    otError error;
+    char *  separator;
+
+    VerifyOrExit(!aArg.IsEmpty(), error = OT_ERROR_INVALID_ARGS);
+
+    separator = strstr(aArg.GetCString(), "/");
 
     VerifyOrExit(separator != nullptr, error = OT_ERROR_NOT_FOUND);
 
@@ -2889,7 +2893,7 @@ exit:
 
 otError Interpreter::ProcessNetworkData(Arg aArgs[])
 {
-    return mNetworkData.Process(Arg::GetArgsLength(aArgs), aArgs);
+    return mNetworkData.Process(aArgs);
 }
 
 #if OPENTHREAD_FTD

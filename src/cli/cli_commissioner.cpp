@@ -110,13 +110,18 @@ otError Commissioner::ProcessJoiner(Arg aArgs[])
     {
         // Intentionally empty
     }
-    else if ((error = Interpreter::ParseJoinerDiscerner(aArgs[1], discerner)) == OT_ERROR_NOT_FOUND)
+    else
     {
-        SuccessOrExit(error = aArgs[1].ParseAsHexString(addr.m8));
-        addrPtr = &addr;
-    }
+        error = Interpreter::ParseJoinerDiscerner(aArgs[1], discerner);
 
-    SuccessOrExit(error);
+        if (error == OT_ERROR_NOT_FOUND)
+        {
+            error   = aArgs[1].ParseAsHexString(addr.m8);
+            addrPtr = &addr;
+        }
+
+        SuccessOrExit(error);
+    }
 
     if (aArgs[0] == "add")
     {
