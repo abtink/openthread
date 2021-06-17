@@ -762,42 +762,41 @@ Error Server::ProcessServiceDiscoveryInstructions(Host &                   aHost
 {
     Error error = kErrorNone;
 
-    for (uint16_t i = 0; i < aDnsHeader.GetUpdateRecordCount(); ++i)
+    for (uint16_t numRecords = aDnsHeader.GetUpdateRecordCount(); numRecords > 0; numRecords--)
     {
-        char                name[Dns::Name::kMaxNameSize];
-        Dns::ResourceRecord record;
-        char                serviceName[Dns::Name::kMaxNameSize];
-        Service *           service;
+        char           serviceName[Dns::Name::kMaxNameSize];
+        char           instanceName[Dns::Name::kMaxNameSize];
+        Dns::PtrRecord ptrRecord;
+        Service *      service;
 
-        SuccessOrExit(error = Dns::Name::ReadName(aMessage, aOffset, name, sizeof(name)));
-        VerifyOrExit(Dns::Name::IsSubDomainOf(name, GetDomain()), error = kErrorSecurity);
-        SuccessOrExit(error = aMessage.Read(aOffset, record));
+        SuccessOrExit(error = Dns::Name::ReadName(aMessage, aOffset, serviceName, sizeof(serviceName)));
+        VerifyOrExit(Dns::Name::IsSubDomainOf(serviceName, GetDomain()), error = kErrorSecurity);
 
-        aOffset += sizeof(record);
+        error = Dns::ResourceRecord::ReadRecord(aMessage, aOffset, ptrRecord);
 
-        if (record.GetType() == Dns::ResourceRecord::kTypePtr)
+        if (error == kErrorNotFound)
         {
-            SuccessOrExit(error = Dns::Name::ReadName(aMessage, aOffset, serviceName, sizeof(serviceName)));
-            VerifyOrExit(Dns::Name::IsSubDomainOf(name, GetDomain()), error = kErrorSecurity);
-        }
-        else
-        {
-            aOffset += record.GetLength();
+            // `ReadRecord()` updates `aOffset` to skip over a
+            // non-matching record.
+            error = kErrorNone;
             continue;
         }
 
-        VerifyOrExit(record.GetClass() == Dns::ResourceRecord::kClassNone || record.GetClass() == aZone.GetClass(),
+        SuccessOrExit(error);
+        VerifyOrExit(ptrRecord.GetClass() == Dns::ResourceRecord::kClassNone ||
+                         ptrRecord.GetClass() == aZone.GetClass(),
                      error = kErrorFailed);
 
-        // TODO: check if the RR name and the full service name matches.
+        SuccessOrExit(error = ptrRecord.ReadPtrName(aMessage, aOffset, instanceName, sizeof(instanceName)));
+        VerifyOrExit(StringEndsWith(instanceName, serviceName), error = kErrorFailed);
 
-        service = aHost.FindService(serviceName);
+        service = aHost.FindService(instanceName);
         VerifyOrExit(service == nullptr, error = kErrorFailed);
-        service = aHost.AddService(serviceName);
+        service = aHost.AddService(instanceName);
         VerifyOrExit(service != nullptr, error = kErrorNoBufs);
 
         // This RR is a "Delete an RR from an RRset" update when the CLASS is NONE.
-        service->mIsDeleted = (record.GetClass() == Dns::ResourceRecord::kClassNone);
+        service->mIsDeleted = (ptrRecord.GetClass() == Dns::ResourceRecord::kClassNone);
     }
 
 exit:
