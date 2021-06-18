@@ -890,8 +890,8 @@ class NodeImpl:
                 service_list.append(service)
                 continue
 
-            # 'port', 'priority', 'weight'
-            for i in range(0, 3):
+            # 'subtypes', port', 'priority', 'weight'
+            for i in range(0, 4):
                 key_value = lines.pop(0).strip().split(':')
                 service[key_value[0].strip()] = key_value[1].strip()
 
