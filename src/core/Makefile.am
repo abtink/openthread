@@ -297,6 +297,7 @@ SOURCES_COMMON                                  = \
     utils/ping_sender.cpp                         \
     utils/slaac_address.cpp                       \
     utils/srp_client_buffers.cpp                  \
+    utils/stat_collector.cpp                      \
     $(NULL)
 
 EXTRA_DIST                                 = \
@@ -443,6 +444,7 @@ HEADERS_COMMON                                  = \
     config/sntp_client.h                          \
     config/srp_client.h                           \
     config/srp_server.h                           \
+    config/stat_collector.h                       \
     config/time_sync.h                            \
     config/tmf.h                                  \
     crypto/aes_ccm.hpp                            \
@@ -564,6 +566,7 @@ HEADERS_COMMON                                  = \
     utils/ping_sender.hpp                         \
     utils/slaac_address.hpp                       \
     utils/srp_client_buffers.hpp                  \
+    utils/stat_collector.hpp                      \
     $(NULL)
 
 noinst_HEADERS                             = \

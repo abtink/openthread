@@ -648,6 +648,8 @@ openthread_core_files = [
   "utils/slaac_address.hpp",
   "utils/srp_client_buffers.cpp",
   "utils/srp_client_buffers.hpp",
+  "utils/stat_collector.cpp",
+  "utils/stat_collector.hpp",
 ]
 
 openthread_radio_sources = [
@@ -722,6 +724,7 @@ source_set("libopenthread_core_config") {
     "config/sntp_client.h",
     "config/srp_client.h",
     "config/srp_server.h",
+    "config/stat_collector.h",
     "config/time_sync.h",
     "config/tmf.h",
     "openthread-core-config.h",

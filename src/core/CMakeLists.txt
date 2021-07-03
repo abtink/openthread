@@ -220,6 +220,7 @@ set(COMMON_SOURCES
     utils/ping_sender.cpp
     utils/slaac_address.cpp
     utils/srp_client_buffers.cpp
+    utils/stat_collector.cpp
 )
 
 set(OT_VENDOR_EXTENSION "" CACHE STRING "specify a C++ source file built as part of OpenThread core library")

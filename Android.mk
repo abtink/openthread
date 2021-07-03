@@ -347,6 +347,7 @@ LOCAL_SRC_FILES                                                  := \
     src/core/utils/ping_sender.cpp                                  \
     src/core/utils/slaac_address.cpp                                \
     src/core/utils/srp_client_buffers.cpp                           \
+    src/core/utils/stat_collector.cpp                               \
     src/lib/hdlc/hdlc.cpp                                           \
     src/lib/platform/exit_code.c                                    \
     src/lib/spinel/spinel.c                                         \

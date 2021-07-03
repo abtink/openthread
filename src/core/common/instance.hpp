@@ -82,6 +82,9 @@
 #if OPENTHREAD_CONFIG_CHANNEL_MONITOR_ENABLE
 #include "utils/channel_monitor.hpp"
 #endif
+#if OPENTHREAD_CONFIG_STAT_COLLECTOR_ENABLE
+#include "utils/stat_collector.hpp"
+#endif
 
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
 #include "backbone_router/bbr_leader.hpp"
@@ -386,6 +389,10 @@ private:
 
 #if OPENTHREAD_CONFIG_CHANNEL_MANAGER_ENABLE && OPENTHREAD_FTD
     Utils::ChannelManager mChannelManager;
+#endif
+
+#if OPENTHREAD_CONFIG_STAT_COLLECTOR_ENABLE
+    Utils::StatCollector mStatCollector;
 #endif
 
 #if (OPENTHREAD_CONFIG_DATASET_UPDATER_ENABLE || OPENTHREAD_CONFIG_CHANNEL_MANAGER_ENABLE) && OPENTHREAD_FTD
@@ -818,6 +825,13 @@ template <> inline Utils::ChannelMonitor &Instance::Get(void)
 template <> inline Utils::ChannelManager &Instance::Get(void)
 {
     return mChannelManager;
+}
+#endif
+
+#if OPENTHREAD_CONFIG_STAT_COLLECTOR_ENABLE
+template <> inline Utils::StatCollector &Instance::Get(void)
+{
+    return mStatCollector;
 }
 #endif
 
