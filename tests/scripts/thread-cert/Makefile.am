@@ -161,6 +161,7 @@ EXTRA_DIST                                                         = \
     test_dataset_updater.py                                          \
     test_diag.py                                                     \
     test_dnssd.py                                                    \
+    test_history_tracker.py                                          \
     test_ipv6.py                                                     \
     test_ipv6_fragmentation.py                                       \
     test_ipv6_source_selection.py                                    \
@@ -220,6 +221,7 @@ check_SCRIPTS                                                      = \
     test_dataset_updater.py                                          \
     test_diag.py                                                     \
     test_dnssd.py                                                    \
+    test_history_tracker.py                                          \
     test_ipv6.py                                                     \
     test_ipv6_fragmentation.py                                       \
     test_ipv6_source_selection.py                                    \
