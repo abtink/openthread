@@ -45,7 +45,6 @@ LEADER = 1
 CHILD = 2
 
 SHORT_WAIT = 5
-ONE_DAY = 24 * 60 * 60
 MAX_AGE_IN_DAYS = 49
 
 
@@ -63,6 +62,12 @@ class TestHistoryTracker(thread_cert.TestCase):
             'mode': 'n',
         },
     }
+
+    def wait_for_days(self, days):
+        FIVE_MIN = 5 * 60
+        num_five_mins = int((days * 24 * 60 * 60) / FIVE_MIN)
+        for i in range(num_five_mins):
+            self.simulator.go(FIVE_MIN)
 
     def test(self):
         leader = self.nodes[LEADER]
@@ -101,23 +106,23 @@ class TestHistoryTracker(thread_cert.TestCase):
         # to simulate all the message/events (e.g. MLE adv) while thread
         # is operational.
 
-        self.simulator.go(ONE_DAY)
+        self.wait_for_days(1)
         netinfo = leader.history_netinfo(1)
         self.assertTrue(netinfo[0]['age'].startswith('1 day'))
 
-        self.simulator.go(ONE_DAY)
+        self.wait_for_days(1)
         netinfo = leader.history_netinfo(1)
         self.assertTrue(netinfo[0]['age'].startswith('2 days'))
 
-        self.simulator.go((MAX_AGE_IN_DAYS - 3) * ONE_DAY)
+        self.wait_for_days(MAX_AGE_IN_DAYS - 3)
         netinfo = leader.history_netinfo(1)
         self.assertTrue(netinfo[0]['age'].startswith('{} days'.format(MAX_AGE_IN_DAYS - 1)))
 
-        self.simulator.go(ONE_DAY)
+        self.wait_for_days(1)
         netinfo = leader.history_netinfo(1)
         self.assertTrue(netinfo[0]['age'].startswith('more than {} days'.format(MAX_AGE_IN_DAYS)))
 
-        self.simulator.go(2 * ONE_DAY)
+        self.wait_for_days(2)
         netinfo = leader.history_netinfo(1)
         self.assertTrue(netinfo[0]['age'].startswith('more than {} days'.format(MAX_AGE_IN_DAYS)))
 
