@@ -27,7 +27,9 @@
 #  POSSIBILITY OF SUCH DAMAGE.
 #
 
+import os
 import unittest
+import sys
 import thread_cert
 
 # Test description:
@@ -196,4 +198,9 @@ class TestHistoryTracker(thread_cert.TestCase):
 
 
 if __name__ == '__main__':
+    # Skip the test under distcheck build. Error code
+    # 77 means skip this test case in automake tests
+    if os.getenv('DISTCHECK_BUILD') == '1':
+        sys.exit(77)
+
     unittest.main()
