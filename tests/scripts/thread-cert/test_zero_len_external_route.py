@@ -138,7 +138,7 @@ class ZeroLengthExternalRoute(thread_cert.TestCase):
         router1.del_ipaddr('fd00:abcd::1')
         router2.add_ipaddr('fd00:abcd::1')
         self.simulator.go(5)
-        self.assertTrue(leader.ping('fd00:abcd::1'))
+        self.assertFalse(leader.ping('fd00:abcd::1'))
 
 
 if __name__ == '__main__':
