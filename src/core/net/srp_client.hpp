@@ -757,7 +757,8 @@ private:
 
     enum : bool
     {
-        kAutoStartDefaultMode = OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_DEFAULT_MODE,
+        kAutoStartDefaultMode           = OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_DEFAULT_MODE,
+        kDisallowSwitchOnRegisteredHost = OPENTHREAD_CONFIG_SRP_CLIENT_DISALLOW_SERVER_SWITCH_WITH_REGISTERED_HOST,
     };
 
     enum : uint16_t
@@ -838,7 +839,7 @@ private:
 #if OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_API_ENABLE
     void ProcessAutoStart(void);
 #if OPENTHREAD_CONFIG_SRP_CLIENT_SWITCH_SERVER_ON_FAILURE
-    void SelectNextServer(void);
+    void SelectNextServer(bool aDisallowSwitchOnRegisteredHost);
 #endif
 #endif
 
