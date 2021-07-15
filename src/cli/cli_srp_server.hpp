@@ -86,20 +86,24 @@ private:
         otError (SrpServer::*mHandler)(Arg aArgs[]);
     };
 
+    otError ProcessAddrMode(Arg aArgs[]);
     otError ProcessDomain(Arg aArgs[]);
     otError ProcessEnable(Arg aArgs[]);
     otError ProcessDisable(Arg aArgs[]);
     otError ProcessLease(Arg aArgs[]);
     otError ProcessHost(Arg aArgs[]);
     otError ProcessService(Arg aArgs[]);
+    otError ProcessSeqNum(Arg aArgs[]);
     otError ProcessHelp(Arg aArgs[]);
 
     void OutputHostAddresses(const otSrpServerHost *aHost);
 
     static constexpr Command sCommands[] = {
-        {"disable", &SrpServer::ProcessDisable}, {"domain", &SrpServer::ProcessDomain},
-        {"enable", &SrpServer::ProcessEnable},   {"help", &SrpServer::ProcessHelp},
-        {"host", &SrpServer::ProcessHost},       {"lease", &SrpServer::ProcessLease},
+
+        {"addrmode", &SrpServer::ProcessAddrMode}, {"disable", &SrpServer::ProcessDisable},
+        {"domain", &SrpServer::ProcessDomain},     {"enable", &SrpServer::ProcessEnable},
+        {"help", &SrpServer::ProcessHelp},         {"host", &SrpServer::ProcessHost},
+        {"lease", &SrpServer::ProcessLease},       {"seqnum", &SrpServer::ProcessSeqNum},
         {"service", &SrpServer::ProcessService},
     };
 

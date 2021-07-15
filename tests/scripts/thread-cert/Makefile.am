@@ -182,6 +182,7 @@ EXTRA_DIST                                                         = \
     test_srp_lease.py                                                \
     test_srp_name_conflicts.py                                       \
     test_srp_register_single_service.py                              \
+    test_srp_server_anycast_mode.py                                  \
     test_srp_sub_type.py                                             \
     test_zero_len_external_route.py                                  \
     thread_cert.py                                                   \
@@ -244,6 +245,7 @@ check_SCRIPTS                                                      = \
     test_srp_lease.py                                                \
     test_srp_name_conflicts.py                                       \
     test_srp_register_single_service.py                              \
+    test_srp_server_anycast_mode.py                                  \
     test_srp_sub_type.py                                             \
     test_zero_len_external_route.py                                  \
     Cert_5_1_01_RouterAttach.py                                      \
