@@ -795,6 +795,15 @@ class NodeImpl:
         self.send_command(cmd)
         self._expect_done()
 
+    def srp_server_get_addr_mode(self):
+        modes = [r'unicast', r'anycast']
+        self.send_command(f'srp server addrmode')
+        return self._expect_result(modes)
+
+    def srp_server_set_addr_mode(self, mode):
+        self.send_command(f'srp server addrmode {mode}')
+        self._expect_done()
+
     def srp_server_set_enabled(self, enable):
         cmd = f'srp server {"enable" if enable else "disable"}'
         self.send_command(cmd)

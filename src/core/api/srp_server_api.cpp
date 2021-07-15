@@ -56,6 +56,20 @@ otError otSrpServerSetDomain(otInstance *aInstance, const char *aDomain)
     return instance.Get<Srp::Server>().SetDomain(aDomain);
 }
 
+otSrpServerAddressMode otSrpServerGetAddressMode(otInstance *aInstance)
+{
+    Instance &instance = *static_cast<Instance *>(aInstance);
+
+    return static_cast<otSrpServerAddressMode>(instance.Get<Srp::Server>().GetAddressMode());
+}
+
+otError otSrpServerSetAddressMode(otInstance *aInstance, otSrpServerAddressMode aMode)
+{
+    Instance &instance = *static_cast<Instance *>(aInstance);
+
+    return instance.Get<Srp::Server>().SetAddressMode(static_cast<Srp::Server::AddressMode>(aMode));
+}
+
 void otSrpServerSetEnabled(otInstance *aInstance, bool aEnabled)
 {
     Instance &instance = *static_cast<Instance *>(aInstance);

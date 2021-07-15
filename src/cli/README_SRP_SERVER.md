@@ -7,6 +7,7 @@ See [README_SRP.md](README_SRP.md).
 ## Command List
 
 - [help](#help)
+- [addrmode](#addrmode)
 - [disable](#disable)
 - [domain](#domain)
 - [enable](#enable)
@@ -24,6 +25,7 @@ Print SRP server help menu.
 
 ```bash
 > srp server help
+addrmode
 disable
 domain
 enable
@@ -31,6 +33,33 @@ help
 host
 lease
 service
+Done
+```
+
+### addrmode
+
+Usage: `srp server addrmode [unicast|anycast]`
+
+Get or set the address mode used by the SRP server.
+
+Address mode specifies how the address and port number are determined by the SRP server and this is published in the Thread Network Data.
+
+Get the address mode.
+
+```bash
+> srp server addrmode
+unicast
+Done
+```
+
+Set the address mode.
+
+```bash
+> srp server addrmode anycast
+Done
+
+> srp server addrmode
+anycast
 Done
 ```
 

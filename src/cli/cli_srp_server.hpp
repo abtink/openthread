@@ -86,6 +86,7 @@ private:
         otError (SrpServer::*mHandler)(Arg aArgs[]);
     };
 
+    otError ProcessAddrMode(Arg aArgs[]);
     otError ProcessDomain(Arg aArgs[]);
     otError ProcessEnable(Arg aArgs[]);
     otError ProcessDisable(Arg aArgs[]);
@@ -97,10 +98,10 @@ private:
     void OutputHostAddresses(const otSrpServerHost *aHost);
 
     static constexpr Command sCommands[] = {
-        {"disable", &SrpServer::ProcessDisable}, {"domain", &SrpServer::ProcessDomain},
-        {"enable", &SrpServer::ProcessEnable},   {"help", &SrpServer::ProcessHelp},
-        {"host", &SrpServer::ProcessHost},       {"lease", &SrpServer::ProcessLease},
-        {"service", &SrpServer::ProcessService},
+        {"addrmode", &SrpServer::ProcessAddrMode}, {"disable", &SrpServer::ProcessDisable},
+        {"domain", &SrpServer::ProcessDomain},     {"enable", &SrpServer::ProcessEnable},
+        {"help", &SrpServer::ProcessHelp},         {"host", &SrpServer::ProcessHost},
+        {"lease", &SrpServer::ProcessLease},       {"service", &SrpServer::ProcessService},
     };
 
     static_assert(Utils::LookupTable::IsSorted(sCommands), "Command Table is not sorted");

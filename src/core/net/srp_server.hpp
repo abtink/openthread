@@ -68,6 +68,13 @@
 #include "thread/network_data_publisher.hpp"
 
 namespace ot {
+
+namespace Dns {
+namespace ServiceDiscovery {
+class Server;
+}
+} // namespace Dns
+
 namespace Srp {
 
 /**
@@ -80,6 +87,7 @@ class Server : public InstanceLocator, private NonCopyable
     friend class UpdateMetadata;
     friend class Service;
     friend class Host;
+    friend class Dns::ServiceDiscovery::Server;
 
 public:
     enum : uint16_t
@@ -95,6 +103,19 @@ public:
      *
      */
     typedef otSrpServerServiceUpdateId ServiceUpdateId;
+
+    /**
+     * This enumeration represents the address mode used by the SRP server.
+     *
+     * Address mode specifies how the address and port number are determined by the SRP server and how this info ins
+     * published in the Thread Network Data.
+     *
+     */
+    enum AddressMode : uint8_t
+    {
+        kAddressModeUnicast = OT_SRP_SREVER_ADDRESS_MODE_UNICAST, ///< Unicast address mode.
+        kAddressModeAnycast = OT_SRP_SERVER_ADDRESS_MODE_ANYCAST, ///< Anycast address mode.
+    };
 
     class Host;
 
@@ -583,6 +604,25 @@ public:
     Error SetDomain(const char *aDomain);
 
     /**
+     * This method returns the address mode being used by the SRP server.
+     *
+     * @returns The SRP server's address mode.
+     *
+     */
+    AddressMode GetAddressMode(void) const { return mAddressMode; }
+
+    /**
+     * This method sets the address mode to be used by the SRP server.
+     *
+     * @param[in] aMode      The address mode to use.
+     *
+     * @retval kErrorNone           Successfully set the address mode.
+     * @retval kErrorInvalidState   The SRP server is enabled and the address mode cannot be changed.
+     *
+     */
+    Error SetAddressMode(AddressMode aMode);
+
+    /**
      * This method tells whether the SRP server is currently running.
      *
      * @returns  A boolean that indicates whether the server is running.
@@ -663,6 +703,11 @@ private:
         kStateStopped,
     };
 
+    static constexpr AddressMode kDefaultAddressMode =
+        static_cast<AddressMode>(OPENTHREAD_CONFIG_SRP_SERVER_DEFAULT_ADDDRESS_MODE);
+
+    static constexpr uint16_t kAnycastAddressModePort = 53;
+
     // This class includes metadata for processing a SRP update (register, deregister)
     // and sending DNS response to the client.
     class UpdateMetadata : public InstanceLocator, public LinkedListEntry<UpdateMetadata>
@@ -696,9 +741,17 @@ private:
         UpdateMetadata *  mNext;
     };
 
-    void Start(void);
-    void Stop(void);
-    void SelectPort(void);
+    void              Start(void);
+    void              Stop(void);
+    void              SelectPort(void);
+    void              PrepareSocket(void);
+    Ip6::Udp::Socket &GetSocket(void);
+
+#if OPENTHREAD_CONFIG_DNSSD_SERVER_ENABLE
+    void  HandleDnssdServerStateChange(void);
+    Error HandleDnssdServerUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+#endif
+
     void HandleNetDataPublisherEvent(NetworkData::Publisher::Event aEvent);
 
     ServiceUpdateId AllocateId(void) { return mServiceUpdateId++; }
@@ -707,10 +760,11 @@ private:
                           const Dns::UpdateHeader &aDnsHeader,
                           Host &                   aHost,
                           const Ip6::MessageInfo & aMessageInfo);
-    void  HandleDnsUpdate(Message &                aMessage,
-                          const Ip6::MessageInfo & aMessageInfo,
-                          const Dns::UpdateHeader &aDnsHeader,
-                          uint16_t                 aOffset);
+    Error ProcessMessage(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void  ProcessDnsUpdate(Message &                aMessage,
+                           const Ip6::MessageInfo & aMessageInfo,
+                           const Dns::UpdateHeader &aDnsHeader,
+                           uint16_t                 aOffset);
     Error ProcessUpdateSection(Host &                   aHost,
                                const Message &          aMessage,
                                const Dns::UpdateHeader &aDnsHeader,
@@ -787,6 +841,8 @@ private:
     ServiceUpdateId mServiceUpdateId;
     uint16_t        mPort;
     State           mState;
+    AddressMode     mAddressMode;
+    uint8_t         mAnycastSequenceNumber;
     bool            mHasRegisteredAnyService : 1;
 };
 

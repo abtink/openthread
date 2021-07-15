@@ -65,6 +65,37 @@ exit:
     return error;
 }
 
+otError SrpServer::ProcessAddrMode(Arg aArgs[])
+{
+    otError error = OT_ERROR_INVALID_ARGS;
+
+    if (aArgs[0].IsEmpty())
+    {
+        switch (otSrpServerGetAddressMode(mInterpreter.mInstance))
+        {
+        case OT_SRP_SREVER_ADDRESS_MODE_UNICAST:
+            mInterpreter.OutputLine("unicast");
+            break;
+
+        case OT_SRP_SERVER_ADDRESS_MODE_ANYCAST:
+            mInterpreter.OutputLine("anycast");
+            break;
+        }
+
+        error = OT_ERROR_NONE;
+    }
+    else if (aArgs[0] == "unicast")
+    {
+        error = otSrpServerSetAddressMode(mInterpreter.mInstance, OT_SRP_SREVER_ADDRESS_MODE_UNICAST);
+    }
+    else if (aArgs[0] == "anycast")
+    {
+        error = otSrpServerSetAddressMode(mInterpreter.mInstance, OT_SRP_SERVER_ADDRESS_MODE_ANYCAST);
+    }
+
+    return error;
+}
+
 otError SrpServer::ProcessDomain(Arg aArgs[])
 {
     otError error = OT_ERROR_NONE;
