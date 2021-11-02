@@ -106,6 +106,13 @@ void SettingsBase::SrpServerInfo::Log(Action aAction) const
 }
 #endif
 
+#if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
+void SettingsBase::SrpReplicationInfo::Log(Action aAction) const
+{
+    LogInfo("%s SrpReplicationInfo {seqnum:%u}", ActionToString(aAction), GetSeqNumber());
+}
+#endif
+
 #endif // OT_SHOULD_LOG_AT(OT_LOG_LEVEL_INFO)
 
 #if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_INFO)
@@ -141,23 +148,24 @@ const char *SettingsBase::ActionToString(Action aAction)
 const char *SettingsBase::KeyToString(Key aKey)
 {
     static const char *const kKeyStrings[] = {
-        "",                  // (0)  (Unused)
-        "ActiveDataset",     // (1)  kKeyActiveDataset
-        "PendingDataset",    // (2)  kKeyPendingDataset
-        "NetworkInfo",       // (3)  kKeyNetworkInfo
-        "ParentInfo",        // (4)  kKeyParentInfo
-        "ChildInfo",         // (5)  kKeyChildInfo
-        "",                  // (6)  Removed (previously auto-start).
-        "SlaacIidSecretKey", // (7)  kKeySlaacIidSecretKey
-        "DadInfo",           // (8)  kKeyDadInfo
-        "",                  // (9)  Removed (previously OMR prefix).
-        "",                  // (10) Removed (previously on-link prefix).
-        "SrpEcdsaKey",       // (11) kKeySrpEcdsaKey
-        "SrpClientInfo",     // (12) kKeySrpClientInfo
-        "SrpServerInfo",     // (13) kKeySrpServerInfo
-        "",                  // (14) Removed (previously NAT64 prefix)
-        "BrUlaPrefix",       // (15) kKeyBrUlaPrefix
-        "BrOnLinkPrefixes"   // (16) kKeyBrOnLinkPrefixes
+        "",                   // (0)  (Unused)
+        "ActiveDataset",      // (1)  kKeyActiveDataset
+        "PendingDataset",     // (2)  kKeyPendingDataset
+        "NetworkInfo",        // (3)  kKeyNetworkInfo
+        "ParentInfo",         // (4)  kKeyParentInfo
+        "ChildInfo",          // (5)  kKeyChildInfo
+        "",                   // (6)  Removed (previously auto-start).
+        "SlaacIidSecretKey",  // (7)  kKeySlaacIidSecretKey
+        "DadInfo",            // (8)  kKeyDadInfo
+        "",                   // (9)  Removed (previously OMR prefix).
+        "",                   // (10) Removed (previously on-link prefix).
+        "SrpEcdsaKey",        // (11) kKeySrpEcdsaKey
+        "SrpClientInfo",      // (12) kKeySrpClientInfo
+        "SrpServerInfo",      // (13) kKeySrpServerInfo
+        "",                   // (14) Removed (previously NAT64 prefix)
+        "BrUlaPrefix",        // (15) kKeyBrUlaPrefix
+        "BrOnLinkPrefixes",   // (16) kKeyBrOnLinkPrefixes
+        "SprReplicationInfo", // (17) kKeySrpReplicationInfo
     };
 
     static_assert(1 == kKeyActiveDataset, "kKeyActiveDataset value is incorrect");
@@ -172,8 +180,9 @@ const char *SettingsBase::KeyToString(Key aKey)
     static_assert(13 == kKeySrpServerInfo, "kKeySrpServerInfo value is incorrect");
     static_assert(15 == kKeyBrUlaPrefix, "kKeyBrUlaPrefix value is incorrect");
     static_assert(16 == kKeyBrOnLinkPrefixes, "kKeyBrOnLinkPrefixes is incorrect");
+    static_assert(17 == kKeySrpReplicationInfo, "kKeySrpReplicationInfo value is incorrect");
 
-    static_assert(kLastKey == kKeyBrOnLinkPrefixes, "kLastKey is not valid");
+    static_assert(kLastKey == kKeySrpReplicationInfo, "kLastKey is not valid");
 
     OT_ASSERT(aKey <= kLastKey);
 
@@ -515,6 +524,12 @@ void Settings::Log(Action aAction, Error aError, Key aKey, const void *aValue)
 #if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE && OPENTHREAD_CONFIG_SRP_SERVER_PORT_SWITCH_ENABLE
         case kKeySrpServerInfo:
             reinterpret_cast<const SrpServerInfo *>(aValue)->Log(aAction);
+            break;
+#endif
+
+#if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
+        case kKeySrpReplicationInfo:
+            reinterpret_cast<const SrpReplicationInfo *>(aValue)->Log(aAction);
             break;
 #endif
 

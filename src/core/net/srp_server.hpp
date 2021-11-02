@@ -101,6 +101,10 @@ class RoutingManager;
 
 namespace Srp {
 
+#if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
+class Srpl;
+#endif
+
 /**
  * This class implements the SRP server.
  *
@@ -115,6 +119,9 @@ class Server : public InstanceLocator, private NonCopyable
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
     friend class BorderRouter::RoutingManager;
 #endif
+#if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
+    friend class Srpl;
+#endif
 
     enum RetainName : bool
     {
@@ -127,6 +134,9 @@ class Server : public InstanceLocator, private NonCopyable
         kDoNotNotifyServiceHandler = false,
         kNotifyServiceHandler      = true,
     };
+
+    struct UpdateMessage;
+    struct MessageMetadata;
 
 public:
     static constexpr uint16_t kUdpPortMin = OPENTHREAD_CONFIG_SRP_SERVER_UDP_PORT_MIN; ///< The reserved min port.
@@ -185,6 +195,9 @@ public:
         friend class LinkedList<Service>;
         friend class LinkedListEntry<Service>;
         friend class Heap::Allocatable<Service>;
+#if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
+        friend class Srpl;
+#endif
 
     public:
         /**
@@ -434,6 +447,10 @@ public:
         const TimeMilli &GetUpdateTime(void) const { return mUpdateTime; }
         void             Log(Action aAction) const;
 
+#if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
+        RetainPtr<UpdateMessage> mAddMessagePtr;
+        RetainPtr<UpdateMessage> mDeleteMessagePtr;
+#endif
         Heap::String           mServiceName;
         RetainPtr<Description> mDescription;
         Service               *mNext;
@@ -456,6 +473,9 @@ public:
         friend class Server;
         friend class LinkedListEntry<Host>;
         friend class Heap::Allocatable<Host>;
+#if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
+        friend class Srpl;
+#endif
 
     public:
         /**
@@ -601,12 +621,12 @@ public:
                                            bool        aIsSubType,
                                            TimeMilli   aUpdateTime);
         void                 RemoveService(Service *aService, RetainName aRetainName, NotifyMode aNotifyServiceHandler);
-        Error                AddCopyOfServiceAsDeletedIfNotPresent(const Service &aService, TimeMilli aUpdateTime);
-        void                 FreeAllServices(void);
-        void                 ClearResources(void);
-        Error                MergeServicesAndResourcesFrom(Host &aHost);
-        Error                AddIp6Address(const Ip6::Address &aIp6Address);
-        bool                 HasServiceInstance(const char *aInstanceName) const;
+        Error AddCopyOfServiceAsDeletedIfNotPresent(const Service &aService, const MessageMetadata &aMetadata);
+        void  FreeAllServices(void);
+        void  ClearResources(void);
+        Error MergeServicesAndResourcesFrom(Host &aHost);
+        Error AddIp6Address(const Ip6::Address &aIp6Address);
+        bool  HasServiceInstance(const char *aInstanceName) const;
         RetainPtr<Service::Description>       FindServiceDescription(const char *aInstanceName);
         const RetainPtr<Service::Description> FindServiceDescription(const char *aInstanceName) const;
         Service                              *FindService(const char *aServiceName, const char *aInstanceName);
@@ -626,6 +646,9 @@ public:
         uint32_t               mKeyLease; // The KEY-LEASE time in seconds.
         TimeMilli              mUpdateTime;
         LinkedList<Service>    mServices;
+#if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
+        RetainPtr<UpdateMessage> mMessagePtr;
+#endif
     };
 
     /**
@@ -812,8 +835,12 @@ public:
      *
      * @param[in]  aEnabled  A boolean to enable/disable the SRP server.
      *
+     * @retval kErrorNone          Successfully enabled/disabled the SRP server.
+     * @retval kErrorInvalidState  SRP replication feature is enabled and is managing the SRP server, therefore the
+     *                             SRP server cannot be enabled/disabled directly.
+     *
      */
-    void SetEnabled(bool aEnabled);
+    Error SetEnabled(bool aEnabled);
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
     /**
@@ -944,6 +971,9 @@ private:
         TtlConfig               mTtlConfig;
         LeaseConfig             mLeaseConfig;
         const Ip6::MessageInfo *mMessageInfo; // Set to `nullptr` when from SRPL.
+#if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
+        RetainPtr<UpdateMessage> mMessagePtr;
+#endif
     };
 
     // This class includes metadata for processing a SRP update (register, deregister)
@@ -980,6 +1010,19 @@ private:
         bool              mIsDirectRxFromClient;
     };
 
+#if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
+    // This struct represents an SRP Update Message along with its receive time.
+    struct UpdateMessage : public Heap::Allocatable<UpdateMessage>, public RetainCountable
+    {
+        Error Init(const Message &aMessage, TimeMilli aRxTime);
+
+        Heap::Data mData;
+        TimeMilli  mRxTime;
+        uint32_t   mGrantedLease;
+        uint32_t   mGrantedKeyLease;
+    };
+#endif
+
     void              Enable(void);
     void              Disable(void);
     void              Start(void);
@@ -1007,6 +1050,9 @@ private:
                           const TtlConfig         &aTtlConfig,
                           const LeaseConfig       &aLeaseConfig);
     Error ProcessMessage(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+#if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
+    Error ProcessMessage(Message &aMessage, TimeMilli aRxTime, uint32_t aGrantedLease, uint32_t aGrantedKeyLease);
+#endif
     Error ProcessMessage(Message                &aMessage,
                          TimeMilli               aRxTime,
                          const TtlConfig        &aTtlConfig,
