@@ -48,9 +48,6 @@
 namespace ot {
 namespace MeshCoP {
 
-using ot::BigEndian::HostSwap16;
-using ot::BigEndian::HostSwap32;
-
 /**
  * This class implements Timestamp generation and parsing.
  *
@@ -67,7 +64,7 @@ public:
      */
     uint64_t GetSeconds(void) const
     {
-        return (static_cast<uint64_t>(HostSwap16(mSeconds16)) << 32) + HostSwap32(mSeconds32);
+        return (static_cast<uint64_t>(mSeconds16.Get()) << 32) + mSeconds32.Get();
     }
 
     /**
@@ -78,8 +75,8 @@ public:
      */
     void SetSeconds(uint64_t aSeconds)
     {
-        mSeconds16 = HostSwap16(static_cast<uint16_t>(aSeconds >> 32));
-        mSeconds32 = HostSwap32(static_cast<uint32_t>(aSeconds & 0xffffffff));
+        mSeconds16 = static_cast<uint16_t>(aSeconds >> 32);
+        mSeconds32 = static_cast<uint32_t>(aSeconds & 0xffffffff);
     }
 
     /**
@@ -88,7 +85,7 @@ public:
      * @returns The Ticks value.
      *
      */
-    uint16_t GetTicks(void) const { return HostSwap16(mTicks) >> kTicksOffset; }
+    uint16_t GetTicks(void) const { return mTicks.Get() >> kTicksOffset; }
 
     /**
      * This method sets the Ticks value.
@@ -98,7 +95,7 @@ public:
      */
     void SetTicks(uint16_t aTicks)
     {
-        mTicks = HostSwap16((HostSwap16(mTicks) & ~kTicksMask) | ((aTicks << kTicksOffset) & kTicksMask));
+        mTicks = (mTicks.Get() & ~kTicksMask) | ((aTicks << kTicksOffset) & kTicksMask);
     }
 
     /**
@@ -107,7 +104,7 @@ public:
      * @returns The Authoritative value.
      *
      */
-    bool GetAuthoritative(void) const { return (HostSwap16(mTicks) & kAuthoritativeMask) != 0; }
+    bool GetAuthoritative(void) const { return (mTicks.Get() & kAuthoritativeMask) != 0; }
 
     /**
      * This method sets the Authoritative value.
@@ -117,8 +114,7 @@ public:
      */
     void SetAuthoritative(bool aAuthoritative)
     {
-        mTicks = HostSwap16((HostSwap16(mTicks) & kTicksMask) |
-                            ((aAuthoritative << kAuthoritativeOffset) & kAuthoritativeMask));
+        mTicks = (mTicks.Get() & kTicksMask) | ((aAuthoritative << kAuthoritativeOffset) & kAuthoritativeMask);
     }
 
     /**
@@ -150,9 +146,9 @@ private:
     static constexpr uint8_t  kAuthoritativeOffset = 0;
     static constexpr uint16_t kAuthoritativeMask   = 1 << kAuthoritativeOffset;
 
-    uint16_t mSeconds16; // bits 32-47
-    uint32_t mSeconds32; // bits 0-31
-    uint16_t mTicks;
+    BigEndian::Uint16 mSeconds16; // bits 32-47
+    BigEndian::Uint32 mSeconds32; // bits 0-31
+    BigEndian::Uint16 mTicks;
 } OT_TOOL_PACKED_END;
 
 } // namespace MeshCoP

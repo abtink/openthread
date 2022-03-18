@@ -58,8 +58,6 @@ namespace ot {
  */
 namespace Coap {
 
-using ot::BigEndian::HostSwap16;
-
 /**
  * @addtogroup core-coap
  *
@@ -347,7 +345,7 @@ public:
      * @returns The Message ID value.
      *
      */
-    uint16_t GetMessageId(void) const { return HostSwap16(GetHelpData().mHeader.mMessageId); }
+    uint16_t GetMessageId(void) const { return GetHelpData().mHeader.mMessageId; }
 
     /**
      * This method sets the Message ID value.
@@ -355,7 +353,7 @@ public:
      * @param[in]  aMessageId  The Message ID value.
      *
      */
-    void SetMessageId(uint16_t aMessageId) { GetHelpData().mHeader.mMessageId = HostSwap16(aMessageId); }
+    void SetMessageId(uint16_t aMessageId) { GetHelpData().mHeader.mMessageId = aMessageId; }
 
     /**
      * This method returns the Token length.
@@ -934,10 +932,10 @@ private:
     OT_TOOL_PACKED_BEGIN
     struct Header
     {
-        uint8_t  mVersionTypeToken;       ///< The CoAP Version, Type, and Token Length
-        uint8_t  mCode;                   ///< The CoAP Code
-        uint16_t mMessageId;              ///< The CoAP Message ID
-        uint8_t  mToken[kMaxTokenLength]; ///< The CoAP Token
+        uint8_t           mVersionTypeToken;       ///< The CoAP Version, Type, and Token Length
+        uint8_t           mCode;                   ///< The CoAP Code
+        BigEndian::Uint16 mMessageId;              ///< The CoAP Message ID
+        uint8_t           mToken[kMaxTokenLength]; ///< The CoAP Token
     } OT_TOOL_PACKED_END;
 
     /**

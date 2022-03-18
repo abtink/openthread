@@ -210,7 +210,7 @@ void ChannelTlv::SetChannel(uint16_t aChannel)
 #endif
 
     SetChannelPage(channelPage);
-    mChannel = HostSwap16(aChannel);
+    mChannel = aChannel;
 }
 
 bool ChannelMaskBaseTlv::IsValid(void) const

@@ -48,9 +48,6 @@
 namespace ot {
 namespace NetworkData {
 
-using ot::BigEndian::HostSwap16;
-using ot::BigEndian::HostSwap32;
-
 /**
  * @addtogroup core-netdata-tlvs
  *
@@ -436,7 +433,7 @@ public:
      *
      * @returns The RLOC16 value.
      */
-    uint16_t GetRloc(void) const { return HostSwap16(mRloc); }
+    uint16_t GetRloc(void) const { return mRloc; }
 
     /**
      * This method sets the RLOC16 value.
@@ -444,7 +441,7 @@ public:
      * @param[in]  aRloc16  The RLOC16 value.
      *
      */
-    void SetRloc(uint16_t aRloc16) { mRloc = HostSwap16(aRloc16); }
+    void SetRloc(uint16_t aRloc16) { mRloc = aRloc16; }
 
     /**
      * This method returns the Preference value.
@@ -521,8 +518,8 @@ private:
     static constexpr uint8_t kPreferenceMask   = 3 << kPreferenceOffset;
     static constexpr uint8_t kNat64Flag        = 1 << 5;
 
-    uint16_t mRloc;
-    uint8_t  mFlags;
+    BigEndian::Uint16 mRloc;
+    uint8_t           mFlags;
 } OT_TOOL_PACKED_END;
 
 /**
@@ -937,7 +934,7 @@ public:
      *
      * @returns The RLOC16 value.
      */
-    uint16_t GetRloc(void) const { return HostSwap16(mRloc); }
+    uint16_t GetRloc(void) const { return mRloc; }
 
     /**
      * This method sets the RLOC16 value.
@@ -945,7 +942,7 @@ public:
      * @param[in]  aRloc16  The RLOC16 value.
      *
      */
-    void SetRloc(uint16_t aRloc16) { mRloc = HostSwap16(aRloc16); }
+    void SetRloc(uint16_t aRloc16) { mRloc = aRloc16; }
 
     /**
      * This method returns the Flags value.
@@ -953,7 +950,7 @@ public:
      * @returns The Flags value.
      *
      */
-    uint16_t GetFlags(void) const { return HostSwap16(mFlags); }
+    uint16_t GetFlags(void) const { return mFlags; }
 
     /**
      * This method sets the Flags value.
@@ -961,7 +958,7 @@ public:
      * @param[in]  aFlags  The Flags value.
      *
      */
-    void SetFlags(uint16_t aFlags) { mFlags = HostSwap16(aFlags); }
+    void SetFlags(uint16_t aFlags) { mFlags = aFlags; }
 
     /**
      * This method returns the Preference value.
@@ -978,7 +975,7 @@ public:
      * @retval FALSE  If the Preferred flag is not set.
      *
      */
-    bool IsPreferred(void) const { return (HostSwap16(mFlags) & kPreferredFlag) != 0; }
+    bool IsPreferred(void) const { return (mFlags.Get() & kPreferredFlag) != 0; }
 
     /**
      * This method indicates whether or not the SLAAC flag is set.
@@ -987,7 +984,7 @@ public:
      * @retval FALSE  If the SLAAC flag is not set.
      *
      */
-    bool IsSlaac(void) const { return (HostSwap16(mFlags) & kSlaacFlag) != 0; }
+    bool IsSlaac(void) const { return (mFlags.Get() & kSlaacFlag) != 0; }
 
     /**
      * This method indicates whether or not the DHCP flag is set.
@@ -996,7 +993,7 @@ public:
      * @retval FALSE  If the DHCP flag is not set.
      *
      */
-    bool IsDhcp(void) const { return (HostSwap16(mFlags) & kDhcpFlag) != 0; }
+    bool IsDhcp(void) const { return (mFlags.Get() & kDhcpFlag) != 0; }
 
     /**
      * This method indicates whether or not the Configure flag is set.
@@ -1005,7 +1002,7 @@ public:
      * @retval FALSE  If the Configure flag is not set.
      *
      */
-    bool IsConfigure(void) const { return (HostSwap16(mFlags) & kConfigureFlag) != 0; }
+    bool IsConfigure(void) const { return (mFlags.Get() & kConfigureFlag) != 0; }
 
     /**
      * This method indicates whether or not the Default Route flag is set.
@@ -1014,7 +1011,7 @@ public:
      * @retval FALSE  If the Default Route flag is not set.
      *
      */
-    bool IsDefaultRoute(void) const { return (HostSwap16(mFlags) & kDefaultRouteFlag) != 0; }
+    bool IsDefaultRoute(void) const { return (mFlags.Get() & kDefaultRouteFlag) != 0; }
 
     /**
      * This method indicates whether or not the On-Mesh flag is set.
@@ -1023,7 +1020,7 @@ public:
      * @retval FALSE  If the On-Mesh flag is not set.
      *
      */
-    bool IsOnMesh(void) const { return (HostSwap16(mFlags) & kOnMeshFlag) != 0; }
+    bool IsOnMesh(void) const { return (mFlags.Get() & kOnMeshFlag) != 0; }
 
     /**
      * This method indicates whether or not the Nd-Dns flag is set.
@@ -1032,7 +1029,7 @@ public:
      * @retval FALSE  If the Nd-Dns flag is not set.
      *
      */
-    bool IsNdDns(void) const { return (HostSwap16(mFlags) & kNdDnsFlag) != 0; }
+    bool IsNdDns(void) const { return (mFlags.Get() & kNdDnsFlag) != 0; }
 
     /**
      * This method indicates whether or not the Domain Prefix flag is set.
@@ -1041,7 +1038,7 @@ public:
      * @retval FALSE  If the Domain Prefix flag is not set.
      *
      */
-    bool IsDp(void) const { return (HostSwap16(mFlags) & kDpFlag) != 0; }
+    bool IsDp(void) const { return (mFlags.Get() & kDpFlag) != 0; }
 
     /**
      * This method returns a pointer to the next BorderRouterEntry
@@ -1095,8 +1092,8 @@ private:
     static constexpr uint16_t kNdDnsFlag        = 1 << 7;
     static constexpr uint16_t kDpFlag           = 1 << 6;
 
-    uint16_t mRloc;
-    uint16_t mFlags;
+    BigEndian::Uint16 mRloc;
+    BigEndian::Uint16 mFlags;
 } OT_TOOL_PACKED_END;
 
 /**
@@ -1350,8 +1347,7 @@ public:
      */
     uint32_t GetEnterpriseNumber(void) const
     {
-        return IsThreadEnterprise() ? static_cast<uint32_t>(kThreadEnterpriseNumber)
-                                    : HostSwap32(mShared.mEnterpriseNumber);
+        return IsThreadEnterprise() ? static_cast<uint32_t>(kThreadEnterpriseNumber) : mShared.mEnterpriseNumber.Get();
     }
 
     /**
@@ -1459,8 +1455,8 @@ private:
     uint8_t mFlagsServiceId;
     union OT_TOOL_PACKED_FIELD
     {
-        uint32_t mEnterpriseNumber;
-        uint8_t  mServiceDataLengthThreadEnterprise;
+        BigEndian::Uint32 mEnterpriseNumber;
+        uint8_t           mServiceDataLengthThreadEnterprise;
     } mShared;
     uint8_t mServiceDataLength;
 
@@ -1507,7 +1503,7 @@ public:
      * @returns The Server16 value.
      *
      */
-    uint16_t GetServer16(void) const { return HostSwap16(mServer16); }
+    uint16_t GetServer16(void) const { return mServer16; }
 
     /*
      * This method sets the Server16 value.
@@ -1515,7 +1511,7 @@ public:
      * @param[in]  aServer16  The Server16 value.
      *
      */
-    void SetServer16(uint16_t aServer16) { mServer16 = HostSwap16(aServer16); }
+    void SetServer16(uint16_t aServer16) { mServer16 = aServer16; }
 
     /**
      * This method gets the Server Data.
@@ -1563,7 +1559,7 @@ private:
     const uint8_t *GetServerData(void) const { return reinterpret_cast<const uint8_t *>(this) + sizeof(*this); }
     uint8_t *      GetServerData(void) { return AsNonConst(AsConst(this)->GetServerData()); }
 
-    uint16_t mServer16;
+    BigEndian::Uint16 mServer16;
 } OT_TOOL_PACKED_END;
 
 /**

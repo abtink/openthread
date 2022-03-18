@@ -48,6 +48,8 @@
 #include <limits.h>
 #include <stdint.h>
 
+#include <openthread/platform/toolchain.h>
+
 namespace ot {
 
 inline uint16_t Swap16(uint16_t v)
@@ -267,6 +269,26 @@ inline void WriteUint64(uint64_t aValue, uint8_t *aBuffer)
     aBuffer[7] = (aValue >> 0) & 0xff;
 }
 
+template <typename UintType> OT_TOOL_PACKED_BEGIN class Uint
+{
+public:
+    Uint(void) = default;
+    Uint(UintType aValue) { Set(aValue); }
+
+    void     Set(UintType aValue) { mValue = HostSwap<UintType>(aValue); }
+    UintType Get(void) const { return HostSwap<UintType>(mValue); }
+
+         operator UintType(void) const { return Get(); }
+    void operator=(UintType aValue) { Set(aValue); }
+
+private:
+    UintType mValue;
+} OT_TOOL_PACKED_END;
+
+typedef Uint<uint16_t> Uint16;
+typedef Uint<uint32_t> Uint32;
+typedef Uint<uint64_t> Uint64;
+
 } // namespace BigEndian
 
 namespace LittleEndian {
@@ -449,6 +471,26 @@ inline void WriteUint64(uint64_t aValue, uint8_t *aBuffer)
     aBuffer[6] = (aValue >> 48) & 0xff;
     aBuffer[7] = (aValue >> 56) & 0xff;
 }
+
+template <typename UintType> OT_TOOL_PACKED_BEGIN class Uint
+{
+public:
+    Uint(void) = default;
+    Uint(UintType aValue) { Set(aValue); }
+
+    void     Set(UintType aValue) { mValue = HostSwap<UintType>(aValue); }
+    UintType Get(void) const { return HostSwap<UintType>(mValue); }
+
+         operator UintType(void) const { return Get(); }
+    void operator=(UintType aValue) { Set(aValue); }
+
+private:
+    UintType mValue;
+} OT_TOOL_PACKED_BEGIN;
+
+typedef Uint<uint16_t> Uint16;
+typedef Uint<uint32_t> Uint32;
+typedef Uint<uint64_t> Uint64;
 
 } // namespace LittleEndian
 } // namespace ot

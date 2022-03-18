@@ -906,7 +906,7 @@ public:
 
         if (IsSedBufferingIncluded())
         {
-            buffersize = HostSwap16(mSedBufferSize);
+            buffersize = mSedBufferSize;
         }
         return buffersize;
     }
@@ -917,7 +917,7 @@ public:
      * @param[in]  aSedBufferSize  The SED Buffer Size value.
      *
      */
-    void SetSedBufferSize(uint16_t aSedBufferSize) { mSedBufferSize = HostSwap16(aSedBufferSize); }
+    void SetSedBufferSize(uint16_t aSedBufferSize) { mSedBufferSize = aSedBufferSize; }
 
     /**
      * This method returns the SED Datagram Count value.
@@ -948,15 +948,15 @@ private:
     static constexpr uint8_t kParentPriorityOffset = 6;
     static constexpr uint8_t kParentPriorityMask   = 3 << kParentPriorityOffset;
 
-    uint8_t  mParentPriority;
-    uint8_t  mLinkQuality3;
-    uint8_t  mLinkQuality2;
-    uint8_t  mLinkQuality1;
-    uint8_t  mLeaderCost;
-    uint8_t  mIdSequence;
-    uint8_t  mActiveRouters;
-    uint16_t mSedBufferSize;
-    uint8_t  mSedDatagramCount;
+    uint8_t           mParentPriority;
+    uint8_t           mLinkQuality3;
+    uint8_t           mLinkQuality2;
+    uint8_t           mLinkQuality1;
+    uint8_t           mLeaderCost;
+    uint8_t           mIdSequence;
+    uint8_t           mActiveRouters;
+    BigEndian::Uint16 mSedBufferSize;
+    uint8_t           mSedDatagramCount;
 } OT_TOOL_PACKED_END;
 
 /**
@@ -1115,7 +1115,7 @@ public:
      * @returns The Channel value.
      *
      */
-    uint16_t GetChannel(void) const { return HostSwap16(mChannel); }
+    uint16_t GetChannel(void) const { return mChannel; }
 
     /**
      * This method sets the Channel value.
@@ -1123,11 +1123,11 @@ public:
      * @param[in]  aChannel  The Channel value.
      *
      */
-    void SetChannel(uint16_t aChannel) { mChannel = HostSwap16(aChannel); }
+    void SetChannel(uint16_t aChannel) { mChannel = aChannel; }
 
 private:
-    uint8_t  mChannelPage;
-    uint16_t mChannel;
+    uint8_t           mChannelPage;
+    BigEndian::Uint16 mChannel;
 } OT_TOOL_PACKED_END;
 
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE

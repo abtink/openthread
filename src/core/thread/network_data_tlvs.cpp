@@ -104,7 +104,7 @@ void ServiceTlv::Init(uint8_t aServiceId, uint32_t aEnterpriseNumber, const Serv
 
     if (aEnterpriseNumber != kThreadEnterpriseNumber)
     {
-        mShared.mEnterpriseNumber = HostSwap32(aEnterpriseNumber);
+        mShared.mEnterpriseNumber = aEnterpriseNumber;
         mServiceDataLength        = aServiceData.GetLength();
         aServiceData.CopyBytesTo(&mServiceDataLength + sizeof(uint8_t));
     }
