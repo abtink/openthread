@@ -49,7 +49,7 @@
 namespace ot {
 namespace Ip6 {
 
-using ot::Encoding::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap16;
 
 /**
  * @addtogroup core-ip6-icmp6

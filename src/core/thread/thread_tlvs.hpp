@@ -45,8 +45,8 @@
 
 namespace ot {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap32;
 
 // Thread 1.2.0 5.19.13 limits the number of IPv6 addresses should be [1, 15].
 constexpr uint8_t kIp6AddressesNumMin = 1;

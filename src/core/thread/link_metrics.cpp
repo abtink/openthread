@@ -49,7 +49,7 @@ namespace LinkMetrics {
 
 RegisterLogModule("LinkMetrics");
 
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::BigEndian::HostSwap32;
 
 void SeriesInfo::Init(uint8_t aSeriesId, const SeriesFlags &aSeriesFlags, const Metrics &aMetrics)
 {

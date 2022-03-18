@@ -50,8 +50,8 @@ namespace ot {
 namespace NetworkData {
 namespace Service {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap32;
 
 const uint32_t kThreadEnterpriseNumber = ServiceTlv::kThreadEnterpriseNumber; ///< Thread enterprise number.
 

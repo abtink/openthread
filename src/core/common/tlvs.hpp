@@ -45,7 +45,7 @@
 
 namespace ot {
 
-using ot::Encoding::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap16;
 
 class Message;
 

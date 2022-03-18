@@ -52,8 +52,8 @@
 #include "net/ip6.hpp"
 #include "thread/network_data_types.hpp"
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap32;
 
 namespace ot {
 

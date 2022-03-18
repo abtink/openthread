@@ -929,7 +929,7 @@ private:
  */
 template <> inline Error Dataset::SetTlv(Tlv::Type aType, const uint16_t &aValue)
 {
-    uint16_t value = Encoding::BigEndian::HostSwap16(aValue);
+    uint16_t value = BigEndian::HostSwap16(aValue);
 
     return SetTlv(aType, &value, sizeof(uint16_t));
 }
@@ -946,7 +946,7 @@ template <> inline Error Dataset::SetTlv(Tlv::Type aType, const uint16_t &aValue
  */
 template <> inline Error Dataset::SetTlv(Tlv::Type aType, const uint32_t &aValue)
 {
-    uint32_t value = Encoding::BigEndian::HostSwap32(aValue);
+    uint32_t value = BigEndian::HostSwap32(aValue);
 
     return SetTlv(aType, &value, sizeof(uint32_t));
 }

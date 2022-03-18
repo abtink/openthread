@@ -56,10 +56,10 @@
 namespace ot {
 namespace MeshCoP {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
-using ot::Encoding::BigEndian::ReadUint24;
-using ot::Encoding::BigEndian::WriteUint24;
+using ot::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap32;
+using ot::BigEndian::ReadUint24;
+using ot::BigEndian::WriteUint24;
 
 /**
  * This class implements MeshCoP TLV generation and parsing.
@@ -1420,7 +1420,7 @@ public:
      * @returns The Channel Mask value.
      *
      */
-    uint32_t GetMask(void) const { return Encoding::Reverse32(HostSwap32(mMask)); }
+    uint32_t GetMask(void) const { return Reverse32(HostSwap32(mMask)); }
 
     /**
      * This method sets the Channel Mask value.
@@ -1428,7 +1428,7 @@ public:
      * @param[in]  aMask  The Channel Mask value.
      *
      */
-    void SetMask(uint32_t aMask) { mMask = HostSwap32(Encoding::Reverse32(aMask)); }
+    void SetMask(uint32_t aMask) { mMask = HostSwap32(Reverse32(aMask)); }
 
 private:
     uint32_t mMask;

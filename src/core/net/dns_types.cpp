@@ -42,7 +42,7 @@
 namespace ot {
 namespace Dns {
 
-using ot::Encoding::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap16;
 
 Error Header::SetRandomMessageId(void)
 {

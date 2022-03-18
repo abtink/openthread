@@ -35,7 +35,7 @@
 
 #include "test_util.h"
 
-using ot::Encoding::BigEndian::ReadUint16;
+using ot::BigEndian::ReadUint16;
 
 template <typename AddressType> struct TestVector
 {

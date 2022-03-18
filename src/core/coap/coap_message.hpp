@@ -58,7 +58,7 @@ namespace ot {
  */
 namespace Coap {
 
-using ot::Encoding::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap16;
 
 /**
  * @addtogroup core-coap

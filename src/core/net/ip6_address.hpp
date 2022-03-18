@@ -48,7 +48,7 @@
 #include "mac/mac_types.hpp"
 #include "net/ip4_address.hpp"
 
-using ot::Encoding::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap16;
 
 namespace ot {
 namespace Ip6 {

@@ -43,7 +43,7 @@
 namespace ot {
 namespace Utils {
 
-using Encoding::BigEndian::HostSwap32;
+using BigEndian::HostSwap32;
 
 void PingSender::Config::SetUnspecifiedToDefault(void)
 {

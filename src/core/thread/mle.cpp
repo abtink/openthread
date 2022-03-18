@@ -58,7 +58,7 @@
 #include "thread/thread_netif.hpp"
 #include "thread/time_sync_service.hpp"
 
-using ot::Encoding::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap16;
 
 namespace ot {
 namespace Mle {

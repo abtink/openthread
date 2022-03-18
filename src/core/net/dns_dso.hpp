@@ -59,8 +59,8 @@ struct otPlatDsoConnection
 namespace ot {
 namespace Dns {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap32;
 
 extern "C" otPlatDsoConnection *otPlatDsoAccept(otInstance *aInstance, const otSockAddr *aPeerSockAddr);
 

@@ -52,8 +52,8 @@
 namespace ot {
 namespace Ip6 {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::BigEndian::HostSwap16;
+using ot::BigEndian::HostSwap32;
 
 RegisterLogModule("Tcp");
 

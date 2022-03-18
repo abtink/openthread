@@ -308,7 +308,7 @@ void KeyManager::ComputeKeys(uint32_t aKeySequence, HashKeys &aHashKeys)
 
     hmac.Start(cryptoKey);
 
-    Encoding::BigEndian::WriteUint32(aKeySequence, keySequenceBytes);
+    BigEndian::WriteUint32(aKeySequence, keySequenceBytes);
     hmac.Update(keySequenceBytes);
     hmac.Update(kThreadString);
 
@@ -328,7 +328,7 @@ void KeyManager::ComputeTrelKey(uint32_t aKeySequence, Mac::Key &aKey)
     cryptoKey.Set(mNetworkKey.m8, NetworkKey::kSize);
 #endif
 
-    Encoding::BigEndian::WriteUint32(aKeySequence, salt);
+    BigEndian::WriteUint32(aKeySequence, salt);
     memcpy(salt + sizeof(uint32_t), kHkdfExtractSaltString, sizeof(kHkdfExtractSaltString));
 
     hkdf.Extract(salt, sizeof(salt), cryptoKey);

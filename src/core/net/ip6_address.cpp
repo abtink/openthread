@@ -45,7 +45,7 @@
 #include "net/ip4_address.hpp"
 #include "net/netif.hpp"
 
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::BigEndian::HostSwap32;
 
 namespace ot {
 namespace Ip6 {

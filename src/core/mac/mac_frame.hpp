@@ -47,10 +47,10 @@
 namespace ot {
 namespace Mac {
 
-using ot::Encoding::LittleEndian::HostSwap16;
-using ot::Encoding::LittleEndian::HostSwap64;
-using ot::Encoding::LittleEndian::ReadUint24;
-using ot::Encoding::LittleEndian::WriteUint24;
+using ot::LittleEndian::HostSwap16;
+using ot::LittleEndian::HostSwap64;
+using ot::LittleEndian::ReadUint24;
+using ot::LittleEndian::WriteUint24;
 
 /**
  * @addtogroup core-mac

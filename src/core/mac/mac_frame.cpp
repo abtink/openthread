@@ -46,10 +46,10 @@
 namespace ot {
 namespace Mac {
 
-using ot::Encoding::LittleEndian::ReadUint16;
-using ot::Encoding::LittleEndian::ReadUint32;
-using ot::Encoding::LittleEndian::WriteUint16;
-using ot::Encoding::LittleEndian::WriteUint32;
+using ot::LittleEndian::ReadUint16;
+using ot::LittleEndian::ReadUint32;
+using ot::LittleEndian::WriteUint16;
+using ot::LittleEndian::WriteUint32;
 
 void HeaderIe::Init(uint16_t aId, uint8_t aLen)
 {

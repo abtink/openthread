@@ -43,9 +43,9 @@
 #include "thread/network_data_leader.hpp"
 #include "thread/thread_netif.hpp"
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::ReadUint16;
-using ot::Encoding::BigEndian::WriteUint16;
+using ot::BigEndian::HostSwap16;
+using ot::BigEndian::ReadUint16;
+using ot::BigEndian::WriteUint16;
 
 namespace ot {
 namespace Lowpan {
