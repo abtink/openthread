@@ -281,6 +281,7 @@ SOURCES_COMMON                                  = \
     thread/announce_begin_server.cpp              \
     thread/announce_sender.cpp                    \
     thread/anycast_locator.cpp                    \
+    thread/child_supervision.cpp                  \
     thread/child_table.cpp                        \
     thread/csl_tx_scheduler.cpp                   \
     thread/discover_scanner.cpp                   \
@@ -322,7 +323,6 @@ SOURCES_COMMON                                  = \
     thread/uri_paths.cpp                          \
     utils/channel_manager.cpp                     \
     utils/channel_monitor.cpp                     \
-    utils/child_supervision.cpp                   \
     utils/flash.cpp                               \
     utils/heap.cpp                                \
     utils/history_tracker.cpp                     \
@@ -601,6 +601,7 @@ HEADERS_COMMON                                  = \
     thread/announce_sender.hpp                    \
     thread/anycast_locator.hpp                    \
     thread/child_mask.hpp                         \
+    thread/child_supervision.hpp                  \
     thread/child_table.hpp                        \
     thread/csl_tx_scheduler.hpp                   \
     thread/discover_scanner.hpp                   \
@@ -646,7 +647,6 @@ HEADERS_COMMON                                  = \
     thread/version.hpp                            \
     utils/channel_manager.hpp                     \
     utils/channel_monitor.hpp                     \
-    utils/child_supervision.hpp                   \
     utils/flash.hpp                               \
     utils/heap.hpp                                \
     utils/history_tracker.hpp                     \
