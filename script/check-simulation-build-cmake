@@ -58,6 +58,8 @@ build_all_features()
         "-DOT_BACKBONE_ROUTER=ON"
         "-DOT_BORDER_ROUTING=ON"
         "-DOT_CSL_RECEIVER=ON"
+        "-DOT_LINK_METRICS_INITIATOR=ON"
+        "-DOT_LINK_METRICS_SUBJECT"=ON"
         "-DOT_MLR=ON"
         "-DOT_OTNS=ON"
         "-DOT_SIMULATION_VIRTUAL_TIME=ON"
