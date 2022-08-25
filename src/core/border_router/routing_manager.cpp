@@ -361,6 +361,9 @@ void RoutingManager::HandleReceived(const InfraIf::Icmp6Packet &aPacket, const I
     case Ip6::Icmp::Header::kTypeRouterSolicit:
         HandleRouterSolicit(aPacket, aSrcAddress);
         break;
+    case Ip6::Icmp::Header::kTypeNeighborAdvert:
+        HandleNeighborAdvertisement(aPacket, aSrcAddress);
+        break;
     default:
         break;
     }
@@ -1069,6 +1072,20 @@ void RoutingManager::HandleRouterSolicit(const InfraIf::Icmp6Packet &aPacket, co
     StartRoutingPolicyEvaluationJitter(0, kRaReplyJitter);
 }
 
+void RoutingManager::HandleNeighborAdvertisement(const InfraIf::Icmp6Packet &aPacket, const Ip6::Address &aSrcAddress)
+{
+    const Ip6::Nd::NeighborAdvertMessage *naMsg;
+
+    VerifyOrExit(aPacket.GetLength() >= sizeof(naMsg));
+    naMsg = reinterpret_cast<const Ip6::Nd::NeighborAdvertMessage *>(aPacket.GetBytes());
+
+    VerifyOrExit(naMsg->IsValid());
+    mDiscoveredPrefixTable.ProcessNeighborAdvertMessage(*naMsg, aSrcAddress);
+
+exit:
+    return;
+}
+
 void RoutingManager::HandleRouterAdvertisement(const InfraIf::Icmp6Packet &aPacket, const Ip6::Address &aSrcAddress)
 {
     Ip6::Nd::RouterAdvertMessage routerAdvMessage(aPacket);
@@ -1295,7 +1312,8 @@ void RoutingManager::ResetDiscoveredPrefixStaleTimer(void)
 
 RoutingManager::DiscoveredPrefixTable::DiscoveredPrefixTable(Instance &aInstance)
     : InstanceLocator(aInstance)
-    , mTimer(aInstance, HandleTimer)
+    , mEntryTimer(aInstance, HandleEntryTimer)
+    , mRouterTimer(aInstance, HandleRouterTimer)
     , mSignalTask(aInstance)
     , mAllowDefaultRouteInNetData(false)
 {
@@ -1347,6 +1365,8 @@ void RoutingManager::DiscoveredPrefixTable::ProcessRouterAdvertMessage(const Ip6
         }
     }
 
+    UpdateRouterOnRx(*router);
+
     RemoveRoutersWithNoEntries();
 
 exit:
@@ -1383,7 +1403,7 @@ void RoutingManager::DiscoveredPrefixTable::ProcessDefaultRoute(const Ip6::Nd::R
     }
 
     UpdateNetworkDataOnChangeTo(*entry);
-    mTimer.FireAtIfEarlier(entry->GetExpireTime());
+    mEntryTimer.FireAtIfEarlier(entry->GetExpireTime());
     SignalTableChanged();
 
 exit:
@@ -1429,7 +1449,7 @@ void RoutingManager::DiscoveredPrefixTable::ProcessPrefixInfoOption(const Ip6::N
     }
 
     UpdateNetworkDataOnChangeTo(*entry);
-    mTimer.FireAtIfEarlier(entry->GetExpireTime());
+    mEntryTimer.FireAtIfEarlier(entry->GetExpireTime());
     SignalTableChanged();
 
 exit:
@@ -1472,7 +1492,7 @@ void RoutingManager::DiscoveredPrefixTable::ProcessRouteInfoOption(const Ip6::Nd
     }
 
     UpdateNetworkDataOnChangeTo(*entry);
-    mTimer.FireAtIfEarlier(entry->GetExpireTime());
+    mEntryTimer.FireAtIfEarlier(entry->GetExpireTime());
     SignalTableChanged();
 
 exit:
@@ -1616,7 +1636,7 @@ void RoutingManager::DiscoveredPrefixTable::RemoveAllEntries(void)
     }
 
     RemoveRoutersWithNoEntries();
-    mTimer.Stop();
+    mEntryTimer.Stop();
 }
 
 void RoutingManager::DiscoveredPrefixTable::RemoveOrDeprecateOldEntries(TimeMilli aTimeThreshold)
@@ -1763,12 +1783,12 @@ void RoutingManager::DiscoveredPrefixTable::UnpublishEntry(const Entry &aEntry)
     Get<RoutingManager>().UnpublishExternalRoute(aEntry.GetPrefix());
 }
 
-void RoutingManager::DiscoveredPrefixTable::HandleTimer(Timer &aTimer)
+void RoutingManager::DiscoveredPrefixTable::HandleEntryTimer(Timer &aTimer)
 {
-    aTimer.Get<RoutingManager>().mDiscoveredPrefixTable.HandleTimer();
+    aTimer.Get<RoutingManager>().mDiscoveredPrefixTable.HandleEntryTimer();
 }
 
-void RoutingManager::DiscoveredPrefixTable::HandleTimer(void)
+void RoutingManager::DiscoveredPrefixTable::HandleEntryTimer(void)
 {
     RemoveExpiredEntries();
 }
@@ -1822,13 +1842,103 @@ void RoutingManager::DiscoveredPrefixTable::RemoveExpiredEntries(void)
 
     if (nextExpireTime != now.GetDistantFuture())
     {
-        mTimer.FireAt(nextExpireTime);
+        mEntryTimer.FireAt(nextExpireTime);
     }
 }
 
 void RoutingManager::DiscoveredPrefixTable::SignalTableChanged(void)
 {
     mSignalTask.Post();
+}
+
+void RoutingManager::DiscoveredPrefixTable::ProcessNeighborAdvertMessage(
+    const Ip6::Nd::NeighborAdvertMessage &aNaMessage,
+    const Ip6::Address &                  aSrcAddress)
+{
+    Router *router = mRouters.FindMatching(aSrcAddress);
+
+    VerifyOrExit(router != nullptr);
+    VerifyOrExit(aNaMessage.IsRouterFlagSet());
+    UpdateRouterOnRx(*router);
+
+exit:
+    return;
+}
+
+void RoutingManager::DiscoveredPrefixTable::UpdateRouterOnRx(Router &aRouter)
+{
+    aRouter.mState   = Router::kActive;
+    aRouter.mTimeout = TimerMilli::GetNow() + Random::NonCrypto::AddJitter(Router::kActiveTimout, Router::kJitter);
+
+    mRouterTimer.FireAtIfEarlier(aRouter.mTimeout);
+}
+
+void RoutingManager::DiscoveredPrefixTable::HandleRouterTimer(Timer &aTimer)
+{
+    aTimer.Get<RoutingManager>().mDiscoveredPrefixTable.HandleRouterTimer();
+}
+
+void RoutingManager::DiscoveredPrefixTable::HandleRouterTimer(void)
+{
+    TimeMilli now      = TimerMilli::GetNow();
+    TimeMilli nextTime = now.GetDistantFuture();
+
+    for (Router &router : mRouters)
+    {
+        if (router.mState == Router::kStale)
+        {
+            continue;
+        }
+
+        if (router.mTimeout <= now)
+        {
+            if (router.mState == Router::kActive)
+            {
+                router.mState        = Router::kProbing;
+                router.mNsProbeCount = 0;
+            }
+
+            router.mNsProbeCount++;
+
+            if (router.mNsProbeCount > Router::kMaxNsProbes)
+            {
+                router.mState = Router::kStale;
+                Get<RoutingManager>().StartRouterSolicitationDelay();
+                continue;
+            }
+
+            router.mTimeout = now + ((router.mNsProbeCount < Router::kMaxNsProbes) ? Router::kNsProbeRetryInterval
+                                                                                   : Router::kNsProbeTimout);
+
+            SendNeighborSolicitToRouter(router);
+        }
+
+        nextTime = Min(nextTime, router.mTimeout);
+    }
+
+    if (nextTime != now.GetDistantFuture())
+    {
+        mRouterTimer.FireAtIfEarlier(nextTime);
+    }
+}
+
+void RoutingManager::DiscoveredPrefixTable::SendNeighborSolicitToRouter(const Router &aRouter)
+{
+    InfraIf::Icmp6Packet            packet;
+    Ip6::Nd::NeighborSolicitMessage neighborSolicitMsg;
+
+    VerifyOrExit(!Get<RoutingManager>().IsRouterSolicitationInProgress());
+
+    neighborSolicitMsg.SetTargetAddress(aRouter.mAddress);
+    packet.InitFrom(neighborSolicitMsg);
+
+    IgnoreError(Get<RoutingManager>().mInfraIf.Send(packet, aRouter.mAddress));
+
+    LogInfo("Sent Neighbor Solicitation to %s - attempt:%d/%d", aRouter.mAddress.ToString().AsCString(),
+            aRouter.mNsProbeCount, Router::kMaxNsProbes);
+
+exit:
+    return;
 }
 
 void RoutingManager::DiscoveredPrefixTable::InitIterator(PrefixTableIterator &aIterator) const

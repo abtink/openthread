@@ -729,7 +729,7 @@ public:
      * @param[in] aTargetAddress  The Target Address.
      *
      */
-    void SetTarget(const Address &aTargetAddress) { mTargetAddress = aTargetAddress; }
+    void SetTargetAddress(const Address &aTargetAddress) { mTargetAddress = aTargetAddress; }
 
 private:
     // Neighbor Solicitation Message (RFC 4861)
@@ -787,7 +787,7 @@ public:
      * @retval FALSE  The Router Flag is not set.
      *
      */
-    bool IsRouterFlagSet(void) { return (mFlags & kRouterFlag) != 0; }
+    bool IsRouterFlagSet(void) const { return (mFlags & kRouterFlag) != 0; }
 
     /**
      * This method sets the Router Flag in the NA message.
@@ -802,7 +802,7 @@ public:
      * @retval FALSE  The Solicited Flag is not set.
      *
      */
-    bool IsSolicitedFlagSet(void) { return (mFlags & kSolicitedFlag) != 0; }
+    bool IsSolicitedFlagSet(void) const { return (mFlags & kSolicitedFlag) != 0; }
 
     /**
      * This method sets the Solicited Flag in the NA message.
@@ -817,7 +817,7 @@ public:
      * @retval FALSE  The Override Flag is not set.
      *
      */
-    bool IsOverrideFlagSet(void) { return (mFlags & kOverrideFlag) != 0; }
+    bool IsOverrideFlagSet(void) const { return (mFlags & kOverrideFlag) != 0; }
 
     /**
      * This method sets the Override Flag in the NA message.
@@ -839,7 +839,7 @@ public:
      * @param[in] aTargetAddress  The Target Address.
      *
      */
-    void SetTarget(const Address &aTargetAddress) { mTargetAddress = aTargetAddress; }
+    void SetTargetAddress(const Address &aTargetAddress) { mTargetAddress = aTargetAddress; }
 
 private:
     // Neighbor Advertisement Message (RFC 4861)

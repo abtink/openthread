@@ -382,6 +382,8 @@ private:
 
         void ProcessRouterAdvertMessage(const Ip6::Nd::RouterAdvertMessage &aRaMessage,
                                         const Ip6::Address &                aSrcAddress);
+        void ProcessNeighborAdvertMessage(const Ip6::Nd::NeighborAdvertMessage &aNaMessage,
+                                          const Ip6::Address &                  aSrcAddress);
 
         void SetAllowDefaultRouteInNetData(bool aAllow);
 
@@ -479,6 +481,22 @@ private:
 
         struct Router
         {
+            // The timeout (in msec) for router staying in `kActve` state
+            // before starting the Neighbor Solicitation (NS) probes.
+            static constexpr uint32_t kActiveTimout = OPENTHREAD_CONFIG_BORDER_ROUTING_ROUTER_ACTIVE_CHECK_TIMEOUT;
+
+            static constexpr uint8_t  kMaxNsProbes          = 3;    // Max number of NS probe attempts.
+            static constexpr uint32_t kNsProbeRetryInterval = 1000; // In msec. Time between NS probe attempts.
+            static constexpr uint32_t kNsProbeTimout        = 2000; // In msec. Max Wait time after last NS probe.
+            static constexpr uint32_t kJitter               = 2000; // In msec. Jitter to randomize probe starts.
+
+            enum State : uint8_t
+            {
+                kActive,  // Router is active (we heard from it recently).
+                kProbing, // Probing the router (sending Neighbor Solicitation to it to check if it is still active).
+                kStale,   // Probe failed (no response from router after multiple attempts).
+            };
+
             enum EmptyChecker : uint8_t
             {
                 kContainsNoEntries
@@ -489,6 +507,9 @@ private:
 
             Ip6::Address      mAddress;
             LinkedList<Entry> mEntries;
+            TimeMilli         mTimeout;
+            State             mState;
+            uint8_t           mNsProbeCount;
         };
 
         class Iterator : public PrefixTableIterator
@@ -515,16 +536,21 @@ private:
         Entry *     FindFavoredEntryToPublish(const Ip6::Prefix &aPrefix);
         void        PublishEntry(const Entry &aEntry);
         void        UnpublishEntry(const Entry &aEntry);
-        static void HandleTimer(Timer &aTimer);
-        void        HandleTimer(void);
+        static void HandleEntryTimer(Timer &aTimer);
+        void        HandleEntryTimer(void);
         void        RemoveExpiredEntries(void);
         void        SignalTableChanged(void);
+        void        UpdateRouterOnRx(Router &aRouter);
+        void        SendNeighborSolicitToRouter(const Router &aRouter);
+        static void HandleRouterTimer(Timer &aTimer);
+        void        HandleRouterTimer(void);
 
         using SignalTask = TaskletIn<RoutingManager, &RoutingManager::HandleDiscoveredPrefixTableChanged>;
 
         Array<Router, kMaxRouters> mRouters;
         Pool<Entry, kMaxEntries>   mEntryPool;
-        TimerMilli                 mTimer;
+        TimerMilli                 mEntryTimer;
+        TimerMilli                 mRouterTimer;
         SignalTask                 mSignalTask;
         bool                       mAllowDefaultRouteInNetData;
     };
@@ -670,8 +696,9 @@ private:
 #endif
 
     void DeprecateOnLinkPrefix(void);
-    void HandleRouterSolicit(const InfraIf::Icmp6Packet &aPacket, const Ip6::Address &aSrcAddress);
     void HandleRouterAdvertisement(const InfraIf::Icmp6Packet &aPacket, const Ip6::Address &aSrcAddress);
+    void HandleRouterSolicit(const InfraIf::Icmp6Packet &aPacket, const Ip6::Address &aSrcAddress);
+    void HandleNeighborAdvertisement(const InfraIf::Icmp6Packet &aPacket, const Ip6::Address &aSrcAddress);
     bool ShouldProcessPrefixInfoOption(const Ip6::Nd::PrefixInfoOption &aPio, const Ip6::Prefix &aPrefix);
     bool ShouldProcessRouteInfoOption(const Ip6::Nd::RouteInfoOption &aRio, const Ip6::Prefix &aPrefix);
     void UpdateDiscoveredPrefixTableOnNetDataChange(void);

@@ -77,6 +77,24 @@
 #endif
 
 /**
+ * @def OPENTHREAD_CONFIG_BORDER_ROUTING_ROUTER_ACTIVE_CHECK_TIMEOUT
+ *
+ * Specifies the timeout in msec for a discovered router on infra link side.
+ *
+ * This parameter is related to mechanism to check that a discovered router is still active.
+ *
+ * After this timeout elapses since the last received message (a Router or Neighbor Advertisement) from the router,
+ * routing manager will start sending Neighbor Solidification (NS) probes to the router to check that it is still
+ * active.
+ *
+ * This parameter can be considered to large value to practically disable this behavior.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_BORDER_ROUTING_ROUTER_ACTIVE_CHECK_TIMEOUT
+#define OPENTHREAD_CONFIG_BORDER_ROUTING_ROUTER_ACTIVE_CHECK_TIMEOUT (120 * 1000) // (in msec).
+#endif
+
+/**
  * @def OPENTHREAD_CONFIG_BORDER_ROUTING_NAT64_ENABLE
  *
  * Define to 1 to enable Border Routing NAT64 support.
