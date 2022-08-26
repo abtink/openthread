@@ -76,6 +76,8 @@ jobs:
         ./configure
         sudo make -j2
         sudo make install
+
+        sudo apt install python2
     - name: Build & Run
       run: |
         top_builddir=$(pwd)/build/toranj ./tests/toranj/start.sh
