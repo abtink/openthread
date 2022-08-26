@@ -386,6 +386,7 @@ class Node(object):
             _log('$ Node{}.wpanctl(\'{}\')'.format(self._index, cmd), new_line=False)
 
         result = subprocess.check_output(self._wpanctl_cmd + cmd, shell=True, stderr=subprocess.STDOUT)
+        result = result.decode('utf-8')
 
         if len(result) >= 1 and result[-1] == '\n':  # remove the last char if it is '\n',
             result = result[:-1]
@@ -607,6 +608,7 @@ class Node(object):
             _log('$ Node{} \'{}\')'.format(self._index, cmd))
 
         result = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        result = result.decode('utf-8')
         return result
 
     def remove_ip6_address_on_interface(self, address, prefix_len=64):
@@ -621,6 +623,7 @@ class Node(object):
             _log('$ Node{} \'{}\')'.format(self._index, cmd))
 
         result = subprocess.check_output(cmd, shell=True, stderr=subprocess.STDOUT)
+        result = result.decode('utf-8')
         return result
 
     # ------------------------------------------------------------------------------------------------------------------
@@ -791,7 +794,7 @@ class AsyncSender(asyncore.dispatcher):
 
         # Create a socket, bind it to the node's interface
         sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, _SO_BINDTODEVICE, node.interface_name + '\0')
+        sock.setsockopt(socket.SOL_SOCKET, _SO_BINDTODEVICE, (node.interface_name + '\0').encode())
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 
         # Set the IPV6_MULTICAST_HOPS
@@ -853,7 +856,7 @@ class AsyncSender(asyncore.dispatcher):
         return True
 
     def handle_write(self):
-        sent_len = self.sendto(self._tx_buffer, self._dst_sock_addr)
+        sent_len = self.send(self._tx_buffer.encode())
 
         if self._node._verbose:
             if sent_len < 30:
@@ -914,7 +917,7 @@ class AsyncReceiver(asyncore.dispatcher):
 
         # Create a socket, bind it to the node's interface
         sock = socket.socket(socket.AF_INET6, socket.SOCK_DGRAM)
-        sock.setsockopt(socket.SOL_SOCKET, _SO_BINDTODEVICE, node.interface_name + '\0')
+        sock.setsockopt(socket.SOL_SOCKET, _SO_BINDTODEVICE, (node.interface_name + '\0').encode())
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
 
         # Bind the socket to any IPv6 address with the given local port
