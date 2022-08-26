@@ -125,6 +125,10 @@ fi
 
 cleanup
 
+echo "ABTIN ------------------------"
+python --version
+python3 --version
+
 if [ "$TORANJ_CLI" = 1 ]; then
     run cli/test-001-get-set.py
     run cli/test-002-form.py
