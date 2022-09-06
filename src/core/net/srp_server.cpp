@@ -54,6 +54,11 @@ RegisterLogModule("SrpServer");
 static const char kDefaultDomain[]       = "default.service.arpa.";
 static const char kServiceSubTypeLabel[] = "._sub.";
 
+static const char *STR(const char *aString)
+{
+    return aString == nullptr ? "(null)" : aString;
+}
+
 static Dns::UpdateHeader::Response ErrorToDnsResponseCode(Error aError)
 {
     Dns::UpdateHeader::Response responseCode;
@@ -693,6 +698,8 @@ void Server::ProcessDnsUpdate(Message &aMessage, MessageMetadata &aMetadata)
     Error error = kErrorNone;
     Host *host  = nullptr;
 
+    LogWarn("SRPSRV ProcessDnsUpdate()");
+
     LogInfo("Received DNS update from %s", aMetadata.IsDirectRxFromClient()
                                                ? aMetadata.mMessageInfo->GetPeerAddr().ToString().AsCString()
                                                : "an SRPL Partner");
@@ -747,6 +754,9 @@ Error Server::ProcessZoneSection(const Message &aMessage, MessageMetadata &aMeta
     VerifyOrExit(aMetadata.mDnsHeader.GetZoneRecordCount() == 1, error = kErrorParse);
 
     SuccessOrExit(error = Dns::Name::ReadName(aMessage, offset, name, sizeof(name)));
+
+    LogWarn("SRPSRV ProcessZoneSection() name = '%s'", name);
+
     // TODO: return `Dns::kResponseNotAuth` for not authorized zone names.
     VerifyOrExit(StringMatch(name, GetDomain(), kStringCaseInsensitiveMatch), error = kErrorSecurity);
     SuccessOrExit(error = aMessage.Read(offset, aMetadata.mDnsZone));
@@ -801,6 +811,8 @@ Error Server::ProcessHostDescriptionInstruction(Host &                 aHost,
     Error    error;
     uint16_t offset = aMetadata.mOffset;
 
+    LogWarn("SRPSRV - ProcessHostDescriptionInstruction()");
+
     OT_ASSERT(aHost.GetFullName() == nullptr);
 
     for (uint16_t numRecords = aMetadata.mDnsHeader.GetUpdateRecordCount(); numRecords > 0; numRecords--)
@@ -809,6 +821,8 @@ Error Server::ProcessHostDescriptionInstruction(Host &                 aHost,
         Dns::ResourceRecord record;
 
         SuccessOrExit(error = Dns::Name::ReadName(aMessage, offset, name, sizeof(name)));
+
+        LogWarn("SRPSRV - RR Name='%s'", name);
 
         SuccessOrExit(error = aMessage.Read(offset, record));
 
@@ -825,6 +839,12 @@ Error Server::ProcessHostDescriptionInstruction(Host &                 aHost,
                 // will return `kErrorFailed`.
                 SuccessOrExit(error = aHost.SetFullName(name));
                 aHost.ClearResources();
+                LogWarn("SRPSRV - Setting it as host name");
+                LogWarn("SRPSRV - aHost.GetFullName() = '%s'", STR(aHost.GetFullName()));
+            }
+            else
+            {
+                LogWarn("SRPSRV - It is an existing service instance name");
             }
         }
         else if (record.GetType() == Dns::ResourceRecord::kTypeAaaa)
@@ -887,6 +907,8 @@ Error Server::ProcessServiceDiscoveryInstructions(Host &                 aHost,
     Error    error  = kErrorNone;
     uint16_t offset = aMetadata.mOffset;
 
+    LogWarn("SRPSRV ProcessServiceDiscoveryInstructions()");
+
     for (uint16_t numRecords = aMetadata.mDnsHeader.GetUpdateRecordCount(); numRecords > 0; numRecords--)
     {
         char           serviceName[Dns::Name::kMaxNameSize];
@@ -897,6 +919,9 @@ Error Server::ProcessServiceDiscoveryInstructions(Host &                 aHost,
         bool           isSubType;
 
         SuccessOrExit(error = Dns::Name::ReadName(aMessage, offset, serviceName, sizeof(serviceName)));
+
+        LogWarn("SRPSRV - RR Name='%s'", serviceName);
+
         VerifyOrExit(Dns::Name::IsSubDomainOf(serviceName, GetDomain()), error = kErrorSecurity);
 
         error = Dns::ResourceRecord::ReadRecord(aMessage, offset, ptrRecord);
@@ -906,12 +931,16 @@ Error Server::ProcessServiceDiscoveryInstructions(Host &                 aHost,
             // `ReadRecord()` updates `aOffset` to skip over a
             // non-matching record.
             error = kErrorNone;
+            LogWarn("SRPSRV - not PTR");
             continue;
         }
 
         SuccessOrExit(error);
 
         SuccessOrExit(error = Dns::Name::ReadName(aMessage, offset, instanceName, sizeof(instanceName)));
+
+        LogWarn("SRPSRV - read serviceName='%s'", serviceName);
+        LogWarn("SRPSRV - read instanceName='%s'", instanceName);
 
         VerifyOrExit(ptrRecord.GetClass() == Dns::ResourceRecord::kClassNone ||
                          ptrRecord.GetClass() == aMetadata.mDnsZone.GetClass(),
@@ -922,6 +951,8 @@ Error Server::ProcessServiceDiscoveryInstructions(Host &                 aHost,
 
         subServiceName = StringFind(serviceName, kServiceSubTypeLabel, kStringCaseInsensitiveMatch);
         isSubType      = (subServiceName != nullptr);
+
+        LogWarn("SRPSRV - isSubType=%d", isSubType);
 
         if (isSubType)
         {
@@ -962,8 +993,12 @@ Error Server::ProcessServiceDescriptionInstructions(Host &           aHost,
                                                     const Message &  aMessage,
                                                     MessageMetadata &aMetadata) const
 {
+    uint16_t counter = 0;
+
     Error    error  = kErrorNone;
     uint16_t offset = aMetadata.mOffset;
+
+    LogWarn("SRPSRV - ProcessServiceDescriptionInstructions");
 
     for (uint16_t numRecords = aMetadata.mDnsHeader.GetUpdateRecordCount(); numRecords > 0; numRecords--)
     {
@@ -972,12 +1007,18 @@ Error Server::ProcessServiceDescriptionInstructions(Host &           aHost,
         Dns::ResourceRecord             record;
 
         SuccessOrExit(error = Dns::Name::ReadName(aMessage, offset, name, sizeof(name)));
+        LogWarn("SRPSRV - read name='%s", name);
+
         SuccessOrExit(error = aMessage.Read(offset, record));
+
+        LogWarn("SRPSRV - RR type %d, class %d", record.GetType(), record.GetClass());
 
         if (record.GetClass() == Dns::ResourceRecord::kClassAny)
         {
             // Delete All RRsets from a name.
             VerifyOrExit(IsValidDeleteAllRecord(record), error = kErrorFailed);
+
+            LogWarn("SRPSRV - Is Delete All RRsets");
 
             desc = aHost.FindServiceDescription(name);
 
@@ -985,6 +1026,8 @@ Error Server::ProcessServiceDescriptionInstructions(Host &           aHost,
             {
                 desc->ClearResources();
                 desc->mUpdateTime = aMetadata.mRxTime;
+
+                LogWarn("SRPSRV - Found matching desc, desc->GetInstanceName() = '%s'", STR(desc->GetInstanceName()));
             }
 
             offset += record.GetSize();
@@ -997,6 +1040,8 @@ Error Server::ProcessServiceDescriptionInstructions(Host &           aHost,
             char           hostName[Dns::Name::kMaxNameSize];
             uint16_t       hostNameLength = sizeof(hostName);
 
+            LogWarn("SRPSRV - Is SRV RR");
+
             VerifyOrExit(record.GetClass() == aMetadata.mDnsZone.GetClass(), error = kErrorFailed);
 
             SuccessOrExit(error = aHost.ProcessTtl(record.GetTtl()));
@@ -1008,6 +1053,8 @@ Error Server::ProcessServiceDescriptionInstructions(Host &           aHost,
             VerifyOrExit(Dns::Name::IsSubDomainOf(name, GetDomain()), error = kErrorSecurity);
             VerifyOrExit(aHost.Matches(hostName), error = kErrorFailed);
 
+            LogWarn("SRPSRV - Host name is '%s'", hostName);
+
             desc = aHost.FindServiceDescription(name);
             VerifyOrExit(desc != nullptr, error = kErrorFailed);
 
@@ -1018,15 +1065,21 @@ Error Server::ProcessServiceDescriptionInstructions(Host &           aHost,
             desc->mWeight     = srvRecord.GetWeight();
             desc->mPort       = srvRecord.GetPort();
             desc->mUpdateTime = aMetadata.mRxTime;
+
+            LogWarn("SRPSRV - Found matching desc, desc->GetInstanceName() = '%s'", STR(desc->GetInstanceName()));
         }
         else if (record.GetType() == Dns::ResourceRecord::kTypeTxt)
         {
+            LogWarn("SRPSRV - Is TXT RR");
+
             VerifyOrExit(record.GetClass() == aMetadata.mDnsZone.GetClass(), error = kErrorFailed);
 
             SuccessOrExit(error = aHost.ProcessTtl(record.GetTtl()));
 
             desc = aHost.FindServiceDescription(name);
             VerifyOrExit(desc != nullptr, error = kErrorFailed);
+
+            LogWarn("SRPSRV - Found matching desc, desc->GetInstanceName() = '%s'", STR(desc->GetInstanceName()));
 
             offset += sizeof(record);
             SuccessOrExit(error = desc->SetTxtDataFromMessage(aMessage, offset, record.GetLength()));
@@ -1042,6 +1095,8 @@ Error Server::ProcessServiceDescriptionInstructions(Host &           aHost,
     // that `mUpdateTime` on a new `Service::Description` is set to
     // `GetNow().GetDistantPast()`.
 
+    LogWarn("SRPSRV - iterate over all services");
+
     for (Service &service : aHost.mServices)
     {
         VerifyOrExit(service.mDescription->mUpdateTime == aMetadata.mRxTime, error = kErrorFailed);
@@ -1052,7 +1107,12 @@ Error Server::ProcessServiceDescriptionInstructions(Host &           aHost,
 
         VerifyOrExit((service.mDescription->mPort == 0) == service.mDescription->mTxtData.IsNull(),
                      error = kErrorFailed);
+
+        LogWarn("SRPSRV - service %d, srv-name:'%s', ins-name:'%s'", counter++, STR(service.GetServiceName()),
+                STR(service.GetInstanceName()));
     }
+
+    LogWarn("SRPSRV - iterate over all services done!");
 
     aMetadata.mOffset = offset;
 
@@ -1205,6 +1265,8 @@ Error Server::ValidateServiceSubTypes(Host &aHost, const MessageMetadata &aMetad
     Error error = kErrorNone;
     Host *existingHost;
 
+    LogWarn("SRPSRV = ValidateServiceSubTypes()");
+
     // Verify that there is a matching base type service for all
     // sub-type services in `aHost` (which is from the received
     // and parsed SRP Update message).
@@ -1240,6 +1302,8 @@ Error Server::ValidateServiceSubTypes(Host &aHost, const MessageMetadata &aMetad
     existingHost = mHosts.FindMatching(aHost.GetFullName());
     VerifyOrExit(existingHost != nullptr);
 
+    LogWarn("SRPSRV - found existing host for same name");
+
     for (const Service &baseService : existingHost->GetServices())
     {
         if (baseService.IsSubType() || (aHost.FindBaseService(baseService.GetInstanceName()) == nullptr))
@@ -1266,6 +1330,8 @@ void Server::HandleUpdate(Host &aHost, const MessageMetadata &aMetadata)
 {
     Error error = kErrorNone;
     Host *existingHost;
+
+    LogWarn("SRPSRV - HandleUpdate(), aHost.GetLease() = %d", aHost.GetLease());
 
     // Check whether the SRP update wants to remove `aHost`.
 
@@ -1296,6 +1362,47 @@ exit:
 
 void Server::InformUpdateHandlerOrCommit(Error aError, Host &aHost, const MessageMetadata &aMetadata)
 {
+    if (aError == kErrorNone)
+    {
+        uint8_t             numAddrs;
+        const Ip6::Address *addrs;
+
+        LogWarn("Processed DNS update info");
+        LogWarn("    Host:%s", STR(aHost.GetFullName()));
+        LogWarn("    Lease:%u, key-lease:%u, ttl:%u", aHost.GetLease(), aHost.GetKeyLease(), aHost.GetTtl());
+
+        addrs = aHost.GetAddresses(numAddrs);
+
+        if (numAddrs == 0)
+        {
+            LogWarn("    No host address");
+        }
+        else
+        {
+            LogWarn("    %d host address(es):", numAddrs);
+
+            for (; numAddrs > 0; addrs++, numAddrs--)
+            {
+                LogWarn("      %s", addrs->ToString().AsCString());
+            }
+        }
+
+        for (const Service &service : aHost.GetServices())
+        {
+            char subLabel[Dns::Name::kMaxLabelSize];
+
+            IgnoreError(service.GetServiceSubTypeLabel(subLabel, sizeof(subLabel)));
+
+            LogWarn("    %s service '%s'%s%s", service.IsDeleted() ? "Deleting" : "Adding",
+                    STR(service.GetInstanceName()), service.IsSubType() ? " subtype:" : "", subLabel);
+        }
+    }
+    else
+    {
+        LogWarn("Error %s processing received DNS update", ErrorToString(aError));
+    }
+
+
     if ((aError == kErrorNone) && (mServiceUpdateHandler != nullptr))
     {
         UpdateMetadata *update = UpdateMetadata::Allocate(GetInstance(), aHost, aMetadata);
@@ -1966,14 +2073,22 @@ Server::Service *Server::Host::AddNewService(const char *aServiceName,
     Service *                       service = nullptr;
     RetainPtr<Service::Description> desc(FindServiceDescription(aInstanceName));
 
+    LogWarn("SRPSRV - AddNewService(%s, %s)", STR(aServiceName), STR(aInstanceName));
+
     if (desc == nullptr)
     {
+        LogWarn("SRPSRV - No existing matching Description");
+
         desc.Reset(Service::Description::AllocateAndInit(aInstanceName, *this));
         VerifyOrExit(desc != nullptr);
     }
 
+    LogWarn("SRPSRV - Desc->GetInstanceName()= '%s'", STR(desc->GetInstanceName()));
+
     service = Service::AllocateAndInit(aServiceName, *desc, aIsSubType, aUpdateTime);
     VerifyOrExit(service != nullptr);
+
+    LogWarn("SRPSRV - service->GetInstanceName()= '%s'", STR(service->GetInstanceName()));
 
     mServices.Push(*service);
 
