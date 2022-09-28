@@ -141,6 +141,7 @@ public:
         : Coap::Coap(aInstance)
     {
         SetInterceptor(&Filter, this);
+        SetResourceHandler(&HandleResource);
     }
 
     /**
@@ -172,7 +173,20 @@ public:
     bool IsTmfMessage(const Ip6::Address &aSourceAddress, const Ip6::Address &aDestAddress, uint16_t aDestPort) const;
 
 private:
+    struct Resource
+    {
+        const char *mUriPath;
+        void (*mHandler)(Instance &aInstance, Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    };
+
+    static const Resource kResources[];
+
     static Error Filter(const Message &aMessage, const Ip6::MessageInfo &aMessageInfo, void *aContext);
+    static bool  HandleResource(CoapBase &              aCoapBase,
+                                const char *            aUriPath,
+                                Message &               aMessage,
+                                const Ip6::MessageInfo &aMessageInfo);
+    bool         HandleResource(const char *aUriPath, Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 };
 
 } // namespace Tmf

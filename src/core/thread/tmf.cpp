@@ -33,7 +33,9 @@
 
 #include "thread/tmf.hpp"
 
+#include "common/instance.hpp"
 #include "common/locator_getters.hpp"
+#include "thread/uri_paths.hpp"
 
 namespace ot {
 namespace Tmf {
@@ -80,9 +82,46 @@ void MessageInfo::SetSockAddrToRlocPeerAddrTo(const Ip6::Address &aPeerAddress)
 //----------------------------------------------------------------------------------------------------------------------
 // Agent
 
+constexpr Agent::Resource Agent::kResources[] = {
+    {UriPath::kAddressError, AddressResolver::HandleAddressError},
+#if OPENTHREAD_FTD
+    {UriPath::kAddressQuery, AddressResolver::HandleAddressQuery},
+    {UriPath::kAddressNotify, AddressResolver::HandleAddressNotification},
+#endif
+    {UriPath::kEnergyScan, EnergyScanServer::HandleRequest},
+#if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
+    {UriPath::kEnergyReport, EnergyScanClient::HandleReport},
+#endif
+};
+
 Error Agent::Start(void)
 {
     return Coap::Start(kUdpPort, OT_NETIF_THREAD);
+}
+
+bool Agent::HandleResource(CoapBase &              aCoapBase,
+                           const char *            aUriPath,
+                           Message &               aMessage,
+                           const Ip6::MessageInfo &aMessageInfo)
+{
+    return static_cast<Agent &>(aCoapBase).HandleResource(aUriPath, aMessage, aMessageInfo);
+}
+
+bool Agent::HandleResource(const char *aUriPath, Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+{
+    bool didHandle = false;
+
+    for (const Resource &resource : kResources)
+    {
+        if (strcmp(resource.mUriPath, aUriPath) == 0)
+        {
+            resource.mHandler(GetInstance(), aMessage, aMessageInfo);
+            didHandle = true;
+            break;
+        }
+    }
+
+    return didHandle;
 }
 
 Error Agent::Filter(const Message &aMessage, const Ip6::MessageInfo &aMessageInfo, void *aContext)

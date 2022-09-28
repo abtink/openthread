@@ -56,9 +56,7 @@ EnergyScanClient::EnergyScanClient(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mCallback(nullptr)
     , mContext(nullptr)
-    , mEnergyScan(UriPath::kEnergyReport, &EnergyScanClient::HandleReport, this)
 {
-    Get<Tmf::Agent>().AddResource(mEnergyScan);
 }
 
 Error EnergyScanClient::SendQuery(uint32_t                           aChannelMask,
@@ -104,9 +102,9 @@ exit:
     return error;
 }
 
-void EnergyScanClient::HandleReport(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
+void EnergyScanClient::HandleReport(Instance &aInstance, Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
-    static_cast<EnergyScanClient *>(aContext)->HandleReport(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
+    aInstance.Get<MeshCoP::Commissioner>().GetEnergyScanClient().HandleReport(aMessage, aMessageInfo);
 }
 
 void EnergyScanClient::HandleReport(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)

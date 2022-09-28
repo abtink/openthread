@@ -54,19 +54,12 @@ RegisterLogModule("AddrResolver");
 
 AddressResolver::AddressResolver(Instance &aInstance)
     : InstanceLocator(aInstance)
-    , mAddressError(UriPath::kAddressError, &AddressResolver::HandleAddressError, this)
 #if OPENTHREAD_FTD
-    , mAddressQuery(UriPath::kAddressQuery, &AddressResolver::HandleAddressQuery, this)
-    , mAddressNotification(UriPath::kAddressNotify, &AddressResolver::HandleAddressNotification, this)
     , mCacheEntryPool(aInstance)
     , mIcmpHandler(&AddressResolver::HandleIcmpReceive, this)
 #endif
 {
-    Get<Tmf::Agent>().AddResource(mAddressError);
 #if OPENTHREAD_FTD
-    Get<Tmf::Agent>().AddResource(mAddressQuery);
-    Get<Tmf::Agent>().AddResource(mAddressNotification);
-
     IgnoreError(Get<Ip6::Icmp>().RegisterHandler(mIcmpHandler));
 #endif
 }
@@ -591,10 +584,11 @@ exit:
     return error;
 }
 
-void AddressResolver::HandleAddressNotification(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
+void AddressResolver::HandleAddressNotification(Instance &              aInstance,
+                                                Coap::Message &         aMessage,
+                                                const Ip6::MessageInfo &aMessageInfo)
 {
-    static_cast<AddressResolver *>(aContext)->HandleAddressNotification(AsCoapMessage(aMessage),
-                                                                        AsCoreType(aMessageInfo));
+    aInstance.Get<AddressResolver>().HandleAddressNotification(aMessage, aMessageInfo);
 }
 
 void AddressResolver::HandleAddressNotification(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
@@ -706,9 +700,11 @@ exit:
 
 #endif // OPENTHREAD_FTD
 
-void AddressResolver::HandleAddressError(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
+void AddressResolver::HandleAddressError(Instance &              aInstance,
+                                         Coap::Message &         aMessage,
+                                         const Ip6::MessageInfo &aMessageInfo)
 {
-    static_cast<AddressResolver *>(aContext)->HandleAddressError(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
+    aInstance.Get<AddressResolver>().HandleAddressError(aMessage, aMessageInfo);
 }
 
 void AddressResolver::HandleAddressError(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
@@ -792,9 +788,11 @@ exit:
 
 #if OPENTHREAD_FTD
 
-void AddressResolver::HandleAddressQuery(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
+void AddressResolver::HandleAddressQuery(Instance &              aInstance,
+                                         Coap::Message &         aMessage,
+                                         const Ip6::MessageInfo &aMessageInfo)
 {
-    static_cast<AddressResolver *>(aContext)->HandleAddressQuery(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
+    aInstance.Get<AddressResolver>().HandleAddressQuery(aMessage, aMessageInfo);
 }
 
 void AddressResolver::HandleAddressQuery(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)

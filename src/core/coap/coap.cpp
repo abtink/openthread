@@ -59,6 +59,7 @@ CoapBase::CoapBase(Instance &aInstance, Sender aSender)
     , mResponsesQueue(aInstance)
     , mDefaultHandler(nullptr)
     , mDefaultHandlerContext(nullptr)
+    , mResourceHandler(nullptr)
     , mSender(aSender)
 #if OPENTHREAD_CONFIG_COAP_BLOCKWISE_TRANSFER_ENABLE
     , mLastResponse(nullptr)
@@ -1432,6 +1433,12 @@ void CoapBase::ProcessReceivedRequest(Message &aMessage, const Ip6::MessageInfo 
 #else
     SuccessOrExit(error = aMessage.ReadUriPathOptions(uriPath));
 #endif // OPENTHREAD_CONFIG_COAP_BLOCKWISE_TRANSFER_ENABLE
+
+    if ((mResourceHandler != nullptr) && mResourceHandler(*this, uriPath, aMessage, aMessageInfo))
+    {
+        error = kErrorNone;
+        ExitNow();
+    }
 
     for (const Resource &resource : mResources)
     {

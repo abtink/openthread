@@ -59,14 +59,12 @@ EnergyScanServer::EnergyScanServer(Instance &aInstance)
     , mActive(false)
     , mScanResultsLength(0)
     , mTimer(aInstance, EnergyScanServer::HandleTimer)
-    , mEnergyScan(UriPath::kEnergyScan, &EnergyScanServer::HandleRequest, this)
 {
-    Get<Tmf::Agent>().AddResource(mEnergyScan);
 }
 
-void EnergyScanServer::HandleRequest(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
+void EnergyScanServer::HandleRequest(Instance &aInstance, Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
-    static_cast<EnergyScanServer *>(aContext)->HandleRequest(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
+    aInstance.Get<EnergyScanServer>().HandleRequest(aMessage, aMessageInfo);
 }
 
 void EnergyScanServer::HandleRequest(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)

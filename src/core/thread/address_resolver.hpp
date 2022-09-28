@@ -47,6 +47,7 @@
 #include "net/icmp6.hpp"
 #include "net/udp6.hpp"
 #include "thread/thread_tlvs.hpp"
+#include "thread/tmf.hpp"
 
 namespace ot {
 
@@ -66,6 +67,7 @@ namespace ot {
 class AddressResolver : public InstanceLocator, private NonCopyable
 {
     friend class TimeTicker;
+    friend class Tmf::Agent;
 
     class CacheEntry;
     class CacheEntryList;
@@ -343,14 +345,16 @@ private:
 
 #endif // OPENTHREAD_FTD
 
-    static void HandleAddressError(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
+    static void HandleAddressError(Instance &aInstance, Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
     void        HandleAddressError(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 
 #if OPENTHREAD_FTD
-    static void HandleAddressQuery(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
+    static void HandleAddressQuery(Instance &aInstance, Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
     void        HandleAddressQuery(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 
-    static void HandleAddressNotification(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
+    static void HandleAddressNotification(Instance &              aInstance,
+                                          Coap::Message &         aMessage,
+                                          const Ip6::MessageInfo &aMessageInfo);
     void        HandleAddressNotification(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 
     static void HandleIcmpReceive(void *               aContext,
@@ -372,12 +376,6 @@ private:
 
     static AddressResolver::CacheEntry *GetEntryAfter(CacheEntry *aPrev, CacheEntryList &aList);
 
-#endif // OPENTHREAD_FTD
-    Coap::Resource mAddressError;
-#if OPENTHREAD_FTD
-    Coap::Resource mAddressQuery;
-    Coap::Resource mAddressNotification;
-
     CacheEntryPool mCacheEntryPool;
     CacheEntryList mCachedList;
     CacheEntryList mSnoopedList;
@@ -385,6 +383,7 @@ private:
     CacheEntryList mQueryRetryList;
 
     Ip6::Icmp::Handler mIcmpHandler;
+
 #endif //  OPENTHREAD_FTD
 };
 

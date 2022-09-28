@@ -743,6 +743,26 @@ public:
 
 protected:
     /**
+     * This type defines function pointer to handle a CoAP resource.
+     *
+     * When processing a received request, this handler is called first with the URI path before checking the list of
+     * added `Resource` entries to match against the URI path.
+     *
+     * @param[in] aCoapBase     A reference the CoAP agent.
+     * @param[in] aUriPath      The URI Path string.
+     * @param[in] aMessage      The received message.
+     * @param[in] aMessageInfo  The message info associated with @p aMessage.
+     *
+     * @retval TRUE   Indicates that the URI path was known and the message was processed by the handler.
+     * @retval FALSE  Indicates that URI path was not known and the message was not processed by the handler.
+     *
+     */
+    typedef bool (*ResourceHandler)(CoapBase &              aCoapBase,
+                                    const char *            aUriPath,
+                                    Message &               aMessage,
+                                    const Ip6::MessageInfo &aMessageInfo);
+
+    /**
      * This function pointer is called to send a CoAP message.
      *
      * @param[in]  aCoapBase     A reference to the CoAP agent.
@@ -773,6 +793,14 @@ protected:
      *
      */
     void Receive(ot::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+
+    /**
+     * This method sets the resource handler function.
+     *
+     * @param[in] aResourceHandler   The resource handler function pointer.
+     *
+     */
+    void SetResourceHandler(ResourceHandler aHandler) { mResourceHandler = aHandler; }
 
 private:
     struct Metadata
@@ -872,6 +900,8 @@ private:
 
     RequestHandler mDefaultHandler;
     void *         mDefaultHandlerContext;
+
+    ResourceHandler mResourceHandler;
 
     const Sender mSender;
 
