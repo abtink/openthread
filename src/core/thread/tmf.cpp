@@ -80,9 +80,147 @@ void MessageInfo::SetSockAddrToRlocPeerAddrTo(const Ip6::Address &aPeerAddress)
 //----------------------------------------------------------------------------------------------------------------------
 // Agent
 
+Agent::Agent(Instance &aInstance)
+    : Coap::Coap(aInstance)
+{
+    SetInterceptor(&Filter, this);
+    SetResourceHandler(&HandleResource);
+    mShouldHandleUri.Clear();
+}
+
 Error Agent::Start(void)
 {
     return Coap::Start(kUdpPort, Ip6::kNetifThread);
+}
+
+bool Agent::HandleResource(CoapBase &              aCoapBase,
+                           const char *            aUriPath,
+                           Message &               aMessage,
+                           const Ip6::MessageInfo &aMessageInfo)
+{
+    return static_cast<Agent &>(aCoapBase).HandleResource(aUriPath, aMessage, aMessageInfo);
+}
+
+bool Agent::HandleResource(const char *aUriPath, Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+{
+    bool didHandle = true;
+    Uri  uri       = UriFromPath(aUriPath);
+
+    VerifyOrExit(mShouldHandleUri.Get(uri), didHandle = false);
+
+    switch (uri)
+    {
+    case kUriAddressError:
+        Get<AddressResolver>().HandleAddressError(aMessage, aMessageInfo);
+        break;
+    case kUriEnergyScan:
+        Get<EnergyScanServer>().HandleRequest(aMessage, aMessageInfo);
+        break;
+    case kUriActiveGet:
+        Get<MeshCoP::ActiveDatasetManager>().HandleGet(aMessage, aMessageInfo);
+        break;
+    case kUriPendingGet:
+        Get<MeshCoP::PendingDatasetManager>().HandleGet(aMessage, aMessageInfo);
+        break;
+#if OPENTHREAD_CONFIG_JOINER_ENABLE
+    case kUriJoinerEntrust:
+        Get<MeshCoP::Joiner>().HandleJoinerEntrust(aMessage, aMessageInfo);
+        break;
+#endif
+#if OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_ENABLE
+    case kUriAnycastLocate:
+        Get<AnycastLocator>().HandleAnycastLocate(aMessage, aMessageInfo);
+        break;
+#endif
+
+#if OPENTHREAD_FTD
+    case kUriAddressQuery:
+        Get<AddressResolver>().HandleAddressQuery(aMessage, aMessageInfo);
+        break;
+    case kUriAddressNotify:
+        Get<AddressResolver>().HandleAddressNotification(aMessage, aMessageInfo);
+        break;
+    case kUriAddressSolicit:
+        Get<Mle::MleRouter>().HandleAddressSolicit(aMessage, aMessageInfo);
+        break;
+    case kUriAddressRelease:
+        Get<Mle::MleRouter>().HandleAddressRelease(aMessage, aMessageInfo);
+        break;
+    case kUriActiveSet:
+        Get<MeshCoP::ActiveDatasetManager>().HandleSet(aMessage, aMessageInfo);
+        break;
+    case kUriPendingSet:
+        Get<MeshCoP::PendingDatasetManager>().HandleSet(aMessage, aMessageInfo);
+        break;
+    case kUriLeaderPetition:
+        Get<MeshCoP::Leader>().HandlePetition(aMessage, aMessageInfo);
+        break;
+    case kUriLeaderKeepAlive:
+        Get<MeshCoP::Leader>().HandleKeepAlive(aMessage, aMessageInfo);
+        break;
+    case kUriServerData:
+        Get<NetworkData::Leader>().HandleServerData(aMessage, aMessageInfo);
+        break;
+    case kUriCommissionerGet:
+        Get<NetworkData::Leader>().HandleCommissioningGet(aMessage, aMessageInfo);
+        break;
+    case kUriCommissionerSet:
+        Get<NetworkData::Leader>().HandleCommissioningSet(aMessage, aMessageInfo);
+        break;
+    case kUriAnnounceBegin:
+        Get<AnnounceBeginServer>().HandleRequest(aMessage, aMessageInfo);
+        break;
+    case kUriPanIdQuery:
+        Get<PanIdQueryServer>().HandleQuery(aMessage, aMessageInfo);
+        break;
+    case kUriRelayTx:
+        Get<MeshCoP::JoinerRouter>().HandleRelayTransmit(aMessage, aMessageInfo);
+        break;
+
+#if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE
+    case kUriPanIdConflict:
+        Get<MeshCoP::Commissioner>().GetPanIdQueryClient().HandleConflict(aMessage, aMessageInfo);
+        break;
+    case kUriEnergyReport:
+        Get<MeshCoP::Commissioner>().GetEnergyScanClient().HandleReport(aMessage, aMessageInfo);
+        break;
+    case kUriRelayRx:
+        Get<MeshCoP::Commissioner>().HandleRelayReceive(aMessage, aMessageInfo);
+        break;
+    case kUriDatasetChanged:
+        Get<MeshCoP::Commissioner>().HandleDatasetChanged(aMessage, aMessageInfo);
+        break;
+#endif
+#endif // OPENTHREAD_FTD
+
+#if OPENTHREAD_CONFIG_DUA_ENABLE || (OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_DUA_ENABLE)
+    case kUriDuaRegistrationNotify:
+        Get<DuaManager>().HandleDuaNotification(aMessage, aMessageInfo);
+        break;
+#endif
+
+#if OPENTHREAD_FTD || OPENTHREAD_CONFIG_TMF_NETWORK_DIAG_MTD_ENABLE
+    case kUriDiagnosticGetRequest:
+        Get<NetworkDiagnostic::NetworkDiagnostic>().HandleDiagnosticGetRequest(aMessage, aMessageInfo);
+        break;
+    case kUriDiagnosticGetQuery:
+        Get<NetworkDiagnostic::NetworkDiagnostic>().HandleDiagnosticGetQuery(aMessage, aMessageInfo);
+        break;
+    case kUriDiagnosticGetAnswer:
+        Get<NetworkDiagnostic::NetworkDiagnostic>().HandleDiagnosticGetAnswer(aMessage, aMessageInfo);
+        break;
+    case kUriDiagnosticReset:
+        Get<NetworkDiagnostic::NetworkDiagnostic>().HandleDiagnosticReset(aMessage, aMessageInfo);
+        break;
+#endif
+
+    default:
+        didHandle = false;
+        break;
+    }
+
+exit:
+    return didHandle;
 }
 
 Error Agent::Filter(const Message &aMessage, const Ip6::MessageInfo &aMessageInfo, void *aContext)

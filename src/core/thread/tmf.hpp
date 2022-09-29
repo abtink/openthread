@@ -37,6 +37,7 @@
 #include "openthread-core-config.h"
 
 #include "coap/coap.hpp"
+#include "common/bit_vector.hpp"
 #include "common/locator.hpp"
 
 namespace ot {
@@ -137,11 +138,7 @@ public:
      * @param[in] aInstance      A reference to the OpenThread instance.
      *
      */
-    explicit Agent(Instance &aInstance)
-        : Coap::Coap(aInstance)
-    {
-        SetInterceptor(&Filter, this);
-    }
+    explicit Agent(Instance &aInstance);
 
     /**
      * This method starts the TMF agent.
@@ -151,6 +148,15 @@ public:
      *
      */
     Error Start(void);
+
+    /**
+     * This method sets whether or not TMF agent should handle a given URI.
+     *
+     * @param[in] aUri   A URI.
+     * @param[in] aVlue  A boolean value to indicate whether agent should have @p aUri or not.
+     *
+     */
+    void SetShouldHandle(Uri aUri, bool aValue) { mShouldHandleUri.Set(aUri, aValue); }
 
     /**
      * This method indicates whether or not a message meets TMF addressing rules.
@@ -172,7 +178,15 @@ public:
     bool IsTmfMessage(const Ip6::Address &aSourceAddress, const Ip6::Address &aDestAddress, uint16_t aDestPort) const;
 
 private:
+    static bool HandleResource(CoapBase &              aCoapBase,
+                               const char *            aUriPath,
+                               Message &               aMessage,
+                               const Ip6::MessageInfo &aMessageInfo);
+    bool        HandleResource(const char *aUriPath, Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+
     static Error Filter(const Message &aMessage, const Ip6::MessageInfo &aMessageInfo, void *aContext);
+
+    BitVector<kUriUnknown> mShouldHandleUri;
 };
 
 } // namespace Tmf

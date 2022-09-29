@@ -62,9 +62,6 @@ Leader::Leader(Instance &aInstance)
     : LeaderBase(aInstance)
     , mWaitingForNetDataSync(false)
     , mTimer(aInstance)
-    , mServerData(UriPath::kServerData, &Leader::HandleServerData, this)
-    , mCommissioningDataGet(UriPath::kCommissionerGet, &Leader::HandleCommissioningGet, this)
-    , mCommissioningDataSet(UriPath::kCommissionerSet, &Leader::HandleCommissioningSet, this)
 {
     Reset();
 }
@@ -87,16 +84,16 @@ void Leader::Start(Mle::LeaderStartMode aStartMode)
         mTimer.Start(kMaxNetDataSyncWait);
     }
 
-    Get<Tmf::Agent>().AddResource(mServerData);
-    Get<Tmf::Agent>().AddResource(mCommissioningDataGet);
-    Get<Tmf::Agent>().AddResource(mCommissioningDataSet);
+    Get<Tmf::Agent>().SetShouldHandle(kUriServerData, true);
+    Get<Tmf::Agent>().SetShouldHandle(kUriCommissionerGet, true);
+    Get<Tmf::Agent>().SetShouldHandle(kUriCommissionerSet, true);
 }
 
 void Leader::Stop(void)
 {
-    Get<Tmf::Agent>().RemoveResource(mServerData);
-    Get<Tmf::Agent>().RemoveResource(mCommissioningDataGet);
-    Get<Tmf::Agent>().RemoveResource(mCommissioningDataSet);
+    Get<Tmf::Agent>().SetShouldHandle(kUriServerData, false);
+    Get<Tmf::Agent>().SetShouldHandle(kUriCommissionerGet, false);
+    Get<Tmf::Agent>().SetShouldHandle(kUriCommissionerSet, false);
 }
 
 void Leader::IncrementVersion(void)
@@ -142,11 +139,6 @@ void Leader::RemoveBorderRouter(uint16_t aRloc16, MatchMode aMatchMode)
     IncrementVersions(flags);
 }
 
-void Leader::HandleServerData(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<Leader *>(aContext)->HandleServerData(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
-}
-
 void Leader::HandleServerData(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     ThreadNetworkDataTlv networkDataTlv;
@@ -186,11 +178,6 @@ void Leader::HandleServerData(Coap::Message &aMessage, const Ip6::MessageInfo &a
 
 exit:
     return;
-}
-
-void Leader::HandleCommissioningSet(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<Leader *>(aContext)->HandleCommissioningSet(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
 }
 
 void Leader::HandleCommissioningSet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
@@ -288,11 +275,6 @@ exit:
     {
         SendCommissioningSetResponse(aMessage, aMessageInfo, state);
     }
-}
-
-void Leader::HandleCommissioningGet(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<Leader *>(aContext)->HandleCommissioningGet(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
 }
 
 void Leader::HandleCommissioningGet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)

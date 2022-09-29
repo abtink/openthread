@@ -47,6 +47,7 @@
 #include "net/icmp6.hpp"
 #include "net/udp6.hpp"
 #include "thread/thread_tlvs.hpp"
+#include "thread/tmf.hpp"
 
 namespace ot {
 
@@ -66,6 +67,7 @@ namespace ot {
 class AddressResolver : public InstanceLocator, private NonCopyable
 {
     friend class TimeTicker;
+    friend class Tmf::Agent;
 
     class CacheEntry;
     class CacheEntryList;
@@ -373,19 +375,14 @@ private:
     static AddressResolver::CacheEntry *GetEntryAfter(CacheEntry *aPrev, CacheEntryList &aList);
 
 #endif // OPENTHREAD_FTD
-    Coap::Resource mAddressError;
 #if OPENTHREAD_FTD
-    Coap::Resource mAddressQuery;
-    Coap::Resource mAddressNotification;
-
-    CacheEntryPool mCacheEntryPool;
-    CacheEntryList mCachedList;
-    CacheEntryList mSnoopedList;
-    CacheEntryList mQueryList;
-    CacheEntryList mQueryRetryList;
-
+    CacheEntryPool     mCacheEntryPool;
+    CacheEntryList     mCachedList;
+    CacheEntryList     mSnoopedList;
+    CacheEntryList     mQueryList;
+    CacheEntryList     mQueryRetryList;
     Ip6::Icmp::Handler mIcmpHandler;
-#endif //  OPENTHREAD_FTD
+#endif
 };
 
 /**

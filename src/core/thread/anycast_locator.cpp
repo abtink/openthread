@@ -48,13 +48,10 @@ AnycastLocator::AnycastLocator(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mCallback(nullptr)
     , mContext(nullptr)
-#if OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_SEND_RESPONSE
-    , mAnycastLocate(UriPath::kAnycastLocate, HandleAnycastLocate, this)
-#endif
 
 {
 #if OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_SEND_RESPONSE
-    Get<Tmf::Agent>().AddResource(mAnycastLocate);
+    Get<Tmf::Agent>().SetShouldHandle(kUriAnycastLocate, true);
 #endif
 }
 
@@ -67,7 +64,7 @@ Error AnycastLocator::Locate(const Ip6::Address &aAnycastAddress, Callback aCall
     VerifyOrExit((aCallback != nullptr) && Get<Mle::Mle>().IsAnycastLocator(aAnycastAddress),
                  error = kErrorInvalidArgs);
 
-    message = Get<Tmf::Agent>().NewConfirmablePostMessage(UriPath::kAnycastLocate);
+    message = Get<Tmf::Agent>().NewConfirmablePostMessage(kUriAnycastLocate);
     VerifyOrExit(message != nullptr, error = kErrorNoBufs);
 
     if (mCallback != nullptr)
@@ -128,11 +125,6 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_SEND_RESPONSE
-
-void AnycastLocator::HandleAnycastLocate(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<AnycastLocator *>(aContext)->HandleAnycastLocate(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
-}
 
 void AnycastLocator::HandleAnycastLocate(const Coap::Message &aRequest, const Ip6::MessageInfo &aMessageInfo)
 {

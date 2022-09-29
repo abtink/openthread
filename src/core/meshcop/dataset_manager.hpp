@@ -37,7 +37,6 @@
 
 #include "openthread-core-config.h"
 
-#include "coap/coap.hpp"
 #include "common/locator.hpp"
 #include "common/non_copyable.hpp"
 #include "common/timer.hpp"
@@ -45,6 +44,7 @@
 #include "meshcop/dataset.hpp"
 #include "meshcop/dataset_local.hpp"
 #include "net/udp6.hpp"
+#include "thread/tmf.hpp"
 
 namespace ot {
 
@@ -365,6 +365,8 @@ private:
 
 class ActiveDatasetManager : public DatasetManager, private NonCopyable
 {
+    friend class Tmf::Agent;
+
 public:
     /**
      * This constructor initializes the ActiveDatasetManager object.
@@ -490,23 +492,16 @@ private:
     static void HandleTimer(Timer &aTimer);
     void        HandleTimer(void) { DatasetManager::HandleTimer(); }
 
-    static void HandleGet(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
-    void        HandleGet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo) const;
-
+    void HandleGet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo) const;
 #if OPENTHREAD_FTD
-    static void HandleSet(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
-    void        HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
-#endif
-
-    Coap::Resource mResourceGet;
-
-#if OPENTHREAD_FTD
-    Coap::Resource mResourceSet;
+    void HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 #endif
 };
 
 class PendingDatasetManager : public DatasetManager, private NonCopyable
 {
+    friend class Tmf::Agent;
+
 public:
     /**
      * This constructor initializes the PendingDatasetManager object.
@@ -615,23 +610,14 @@ private:
 
     void HandleDelayTimer(void);
 
-    static void HandleGet(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
-    void        HandleGet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo) const;
-
+    void HandleGet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo) const;
 #if OPENTHREAD_FTD
-    static void HandleSet(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
-    void        HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 #endif
 
     using DelayTimer = TimerMilliIn<PendingDatasetManager, &PendingDatasetManager::HandleDelayTimer>;
 
     DelayTimer mDelayTimer;
-
-    Coap::Resource mResourceGet;
-
-#if OPENTHREAD_FTD
-    Coap::Resource mResourceSet;
-#endif
 };
 
 } // namespace MeshCoP

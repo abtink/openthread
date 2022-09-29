@@ -36,55 +36,77 @@
 
 #include "openthread-core-config.h"
 
+#include "common/error.hpp"
+
 namespace ot {
 
 /**
- *
- * This structure contains Thread URI Path string definitions.
+ * This enumeration represents Thread URIs.
  *
  */
-struct UriPath
+enum Uri : uint8_t
 {
-    static const char kAddressQuery[];           ///< The URI Path for Address Query ("a/aq").
-    static const char kAddressNotify[];          ///< The URI Path for Address Notify ("a/an").
-    static const char kAddressError[];           ///< The URI Path for Address Error ("a/ae").
-    static const char kAddressRelease[];         ///< The URI Path for Address Release ("a/ar").
-    static const char kAddressSolicit[];         ///< The URI Path for Address Solicit ("a/as").
-    static const char kAnycastLocate[];          ///< The URI Path for Anycast Locate ("a/yl")
-    static const char kActiveGet[];              ///< The URI Path for MGMT_ACTIVE_GE ("c/ag")T
-    static const char kActiveSet[];              ///< The URI Path for MGMT_ACTIVE_SET ("c/as").
-    static const char kDatasetChanged[];         ///< The URI Path for MGMT_DATASET_CHANGED ("c/dc").
-    static const char kEnergyScan[];             ///< The URI Path for Energy Scan ("c/es").
-    static const char kEnergyReport[];           ///< The URI Path for Energy Report ("c/er").
-    static const char kPendingGet[];             ///< The URI Path for MGMT_PENDING_GET ("c/pg").
-    static const char kPendingSet[];             ///< The URI Path for MGMT_PENDING_SET ("c/ps").
-    static const char kServerData[];             ///< The URI Path for Server Data Registration ("a/sd").
-    static const char kAnnounceBegin[];          ///< The URI Path for Announce Begin ("c/ab").
-    static const char kProxyRx[];                ///< The URI Path for Proxy RX ("c/ur").
-    static const char kProxyTx[];                ///< The URI Path for Proxy TX ("c/ut").
-    static const char kRelayRx[];                ///< The URI Path for Relay RX ("c/rx").
-    static const char kRelayTx[];                ///< The URI Path for Relay TX ("c/tx").
-    static const char kJoinerFinalize[];         ///< The URI Path for Joiner Finalize ("c/jf").
-    static const char kJoinerEntrust[];          ///< The URI Path for Joiner Entrust ("c/je").
-    static const char kLeaderPetition[];         ///< The URI Path for Leader Petition ("c/lp").
-    static const char kLeaderKeepAlive[];        ///< The URI Path for Leader Keep Alive ("c/la").
-    static const char kPanIdConflict[];          ///< The URI Path for PAN ID Conflict ("c/pc").
-    static const char kPanIdQuery[];             ///< The URI Path for PAN ID Query ("c/pq").
-    static const char kCommissionerGet[];        ///< The URI Path for MGMT_COMMISSIONER_GET ("c/cg").
-    static const char kCommissionerKeepAlive[];  ///< The URI Path for Commissioner Keep Alive ("c/ca").
-    static const char kCommissionerPetition[];   ///< The URI Path for Commissioner Petition ("c/cp").
-    static const char kCommissionerSet[];        ///< The URI Path for MGMT_COMMISSIONER_SET ("c/cs").
-    static const char kDiagnosticGetRequest[];   ///< The URI Path for Network Diagnostic Get Request ("d/dg").
-    static const char kDiagnosticGetQuery[];     ///< The URI Path for Network Diagnostic Get Query ("d/dq").
-    static const char kDiagnosticGetAnswer[];    ///< The URI Path for Network Diagnostic Get Answer ("d/da").
-    static const char kDiagnosticReset[];        ///< The URI Path for Network Diagnostic Reset ("d/dr").
-    static const char kMlr[];                    ///< The URI Path for Multicast Listener Registration ("n/mr").
-    static const char kDuaRegistrationRequest[]; ///< The URI Path for DUA Registration Request ("n/dr").
-    static const char kDuaRegistrationNotify[];  ///< The URI Path for DUA Registration Notification ("n/dn").
-    static const char kBackboneQuery[];          ///< The URI Path for Backbone Query ("b/bq").
-    static const char kBackboneAnswer[];         ///< The URI Path for Backbone Answer / Backbone Notification ("b/ba").
-    static const char kBackboneMlr[];            ///< The URI Path for Backbone Multicast Listener Report ("b/bmr").
+    kUriAddressError,           // "a/ae"
+    kUriAddressNotify,          // "a/an"
+    kUriAddressQuery,           // "a/aq"
+    kUriAddressRelease,         // "a/ar"
+    kUriAddressSolicit,         // "a/as"
+    kUriServerData,             // "a/sd"
+    kUriAnycastLocate,          // "a/yl"
+    kUriBackboneAnswer,         // "b/ba"
+    kUriBackboneMlr,            // "b/bmr"
+    kUriBackboneQuery,          // "b/bq"
+    kUriAnnounceBegin,          // "c/ab"
+    kUriActiveGet,              // "c/ag"
+    kUriActiveSet,              // "c/as"
+    kUriCommissionerKeepAlive,  // "c/ca"
+    kUriCommissionerGet,        // "c/cg"
+    kUriCommissionerPetition,   // "c/cp"
+    kUriCommissionerSet,        // "c/cs"
+    kUriDatasetChanged,         // "c/dc"
+    kUriEnergyReport,           // "c/er"
+    kUriEnergyScan,             // "c/es"
+    kUriJoinerEntrust,          // "c/je"
+    kUriJoinerFinalize,         // "c/jf"
+    kUriLeaderKeepAlive,        // "c/la"
+    kUriLeaderPetition,         // "c/lp"
+    kUriPanIdConflict,          // "c/pc"
+    kUriPendingGet,             // "c/pg"
+    kUriPanIdQuery,             // "c/pq"
+    kUriPendingSet,             // "c/ps"
+    kUriRelayRx,                // "c/rx"
+    kUriRelayTx,                // "c/tx"
+    kUriProxyRx,                // "c/ur"
+    kUriProxyTx,                // "c/ut"
+    kUriDiagnosticGetAnswer,    // "d/da"
+    kUriDiagnosticGetRequest,   // "d/dg"
+    kUriDiagnosticGetQuery,     // "d/dq"
+    kUriDiagnosticReset,        // "d/dr"
+    kUriDuaRegistrationNotify,  // "n/dn"
+    kUriDuaRegistrationRequest, // "n/dr"
+    kUriMlr,                    // "n/mr"
+    kUriUnknown,                // Unknown URI
 };
+
+/**
+ * This function returns URI path string for a given URI.
+ *
+ * @param[in] aUri   A URI.
+ *
+ * @returns The path string for @p aUri.
+ *
+ */
+const char *PathForUri(Uri aUri);
+
+/**
+ * This function looks up the URI from a given path string.
+ *
+ * @param[in] aPath    A path string.
+ *
+ * @returns The URI associated with @p aPath or `kUriUnknown` if no match was found.
+ *
+ */
+Uri UriFromPath(const char *aPath);
 
 } // namespace ot
 

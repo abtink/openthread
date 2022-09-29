@@ -63,8 +63,6 @@ RegisterLogModule("Mle");
 MleRouter::MleRouter(Instance &aInstance)
     : Mle(aInstance)
     , mAdvertiseTrickleTimer(aInstance, MleRouter::HandleAdvertiseTrickleTimer)
-    , mAddressSolicit(UriPath::kAddressSolicit, &MleRouter::HandleAddressSolicit, this)
-    , mAddressRelease(UriPath::kAddressRelease, &MleRouter::HandleAddressRelease, this)
     , mChildTable(aInstance)
     , mRouterTable(aInstance)
     , mChallengeTimeout(0)
@@ -279,8 +277,8 @@ exit:
 
 void MleRouter::StopLeader(void)
 {
-    Get<Tmf::Agent>().RemoveResource(mAddressSolicit);
-    Get<Tmf::Agent>().RemoveResource(mAddressRelease);
+    Get<Tmf::Agent>().SetShouldHandle(kUriAddressSolicit, false);
+    Get<Tmf::Agent>().SetShouldHandle(kUriAddressRelease, false);
     Get<MeshCoP::ActiveDatasetManager>().StopLeader();
     Get<MeshCoP::PendingDatasetManager>().StopLeader();
     StopAdvertiseTrickleTimer();
@@ -430,8 +428,8 @@ void MleRouter::SetStateLeader(uint16_t aRloc16, LeaderStartMode aStartMode)
     Get<NetworkData::Leader>().Start(aStartMode);
     Get<MeshCoP::ActiveDatasetManager>().StartLeader();
     Get<MeshCoP::PendingDatasetManager>().StartLeader();
-    Get<Tmf::Agent>().AddResource(mAddressSolicit);
-    Get<Tmf::Agent>().AddResource(mAddressRelease);
+    Get<Tmf::Agent>().SetShouldHandle(kUriAddressSolicit, true);
+    Get<Tmf::Agent>().SetShouldHandle(kUriAddressRelease, true);
     Get<Ip6::Ip6>().SetForwardingEnabled(true);
     Get<Ip6::Mpl>().SetTimerExpirations(kMplRouterDataMessageTimerExpirations);
     Get<Mac::Mac>().SetBeaconEnabled(true);
@@ -3719,7 +3717,7 @@ Error MleRouter::SendAddressSolicit(ThreadStatusTlv::Status aStatus)
 
     VerifyOrExit(!mAddressSolicitPending);
 
-    message = Get<Tmf::Agent>().NewPriorityConfirmablePostMessage(UriPath::kAddressSolicit);
+    message = Get<Tmf::Agent>().NewPriorityConfirmablePostMessage(kUriAddressSolicit);
     VerifyOrExit(message != nullptr, error = kErrorNoBufs);
 
     SuccessOrExit(error = Tlv::Append<ThreadExtMacAddressTlv>(*message, Get<Mac::Mac>().GetExtAddress()));
@@ -3753,7 +3751,7 @@ void MleRouter::SendAddressRelease(void)
     Tmf::MessageInfo messageInfo(GetInstance());
     Coap::Message *  message;
 
-    message = Get<Tmf::Agent>().NewPriorityConfirmablePostMessage(UriPath::kAddressRelease);
+    message = Get<Tmf::Agent>().NewPriorityConfirmablePostMessage(kUriAddressRelease);
     VerifyOrExit(message != nullptr, error = kErrorNoBufs);
 
     SuccessOrExit(error = Tlv::Append<ThreadRloc16Tlv>(*message, Rloc16FromRouterId(mRouterId)));
@@ -3889,11 +3887,6 @@ bool MleRouter::IsExpectedToBecomeRouterSoon(void) const
             mAddressSolicitPending);
 }
 
-void MleRouter::HandleAddressSolicit(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<MleRouter *>(aContext)->HandleAddressSolicit(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
-}
-
 void MleRouter::HandleAddressSolicit(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     Error                   error          = kErrorNone;
@@ -4022,11 +4015,6 @@ void MleRouter::SendAddressSolicitResponse(const Coap::Message &   aRequest,
 
 exit:
     FreeMessage(message);
-}
-
-void MleRouter::HandleAddressRelease(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<MleRouter *>(aContext)->HandleAddressRelease(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
 }
 
 void MleRouter::HandleAddressRelease(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)

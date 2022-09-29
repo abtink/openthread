@@ -40,12 +40,12 @@
 
 #include <stdint.h>
 
-#include "coap/coap.hpp"
 #include "common/non_copyable.hpp"
 #include "common/timer.hpp"
 #include "net/ip6_address.hpp"
 #include "thread/mle_router.hpp"
 #include "thread/network_data.hpp"
+#include "thread/tmf.hpp"
 
 namespace ot {
 
@@ -67,6 +67,8 @@ namespace NetworkData {
  */
 class Leader : public LeaderBase, private NonCopyable
 {
+    friend class Tmf::Agent;
+
 public:
     /**
      * This enumeration defines the match mode constants to compare two RLOC16 values.
@@ -320,11 +322,6 @@ private:
     TimeMilli   mContextLastUsed[kNumContextIds];
     uint32_t    mContextIdReuseDelay;
     UpdateTimer mTimer;
-
-    Coap::Resource mServerData;
-
-    Coap::Resource mCommissioningDataGet;
-    Coap::Resource mCommissioningDataSet;
 };
 
 /**

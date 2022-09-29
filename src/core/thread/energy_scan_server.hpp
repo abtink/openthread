@@ -36,7 +36,6 @@
 
 #include "openthread-core-config.h"
 
-#include "coap/coap.hpp"
 #include "common/locator.hpp"
 #include "common/non_copyable.hpp"
 #include "common/notifier.hpp"
@@ -44,6 +43,7 @@
 #include "net/ip6_address.hpp"
 #include "net/udp6.hpp"
 #include "thread/thread_tlvs.hpp"
+#include "thread/tmf.hpp"
 
 namespace ot {
 
@@ -54,6 +54,7 @@ namespace ot {
 class EnergyScanServer : public InstanceLocator, private NonCopyable
 {
     friend class ot::Notifier;
+    friend class Tmf::Agent;
 
 public:
     /**
@@ -92,8 +93,6 @@ private:
     uint8_t mScanResultsLength;
 
     ScanTimer mTimer;
-
-    Coap::Resource mEnergyScan;
 };
 
 /**

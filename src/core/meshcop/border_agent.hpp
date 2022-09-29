@@ -46,6 +46,7 @@
 #include "common/non_copyable.hpp"
 #include "common/notifier.hpp"
 #include "net/udp6.hpp"
+#include "thread/uri_paths.hpp"
 
 namespace ot {
 
@@ -159,7 +160,7 @@ private:
 
     Error       ForwardToLeader(const Coap::Message &   aMessage,
                                 const Ip6::MessageInfo &aMessageInfo,
-                                const char *            aPath,
+                                Uri                     aUri,
                                 bool                    aPetition,
                                 bool                    aSeparate);
     Error       ForwardToCommissioner(Coap::Message &aForwardMessage, const Message &aMessage);

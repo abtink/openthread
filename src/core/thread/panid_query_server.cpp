@@ -54,14 +54,8 @@ PanIdQueryServer::PanIdQueryServer(Instance &aInstance)
     , mChannelMask(0)
     , mPanId(Mac::kPanIdBroadcast)
     , mTimer(aInstance)
-    , mPanIdQuery(UriPath::kPanIdQuery, &PanIdQueryServer::HandleQuery, this)
 {
-    Get<Tmf::Agent>().AddResource(mPanIdQuery);
-}
-
-void PanIdQueryServer::HandleQuery(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<PanIdQueryServer *>(aContext)->HandleQuery(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
+    Get<Tmf::Agent>().SetShouldHandle(kUriPanIdQuery, true);
 }
 
 void PanIdQueryServer::HandleQuery(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
@@ -117,7 +111,7 @@ void PanIdQueryServer::SendConflict(void)
     Tmf::MessageInfo        messageInfo(GetInstance());
     Coap::Message *         message;
 
-    message = Get<Tmf::Agent>().NewPriorityConfirmablePostMessage(UriPath::kPanIdConflict);
+    message = Get<Tmf::Agent>().NewPriorityConfirmablePostMessage(kUriPanIdConflict);
     VerifyOrExit(message != nullptr, error = kErrorNoBufs);
 
     channelMask.Init();

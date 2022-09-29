@@ -44,6 +44,7 @@
 #include "common/locator.hpp"
 #include "net/ip6_address.hpp"
 #include "net/udp6.hpp"
+#include "thread/tmf.hpp"
 
 namespace ot {
 
@@ -53,6 +54,8 @@ namespace ot {
  */
 class EnergyScanClient : public InstanceLocator
 {
+    friend class Tmf::Agent;
+
 public:
     /**
      * This constructor initializes the object.
@@ -84,13 +87,10 @@ public:
                     void *                             aContext);
 
 private:
-    static void HandleReport(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
-    void        HandleReport(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void HandleReport(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 
     otCommissionerEnergyReportCallback mCallback;
     void *                             mContext;
-
-    Coap::Resource mEnergyScan;
 };
 
 /**

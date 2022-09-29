@@ -71,11 +71,7 @@ public:
      * @retval FALSE  If the given index is clear.
      *
      */
-    bool Get(uint16_t aIndex) const
-    {
-        OT_ASSERT(aIndex < N);
-        return (mMask[aIndex / 8] & (0x80 >> (aIndex % 8))) != 0;
-    }
+    bool Get(uint16_t aIndex) const { return (mMask[aIndex / 8] & (0x80 >> (aIndex % 8))) != 0; }
 
     /**
      * This method sets the mask of a given index.
@@ -86,8 +82,6 @@ public:
      */
     void Set(uint16_t aIndex, bool aValue)
     {
-        OT_ASSERT(aIndex < N);
-
         if (aValue)
         {
             mMask[aIndex / 8] |= 0x80 >> (aIndex % 8);

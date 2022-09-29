@@ -57,19 +57,12 @@ RegisterLogModule("MeshCoPLeader");
 
 Leader::Leader(Instance &aInstance)
     : InstanceLocator(aInstance)
-    , mPetition(UriPath::kLeaderPetition, Leader::HandlePetition, this)
-    , mKeepAlive(UriPath::kLeaderKeepAlive, Leader::HandleKeepAlive, this)
     , mTimer(aInstance)
     , mDelayTimerMinimal(DelayTimerTlv::kDelayTimerMinimal)
     , mSessionId(Random::NonCrypto::GetUint16())
 {
-    Get<Tmf::Agent>().AddResource(mPetition);
-    Get<Tmf::Agent>().AddResource(mKeepAlive);
-}
-
-void Leader::HandlePetition(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<Leader *>(aContext)->HandlePetition(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
+    Get<Tmf::Agent>().SetShouldHandle(kUriLeaderPetition, true);
+    Get<Tmf::Agent>().SetShouldHandle(kUriLeaderKeepAlive, true);
 }
 
 void Leader::HandlePetition(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
@@ -152,11 +145,6 @@ exit:
     LogError("send petition response", error);
 }
 
-void Leader::HandleKeepAlive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<Leader *>(aContext)->HandleKeepAlive(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
-}
-
 void Leader::HandleKeepAlive(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     uint8_t                state;
@@ -229,7 +217,7 @@ void Leader::SendDatasetChanged(const Ip6::Address &aAddress)
     Tmf::MessageInfo messageInfo(GetInstance());
     Coap::Message *  message;
 
-    message = Get<Tmf::Agent>().NewPriorityConfirmablePostMessage(UriPath::kDatasetChanged);
+    message = Get<Tmf::Agent>().NewPriorityConfirmablePostMessage(kUriDatasetChanged);
     VerifyOrExit(message != nullptr, error = kErrorNoBufs);
 
     messageInfo.SetSockAddrToRlocPeerAddrTo(aAddress);

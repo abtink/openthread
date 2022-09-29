@@ -52,9 +52,8 @@ RegisterLogModule("MeshCoP");
 
 AnnounceBeginServer::AnnounceBeginServer(Instance &aInstance)
     : AnnounceSenderBase(aInstance, AnnounceBeginServer::HandleTimer)
-    , mAnnounceBegin(UriPath::kAnnounceBegin, &AnnounceBeginServer::HandleRequest, this)
 {
-    Get<Tmf::Agent>().AddResource(mAnnounceBegin);
+    Get<Tmf::Agent>().SetShouldHandle(kUriAnnounceBegin, true);
 }
 
 void AnnounceBeginServer::SendAnnounce(uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod)
@@ -63,11 +62,6 @@ void AnnounceBeginServer::SendAnnounce(uint32_t aChannelMask, uint8_t aCount, ui
     SetPeriod(aPeriod);
     SetJitter(kDefaultJitter);
     AnnounceSenderBase::SendAnnounce(aCount);
-}
-
-void AnnounceBeginServer::HandleRequest(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<AnnounceBeginServer *>(aContext)->HandleRequest(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
 }
 
 void AnnounceBeginServer::HandleRequest(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)

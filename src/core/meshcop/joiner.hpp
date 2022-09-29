@@ -40,7 +40,6 @@
 
 #include <openthread/joiner.h>
 
-#include "coap/coap.hpp"
 #include "coap/coap_message.hpp"
 #include "coap/coap_secure.hpp"
 #include "common/as_core_type.hpp"
@@ -53,6 +52,7 @@
 #include "meshcop/meshcop.hpp"
 #include "meshcop/meshcop_tlvs.hpp"
 #include "thread/discover_scanner.hpp"
+#include "thread/tmf.hpp"
 
 namespace ot {
 
@@ -60,6 +60,8 @@ namespace MeshCoP {
 
 class Joiner : public InstanceLocator, private NonCopyable
 {
+    friend class Tmf::Agent;
+
 public:
     /**
      * This enumeration type defines the Joiner State.
@@ -246,8 +248,7 @@ private:
 
     Coap::Message *mFinalizeMessage;
 
-    JoinerTimer    mTimer;
-    Coap::Resource mJoinerEntrust;
+    JoinerTimer mTimer;
 };
 
 } // namespace MeshCoP

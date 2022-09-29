@@ -397,17 +397,12 @@ exit:
 void ActiveDatasetManager::StartLeader(void)
 {
     IgnoreError(GenerateLocal());
-    Get<Tmf::Agent>().AddResource(mResourceSet);
+    Get<Tmf::Agent>().SetShouldHandle(kUriActiveSet, true);
 }
 
 void ActiveDatasetManager::StopLeader(void)
 {
-    Get<Tmf::Agent>().RemoveResource(mResourceSet);
-}
-
-void ActiveDatasetManager::HandleSet(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<ActiveDatasetManager *>(aContext)->HandleSet(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
+    Get<Tmf::Agent>().SetShouldHandle(kUriActiveSet, false);
 }
 
 void ActiveDatasetManager::HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
@@ -422,17 +417,12 @@ exit:
 void PendingDatasetManager::StartLeader(void)
 {
     StartDelayTimer();
-    Get<Tmf::Agent>().AddResource(mResourceSet);
+    Get<Tmf::Agent>().SetShouldHandle(kUriPendingSet, true);
 }
 
 void PendingDatasetManager::StopLeader(void)
 {
-    Get<Tmf::Agent>().RemoveResource(mResourceSet);
-}
-
-void PendingDatasetManager::HandleSet(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
-{
-    static_cast<PendingDatasetManager *>(aContext)->HandleSet(AsCoapMessage(aMessage), AsCoreType(aMessageInfo));
+    Get<Tmf::Agent>().SetShouldHandle(kUriPendingSet, false);
 }
 
 void PendingDatasetManager::HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)

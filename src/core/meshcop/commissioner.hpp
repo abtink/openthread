@@ -40,7 +40,6 @@
 
 #include <openthread/commissioner.h>
 
-#include "coap/coap.hpp"
 #include "coap/coap_secure.hpp"
 #include "common/as_core_type.hpp"
 #include "common/clearable.hpp"
@@ -57,6 +56,7 @@
 #include "net/udp6.hpp"
 #include "thread/key_manager.hpp"
 #include "thread/mle.hpp"
+#include "thread/tmf.hpp"
 
 namespace ot {
 
@@ -64,6 +64,8 @@ namespace MeshCoP {
 
 class Commissioner : public InstanceLocator, private NonCopyable
 {
+    friend class Tmf::Agent;
+
 public:
     /**
      * This enumeration type represents the Commissioner State.
@@ -575,11 +577,8 @@ private:
     static void HandleCoapsConnected(bool aConnected, void *aContext);
     void        HandleCoapsConnected(bool aConnected);
 
-    static void HandleRelayReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
-    void        HandleRelayReceive(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
-
-    static void HandleDatasetChanged(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
-    void        HandleDatasetChanged(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void HandleRelayReceive(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void HandleDatasetChanged(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 
     static void HandleJoinerFinalize(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
     void        HandleJoinerFinalize(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
@@ -615,8 +614,6 @@ private:
     JoinerExpirationTimer    mJoinerExpirationTimer;
     CommissionerTimer        mTimer;
 
-    Coap::Resource mRelayReceive;
-    Coap::Resource mDatasetChanged;
     Coap::Resource mJoinerFinalize;
 
     AnnounceBeginClient mAnnounceBegin;
