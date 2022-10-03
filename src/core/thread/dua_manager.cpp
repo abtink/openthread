@@ -76,8 +76,6 @@ DuaManager::DuaManager(Instance &aInstance)
     mChildDuaMask.Clear();
     mChildDuaRegisteredMask.Clear();
 #endif
-
-    Get<Tmf::Agent>().SetShouldHandle(kUriDuaRegistrationNotify, true);
 }
 
 void DuaManager::HandleDomainPrefixUpdate(BackboneRouter::Leader::DomainPrefixState aState)

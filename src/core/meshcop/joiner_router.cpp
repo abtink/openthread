@@ -61,7 +61,6 @@ JoinerRouter::JoinerRouter(Instance &aInstance)
     , mJoinerUdpPort(0)
     , mIsJoinerPortConfigured(false)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriRelayTx, true);
 }
 
 void JoinerRouter::HandleNotifierEvents(Events aEvents)

@@ -256,15 +256,6 @@ void BorderAgent::HandleRequest<&BorderAgent::mRelayTransmit>(void *            
 }
 
 template <>
-void BorderAgent::HandleRequest<&BorderAgent::mRelayReceive>(void *               aContext,
-                                                             otMessage *          aMessage,
-                                                             const otMessageInfo *aMessageInfo)
-{
-    OT_UNUSED_VARIABLE(aMessageInfo);
-    static_cast<BorderAgent *>(aContext)->HandleRelayReceive(AsCoapMessage(aMessage));
-}
-
-template <>
 void BorderAgent::HandleRequest<&BorderAgent::mProxyTransmit>(void *               aContext,
                                                               otMessage *          aMessage,
                                                               const otMessageInfo *aMessageInfo)
@@ -282,7 +273,6 @@ BorderAgent::BorderAgent(Instance &aInstance)
                              BorderAgent::HandleRequest<&BorderAgent::mCommissionerKeepAlive>,
                              this)
     , mRelayTransmit(kUriRelayTx, BorderAgent::HandleRequest<&BorderAgent::mRelayTransmit>, this)
-    , mRelayReceive(kUriRelayRx, BorderAgent::HandleRequest<&BorderAgent::mRelayReceive>, this)
     , mCommissionerGet(kUriCommissionerGet, BorderAgent::HandleRequest<&BorderAgent::mCommissionerGet>, this)
     , mCommissionerSet(kUriCommissionerSet, BorderAgent::HandleRequest<&BorderAgent::mCommissionerSet>, this)
     , mActiveGet(kUriActiveGet, BorderAgent::HandleRequest<&BorderAgent::mActiveGet>, this)
@@ -405,7 +395,9 @@ exit:
 void BorderAgent::HandleRelayReceive(const Coap::Message &aMessage)
 {
     Coap::Message *message = nullptr;
-    Error          error;
+    Error          error   = kErrorNone;
+
+    VerifyOrExit(mState != kStateStopped);
 
     VerifyOrExit(aMessage.IsNonConfirmablePostRequest(), error = kErrorDrop);
 
@@ -593,8 +585,6 @@ void BorderAgent::Start(void)
     coaps.AddResource(mProxyTransmit);
     coaps.AddResource(mRelayTransmit);
 
-    Get<Tmf::Agent>().AddResource(mRelayReceive);
-
     mState        = kStateStarted;
     mUdpProxyPort = 0;
 
@@ -634,8 +624,6 @@ void BorderAgent::Stop(void)
     coaps.RemoveResource(mPendingSet);
     coaps.RemoveResource(mProxyTransmit);
     coaps.RemoveResource(mRelayTransmit);
-
-    Get<Tmf::Agent>().RemoveResource(mRelayReceive);
 
     coaps.Stop();
 

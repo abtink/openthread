@@ -71,7 +71,6 @@ Joiner::Joiner(Instance &aInstance)
     SetIdFromIeeeEui64();
     mDiscerner.Clear();
     memset(mJoinerRouters, 0, sizeof(mJoinerRouters));
-    Get<Tmf::Agent>().SetShouldHandle(kUriJoinerEntrust, true);
 }
 
 void Joiner::SetIdFromIeeeEui64(void)

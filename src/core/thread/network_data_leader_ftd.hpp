@@ -111,7 +111,7 @@ public:
      * This method stops the Leader services.
      *
      */
-    void Stop(void);
+    void Stop(void) {}
 
     /**
      * This method increments the Thread Network Data version.

@@ -55,7 +55,6 @@ PanIdQueryServer::PanIdQueryServer(Instance &aInstance)
     , mPanId(Mac::kPanIdBroadcast)
     , mTimer(aInstance)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriPanIdQuery, true);
 }
 
 void PanIdQueryServer::HandleQuery(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)

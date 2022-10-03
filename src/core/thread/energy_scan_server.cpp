@@ -59,7 +59,6 @@ EnergyScanServer::EnergyScanServer(Instance &aInstance)
     , mScanResultsLength(0)
     , mTimer(aInstance)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriEnergyScan, true);
 }
 
 void EnergyScanServer::HandleRequest(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)

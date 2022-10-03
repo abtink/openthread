@@ -644,7 +644,6 @@ exit:
 ActiveDatasetManager::ActiveDatasetManager(Instance &aInstance)
     : DatasetManager(aInstance, Dataset::kActive, ActiveDatasetManager::HandleTimer)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriActiveGet, true);
 }
 
 bool ActiveDatasetManager::IsPartiallyComplete(void) const
@@ -696,7 +695,6 @@ PendingDatasetManager::PendingDatasetManager(Instance &aInstance)
     : DatasetManager(aInstance, Dataset::kPending, PendingDatasetManager::HandleTimer)
     , mDelayTimer(aInstance)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriPendingGet, true);
 }
 
 void PendingDatasetManager::Clear(void)

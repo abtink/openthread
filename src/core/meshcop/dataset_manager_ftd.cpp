@@ -397,16 +397,11 @@ exit:
 void ActiveDatasetManager::StartLeader(void)
 {
     IgnoreError(GenerateLocal());
-    Get<Tmf::Agent>().SetShouldHandle(kUriActiveSet, true);
-}
-
-void ActiveDatasetManager::StopLeader(void)
-{
-    Get<Tmf::Agent>().SetShouldHandle(kUriActiveSet, false);
 }
 
 void ActiveDatasetManager::HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
+    VerifyOrExit(Get<Mle::Mle>().IsLeader());
     SuccessOrExit(DatasetManager::HandleSet(aMessage, aMessageInfo));
     IgnoreError(ApplyConfiguration());
 
@@ -417,16 +412,11 @@ exit:
 void PendingDatasetManager::StartLeader(void)
 {
     StartDelayTimer();
-    Get<Tmf::Agent>().SetShouldHandle(kUriPendingSet, true);
-}
-
-void PendingDatasetManager::StopLeader(void)
-{
-    Get<Tmf::Agent>().SetShouldHandle(kUriPendingSet, false);
 }
 
 void PendingDatasetManager::HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
+    VerifyOrExit(Get<Mle::Mle>().IsLeader());
     SuccessOrExit(DatasetManager::HandleSet(aMessage, aMessageInfo));
     StartDelayTimer();
 

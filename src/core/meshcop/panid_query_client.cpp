@@ -56,7 +56,6 @@ PanIdQueryClient::PanIdQueryClient(Instance &aInstance)
     , mCallback(nullptr)
     , mContext(nullptr)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriPanIdConflict, true);
 }
 
 Error PanIdQueryClient::SendQuery(uint16_t                            aPanId,

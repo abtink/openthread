@@ -57,7 +57,6 @@ EnergyScanClient::EnergyScanClient(Instance &aInstance)
     , mCallback(nullptr)
     , mContext(nullptr)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriEnergyReport, true);
 }
 
 Error EnergyScanClient::SendQuery(uint32_t                           aChannelMask,

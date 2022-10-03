@@ -50,9 +50,6 @@ AnycastLocator::AnycastLocator(Instance &aInstance)
     , mContext(nullptr)
 
 {
-#if OPENTHREAD_CONFIG_TMF_ANYCAST_LOCATOR_SEND_RESPONSE
-    Get<Tmf::Agent>().SetShouldHandle(kUriAnycastLocate, true);
-#endif
 }
 
 Error AnycastLocator::Locate(const Ip6::Address &aAnycastAddress, Callback aCallback, void *aContext)

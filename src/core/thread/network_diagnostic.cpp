@@ -62,10 +62,6 @@ NetworkDiagnostic::NetworkDiagnostic(Instance &aInstance)
     , mReceiveDiagnosticGetCallback(nullptr)
     , mReceiveDiagnosticGetCallbackContext(nullptr)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriDiagnosticGetRequest, true);
-    Get<Tmf::Agent>().SetShouldHandle(kUriDiagnosticGetQuery, true);
-    Get<Tmf::Agent>().SetShouldHandle(kUriDiagnosticGetAnswer, true);
-    Get<Tmf::Agent>().SetShouldHandle(kUriDiagnosticReset, true);
 }
 
 Error NetworkDiagnostic::SendDiagnosticGet(const Ip6::Address &           aDestination,

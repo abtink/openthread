@@ -139,15 +139,11 @@ exit:
 
 void Commissioner::AddCoapResources(void)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriRelayRx, true);
-    Get<Tmf::Agent>().SetShouldHandle(kUriDatasetChanged, true);
     Get<Coap::CoapSecure>().AddResource(mJoinerFinalize);
 }
 
 void Commissioner::RemoveCoapResources(void)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriRelayRx, false);
-    Get<Tmf::Agent>().SetShouldHandle(kUriDatasetChanged, false);
     Get<Coap::CoapSecure>().RemoveResource(mJoinerFinalize);
 }
 
@@ -1031,6 +1027,7 @@ exit:
 
 void Commissioner::HandleDatasetChanged(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
+    VerifyOrExit(mState == kStateActive);
     VerifyOrExit(aMessage.IsConfirmablePostRequest());
 
     LogInfo("received dataset changed");

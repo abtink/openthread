@@ -53,7 +53,6 @@ RegisterLogModule("MeshCoP");
 AnnounceBeginServer::AnnounceBeginServer(Instance &aInstance)
     : AnnounceSenderBase(aInstance, AnnounceBeginServer::HandleTimer)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriAnnounceBegin, true);
 }
 
 void AnnounceBeginServer::SendAnnounce(uint32_t aChannelMask, uint8_t aCount, uint16_t aPeriod)

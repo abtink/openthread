@@ -59,10 +59,7 @@ AddressResolver::AddressResolver(Instance &aInstance)
     , mIcmpHandler(&AddressResolver::HandleIcmpReceive, this)
 #endif
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriAddressError, true);
 #if OPENTHREAD_FTD
-    Get<Tmf::Agent>().SetShouldHandle(kUriAddressQuery, true);
-    Get<Tmf::Agent>().SetShouldHandle(kUriAddressNotify, true);
     IgnoreError(Get<Ip6::Icmp>().RegisterHandler(mIcmpHandler));
 #endif
 }

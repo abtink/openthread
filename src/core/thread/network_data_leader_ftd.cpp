@@ -83,17 +83,6 @@ void Leader::Start(Mle::LeaderStartMode aStartMode)
     {
         mTimer.Start(kMaxNetDataSyncWait);
     }
-
-    Get<Tmf::Agent>().SetShouldHandle(kUriServerData, true);
-    Get<Tmf::Agent>().SetShouldHandle(kUriCommissionerGet, true);
-    Get<Tmf::Agent>().SetShouldHandle(kUriCommissionerSet, true);
-}
-
-void Leader::Stop(void)
-{
-    Get<Tmf::Agent>().SetShouldHandle(kUriServerData, false);
-    Get<Tmf::Agent>().SetShouldHandle(kUriCommissionerGet, false);
-    Get<Tmf::Agent>().SetShouldHandle(kUriCommissionerSet, false);
 }
 
 void Leader::IncrementVersion(void)
@@ -144,6 +133,8 @@ void Leader::HandleServerData(Coap::Message &aMessage, const Ip6::MessageInfo &a
     ThreadNetworkDataTlv networkDataTlv;
     uint16_t             rloc16;
 
+    VerifyOrExit(Get<Mle::Mle>().IsLeader());
+
     LogInfo("Received network data registration");
 
     VerifyOrExit(!mWaitingForNetDataSync);
@@ -193,6 +184,8 @@ void Leader::HandleCommissioningSet(Coap::Message &aMessage, const Ip6::MessageI
 
     MeshCoP::Tlv *cur;
     MeshCoP::Tlv *end;
+
+    VerifyOrExit(Get<Mle::Mle>().IsLeader());
 
     VerifyOrExit(length <= sizeof(tlvs));
     VerifyOrExit(Get<Mle::MleRouter>().IsLeader());
@@ -282,11 +275,16 @@ void Leader::HandleCommissioningGet(Coap::Message &aMessage, const Ip6::MessageI
     uint16_t length = 0;
     uint16_t offset;
 
+    VerifyOrExit(Get<Mle::Mle>().IsLeader());
+
     SuccessOrExit(Tlv::FindTlvValueOffset(aMessage, MeshCoP::Tlv::kGet, offset, length));
     aMessage.SetOffset(offset);
 
 exit:
-    SendCommissioningGetResponse(aMessage, length, aMessageInfo);
+    if (Get<Mle::MleRouter>().IsLeader())
+    {
+        SendCommissioningGetResponse(aMessage, length, aMessageInfo);
+    }
 }
 
 void Leader::SendCommissioningGetResponse(const Coap::Message &   aRequest,

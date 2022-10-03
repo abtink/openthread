@@ -40,7 +40,7 @@
 
 #include <openthread/border_agent.h>
 
-#include "coap/coap.hpp"
+#include "thread/tmf.hpp"
 #include "common/as_core_type.hpp"
 #include "common/locator.hpp"
 #include "common/non_copyable.hpp"
@@ -55,6 +55,7 @@ namespace MeshCoP {
 class BorderAgent : public InstanceLocator, private NonCopyable
 {
     friend class ot::Notifier;
+    friend class Tmf::Agent;
 
 public:
     /**
@@ -183,7 +184,6 @@ private:
     Coap::Resource mCommissionerPetition;
     Coap::Resource mCommissionerKeepAlive;
     Coap::Resource mRelayTransmit;
-    Coap::Resource mRelayReceive;
     Coap::Resource mCommissionerGet;
     Coap::Resource mCommissionerSet;
     Coap::Resource mActiveGet;

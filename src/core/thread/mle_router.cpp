@@ -277,10 +277,6 @@ exit:
 
 void MleRouter::StopLeader(void)
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriAddressSolicit, false);
-    Get<Tmf::Agent>().SetShouldHandle(kUriAddressRelease, false);
-    Get<MeshCoP::ActiveDatasetManager>().StopLeader();
-    Get<MeshCoP::PendingDatasetManager>().StopLeader();
     StopAdvertiseTrickleTimer();
     Get<NetworkData::Leader>().Stop();
     Get<ThreadNetif>().UnsubscribeAllRoutersMulticast();
@@ -428,8 +424,6 @@ void MleRouter::SetStateLeader(uint16_t aRloc16, LeaderStartMode aStartMode)
     Get<NetworkData::Leader>().Start(aStartMode);
     Get<MeshCoP::ActiveDatasetManager>().StartLeader();
     Get<MeshCoP::PendingDatasetManager>().StartLeader();
-    Get<Tmf::Agent>().SetShouldHandle(kUriAddressSolicit, true);
-    Get<Tmf::Agent>().SetShouldHandle(kUriAddressRelease, true);
     Get<Ip6::Ip6>().SetForwardingEnabled(true);
     Get<Ip6::Mpl>().SetTimerExpirations(kMplRouterDataMessageTimerExpirations);
     Get<Mac::Mac>().SetBeaconEnabled(true);
@@ -3896,6 +3890,8 @@ void MleRouter::HandleAddressSolicit(Coap::Message &aMessage, const Ip6::Message
     uint16_t                rloc16;
     uint8_t                 status;
 
+    VerifyOrExit(mRole == kRoleLeader);
+
     VerifyOrExit(aMessage.IsConfirmablePostRequest(), error = kErrorParse);
 
     Log(kMessageReceive, kTypeAddressSolicit, aMessageInfo.GetPeerAddr());
@@ -4023,6 +4019,8 @@ void MleRouter::HandleAddressRelease(Coap::Message &aMessage, const Ip6::Message
     Mac::ExtAddress extAddress;
     uint8_t         routerId;
     Router *        router;
+
+    VerifyOrExit(mRole == kRoleLeader);
 
     VerifyOrExit(aMessage.IsConfirmablePostRequest());
 

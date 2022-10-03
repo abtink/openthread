@@ -85,7 +85,6 @@ Agent::Agent(Instance &aInstance)
 {
     SetInterceptor(&Filter, this);
     SetResourceHandler(&HandleResource);
-    mShouldHandleUri.Clear();
 }
 
 Error Agent::Start(void)
@@ -105,8 +104,6 @@ bool Agent::HandleResource(const char *aUriPath, Message &aMessage, const Ip6::M
 {
     bool didHandle = true;
     Uri  uri       = UriFromPath(aUriPath);
-
-    VerifyOrExit(mShouldHandleUri.Get(uri), didHandle = false);
 
     switch (uri)
     {
@@ -176,22 +173,31 @@ bool Agent::HandleResource(const char *aUriPath, Message &aMessage, const Ip6::M
     case kUriRelayTx:
         Get<MeshCoP::JoinerRouter>().HandleRelayTransmit(aMessage, aMessageInfo);
         break;
+#endif // OPENTHREAD_FTD
 
-#if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE
+#if OPENTHREAD_CONFIG_COMMISSIONER_ENABLE && OPENTHREAD_FTD
     case kUriPanIdConflict:
         Get<MeshCoP::Commissioner>().GetPanIdQueryClient().HandleConflict(aMessage, aMessageInfo);
         break;
     case kUriEnergyReport:
         Get<MeshCoP::Commissioner>().GetEnergyScanClient().HandleReport(aMessage, aMessageInfo);
         break;
-    case kUriRelayRx:
-        Get<MeshCoP::Commissioner>().HandleRelayReceive(aMessage, aMessageInfo);
-        break;
     case kUriDatasetChanged:
         Get<MeshCoP::Commissioner>().HandleDatasetChanged(aMessage, aMessageInfo);
         break;
+    // kUriRelayRx is handled below
 #endif
-#endif // OPENTHREAD_FTD
+
+#if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE || (OPENTHREAD_FTD && OPENTHREAD_CONFIG_COMMISSIONER_ENABLE)
+     case kUriRelayRx:
+#if (OPENTHREAD_FTD && OPENTHREAD_CONFIG_COMMISSIONER_ENABLE)
+        Get<MeshCoP::Commissioner>().HandleRelayReceive(aMessage, aMessageInfo);
+#endif
+#if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
+        Get<MeshCoP::BorderAgent>().HandleRelayReceive(aMessage);
+#endif
+        break;
+#endif
 
 #if OPENTHREAD_CONFIG_DUA_ENABLE || (OPENTHREAD_FTD && OPENTHREAD_CONFIG_TMF_PROXY_DUA_ENABLE)
     case kUriDuaRegistrationNotify:
@@ -219,7 +225,6 @@ bool Agent::HandleResource(const char *aUriPath, Message &aMessage, const Ip6::M
         break;
     }
 
-exit:
     return didHandle;
 }
 

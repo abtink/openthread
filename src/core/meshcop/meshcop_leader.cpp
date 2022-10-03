@@ -61,8 +61,6 @@ Leader::Leader(Instance &aInstance)
     , mDelayTimerMinimal(DelayTimerTlv::kDelayTimerMinimal)
     , mSessionId(Random::NonCrypto::GetUint16())
 {
-    Get<Tmf::Agent>().SetShouldHandle(kUriLeaderPetition, true);
-    Get<Tmf::Agent>().SetShouldHandle(kUriLeaderKeepAlive, true);
 }
 
 void Leader::HandlePetition(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)

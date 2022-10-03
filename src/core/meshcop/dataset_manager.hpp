@@ -472,12 +472,6 @@ public:
     void StartLeader(void);
 
     /**
-     * This method stops the Leader functions for maintaining the Active Operational Dataset.
-     *
-     */
-    void StopLeader(void);
-
-    /**
      * This method generate a default Active Operational Dataset.
      *
      * @retval kErrorNone          Successfully generated an Active Operational Dataset.
@@ -585,12 +579,6 @@ public:
      *
      */
     void StartLeader(void);
-
-    /**
-     * This method stops the Leader functions for maintaining the Active Operational Dataset.
-     *
-     */
-    void StopLeader(void);
 
     /**
      * This method generates a Pending Dataset from an Active Dataset.
