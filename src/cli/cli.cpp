@@ -2652,9 +2652,12 @@ template <> otError Interpreter::Process<Cmd("counters")>(Arg aArgs[])
 
                 for (const MleTimeCounterName &counter : kTimeCounterNames)
                 {
-                    OutputLine("Time %s Milli: %lu", counter.mName, mleCounters->*counter.mValuePtr);
+                    OutputFormat("Time %s Milli: ", counter.mName);
+                    OutputUint64Line(mleCounters->*counter.mValuePtr);
                 }
-                OutputLine("Time Tracked Milli: %lu", mleCounters->mTrackedTime);
+
+                OutputFormat("Time Tracked Milli: ");
+                OutputUint64Line(mleCounters->mTrackedTime);
             }
 #endif
         }
@@ -5076,7 +5079,9 @@ template <> otError Interpreter::Process<Cmd("networktime")>(Arg aArgs[])
 
         networkTimeStatus = otNetworkTimeGet(GetInstancePtr(), &time);
 
-        OutputFormat("Network Time:     %luus", time);
+        OutputFormat("Network Time:     ");
+        OutputUint64(time);
+        OutputFormat("us");
 
         switch (networkTimeStatus)
         {
@@ -6336,7 +6341,7 @@ template <> otError Interpreter::Process<Cmd("uptime")>(Arg aArgs[])
     }
     else if (aArgs[0] == "ms")
     {
-        OutputLine("%lu", otInstanceGetUptime(GetInstancePtr()));
+        OutputUint64Line(otInstanceGetUptime(GetInstancePtr()));
     }
     else
     {

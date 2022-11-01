@@ -313,6 +313,22 @@ public:
     void OutputExtAddressLine(const otExtAddress &aExtAddress) { OutputBytesLine(aExtAddress.m8); }
 
     /**
+     * This method outputs a `uint64_t` value in decimal format.
+     *
+     * @param[in] aUint64   The `uint64_t` value to output.
+     *
+     */
+    void OutputUint64(uint64_t aUint64);
+
+    /**
+     * This method outputs a `uint64_t` value in decimal format and at the end it also outputs newline "\r\n".
+     *
+     * @param[in] aUint64   The `uint64_t` value to output.
+     *
+     */
+    void OutputUint64Line(uint64_t aUint64);
+
+    /**
      * This method outputs "Enabled" or "Disabled" status to the CLI console (it also appends newline "\r\n").
      *
      * @param[in] aEnabled  A boolean indicating the status. TRUE outputs "Enabled", FALSE outputs "Disabled".
