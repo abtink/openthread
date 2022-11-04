@@ -83,6 +83,12 @@ public:
     typedef otNetworkDiagTlv TlvInfo;
 
     /**
+     * This structure represents parsed information from Network Diagnostic Child Table entry.
+     *
+     */
+    typedef otNetworkDiagChildEntry ChildInfo;
+
+    /**
      * This constructor initializes the object.
      *
      */
@@ -132,6 +138,8 @@ public:
     static Error GetNextDiagTlv(const Coap::Message &aMessage, Iterator &aIterator, TlvInfo &aTlvInfo);
 
 private:
+    static constexpr uint16_t kMaxChildEntries = 398;
+
     enum CommandType : uint8_t
     {
         kDiagnosticGet,

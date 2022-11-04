@@ -227,43 +227,42 @@ exit:
 #if OPENTHREAD_FTD
 Error NetworkDiagnostic::AppendChildTable(Message &aMessage)
 {
-    Error           error   = kErrorNone;
-    uint16_t        count   = 0;
-    uint8_t         timeout = 0;
-    ChildTableTlv   tlv;
-    ChildTableEntry entry;
+    Error    error = kErrorNone;
+    uint16_t count = 0;
 
-    tlv.Init();
+    count = Min(Get<ChildTable>().GetNumChildren(Child::kInStateValid), kMaxChildEntries);
 
-    count = Get<ChildTable>().GetNumChildren(Child::kInStateValid);
-
-    // The length of the Child Table TLV may exceed the outgoing link's MTU (1280B).
-    // As a workaround we limit the number of entries in the Child Table TLV,
-    // also to avoid using extended TLV format. The issue is processed by the
-    // Thread Group (SPEC-894).
-    if (count > (Tlv::kBaseTlvMaxLength / sizeof(ChildTableEntry)))
+    if (count * sizeof(ChildTableEntry) <= Tlv::kBaseTlvMaxLength)
     {
-        count = Tlv::kBaseTlvMaxLength / sizeof(ChildTableEntry);
+        Tlv tlv;
+
+        tlv.SetType(NetworkDiagnosticTlv::kChildTable);
+        tlv.SetLength(static_cast<uint8_t>(count * sizeof(ChildTableEntry)));
+        SuccessOrExit(error = aMessage.Append(tlv));
     }
+    else
+    {
+        ExtendedTlv extTlv;
 
-    tlv.SetLength(static_cast<uint8_t>(count * sizeof(ChildTableEntry)));
-
-    SuccessOrExit(error = aMessage.Append(tlv));
+        extTlv.SetType(NetworkDiagnosticTlv::kChildTable);
+        extTlv.SetLength(count * sizeof(ChildTableEntry));
+        SuccessOrExit(error = aMessage.Append(extTlv));
+    }
 
     for (Child &child : Get<ChildTable>().Iterate(Child::kInStateValid))
     {
-        VerifyOrExit(count--);
+        uint8_t         timeout = 0;
+        ChildTableEntry entry;
 
-        timeout = 0;
+        VerifyOrExit(count--);
 
         while (static_cast<uint32_t>(1 << timeout) < child.GetTimeout())
         {
             timeout++;
         }
 
-        entry.SetReserved(0);
+        entry.Clear();
         entry.SetTimeout(timeout + 4);
-
         entry.SetChildId(Mle::ChildIdFromRloc16(child.GetRloc16()));
         entry.SetMode(child.GetDeviceMode());
 
@@ -271,7 +270,6 @@ Error NetworkDiagnostic::AppendChildTable(Message &aMessage)
     }
 
 exit:
-
     return error;
 }
 #endif // OPENTHREAD_FTD
@@ -628,13 +626,6 @@ static inline void ParseMacCounters(const MacCountersTlv &aMacCountersTlv, otNet
     aMacCounters.mIfOutDiscards      = aMacCountersTlv.GetIfOutDiscards();
 }
 
-static inline void ParseChildEntry(const ChildTableEntry &aChildTableTlvEntry, otNetworkDiagChildEntry &aChildEntry)
-{
-    aChildEntry.mTimeout = aChildTableTlvEntry.GetTimeout();
-    aChildEntry.mChildId = aChildTableTlvEntry.GetChildId();
-    aChildTableTlvEntry.GetMode().Get(aChildEntry.mMode);
-}
-
 Error NetworkDiagnostic::GetNextDiagTlv(const Coap::Message &aMessage, Iterator &aIterator, TlvInfo &aTlvInfo)
 {
     Error    error  = kErrorNotFound;
@@ -780,19 +771,34 @@ Error NetworkDiagnostic::GetNextDiagTlv(const Coap::Message &aMessage, Iterator 
 
         case NetworkDiagnosticTlv::kChildTable:
         {
-            ChildTableTlv &childTable = As<ChildTableTlv>(tlv);
+            uint16_t   childInfoLength = GetArrayLength(aTlvInfo.mData.mChildTable.mTable);
+            ChildInfo *childInfo       = &aTlvInfo.mData.mChildTable.mTable[0];
+            uint8_t &  childCount      = aTlvInfo.mData.mChildTable.mCount;
 
-            VerifyOrExit(childTable.IsValid(), error = kErrorParse);
-            VerifyOrExit(childTable.GetNumEntries() <= GetArrayLength(aTlvInfo.mData.mChildTable.mTable),
-                         error = kErrorParse);
+            VerifyOrExit((tlvLength % sizeof(ChildTableEntry)) == 0, error = kErrorParse);
 
-            for (uint8_t i = 0; i < childTable.GetNumEntries(); ++i)
+            // `TlvInfo` has a fixed array Child Table entries. If there
+            // are more entries in the message, we read and return as
+            // many as can fit in array and ignore the rest.
+
+            childCount = 0;
+
+            while ((tlvLength > 0) && (childCount < childInfoLength))
             {
-                ChildTableEntry childEntry;
-                VerifyOrExit(childTable.ReadEntry(childEntry, aMessage, offset, i) == kErrorNone, error = kErrorParse);
-                ParseChildEntry(childEntry, aTlvInfo.mData.mChildTable.mTable[i]);
+                ChildTableEntry entry;
+
+                SuccessOrExit(error = aMessage.Read(valueOffset, entry));
+
+                childInfo->mTimeout = entry.GetTimeout();
+                childInfo->mChildId = entry.GetChildId();
+                entry.GetMode().Get(childInfo->mMode);
+
+                childCount++;
+                childInfo++;
+                tlvLength -= sizeof(ChildTableEntry);
+                valueOffset += sizeof(ChildTableEntry);
             }
-            aTlvInfo.mData.mChildTable.mCount = childTable.GetNumEntries();
+
             break;
         }
 
