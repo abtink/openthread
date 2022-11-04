@@ -127,6 +127,18 @@ typedef UintTlvInfo<NetworkDiagnosticTlv::kMode, uint8_t> ModeTlv;
 typedef UintTlvInfo<NetworkDiagnosticTlv::kTimeout, uint32_t> TimeoutTlv;
 
 /**
+ * This class defines Network Data TLV constants and types.
+ *
+ */
+typedef TlvInfo<NetworkDiagnosticTlv::kNetworkData> NetworkDataTlv;
+
+/**
+ * This class defines IPv6 Address List TLV constants and types.
+ *
+ */
+typedef TlvInfo<NetworkDiagnosticTlv::kIp6AddressList> Ip6AddressListTlv;
+
+/**
  * This class defines Battery Level TLV constants and types.
  *
  */
@@ -227,95 +239,6 @@ public:
         Mle::LeaderDataTlv::Init();
         ot::Tlv::SetType(kType);
     }
-} OT_TOOL_PACKED_END;
-
-/**
- * This class implements Network Data TLV generation and parsing.
- *
- */
-OT_TOOL_PACKED_BEGIN
-class NetworkDataTlv : public NetworkDiagnosticTlv, public TlvInfo<NetworkDiagnosticTlv::kNetworkData>
-{
-public:
-    /**
-     * This method initializes the TLV.
-     *
-     */
-    void Init(void)
-    {
-        SetType(kNetworkData);
-        SetLength(sizeof(*this) - sizeof(NetworkDiagnosticTlv));
-    }
-
-    /**
-     * This method indicates whether or not the TLV appears to be well-formed.
-     *
-     * @retval TRUE   If the TLV appears to be well-formed.
-     * @retval FALSE  If the TLV does not appear to be well-formed.
-     *
-     */
-    bool IsValid(void) const { return GetLength() < sizeof(*this) - sizeof(NetworkDiagnosticTlv); }
-
-    /**
-     * This method returns a pointer to the Network Data.
-     *
-     * @returns A pointer to the Network Data.
-     *
-     */
-    uint8_t *GetNetworkData(void) { return mNetworkData; }
-
-    /**
-     * This method sets the Network Data.
-     *
-     * @param[in]  aNetworkData  A pointer to the Network Data.
-     *
-     */
-    void SetNetworkData(const uint8_t *aNetworkData) { memcpy(mNetworkData, aNetworkData, GetLength()); }
-
-private:
-    uint8_t mNetworkData[255];
-} OT_TOOL_PACKED_END;
-
-/**
- * This class implements IPv6 Address List TLV generation and parsing.
- *
- */
-OT_TOOL_PACKED_BEGIN
-class Ip6AddressListTlv : public NetworkDiagnosticTlv, public TlvInfo<NetworkDiagnosticTlv::kIp6AddressList>
-{
-public:
-    /**
-     * This method initializes the TLV.
-     *
-     */
-    void Init(void)
-    {
-        SetType(kIp6AddressList);
-        SetLength(sizeof(*this) - sizeof(NetworkDiagnosticTlv));
-    }
-
-    /**
-     * This method indicates whether or not the TLV appears to be well-formed.
-     *
-     * @retval TRUE   If the TLV appears to be well-formed.
-     * @retval FALSE  If the TLV does not appear to be well-formed.
-     *
-     */
-    bool IsValid(void) const { return !IsExtended() && (GetLength() % sizeof(Ip6::Address) == 0); }
-
-    /**
-     * This method returns a pointer to the IPv6 address entry.
-     *
-     * @param[in]  aIndex  The index into the IPv6 address list.
-     *
-     * @returns A reference to the IPv6 address.
-     *
-     */
-    const Ip6::Address &GetIp6Address(uint8_t aIndex) const
-    {
-        return *reinterpret_cast<const Ip6::Address *>(GetValue() + (aIndex * sizeof(Ip6::Address)));
-    }
-
 } OT_TOOL_PACKED_END;
 
 /**

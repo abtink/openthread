@@ -189,11 +189,8 @@ exit:
 
 Error NetworkDiagnostic::AppendIp6AddressList(Message &aMessage)
 {
-    Error             error = kErrorNone;
-    Ip6AddressListTlv tlv;
-    uint8_t           count = 0;
-
-    tlv.Init();
+    Error    error = kErrorNone;
+    uint16_t count = 0;
 
     for (const Ip6::Netif::UnicastAddress &addr : Get<ThreadNetif>().GetUnicastAddresses())
     {
@@ -201,8 +198,22 @@ Error NetworkDiagnostic::AppendIp6AddressList(Message &aMessage)
         count++;
     }
 
-    tlv.SetLength(count * sizeof(Ip6::Address));
-    SuccessOrExit(error = aMessage.Append(tlv));
+    if (count * Ip6::Address::kSize <= Tlv::kBaseTlvMaxLength)
+    {
+        Tlv tlv;
+
+        tlv.SetType(NetworkDiagnosticTlv::kIp6AddressList);
+        tlv.SetLength(static_cast<uint8_t>(count * Ip6::Address::kSize));
+        SuccessOrExit(error = aMessage.Append(tlv));
+    }
+    else
+    {
+        ExtendedTlv extTlv;
+
+        extTlv.SetType(NetworkDiagnosticTlv::kIp6AddressList);
+        extTlv.SetLength(count * Ip6::Address::kSize);
+        SuccessOrExit(error = aMessage.Append(extTlv));
+    }
 
     for (const Ip6::Netif::UnicastAddress &addr : Get<ThreadNetif>().GetUnicastAddresses())
     {
@@ -210,7 +221,6 @@ Error NetworkDiagnostic::AppendIp6AddressList(Message &aMessage)
     }
 
 exit:
-
     return error;
 }
 
@@ -363,10 +373,8 @@ Error NetworkDiagnostic::FillRequestedTlvs(const Message &       aRequest,
         }
 
         case NetworkDiagnosticTlv::kIp6AddressList:
-        {
             SuccessOrExit(error = AppendIp6AddressList(aResponse));
             break;
-        }
 
         case NetworkDiagnosticTlv::kMacCounters:
         {
@@ -627,29 +635,47 @@ static inline void ParseChildEntry(const ChildTableEntry &aChildTableTlvEntry, o
     aChildTableTlvEntry.GetMode().Get(aChildEntry.mMode);
 }
 
-Error NetworkDiagnostic::GetNextDiagTlv(const Coap::Message &aMessage,
-                                        Iterator &           aIterator,
-                                        otNetworkDiagTlv &   aNetworkDiagTlv)
+Error NetworkDiagnostic::GetNextDiagTlv(const Coap::Message &aMessage, Iterator &aIterator, TlvInfo &aTlvInfo)
 {
-    Error                error  = kErrorNone;
-    uint16_t             offset = aMessage.GetOffset() + aIterator;
-    NetworkDiagnosticTlv tlv;
+    Error    error  = kErrorNotFound;
+    uint16_t offset = (aIterator == 0) ? aMessage.GetOffset() : aIterator;
 
-    while (true)
+    while (offset < aMessage.GetLength())
     {
-        uint16_t tlvTotalLength;
+        bool     skipTlv = false;
+        uint16_t valueOffset;
+        uint16_t tlvLength;
+        union
+        {
+            Tlv         tlv;
+            ExtendedTlv extTlv;
+        };
 
-        VerifyOrExit(aMessage.Read(offset, tlv) == kErrorNone, error = kErrorNotFound);
+        SuccessOrExit(error = aMessage.Read(offset, tlv));
+
+        if (tlv.IsExtended())
+        {
+            SuccessOrExit(error = aMessage.Read(offset, extTlv));
+            valueOffset = offset + sizeof(ExtendedTlv);
+            tlvLength   = extTlv.GetLength();
+        }
+        else
+        {
+            valueOffset = offset + sizeof(Tlv);
+            tlvLength   = tlv.GetLength();
+        }
+
+        VerifyOrExit(offset + tlv.GetSize() <= aMessage.GetLength(), error = kErrorParse);
 
         switch (tlv.GetType())
         {
         case NetworkDiagnosticTlv::kExtMacAddress:
-            SuccessOrExit(
-                error = Tlv::Read<ExtMacAddressTlv>(aMessage, offset, AsCoreType(&aNetworkDiagTlv.mData.mExtAddress)));
+            SuccessOrExit(error =
+                              Tlv::Read<ExtMacAddressTlv>(aMessage, offset, AsCoreType(&aTlvInfo.mData.mExtAddress)));
             break;
 
         case NetworkDiagnosticTlv::kAddress16:
-            SuccessOrExit(error = Tlv::Read<Address16Tlv>(aMessage, offset, aNetworkDiagTlv.mData.mAddr16));
+            SuccessOrExit(error = Tlv::Read<Address16Tlv>(aMessage, offset, aTlvInfo.mData.mAddr16));
             break;
 
         case NetworkDiagnosticTlv::kMode:
@@ -657,92 +683,99 @@ Error NetworkDiagnostic::GetNextDiagTlv(const Coap::Message &aMessage,
             uint8_t mode;
 
             SuccessOrExit(error = Tlv::Read<ModeTlv>(aMessage, offset, mode));
-            Mle::DeviceMode(mode).Get(aNetworkDiagTlv.mData.mMode);
+            Mle::DeviceMode(mode).Get(aTlvInfo.mData.mMode);
             break;
         }
 
         case NetworkDiagnosticTlv::kTimeout:
-            SuccessOrExit(error = Tlv::Read<TimeoutTlv>(aMessage, offset, aNetworkDiagTlv.mData.mTimeout));
+            SuccessOrExit(error = Tlv::Read<TimeoutTlv>(aMessage, offset, aTlvInfo.mData.mTimeout));
             break;
 
         case NetworkDiagnosticTlv::kConnectivity:
         {
-            ConnectivityTlv connectivity;
+            ConnectivityTlv connectivityTlv;
 
-            SuccessOrExit(error = aMessage.Read(offset, connectivity));
-            VerifyOrExit(connectivity.IsValid(), error = kErrorParse);
-            connectivity.GetConnectivity(aNetworkDiagTlv.mData.mConnectivity);
+            VerifyOrExit(!tlv.IsExtended(), error = kErrorParse);
+            SuccessOrExit(error = aMessage.Read(offset, connectivityTlv));
+            VerifyOrExit(connectivityTlv.IsValid(), error = kErrorParse);
+            connectivityTlv.GetConnectivity(aTlvInfo.mData.mConnectivity);
             break;
         }
 
         case NetworkDiagnosticTlv::kRoute:
         {
-            RouteTlv route;
+            RouteTlv routeTlv;
+            uint16_t bytesToRead = static_cast<uint16_t>(Min(tlv.GetSize(), static_cast<uint32_t>(sizeof(routeTlv))));
 
-            tlvTotalLength = sizeof(tlv) + tlv.GetLength();
-            VerifyOrExit(tlvTotalLength <= sizeof(route), error = kErrorParse);
-            SuccessOrExit(error = aMessage.Read(offset, &route, tlvTotalLength));
-            VerifyOrExit(route.IsValid(), error = kErrorParse);
-
-            ParseRoute(route, aNetworkDiagTlv.mData.mRoute);
+            VerifyOrExit(!tlv.IsExtended(), error = kErrorParse);
+            SuccessOrExit(error = aMessage.Read(offset, &routeTlv, bytesToRead));
+            VerifyOrExit(routeTlv.IsValid(), error = kErrorParse);
+            ParseRoute(routeTlv, aTlvInfo.mData.mRoute);
             break;
         }
 
         case NetworkDiagnosticTlv::kLeaderData:
         {
-            LeaderDataTlv leaderData;
+            LeaderDataTlv leaderDataTlv;
 
-            SuccessOrExit(error = aMessage.Read(offset, leaderData));
-            VerifyOrExit(leaderData.IsValid(), error = kErrorParse);
-            leaderData.Get(AsCoreType(&aNetworkDiagTlv.mData.mLeaderData));
+            VerifyOrExit(!tlv.IsExtended(), error = kErrorParse);
+            SuccessOrExit(error = aMessage.Read(offset, leaderDataTlv));
+            VerifyOrExit(leaderDataTlv.IsValid(), error = kErrorParse);
+            leaderDataTlv.Get(AsCoreType(&aTlvInfo.mData.mLeaderData));
             break;
         }
 
         case NetworkDiagnosticTlv::kNetworkData:
-        {
-            NetworkDataTlv networkData;
+            static_assert(sizeof(aTlvInfo.mData.mNetworkData.m8) >= NetworkData::NetworkData::kMaxSize,
+                          "NetworkData array in `otNetworkDiagTlv` is too small");
 
-            tlvTotalLength = sizeof(tlv) + tlv.GetLength();
-            VerifyOrExit(tlvTotalLength <= sizeof(networkData), error = kErrorParse);
-            SuccessOrExit(error = aMessage.Read(offset, &networkData, tlvTotalLength));
-            VerifyOrExit(networkData.IsValid(), error = kErrorParse);
-            VerifyOrExit(sizeof(aNetworkDiagTlv.mData.mNetworkData.m8) >= networkData.GetLength(), error = kErrorParse);
-
-            memcpy(aNetworkDiagTlv.mData.mNetworkData.m8, networkData.GetNetworkData(), networkData.GetLength());
-            aNetworkDiagTlv.mData.mNetworkData.mCount = networkData.GetLength();
+            VerifyOrExit(tlvLength <= NetworkData::NetworkData::kMaxSize, error = kErrorParse);
+            aTlvInfo.mData.mNetworkData.mCount = static_cast<uint8_t>(tlvLength);
+            aMessage.ReadBytes(valueOffset, aTlvInfo.mData.mNetworkData.m8, tlvLength);
             break;
-        }
 
         case NetworkDiagnosticTlv::kIp6AddressList:
         {
-            Ip6AddressListTlv &ip6AddrList = As<Ip6AddressListTlv>(tlv);
+            uint16_t      addrListLength = GetArrayLength(aTlvInfo.mData.mIp6AddrList.mList);
+            Ip6::Address *addrEntry      = AsCoreTypePtr(&aTlvInfo.mData.mIp6AddrList.mList[0]);
+            uint8_t &     addrCount      = aTlvInfo.mData.mIp6AddrList.mCount;
 
-            VerifyOrExit(ip6AddrList.IsValid(), error = kErrorParse);
-            VerifyOrExit(sizeof(aNetworkDiagTlv.mData.mIp6AddrList.mList) >= ip6AddrList.GetLength(),
-                         error = kErrorParse);
-            SuccessOrExit(error = aMessage.Read(offset + sizeof(ip6AddrList), aNetworkDiagTlv.mData.mIp6AddrList.mList,
-                                                ip6AddrList.GetLength()));
-            aNetworkDiagTlv.mData.mIp6AddrList.mCount = ip6AddrList.GetLength() / OT_IP6_ADDRESS_SIZE;
+            VerifyOrExit((tlvLength % Ip6::Address::kSize) == 0, error = kErrorParse);
+
+            // `TlvInfo` has a fixed array for IPv6 addresses. If there
+            // are more addresses in the message, we read and return as
+            // many as can fit in array and ignore the rest.
+
+            addrCount = 0;
+
+            while ((tlvLength > 0) && (addrCount < addrListLength))
+            {
+                SuccessOrExit(error = aMessage.Read(valueOffset, *addrEntry));
+                addrCount++;
+                addrEntry++;
+                valueOffset += Ip6::Address::kSize;
+                tlvLength -= Ip6::Address::kSize;
+            }
+
             break;
         }
 
         case NetworkDiagnosticTlv::kMacCounters:
         {
-            MacCountersTlv macCounters;
+            MacCountersTlv macCountersTlv;
 
-            SuccessOrExit(error = aMessage.Read(offset, macCounters));
-            VerifyOrExit(macCounters.IsValid(), error = kErrorParse);
-
-            ParseMacCounters(macCounters, aNetworkDiagTlv.mData.mMacCounters);
+            SuccessOrExit(error = aMessage.Read(offset, macCountersTlv));
+            VerifyOrExit(macCountersTlv.IsValid(), error = kErrorParse);
+            ParseMacCounters(macCountersTlv, aTlvInfo.mData.mMacCounters);
             break;
         }
 
         case NetworkDiagnosticTlv::kBatteryLevel:
-            SuccessOrExit(error = Tlv::Read<BatteryLevelTlv>(aMessage, offset, aNetworkDiagTlv.mData.mBatteryLevel));
+            SuccessOrExit(error = Tlv::Read<BatteryLevelTlv>(aMessage, offset, aTlvInfo.mData.mBatteryLevel));
             break;
 
         case NetworkDiagnosticTlv::kSupplyVoltage:
-            SuccessOrExit(error = Tlv::Read<SupplyVoltageTlv>(aMessage, offset, aNetworkDiagTlv.mData.mSupplyVoltage));
+            SuccessOrExit(error = Tlv::Read<SupplyVoltageTlv>(aMessage, offset, aTlvInfo.mData.mSupplyVoltage));
             break;
 
         case NetworkDiagnosticTlv::kChildTable:
@@ -750,44 +783,44 @@ Error NetworkDiagnostic::GetNextDiagTlv(const Coap::Message &aMessage,
             ChildTableTlv &childTable = As<ChildTableTlv>(tlv);
 
             VerifyOrExit(childTable.IsValid(), error = kErrorParse);
-            VerifyOrExit(childTable.GetNumEntries() <= GetArrayLength(aNetworkDiagTlv.mData.mChildTable.mTable),
+            VerifyOrExit(childTable.GetNumEntries() <= GetArrayLength(aTlvInfo.mData.mChildTable.mTable),
                          error = kErrorParse);
 
             for (uint8_t i = 0; i < childTable.GetNumEntries(); ++i)
             {
                 ChildTableEntry childEntry;
                 VerifyOrExit(childTable.ReadEntry(childEntry, aMessage, offset, i) == kErrorNone, error = kErrorParse);
-                ParseChildEntry(childEntry, aNetworkDiagTlv.mData.mChildTable.mTable[i]);
+                ParseChildEntry(childEntry, aTlvInfo.mData.mChildTable.mTable[i]);
             }
-            aNetworkDiagTlv.mData.mChildTable.mCount = childTable.GetNumEntries();
+            aTlvInfo.mData.mChildTable.mCount = childTable.GetNumEntries();
             break;
         }
 
         case NetworkDiagnosticTlv::kChannelPages:
-        {
-            VerifyOrExit(sizeof(aNetworkDiagTlv.mData.mChannelPages.m8) >= tlv.GetLength(), error = kErrorParse);
-            SuccessOrExit(
-                error = aMessage.Read(offset + sizeof(tlv), aNetworkDiagTlv.mData.mChannelPages.m8, tlv.GetLength()));
-            aNetworkDiagTlv.mData.mChannelPages.mCount = tlv.GetLength();
+            aTlvInfo.mData.mChannelPages.mCount =
+                static_cast<uint8_t>(Min(tlvLength, GetArrayLength(aTlvInfo.mData.mChannelPages.m8)));
+            aMessage.ReadBytes(valueOffset, aTlvInfo.mData.mChannelPages.m8, aTlvInfo.mData.mChannelPages.mCount);
             break;
-        }
 
         case NetworkDiagnosticTlv::kMaxChildTimeout:
-            SuccessOrExit(error =
-                              Tlv::Read<MaxChildTimeoutTlv>(aMessage, offset, aNetworkDiagTlv.mData.mMaxChildTimeout));
+            SuccessOrExit(error = Tlv::Read<MaxChildTimeoutTlv>(aMessage, offset, aTlvInfo.mData.mMaxChildTimeout));
             break;
 
         default:
-            // Ignore unrecognized Network Diagnostic TLV silently and
-            // continue to top of the `while(true)` loop.
-            offset += tlv.GetSize();
-            continue;
+            // Skip unrecognized TLVs.
+            skipTlv = true;
+            break;
         }
 
-        // Exit if a TLV is recognized and parsed successfully.
-        aNetworkDiagTlv.mType = tlv.GetType();
-        aIterator             = static_cast<uint16_t>(offset - aMessage.GetOffset() + tlv.GetSize());
-        ExitNow();
+        offset += tlv.GetSize();
+
+        if (!skipTlv)
+        {
+            // Exit if a TLV is recognized and parsed successfully.
+            aTlvInfo.mType = tlv.GetType();
+            aIterator      = offset;
+            ExitNow();
+        }
     }
 
 exit:
