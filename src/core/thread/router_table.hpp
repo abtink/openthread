@@ -112,24 +112,26 @@ public:
     Router *Allocate(void);
 
     /**
-     * This method allocates a router with a specified router id.
+     * This method allocates a router with a specified Router ID.
+     *
+     * @param[in] aId   The Router ID to allocate.
      *
      * @returns A pointer to the allocated router or `nullptr` if the router id could not be allocated.
      *
      */
-    Router *Allocate(uint8_t aRouterId);
+    Router *Allocate(uint8_t aId);
 
     /**
-     * This method releases a router id.
+     * This method releases a Router ID.
      *
-     * @param[in]  aRouterId  The router id.
+     * @param[in]  aId  The Router Id to release.
      *
-     * @retval kErrorNone          Successfully released the router id.
+     * @retval kErrorNone          Successfully released the Router ID @p aId.
      * @retval kErrorInvalidState  The device is not currently operating as a leader.
-     * @retval kErrorNotFound      The router id is not currently allocated.
+     * @retval kErrorNotFound      The Router ID @p aId is not currently allocated.
      *
      */
-    Error Release(uint8_t aRouterId);
+    Error Release(uint8_t aId);
 
     /**
      * This method removes a router link.
@@ -212,24 +214,24 @@ public:
     Router *GetNeighbor(const Mac::Address &aMacAddress);
 
     /**
-     * This method returns the router for a given router id.
+     * This method returns the router for a given Router ID.
      *
-     * @param[in]  aRouterId  The router id.
+     * @param[in]  aId  The Router ID.
      *
      * @returns A pointer to the router or `nullptr` if the router could not be found.
      *
      */
-    Router *GetRouter(uint8_t aRouterId) { return AsNonConst(AsConst(this)->GetRouter(aRouterId)); }
+    Router *GetRouter(uint8_t aId) { return AsNonConst(AsConst(this)->GetRouter(aId)); }
 
     /**
-     * This method returns the router for a given router id.
+     * This method returns the router for a given Router ID.
      *
-     * @param[in]  aRouterId  The router id.
+     * @param[in]  aId  The Router ID.
      *
      * @returns A pointer to the router or `nullptr` if the router could not be found.
      *
      */
-    const Router *GetRouter(uint8_t aRouterId) const;
+    const Router *GetRouter(uint8_t aId) const;
 
     /**
      * This method returns the router for a given IEEE Extended Address.
@@ -295,13 +297,13 @@ public:
     uint8_t GetNeighborCount(void) const;
 
     /**
-     * This method indicates whether or not @p aRouterId is allocated.
+     * This method indicates whether or not Router ID @p aId is allocated.
      *
-     * @retval TRUE if @p aRouterId is allocated.
-     * @retval FALSE if @p aRouterId is not allocated.
+     * @retval TRUE if Router ID @p aId is allocated.
+     * @retval FALSE if Router ID @p aId is not allocated.
      *
      */
-    bool IsAllocated(uint8_t aRouterId) const;
+    bool IsAllocated(uint8_t aId) const;
 
     /**
      * This method updates the Router ID allocation.
@@ -318,7 +320,7 @@ public:
      * @returns The allocated Router ID set.
      *
      */
-    const Mle::RouterIdSet &GetRouterIdSet(void) const { return mAllocatedRouterIds; }
+    void GetRouterIdSet(Mle::RouterIdSet &aRouterIdSet) const;
 
     /**
      * This method updates the router table and must be called with a one second period.
@@ -367,11 +369,8 @@ private:
         Iterator end(void) { return Iterator(GetInstance(), Iterator::kEndIterator); }
     };
 
-    void          UpdateAllocation(void);
-    const Router *GetFirstEntry(void) const;
-    const Router *GetNextEntry(const Router *aRouter) const;
-    Router *      GetFirstEntry(void) { return AsNonConst(AsConst(this)->GetFirstEntry()); }
-    Router *      GetNextEntry(Router *aRouter) { return AsNonConst(AsConst(this)->GetNextEntry(aRouter)); }
+    Router *Add(uint8_t aId);
+    void    Remove(uint8_t aId);
 
     const Router *FindRouter(const Router::AddressMatcher &aMatcher) const;
     Router *      FindRouter(const Router::AddressMatcher &aMatcher)
@@ -379,12 +378,41 @@ private:
         return AsNonConst(AsConst(this)->FindRouter(aMatcher));
     }
 
-    Router           mRouters[Mle::kMaxRouters];
-    Mle::RouterIdSet mAllocatedRouterIds;
-    uint8_t          mRouterIdReuseDelay[Mle::kMaxRouterId + 1];
-    TimeMilli        mRouterIdSequenceLastUpdated;
-    uint8_t          mRouterIdSequence;
-    uint8_t          mActiveRouterCount;
+    class RouterId
+    {
+    public:
+        RouterId(void)
+            : mIndex(kUnallocatedIndex)
+            , mReuseDelay(0)
+        {
+        }
+
+        void Clear(void) { mIndex = kUnallocatedIndex, mReuseDelay = 0; }
+
+        bool IsAllocated(void) const { return mIndex != kUnallocatedIndex; }
+        bool CanAllocate(void) const { return !IsAllocated() && (mReuseDelay == 0); }
+
+        void Allocate(uint8_t aIndex) { mIndex = aIndex; }
+        void Unallocate(void) { mIndex = kUnallocatedIndex, mReuseDelay = Mle::kRouterIdReuseDelay; }
+
+        uint8_t GetIndex(void) const { return mIndex; }
+
+        void ResetReuseDelay(void) { mReuseDelay = Mle::kRouterIdReuseDelay; }
+        void DecrementReuseDelay(void) { (mReuseDelay > 0) ? mReuseDelay-- : 0; }
+
+    private:
+        static constexpr uint8_t kUnallocatedIndex = 0xff;
+
+        uint8_t mIndex;
+        uint8_t mReuseDelay;
+    };
+
+    Router   mRouters[Mle::kMaxRouters];
+    RouterId mRouterIds[Mle::kMaxRouterId + 1];
+
+    TimeMilli mRouterIdSequenceLastUpdated;
+    uint8_t   mRouterIdSequence;
+    uint8_t   mActiveRouterCount;
 #if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
     uint8_t mMinRouterId;
     uint8_t mMaxRouterId;

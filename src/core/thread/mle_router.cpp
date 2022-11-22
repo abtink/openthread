@@ -3984,7 +3984,7 @@ void MleRouter::SendAddressSolicitResponse(const Coap::Message &   aRequest,
 
         routerMaskTlv.Init();
         routerMaskTlv.SetIdSequence(mRouterTable.GetRouterIdSequence());
-        routerMaskTlv.SetAssignedRouterIdMask(mRouterTable.GetRouterIdSet());
+        mRouterTable.GetRouterIdSet(routerMaskTlv.GetAssignedRouterIdMask());
 
         SuccessOrExit(routerMaskTlv.AppendTo(*message));
     }
@@ -4155,8 +4155,10 @@ void MleRouter::FillConnectivityTlv(ConnectivityTlv &aTlv)
 void MleRouter::FillRouteTlv(RouteTlv &aTlv, Neighbor *aNeighbor)
 {
     uint8_t     routerIdSequence = mRouterTable.GetRouterIdSequence();
-    RouterIdSet routerIdSet      = mRouterTable.GetRouterIdSet();
+    RouterIdSet routerIdSet;
     uint8_t     routerCount;
+
+    mRouterTable.GetRouterIdSet(routerIdSet);
 
     if (aNeighbor && IsActiveRouter(aNeighbor->GetRloc16()))
     {

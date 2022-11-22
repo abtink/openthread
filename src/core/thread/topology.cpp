@@ -543,6 +543,7 @@ void Router::Clear(void)
 
     memset(reinterpret_cast<void *>(this), 0, sizeof(Router));
     Init(instance);
+    MarkAsUnAllocated();
 }
 
 LinkQuality Router::GetTwoWayLinkQuality(void) const
@@ -567,6 +568,7 @@ void Parent::Clear(void)
 
     memset(reinterpret_cast<void *>(this), 0, sizeof(Parent));
     Init(instance);
+    MarkAsUnAllocated();
 }
 
 } // namespace ot

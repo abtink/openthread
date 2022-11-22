@@ -1348,6 +1348,8 @@ class Parent;
  */
 class Router : public Neighbor
 {
+    friend class RouterTable;
+
 public:
     /**
      * This class represents diagnostic information for a Thread Router.
@@ -1448,6 +1450,10 @@ public:
      *
      */
     void SetCost(uint8_t aCost) { mCost = aCost; }
+
+protected:
+    bool IsAllocated(void) const { return GetRloc16() != 0xffff; }
+    void MarkAsUnAllocated(void) { SetRloc16(0xffff); }
 
 private:
     uint8_t mNextHop;            ///< The next hop towards this router
