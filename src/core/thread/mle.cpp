@@ -2167,20 +2167,19 @@ void Mle::SendAnnounce(uint8_t aChannel, AnnounceMode aMode)
 
 void Mle::SendAnnounce(uint8_t aChannel, const Ip6::Address &aDestination, AnnounceMode aMode)
 {
-    Error              error = kErrorNone;
-    ChannelTlv         channel;
-    MeshCoP::Timestamp activeTimestamp;
+    Error              error   = kErrorNone;
     TxMessage *        message = nullptr;
+    ChannelTlvValue    channel;
+    MeshCoP::Timestamp activeTimestamp;
 
     VerifyOrExit(Get<Mac::Mac>().GetSupportedChannelMask().ContainsChannel(aChannel), error = kErrorInvalidArgs);
     VerifyOrExit((message = NewMleMessage(kCommandAnnounce)) != nullptr, error = kErrorNoBufs);
     message->SetLinkSecurityEnabled(true);
     message->SetChannel(aChannel);
 
-    channel.Init();
     channel.SetChannelPage(0);
     channel.SetChannel(Get<Mac::Mac>().GetPanChannel());
-    SuccessOrExit(error = channel.AppendTo(*message));
+    SuccessOrExit(error = Tlv::Append<ChannelTlv>(*message, channel));
 
     switch (aMode)
     {
@@ -3664,7 +3663,7 @@ exit:
 void Mle::HandleAnnounce(RxInfo &aRxInfo)
 {
     Error                     error = kErrorNone;
-    ChannelTlv                channelTlv;
+    ChannelTlvValue           channelValue;
     MeshCoP::Timestamp        timestamp;
     const MeshCoP::Timestamp *localTimestamp;
     uint8_t                   channel;
@@ -3672,10 +3671,8 @@ void Mle::HandleAnnounce(RxInfo &aRxInfo)
 
     Log(kMessageReceive, kTypeAnnounce, aRxInfo.mMessageInfo.GetPeerAddr());
 
-    SuccessOrExit(error = Tlv::FindTlv(aRxInfo.mMessage, channelTlv));
-    VerifyOrExit(channelTlv.IsValid(), error = kErrorParse);
-
-    channel = static_cast<uint8_t>(channelTlv.GetChannel());
+    SuccessOrExit(error = Tlv::Find<ChannelTlv>(aRxInfo.mMessage, channelValue));
+    channel = static_cast<uint8_t>(channelValue.GetChannel());
 
     SuccessOrExit(error = Tlv::Find<ActiveTimestampTlv>(aRxInfo.mMessage, timestamp));
     SuccessOrExit(error = Tlv::Find<PanIdTlv>(aRxInfo.mMessage, panId));
@@ -4784,16 +4781,15 @@ exit:
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
 Error Mle::TxMessage::AppendCslChannelTlv(void)
 {
-    CslChannelTlv cslChannel;
+    ChannelTlvValue cslChannel;
 
     // CSL channel value of zero indicates that the CSL channel is not
     // specified. We can use this value in the TLV as well.
 
-    cslChannel.Init();
     cslChannel.SetChannelPage(0);
     cslChannel.SetChannel(Get<Mac::Mac>().GetCslChannel());
 
-    return Append(cslChannel);
+    return Tlv::Append<CslChannelTlv>(*this, cslChannel);
 }
 
 Error Mle::TxMessage::AppendCslTimeoutTlv(void)
