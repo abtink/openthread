@@ -558,6 +558,23 @@ public:
         return *this;
     }
 
+    /**
+     * This method indicates whether a given entry pointer is from the array buffer.
+     *
+     * This method does not check the current length of array and only checks that @p aEntry is pointing to an address
+     * contained within underlying C array buffer.
+     *
+     * @param[in] aEntry   A pointer to an entry to check.
+     *
+     * @retval TRUE  The @p aEntry is from the array.
+     * @retval FALSE The @p aEntry is not from the array.
+     *
+     */
+    bool IsInArrayBuffer(const Type *aEntry) const
+    {
+        return (&mElements[0] <= aEntry) && (aEntry < GetArrayEnd(mElements));
+    }
+
     // The following methods are intended to support range-based `for`
     // loop iteration over the array elements and should not be used
     // directly.

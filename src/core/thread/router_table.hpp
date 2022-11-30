@@ -33,6 +33,7 @@
 
 #if OPENTHREAD_FTD
 
+#include "common/array.hpp"
 #include "common/const_cast.hpp"
 #include "common/encoding.hpp"
 #include "common/iterator_utils.hpp"
@@ -49,41 +50,8 @@ namespace ot {
 class RouterTable : public InstanceLocator, private NonCopyable
 {
     friend class NeighborTable;
-    class IteratorBuilder;
 
 public:
-    /**
-     * This class represents an iterator for iterating through entries in the router table.
-     *
-     */
-    class Iterator : public InstanceLocator, public ItemPtrIterator<Router, Iterator>
-    {
-        friend class ItemPtrIterator<Router, Iterator>;
-        friend class IteratorBuilder;
-
-    public:
-        /**
-         * This constructor initializes an `Iterator` instance to start from beginning of the router table.
-         *
-         * @param[in] aInstance  A reference to the OpenThread instance.
-         *
-         */
-        explicit Iterator(Instance &aInstance);
-
-    private:
-        enum IteratorType : uint8_t
-        {
-            kEndIterator,
-        };
-
-        Iterator(Instance &aInstance, IteratorType)
-            : InstanceLocator(aInstance)
-        {
-        }
-
-        void Advance(void);
-    };
-
     /**
      * Constructor.
      *
@@ -148,7 +116,7 @@ public:
      * @returns The number of active routers in the Thread network.
      *
      */
-    uint8_t GetActiveRouterCount(void) const { return mActiveRouterCount; }
+    uint8_t GetActiveRouterCount(void) const { return mRouters.GetLength(); }
 
     /**
      * This method returns the leader in the Thread network.
@@ -258,8 +226,7 @@ public:
      */
     bool Contains(const Neighbor &aNeighbor) const
     {
-        return mRouters <= &static_cast<const Router &>(aNeighbor) &&
-               &static_cast<const Router &>(aNeighbor) < mRouters + Mle::kMaxRouters;
+        return mRouters.IsInArrayBuffer(&static_cast<const Router &>(aNeighbor));
     }
 
     /**
@@ -346,18 +313,6 @@ public:
      */
     void HandleTimeTick(void);
 
-    /**
-     * This method enables range-based `for` loop iteration over all Router entries in the Router table.
-     *
-     * This method should be used as follows:
-     *
-     *     for (Router &router : Get<RouterTable>().Iterate()) { ... }
-     *
-     * @returns An `IteratorBuilder` instance.
-     *
-     */
-    IteratorBuilder Iterate(void) { return IteratorBuilder(GetInstance()); }
-
 #if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
     void GetRouterIdRange(uint8_t &aMinRouterId, uint8_t &aMaxRouterId) const;
 
@@ -374,25 +329,16 @@ public:
     void LogRouteTable(void) {}
 #endif
 
+    // The following methods are intended to support range-based `for`
+    // loop iteration over the router and should not be used
+    // directly.
+
+    Router *      begin(void) { return mRouters.begin(); }
+    Router *      end(void) { return mRouters.end(); }
+    const Router *begin(void) const { return mRouters.begin(); }
+    const Router *end(void) const { return mRouters.end(); }
+
 private:
-    class IteratorBuilder : public InstanceLocator
-    {
-    public:
-        explicit IteratorBuilder(Instance &aInstance)
-            : InstanceLocator(aInstance)
-        {
-        }
-
-        Iterator begin(void) { return Iterator(GetInstance()); }
-        Iterator end(void) { return Iterator(GetInstance(), Iterator::kEndIterator); }
-    };
-
-    void          UpdateAllocation(void);
-    const Router *GetFirstEntry(void) const;
-    const Router *GetNextEntry(const Router *aRouter) const;
-    Router *      GetFirstEntry(void) { return AsNonConst(AsConst(this)->GetFirstEntry()); }
-    Router *      GetNextEntry(Router *aRouter) { return AsNonConst(AsConst(this)->GetNextEntry(aRouter)); }
-
     Router *      FindNeighbor(uint16_t aRloc16);
     Router *      FindNeighbor(const Mac::ExtAddress &aExtAddress);
     Router *      FindNeighbor(const Mac::Address &aMacAddress);
@@ -402,12 +348,11 @@ private:
         return AsNonConst(AsConst(this)->FindRouter(aMatcher));
     }
 
-    Router           mRouters[Mle::kMaxRouters];
-    Mle::RouterIdSet mAllocatedRouterIds;
-    uint8_t          mRouterIdReuseDelay[Mle::kMaxRouterId + 1];
-    TimeMilli        mRouterIdSequenceLastUpdated;
-    uint8_t          mRouterIdSequence;
-    uint8_t          mActiveRouterCount;
+    Array<Router, Mle::kMaxRouters> mRouters;
+    Mle::RouterIdSet                mAllocatedRouterIds;
+    uint8_t                         mRouterIdReuseDelay[Mle::kMaxRouterId + 1];
+    uint8_t                         mRouterIdSequence;
+    TimeMilli                       mRouterIdSequenceLastUpdated;
 #if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
     uint8_t mMinRouterId;
     uint8_t mMaxRouterId;

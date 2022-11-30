@@ -1760,7 +1760,7 @@ bool MleRouter::HasNeighborWithGoodLinkQuality(void) const
         ExitNow();
     }
 
-    for (Router &router : Get<RouterTable>().Iterate())
+    for (const Router &router : Get<RouterTable>())
     {
         if (!router.IsStateValid())
         {
@@ -1940,7 +1940,7 @@ void MleRouter::HandleTimeTick(void)
     }
 
     // update router state
-    for (Router &router : Get<RouterTable>().Iterate())
+    for (Router &router : Get<RouterTable>())
     {
         uint32_t age;
 
@@ -4112,7 +4112,7 @@ void MleRouter::FillConnectivityTlv(ConnectivityTlv &aTlv)
 
     aTlv.SetActiveRouters(mRouterTable.GetActiveRouterCount());
 
-    for (Router &router : Get<RouterTable>().Iterate())
+    for (const Router &router : Get<RouterTable>())
     {
         if (router.GetRloc16() == GetRloc16())
         {
@@ -4155,7 +4155,7 @@ bool MleRouter::HasMinDowngradeNeighborRouters(void)
 {
     uint8_t routerCount = 0;
 
-    for (Router &router : Get<RouterTable>().Iterate())
+    for (const Router &router : Get<RouterTable>())
     {
         if (!router.IsStateValid())
         {
@@ -4177,7 +4177,7 @@ bool MleRouter::HasOneNeighborWithComparableConnectivity(const RouteTlv &aRouteT
     bool    rval        = true;
 
     // process local neighbor routers
-    for (Router &router : Get<RouterTable>().Iterate())
+    for (const Router &router : Get<RouterTable>())
     {
         LinkQuality localLinkQuality;
         LinkQuality peerLinkQuality;
