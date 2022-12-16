@@ -627,18 +627,21 @@ class Node(object):
     # class methods
 
     @classmethod
-    def init_all_nodes(cls, disable_logs=not _VERBOSE, wait_time=15):
+    def init_all_nodes(cls, disable_logs=not _VERBOSE, wait_time=30):
         """Issues a `wpanctl.leave` on all `Node` objects and waits for them to be ready"""
         random.seed(123456)
-        time.sleep(0.5)
+        time.sleep(2)
         for node in Node._all_nodes:
             start_time = time.time()
             while True:
+                print('ABTIN - Start of loop')
                 try:
                     node._wpantund_process.poll()
+                    print('ABTIN poll done')
                     if node._wpantund_process.returncode is not None:
                         print('Node {} wpantund instance has terminated unexpectedly'.format(node))
                     if disable_logs:
+                        print('ABTIN-before - disable_logs')
                         node.set(WPAN_OT_LOG_LEVEL, '0')
                     node.leave()
                 except subprocess.CalledProcessError as e:
@@ -652,7 +655,8 @@ class Node(object):
                     raise
                 else:
                     break
-                time.sleep(0.4)
+                print('ABTIN - About to sleep()')
+                time.sleep(0.9)
 
     @classmethod
     def finalize_all_nodes(cls):
