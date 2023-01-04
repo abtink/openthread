@@ -610,6 +610,14 @@ public:
         return reinterpret_cast<const HasRouteEntry *>(GetValue() + GetLength() - sizeof(HasRouteEntry));
     }
 
+    // The following methods are intended to support range-based `for`
+    // loop iteration over `HasRouteEntry` entries in the TLV.
+
+    HasRouteEntry       *begin(void) { return GetFirstEntry(); }
+    HasRouteEntry       *end(void) { return AsNonConst(AsConst(this)->end()); }
+    const HasRouteEntry *begin(void) const { return GetFirstEntry(); }
+    const HasRouteEntry *end(void) const;
+
 } OT_TOOL_PACKED_END;
 
 /**
@@ -1186,6 +1194,14 @@ public:
     {
         return reinterpret_cast<const BorderRouterEntry *>(GetValue() + GetLength() - sizeof(BorderRouterEntry));
     }
+
+    // The following methods are intended to support range-based `for`
+    // loop iteration over `BorderRouterEntry` entries in the TLV.
+
+    BorderRouterEntry       *begin(void) { return GetFirstEntry(); }
+    BorderRouterEntry       *end(void) { return AsNonConst(AsConst(this)->end()); }
+    const BorderRouterEntry *begin(void) const { return GetFirstEntry(); }
+    const BorderRouterEntry *end(void) const;
 
 } OT_TOOL_PACKED_END;
 

@@ -79,6 +79,16 @@ exit:
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+// HasRouteTlv
+
+const HasRouteEntry *HasRouteTlv::end(void) const { return GetEntry(GetNumEntries()); }
+
+//---------------------------------------------------------------------------------------------------------------------
+// BorderRouterTlv
+
+const BorderRouterEntry *BorderRouterTlv::end(void) const { return GetEntry(GetNumEntries()); }
+
+//---------------------------------------------------------------------------------------------------------------------
 // PrefixTlv
 
 const NetworkDataTlv *PrefixTlv::FindSubTlv(Type aType) const { return Find(GetSubTlvs(), GetNext(), aType); }

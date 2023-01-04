@@ -221,10 +221,9 @@ bool LeaderBase::IsOnMesh(const Ip6::Address &aAddress) const
                 continue;
             }
 
-            for (const BorderRouterEntry *entry = borderRouter->GetFirstEntry(); entry <= borderRouter->GetLastEntry();
-                 entry                          = entry->GetNext())
+            for (const BorderRouterEntry &entry : *borderRouter)
             {
-                if (entry->IsOnMesh())
+                if (entry.IsOnMesh())
                 {
                     ExitNow(rval = true);
                 }
@@ -324,13 +323,12 @@ Error LeaderBase::ExternalRouteLookup(uint8_t aDomainId, const Ip6::Address &aDe
 
         while ((hasRoute = subTlvIterator.Iterate<HasRouteTlv>()) != nullptr)
         {
-            for (const HasRouteEntry *entry = hasRoute->GetFirstEntry(); entry <= hasRoute->GetLastEntry();
-                 entry                      = entry->GetNext())
+            for (const HasRouteEntry &entry : *hasRoute)
             {
                 if ((bestRouteEntry == nullptr) || (prefixLength > bestMatchLength) ||
-                    CompareRouteEntries(*entry, *bestRouteEntry) > 0)
+                    CompareRouteEntries(entry, *bestRouteEntry) > 0)
                 {
-                    bestRouteEntry  = entry;
+                    bestRouteEntry  = &entry;
                     bestMatchLength = prefixLength;
                 }
             }
@@ -355,17 +353,16 @@ Error LeaderBase::DefaultRouteLookup(const PrefixTlv &aPrefix, uint16_t &aRloc16
 
     while ((borderRouter = subTlvIterator.Iterate<BorderRouterTlv>()) != nullptr)
     {
-        for (const BorderRouterEntry *entry = borderRouter->GetFirstEntry(); entry <= borderRouter->GetLastEntry();
-             entry                          = entry->GetNext())
+        for (const BorderRouterEntry &entry : *borderRouter)
         {
-            if (!entry->IsDefaultRoute())
+            if (!entry.IsDefaultRoute())
             {
                 continue;
             }
 
-            if (route == nullptr || CompareRouteEntries(*entry, *route) > 0)
+            if (route == nullptr || CompareRouteEntries(entry, *route) > 0)
             {
-                route = entry;
+                route = &entry;
             }
         }
     }

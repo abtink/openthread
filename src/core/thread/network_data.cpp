@@ -428,16 +428,15 @@ void MutableNetworkData::RemoveTemporaryDataIn(PrefixTlv &aPrefix)
                 ContextTlv      *context      = aPrefix.FindSubTlv<ContextTlv>();
 
                 // Replace p_border_router_16
-                for (BorderRouterEntry *entry = borderRouter->GetFirstEntry(); entry <= borderRouter->GetLastEntry();
-                     entry                    = entry->GetNext())
+                for (BorderRouterEntry &entry : *borderRouter)
                 {
-                    if ((entry->IsDhcp() || entry->IsConfigure()) && (context != nullptr))
+                    if ((entry.IsDhcp() || entry.IsConfigure()) && (context != nullptr))
                     {
-                        entry->SetRloc(0xfc00 | context->GetContextId());
+                        entry.SetRloc(0xfc00 | context->GetContextId());
                     }
                     else
                     {
-                        entry->SetRloc(0xfffe);
+                        entry.SetRloc(0xfffe);
                     }
                 }
 
@@ -449,10 +448,9 @@ void MutableNetworkData::RemoveTemporaryDataIn(PrefixTlv &aPrefix)
                 HasRouteTlv *hasRoute = As<HasRouteTlv>(cur);
 
                 // Replace r_border_router_16
-                for (HasRouteEntry *entry = hasRoute->GetFirstEntry(); entry <= hasRoute->GetLastEntry();
-                     entry                = entry->GetNext())
+                for (HasRouteEntry &entry : *hasRoute)
                 {
-                    entry->SetRloc(0xfffe);
+                    entry.SetRloc(0xfffe);
                 }
 
                 break;

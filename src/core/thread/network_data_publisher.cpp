@@ -970,10 +970,9 @@ void Publisher::PrefixEntry::CountOnMeshPrefixEntries(uint8_t &aNumEntries, uint
     brSubTlv = prefixTlv->FindSubTlv<BorderRouterTlv>(/* aStable */ true);
     VerifyOrExit(brSubTlv != nullptr);
 
-    for (const BorderRouterEntry *entry = brSubTlv->GetFirstEntry(); entry <= brSubTlv->GetLastEntry();
-         entry                          = entry->GetNext())
+    for (const BorderRouterEntry &entry : *brSubTlv)
     {
-        uint16_t entryFlags      = entry->GetFlags();
+        uint16_t entryFlags      = entry.GetFlags();
         int8_t   entryPreference = BorderRouterEntry::PreferenceFromFlags(entryFlags);
 
         // Count an existing entry in the network data if its flags
@@ -993,7 +992,7 @@ void Publisher::PrefixEntry::CountOnMeshPrefixEntries(uint8_t &aNumEntries, uint
             // than ours or if it has same preference we use the associated
             // RLOC16.
 
-            if ((entryPreference > preference) || IsPreferred(entry->GetRloc()))
+            if ((entryPreference > preference) || IsPreferred(entry.GetRloc()))
             {
                 aNumPreferredEntries++;
             }
@@ -1017,10 +1016,9 @@ void Publisher::PrefixEntry::CountExternalRouteEntries(uint8_t &aNumEntries, uin
     hrSubTlv = prefixTlv->FindSubTlv<HasRouteTlv>(/* aStable */ true);
     VerifyOrExit(hrSubTlv != nullptr);
 
-    for (const HasRouteEntry *entry = hrSubTlv->GetFirstEntry(); entry <= hrSubTlv->GetLastEntry();
-         entry                      = entry->GetNext())
+    for (const HasRouteEntry &entry : *hrSubTlv)
     {
-        uint8_t entryFlags      = entry->GetFlags();
+        uint8_t entryFlags      = entry.GetFlags();
         int8_t  entryPreference = HasRouteEntry::PreferenceFromFlags(entryFlags);
 
         // Count an existing entry in the network data if its flags
@@ -1040,7 +1038,7 @@ void Publisher::PrefixEntry::CountExternalRouteEntries(uint8_t &aNumEntries, uin
             // than ours or if it has same preference with a smaller
             // RLOC16.
 
-            if ((entryPreference > preference) || IsPreferred(entry->GetRloc()))
+            if ((entryPreference > preference) || IsPreferred(entry.GetRloc()))
             {
                 aNumPreferredEntries++;
             }

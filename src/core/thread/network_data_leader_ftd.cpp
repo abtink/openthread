@@ -573,9 +573,9 @@ bool Leader::ContainsMatchingEntry(const HasRouteTlv *aHasRoute, const HasRouteE
 
     VerifyOrExit(aHasRoute != nullptr);
 
-    for (const HasRouteEntry *entry = aHasRoute->GetFirstEntry(); entry <= aHasRoute->GetLastEntry(); entry++)
+    for (const HasRouteEntry &entry : *aHasRoute)
     {
-        if (*entry == aEntry)
+        if (entry == aEntry)
         {
             contains = true;
             break;
@@ -602,10 +602,9 @@ bool Leader::ContainsMatchingEntry(const BorderRouterTlv *aBorderRouter, const B
 
     VerifyOrExit(aBorderRouter != nullptr);
 
-    for (const BorderRouterEntry *entry = aBorderRouter->GetFirstEntry(); entry <= aBorderRouter->GetLastEntry();
-         entry++)
+    for (const BorderRouterEntry &entry : *aBorderRouter)
     {
-        if (*entry == aEntry)
+        if (entry == aEntry)
         {
             contains = true;
             break;
@@ -1362,12 +1361,11 @@ bool Leader::ContainsOmrPrefix(const Ip6::Prefix &aPrefix)
             continue;
         }
 
-        for (const BorderRouterEntry *entry = borderRouter->GetFirstEntry(); entry <= borderRouter->GetLastEntry();
-             entry                          = entry->GetNext())
+        for (const BorderRouterEntry &entry : *borderRouter)
         {
             OnMeshPrefixConfig config;
 
-            config.SetFrom(*prefixTlv, *borderRouter, *entry);
+            config.SetFrom(*prefixTlv, *borderRouter, entry);
 
             if (BorderRouter::RoutingManager::IsValidOmrPrefix(config))
             {
