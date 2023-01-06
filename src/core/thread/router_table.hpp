@@ -39,6 +39,7 @@
 #include "common/iterator_utils.hpp"
 #include "common/locator.hpp"
 #include "common/non_copyable.hpp"
+#include "common/serial_number.hpp"
 #include "mac/mac_types.hpp"
 #include "thread/mle_tlvs.hpp"
 #include "thread/mle_types.hpp"
@@ -257,6 +258,21 @@ public:
      *
      */
     TimeMilli GetRouterIdSequenceLastUpdated(void) const { return mRouterIdSequenceLastUpdated; }
+
+    /**
+     * This method indicates whether a given Router ID Sequence is more recent compared to the current Router ID
+     * Sequence.
+     *
+     * @param[in] aRouterIdSequence   The Router ID Sequence to compare.
+     *
+     * @retval TRUE   if @p aRouterIdSequence is more recent than current Router ID Sequence.
+     * @retval FALSE  if @p aRouterIdSequence is not more recent than current Router ID Sequence.
+     *
+     */
+    bool IsRouterIdSequenceMoreRecent(uint8_t aRouterIdSequence) const
+    {
+        return ((GetActiveRouterCount() == 0) || SerialNumber::IsGreater(aRouterIdSequence, mRouterIdSequence));
+    }
 
     /**
      * This method returns the number of neighbor links.
