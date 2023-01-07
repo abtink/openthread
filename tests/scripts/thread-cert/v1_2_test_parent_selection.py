@@ -147,6 +147,8 @@ class TestParentSelection(thread_cert.TestCase):
         msg = messages.next_mle_message(mle.CommandType.CHILD_ID_REQUEST)
         msg.assertSentToNode(self.nodes[ROUTER_1_1])
 
+        self.simulator.go(30)
+
         # Mesh Impacting Criteria - Active Routers over REEDs
         # ROUTER_1_2 would attach to LEADER_1_2
         # Link quality configuration, so that REED_1_2 has the chance to respond
