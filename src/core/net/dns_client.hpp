@@ -142,6 +142,19 @@ public:
 #endif
 
         /**
+         * This enumeration type represents the service resolution mode.
+         *
+         */
+        enum ServiceMode : uint8_t
+        {
+            kServiceModeUnspecified = OT_DNS_SERVICE_MODE_UNSPECIFIED, ///< Unspecified. Use default.
+            kServiceModeSrv         = OT_DNS_SERVICE_MODE_SRV,         ///< Query for SRV record only.
+            kServiceModeTxt         = OT_DNS_SERVICE_MODE_TXT,         ///< Query for TXT record only.
+            kServiceModeSrvTxt      = OT_DNS_SERVICE_MODE_SRV_TXT,     ///< Query for SRV and TXT records.
+
+        };
+
+        /**
          * This is the default constructor for `QueryConfig` object.
          *
          */
@@ -192,6 +205,14 @@ public:
         Nat64Mode GetNat64Mode(void) const { return static_cast<Nat64Mode>(mNat64Mode); }
 #endif
 
+        /**
+         * This method get the service resolution mode.
+         *
+         * @returns The service resolution mode.
+         *
+         */
+        ServiceMode GetServiceMode(void) const { return static_cast<ServiceMode>(mServiceMode); }
+
     private:
         static constexpr uint32_t kDefaultResponseTimeout = OPENTHREAD_CONFIG_DNS_CLIENT_DEFAULT_RESPONSE_TIMEOUT;
         static constexpr uint16_t kDefaultServerPort      = OPENTHREAD_CONFIG_DNS_CLIENT_DEFAULT_SERVER_PORT;
@@ -216,11 +237,12 @@ public:
         void SetResponseTimeout(uint32_t aResponseTimeout) { mResponseTimeout = aResponseTimeout; }
         void SetMaxTxAttempts(uint8_t aMaxTxAttempts) { mMaxTxAttempts = aMaxTxAttempts; }
         void SetRecursionFlag(RecursionFlag aFlag) { mRecursionFlag = static_cast<otDnsRecursionFlag>(aFlag); }
+        void SetServiceMode(ServiceMode aMode) { mServiceMode = static_cast<otDnsServiceMode>(aMode); }
 #if OPENTHREAD_CONFIG_DNS_CLIENT_NAT64_ENABLE
         void SetNat64Mode(Nat64Mode aMode) { mNat64Mode = static_cast<otDnsNat64Mode>(aMode); }
 #endif
 
-        void SetFrom(const QueryConfig &aConfig, const QueryConfig &aDefaultConfig);
+        void SetFrom(const QueryConfig *aConfig, const QueryConfig &aDefaultConfig);
     };
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
@@ -266,7 +288,8 @@ public:
 #endif
 
 #if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
-        Error FindServiceInfo(Section aSection, const Name &aName, ServiceInfo &aServiceInfo) const;
+        Error ReadServiceInfo(Section aSection, const Name &aName, ServiceInfo &aServiceInfo) const;
+        Error ReadTxtRecord(Section aSection, const Name &aName, ServiceInfo &aServiceInfo) const;
 #endif
 
         Instance      *mInstance;              // The OpenThread instance.
@@ -694,8 +717,10 @@ private:
         kIp4AddressQuery, // IPv4 Address resolution
 #endif
 #if OPENTHREAD_CONFIG_DNS_CLIENT_SERVICE_DISCOVERY_ENABLE
-        kBrowseQuery,  // Browse (service instance enumeration).
-        kServiceQuery, // Service instance resolution.
+        kBrowseQuery,        // Browse (service instance enumeration).
+        kServiceQuerySrvTxt, // Service instance resolution both SRV and TXT records.
+        kServiceQuerySrv,    // Service instance resolution SRV record only.
+        kServiceQueryTxt,    // Service instance resolution TXT record only.
 #endif
     };
 
@@ -726,11 +751,7 @@ private:
 
     static constexpr uint16_t kNameOffsetInQuery = sizeof(QueryInfo);
 
-    Error       StartQuery(QueryInfo         &aInfo,
-                           const QueryConfig *aConfig,
-                           const char        *aLabel,
-                           const char        *aName,
-                           void              *aContext);
+    Error       StartQuery(QueryInfo &aInfo, const char *aLabel, const char *aName);
     Error       AllocateQuery(const QueryInfo &aInfo, const char *aLabel, const char *aName, Query *&aQuery);
     void        FreeQuery(Query &aQuery);
     void        UpdateQuery(Query &aQuery, const QueryInfo &aInfo) { aQuery.Write(0, aInfo); }
@@ -751,8 +772,8 @@ private:
     void UpdateDefaultConfigAddress(void);
 #endif
 
-    static const uint8_t   kQuestionCount[];
-    static const uint16_t *kQuestionRecordTypes[];
+    static const uint8_t         kQuestionCount[];
+    static const uint16_t *const kQuestionRecordTypes[];
 
     static const uint16_t kIp6AddressQueryRecordTypes[];
 #if OPENTHREAD_CONFIG_DNS_CLIENT_NAT64_ENABLE

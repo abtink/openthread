@@ -81,6 +81,25 @@ typedef enum
 } otDnsNat64Mode;
 
 /**
+ * This enumeration type represents the service resolution mode in an `otDnsQueryConfig`.
+ *
+ * This is only used during DNS client service resolution `otDnsClientResolveService()`. It determines which
+ * record types to query.
+ *
+ * With `OT_DNS_SERVICE_MODE_SRV_TXT`, client will query for both SRV and TXT records in same message. Note that some
+ * DNS servers/resolvers may not be able to have two questions (response with error). In this case, the caller can
+ * choose to retry the request with two queries with `OT_DNS_SERVICE_MODE_SRV` and `OT_DNS_SERVICE_MODE_TXT`.
+ *
+ */
+typedef enum
+{
+    OT_DNS_SERVICE_MODE_UNSPECIFIED = 0, ///< Mode is not specified. Use default.
+    OT_DNS_SERVICE_MODE_SRV         = 1, ///< Query for SRV record only.
+    OT_DNS_SERVICE_MODE_TXT         = 2, ///< Query for TXT record only.
+    OT_DNS_SERVICE_MODE_SRV_TXT     = 3, ///< Query for both SRV and TXT records.
+} otDnsServiceMode;
+
+/**
  * This structure represents a DNS query configuration.
  *
  * Any of the fields in this structure can be set to zero to indicate that it is not specified. How the unspecified
@@ -94,6 +113,7 @@ typedef struct otDnsQueryConfig
     uint8_t            mMaxTxAttempts;   ///< Maximum tx attempts before reporting failure. Zero for unspecified value.
     otDnsRecursionFlag mRecursionFlag;   ///< Indicates whether the server can resolve the query recursively or not.
     otDnsNat64Mode     mNat64Mode;       ///< Allow/Disallow NAT64 address translation during address resolution.
+    otDnsServiceMode   mServiceMode;     ///< Determines which records to query during service resolution.
 } otDnsQueryConfig;
 
 /**
@@ -406,7 +426,8 @@ otError otDnsBrowseResponseGetServiceInstance(const otDnsBrowseResponse *aRespon
  * (note that it is a SHOULD and not a MUST requirement). This function tries to retrieve this info for a given service
  * instance when available.
  *
- * - If no matching SRV record is found in @p aResponse, `OT_ERROR_NOT_FOUND` is returned.
+ * - If no matching SRV record is found in @p aResponse, `OT_ERROR_NOT_FOUND` is returned. In this case, no additional
+ *   records (no TXT and/or AAAA) are read.
  * - If a matching SRV record is found in @p aResponse, @p aServiceInfo is updated and `OT_ERROR_NONE` is returned.
  * - If no matching TXT record is found in @p aResponse, `mTxtDataSize` in @p aServiceInfo is set to zero.
  * - If TXT data length is greater than `mTxtDataSize`, it is read partially and `mTxtDataTruncated` is set to true.
@@ -536,8 +557,10 @@ otError otDnsServiceResponseGetServiceName(const otDnsServiceResponse *aResponse
  *
  * This function MUST only be used from `otDnsServiceCallback`.
  *
- * - If no matching SRV record is found in @p aResponse, `OT_ERROR_NOT_FOUND` is returned.
- * - If a matching SRV record is found in @p aResponse, @p aServiceInfo is updated and `OT_ERROR_NONE` is returned.
+ * - If a matching SRV record is found in @p aResponse, @p aServiceInfo is updated.
+ * - If no matching SRV record is found, `OT_ERROR_NOT_FOUND` is returned unless the query config for this query
+ *   used `OT_DNS_SERVICE_MODE_TXT` for `mServiceMode` (meaning the request was only for TXT record). In this case, we
+ *   still try to parse the SRV record from Additional Data Section of response (in case server provided the info).
  * - If no matching TXT record is found in @p aResponse, `mTxtDataSize` in @p aServiceInfo is set to zero.
  * - If TXT data length is greater than `mTxtDataSize`, it is read partially and `mTxtDataTruncated` is set to true.
  * - If no matching AAAA record is found in @p aResponse, `mHostAddress is set to all zero or unspecified address.
@@ -548,7 +571,7 @@ otError otDnsServiceResponseGetServiceName(const otDnsServiceResponse *aResponse
  * @param[out] aServiceInfo       A `ServiceInfo` to output the service instance information (MUST NOT be NULL).
  *
  * @retval OT_ERROR_NONE          The service instance info was read. @p aServiceInfo is updated.
- * @retval OT_ERROR_NOT_FOUND     Could not find a matching SRV record in @p aResponse.
+ * @retval OT_ERROR_NOT_FOUND     Could not find a required record in @p aResponse.
  * @retval OT_ERROR_NO_BUFS       The host name and/or TXT data could not fit in the given buffers.
  * @retval OT_ERROR_PARSE         Could not parse the records in the @p aResponse.
  *
