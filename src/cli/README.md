@@ -355,7 +355,7 @@ Done
 
 ### br
 
-Enbale/disable the Border Routing functionality.
+Enable/disable the Border Routing functionality.
 
 ```bash
 > br enable
@@ -367,27 +367,108 @@ Done
 Done
 ```
 
+### br state
+
+Get the Border Routing state:
+
+- `uninitialized`: Routing Manager is uninitialized.
+- `disabled`: Routing Manager is initialized but disabled.
+- `stopped`: Routing Manager in initialized and enabled but currently stopped.
+- `running`: Routing Manager is initialized, enabled, and running.
+
+```bash
+> br state
+running
+```
+
 ### br omrprefix
 
-Get the randomly generated off-mesh-routable prefix of the Border Router.
+Get both local and favored off-mesh-routable prefixes of the Border Router.
 
 ```bash
 > br omrprefix
+Local: fdfc:1ff5:1512:5622::/64
+Favored: fdfc:1ff5:1512:5622::/64 prf:low
+Done
+```
+
+### br omrprefix favored
+
+Get the favored off-mesh-routable prefix of the Border Router.
+
+```bash
+> br omrprefix favored
+fdfc:1ff5:1512:5622::/64 prf:low
+Done
+```
+
+### br omrprefix local
+
+Get the local off-mesh-routable prefix of the Border Router.
+
+```bash
+> br omrprefix local
 fdfc:1ff5:1512:5622::/64
 Done
 ```
 
 ### br onlinkprefix
 
-Get the randomly generated on-link prefix of the Border Router.
+Get both local and favored on-link prefixes of the Border Router.
 
 ```bash
 > br onlinkprefix
+Local: fd41:2650:a6f5:0::/64
+Favored: 2600::0:1234:da12::/64
+Done
+```
+
+### br onlinkprefix favored
+
+Get the favored on-link prefix of the Border Router.
+
+```bash
+> br onlinkprefix favored
+2600::0:1234:da12::/64
+Done
+```
+
+### br onlinkprefix local
+
+Get the local on-link prefix of the Border Router.
+
+```bash
+> br onlinkprefix local
 fd41:2650:a6f5:0::/64
 Done
 ```
 
-### br nat64prefix
+### br nat64prefix local
+
+Get both local and favored NAT64 prefixes of the Border Router.
+
+`OPENTHREAD_CONFIG_NAT64_BORDER_ROUTING_ENABLE` is required.
+
+```bash
+> br nat64prefix
+Local: fd14:1078:b3d5:b0b0:0:0::/96
+Favored: fd14:1078:b3d5:b0b0:0:0::/96 prf:low
+Done
+```
+
+### br nat64prefix favored
+
+Get the favored NAT64 prefix of the Border Router.
+
+`OPENTHREAD_CONFIG_NAT64_BORDER_ROUTING_ENABLE` is required.
+
+```bash
+> br nat64prefix favored
+fd14:1078:b3d5:b0b0:0:0::/96 prf:low
+Done
+```
+
+### br nat64prefix local
 
 Get the local NAT64 prefix of the Border Router.
 
@@ -396,6 +477,17 @@ Get the local NAT64 prefix of the Border Router.
 ```bash
 > br nat64prefix
 fd14:1078:b3d5:b0b0:0:0::/96
+Done
+```
+
+### br prefixtable
+
+Get the discovered prefixes by Border Routing Manager on the infrastructure link.
+
+```bash
+> br prefixtable
+prefix:fd00:1234:5678:0::/64, on-link:no, ms-since-rx:29526, lifetime:1800, route-prf:med, router:ff02:0:0:0:0:0:0:1
+prefix:1200:abba:baba:0::/64, on-link:yes, ms-since-rx:29527, lifetime:1800, preferred:1800, router:ff02:0:0:0:0:0:0:1
 Done
 ```
 
@@ -415,6 +507,15 @@ Set the preference (which may be 'high', 'med', or 'low') to use when advertisin
 
 ```bash
 > br rioprf low
+Done
+```
+
+### br rioprf clear
+
+Clear a previously set preference value for advertising Route Info Options (e.g., for discovered OMR prefixes) in emitted Router Advertisement message. When cleared BR will use device's role to determine the RIO preference: Medium preference when in router/leader role and low preference when in child role.
+
+```bash
+> br rioprf clear
 Done
 ```
 
