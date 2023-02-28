@@ -53,11 +53,6 @@ Notifier::Notifier(Instance &aInstance)
     : InstanceLocator(aInstance)
     , mTimer(aInstance)
     , mSynchronizeDataTask(aInstance)
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
-    , mNetDataFullTask(aInstance)
-    , mNetDataFullCallback(nullptr)
-    , mNetDataFullCallbackContext(nullptr)
-#endif
     , mNextDelay(0)
     , mOldRloc(Mac::kShortAddrInvalid)
     , mWaitingForResponse(false)
@@ -189,6 +184,20 @@ exit:
 }
 #endif // #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE || OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
 
+#if OPENTHREAD_FTD && OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
+uint8_t Notifier::DetermineExpectedLength(void) const
+{
+    uint8_t newNetDataLength;
+
+    if (Get<Leader>().CanRegisterNetworkData(Get<Local>(), newNetDataLength) != kErrorNone)
+    {
+        newNetDataLength = NetworkData::kMaxSize;
+    }
+
+    return newNetDataLength;
+}
+#endif
+
 Error Notifier::SendServerDataNotification(uint16_t aOldRloc16, const NetworkData *aNetworkData)
 {
     Error            error = kErrorNone;
@@ -206,13 +215,6 @@ Error Notifier::SendServerDataNotification(uint16_t aOldRloc16, const NetworkDat
         tlv.SetLength(aNetworkData->GetLength());
         SuccessOrExit(error = message->Append(tlv));
         SuccessOrExit(error = message->AppendBytes(aNetworkData->GetBytes(), aNetworkData->GetLength()));
-
-#if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
-        if (Get<Leader>().CanRegisterNetworkData(*aNetworkData, aOldRloc16) == kErrorNoBufs)
-        {
-            SignalNetworkDataFull();
-        }
-#endif
     }
 
     if (aOldRloc16 != Mac::kShortAddrInvalid)
@@ -224,6 +226,10 @@ Error Notifier::SendServerDataNotification(uint16_t aOldRloc16, const NetworkDat
     SuccessOrExit(error = Get<Tmf::Agent>().SendMessage(*message, messageInfo, HandleCoapResponse, this));
 
     LogInfo("Sent server data notification");
+
+#if OPENTHREAD_FTD && OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
+    Get<Publisher>().HandleNetDataChange();
+#endif
 
 exit:
     FreeMessageOnError(message, error);
@@ -284,26 +290,6 @@ void Notifier::HandleCoapResponse(Error aResult)
         OT_ASSERT(false);
     }
 }
-
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
-void Notifier::SetNetDataFullCallback(NetDataCallback aCallback, void *aContext)
-{
-    mNetDataFullCallback        = aCallback;
-    mNetDataFullCallbackContext = aContext;
-}
-
-void Notifier::HandleNetDataFull(void)
-{
-#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
-    Get<Publisher>().HandleNetDataFull();
-#endif
-
-    if (mNetDataFullCallback != nullptr)
-    {
-        mNetDataFullCallback(mNetDataFullCallbackContext);
-    }
-}
-#endif
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE && OPENTHREAD_CONFIG_BORDER_ROUTER_REQUEST_ROUTER_ROLE
 

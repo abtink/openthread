@@ -61,6 +61,8 @@ Publisher::Publisher(Instance &aInstance)
 #endif
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE && OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     , mMode(kNormalOperation)
+    , mLocalWasFull(false)
+    , mIsCompactInitiator(false)
     , mModeTimer(aInstance)
 #endif
     , mTimer(aInstance)
@@ -114,7 +116,7 @@ Error Publisher::PublishExternalRoute(const ExternalRouteConfig &aConfig, Reques
 #if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     if (mMode == kOptimizeNetData)
     {
-        OptimizeNetDataUse();
+        AddCompactPrefixes();
     }
 #endif
 
@@ -149,7 +151,7 @@ Error Publisher::UnpublishPrefix(const Ip6::Prefix &aPrefix)
 #if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     if (mMode == kOptimizeNetData)
     {
-        OptimizeNetDataUse();
+        AddCompactPrefixes();
     }
 #endif
 
@@ -234,6 +236,8 @@ void Publisher::NotifyPrefixEntryChange(Event aEvent, const Ip6::Prefix &aPrefix
     mPrefixCallback.InvokeIfSet(static_cast<otNetDataPublisherEvent>(aEvent), &aPrefix);
 }
 
+//----------------------------------------------------------------------------------------------------------------------
+
 #if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
 
 bool Publisher::CompactPrefix::Matches(const SubPrefixMatcher &aMatcher) const
@@ -258,45 +262,243 @@ exit:
     return error;
 }
 
-void Publisher::HandleNetDataFull(void)
+bool Publisher::IsNetDataGettingFull(void) const
 {
+    bool isGettingFull = mLocalWasFull || (Get<Leader>().GetLength() > kLengthThresholdHigh);
+
+#if OPENTHREAD_FTD
+    isGettingFull = isGettingFull || (Get<Notifier>().DetermineExpectedLength() > kLengthThresholdHigh);
+#endif
+
+    return isGettingFull;
+}
+
+bool Publisher::NetDataContainsCompactInitiator(void) const
+{
+    bool                contains = false;
+    Iterator            iterator = kIteratorInit;
+    ExternalRouteConfig route;
+
+    while (Get<Leader>().GetNextExternalRoute(iterator, route) == kErrorNone)
+    {
+        if (route.mCompactInitiator)
+        {
+            contains = true;
+            break;
+        }
+    }
+
+    return contains;
+}
+
+bool Publisher::CanRecoverFromOptimized(void) const
+{
+    OT_ASSERT(mMode == kOptimizeNetData);
+
+    return mIsCompactInitiator ? (Get<Leader>().GetLength() < kLengthThresholdLow)
+                               : !NetDataContainsCompactInitiator();
+}
+
+void Publisher::HandleLocalNetDataFull(void)
+{
+    // This is signaled when local netdata gets full and cannot add
+    // a newly requested entry (prefix or service).
+
+    static constexpr uint32_t kShortDelay = 1;
+
+    // TODO: Check other modes
+
     switch (mMode)
     {
     case kNormalOperation:
-        mCompactPrefixLength.Reset();
-        LogInfo("Netdata is full, trying to optimize route entries using plen %u", mCompactPrefixLength.Get());
+        VerifyOrExit(!mLocalWasFull);
+        mLocalWasFull = true;
+        mModeTimer.Start(kShortDelay);
+        LogInfo("Local netdata is full");
         break;
 
-    case kRecoverFromOptimize:
-        LogInfo("Netdata is still full, re-entering optimized mode");
-        break;
-
-    case kOptimizeNetData:
-        if (mCompactPrefixLength.SelectNext() != kErrorNone)
-        {
-            LogWarn("Netdata is still full even using the shortest compact len %u", mCompactPrefixLength.Get());
-            ExitNow();
-        }
-
-        LogInfo("Netdata is still full - switching to shorter compact len %u", mCompactPrefixLength.Get());
+    default:
         break;
     }
-
-    mMode = kOptimizeNetData;
-    OptimizeNetDataUse();
-    mModeTimer.Start(Random::NonCrypto::AddJitter(kOptimizeNetDataRecoveryAttemptInterval,
-                                                  static_cast<uint16_t>(kOptimizeNetDataRecoveryJitter)));
 
 exit:
     return;
 }
 
-void Publisher::OptimizeNetDataUse(void)
+void Publisher::ResolveCompactInitatorConflict(void)
+{
+    Iterator            iterator = kIteratorInit;
+    ExternalRouteConfig route;
+
+    OT_ASSERT(mIsCompactInitiator);
+
+    while (Get<Leader>().GetNextExternalRoute(iterator, route) == kErrorNone)
+    {
+        if (!route.mCompactInitiator || (route.mRloc16 == Get<Mle::Mle>().GetRloc16()))
+        {
+            continue;
+        }
+
+        // There is another BR with `mCompactInitiator`, the one with
+        // smaller RLOC16 wins. We re-add all compact prefixes so to
+        // update the Compact Initiator flag in our route entries.
+
+        if (route.mRloc16 < Get<Mle::Mle>().GetRloc16())
+        {
+
+            mIsCompactInitiator = false;
+            AddCompactPrefixes();
+            break;
+        }
+    }
+}
+
+void Publisher::HandleNetDataChange(void)
+{
+    // This method updates compact mode variables/state on a netdata
+    // change. This is called when either `Leader` or `Local` netdata
+    // is changed.
+
+    uint32_t interval;
+
+    switch (mMode)
+    {
+    case kNormalOperation:
+        if (NetDataContainsCompactInitiator())
+        {
+            EnterOptimizeMode();
+            ExitNow();
+        }
+
+        if (!IsNetDataGettingFull())
+        {
+            mModeTimer.Stop();
+            ExitNow();
+        }
+
+        VerifyOrExit(!mModeTimer.IsRunning());
+
+        interval = Random::NonCrypto::GetUint32InRange(kMinWaitToOptimize, kMaxWaitToOptimize);
+        mModeTimer.Start(interval);
+        LogInfo("Netdata is getting full, check again in %lu msec", ToUlong(interval));
+        break;
+
+    case kOptimizeNetData:
+        if (mIsCompactInitiator)
+        {
+            ResolveCompactInitatorConflict();
+        }
+        else if (!NetDataContainsCompactInitiator())
+        {
+            mModeTimer.Start(kWaitToRecoverFromOptimzed);
+        }
+
+        if (mIsCompactInitiator)
+        {
+            if (CanRecoverFromOptimized())
+            {
+                mModeTimer.Start(kWaitToRecoverFromOptimzed);
+            }
+            else
+            {
+                mModeTimer.Stop();
+            }
+        }
+        // If I am initator, check if we can recover, if so, start timer?
+        // Else if I am not don't change anything based on netdata length
+        break;
+
+    case kRecoverFromOptimize:
+        if (mIsCompactInitiator)
+        {
+            ResolveCompactInitatorConflict();
+
+            if (!mIsCompactInitiator)
+            {
+                EnterOptimizeMode();
+                ExitNow();
+            }
+        }
+        else if (NetDataContainsCompactInitiator())
+        {
+            EnterOptimizeMode();
+            ExitNow();
+        }
+
+        if (IsNetDataGettingFull())
+        {
+            if (mIsCompactInitiator)
+            {
+                EnterOptimizeMode();
+            }
+            else
+            {
+                // what to do in this case?
+                mIsCompactInitiator = true;
+                EnterOptimizeMode();
+            }
+        }
+        // If netdata is getting full, stop recovery?
+        // If I was innitator, go back to being inintator.
+        // Else, what do I do? Become initator myself?
+
+        break;
+    }
+
+exit:
+    return;
+}
+
+void Publisher::EnterOptimizeMode(void)
+{
+    mMode         = kOptimizeNetData;
+    mLocalWasFull = false;
+
+    mCompactPrefixLength.Reset();
+    AddCompactPrefixes();
+
+    if (mIsCompactInitiator)
+    {
+        mInRecoverBackoff = true;
+        mModeTimer.Start(kRecoveryBackoff);
+    }
+}
+
+void Publisher::EnterNormalMode(void)
+{
+    VerifyOrExit(mMode != kNormalOperation);
+
+    RemoveCompactPrefixes();
+
+    mCompactPrefixes.Clear();
+    mMode               = kNormalOperation;
+    mIsCompactInitiator = false;
+
+exit:
+    return;
+}
+
+void Publisher::EnterRecoverFromOptimizeMode(void)
+{
+    LogInfo("Recover from optimized mode - check if we can re-add optimized entries");
+
+    for (PrefixEntry &entry : mPrefixEntries)
+    {
+        entry.ReaddIfOptimized();
+    }
+
+    mMode = kRecoverFromOptimize;
+    mModeTimer.Start(kOptimizeNetDataRecoveryWaitInterval);
+}
+
+void Publisher::AddCompactPrefixes(void)
 {
     bool                 didOptimize = false;
-    CompactPrefixesArray oldPrefixes;
+    CompactPrefixesArray oldPrefixes = mCompactPrefixes;
 
     OT_ASSERT(mMode == kOptimizeNetData);
+
+    mCompactPrefixes.Clear();
 
     for (PrefixEntry &entry : mPrefixEntries)
     {
@@ -313,8 +515,6 @@ void Publisher::OptimizeNetDataUse(void)
         ExitNow();
     }
 
-    oldPrefixes = mCompactPrefixes;
-
     while (DetermineCompactPrefixes() != kErrorNone)
     {
         if (mCompactPrefixLength.SelectNext() == kErrorNone)
@@ -328,35 +528,42 @@ void Publisher::OptimizeNetDataUse(void)
         }
     }
 
-    // First remove all the prefixes in old array that are no longer
-    // seen in new `mCompactPrefixes`.
+    // First remove all the prefixes in the old array.
 
     for (const CompactPrefix &oldPrefix : oldPrefixes)
     {
+        IgnoreError(Get<Local>().RemoveHasRoutePrefix(oldPrefix.GetPrefix()));
+
+#if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_INFO)
         if (!mCompactPrefixes.ContainsMatching(oldPrefix))
         {
-            IgnoreError(Get<Local>().RemoveHasRoutePrefix(oldPrefix.GetPrefix()));
             LogInfo("Removing old compact prefix %s", oldPrefix.ToString().AsCString());
         }
+#endif
     }
 
-    // Then add all new prefixes in `mCompactPrefixes` that were not
-    // present in the old array.
+    // Then add all the prefixes in `mCompactPrefixes`.
 
     for (const CompactPrefix &newPrefix : mCompactPrefixes)
     {
+        ExternalRouteConfig config;
+
+        config.Clear();
+        config.mPrefix           = newPrefix.GetPrefix();
+        config.mStable           = true;
+        config.mCompactInitiator = mIsCompactInitiator;
+
+        IgnoreError(Get<Local>().AddHasRoutePrefix(config));
+
+#if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_INFO)
         if (!oldPrefixes.ContainsMatching(newPrefix))
         {
-            ExternalRouteConfig config;
-
-            config.Clear();
-            config.mPrefix = newPrefix.GetPrefix();
-            config.mStable = true;
-
-            IgnoreError(Get<Local>().AddHasRoutePrefix(config));
             LogInfo("Adding new compact prefix %s", newPrefix.ToString().AsCString());
         }
+#endif
     }
+
+    Get<Notifier>().HandleServerDataUpdated();
 
 exit:
     return;
@@ -418,62 +625,66 @@ exit:
     return error;
 }
 
-void Publisher::EnterNormalMode(void)
-{
-    bool didRemove = false;
 
-    VerifyOrExit(mMode != kNormalOperation);
+void Publisher::RemoveCompactPrefixes(void)
+{
+    // Remove all `CompactPrefixes` from local netdata
+    // and register with leader.
 
     for (const CompactPrefix &compactPrefix : mCompactPrefixes)
     {
-        bool found = false;
+        IgnoreError(Get<Local>().RemoveHasRoutePrefix(compactPrefix.GetPrefix()));
+        LogInfo("Removing compact prefix %s", compactPrefix.ToString().AsCString());
 
-        for (const PrefixEntry &entry : mPrefixEntries)
+        // Check if the prefix matches an existing published entry and if
+        // it does, add it again. We need to remove it and re-add it to
+        // make sure the flags are preference are properly set.
+
+        for (PrefixEntry &entry : mPrefixEntries)
         {
             if (entry.IsInUse() && entry.IsExternalRoute() && compactPrefix.Matches(entry.GetPrefix()))
             {
-                found = true;
+                IgnoreError(entry.AddExternalRoute());
+                LogInfo("Re-adding prefix %s", compactPrefix.ToString().AsCString());
                 break;
             }
         }
 
-        if (!found)
-        {
-            LogInfo("Removing compact prefix %s used while optimizing netdata", compactPrefix.ToString().AsCString());
-            IgnoreError(Get<Local>().RemoveHasRoutePrefix(compactPrefix.GetPrefix()));
-            didRemove = true;
-        }
-    }
-
-    if (didRemove)
-    {
         Get<Notifier>().HandleServerDataUpdated();
     }
-
-    mCompactPrefixes.Clear();
-    mMode = kNormalOperation;
-
-exit:
-    return;
 }
+
 
 void Publisher::HandleModeTimer(void)
 {
     switch (mMode)
     {
     case kNormalOperation:
+        // Check that conditions for entering optimize mode is still
+        // true(i.e., netdata is still getting full) and then enter
+        // optimize mode as initiator.
+
+        VerifyOrExit(IsNetDataGettingFull());
+        LogInfo("Trying to optimize route entries using plen %u", mCompactPrefixLength.Get());
+        mCompactPrefixLength.Reset();
+        mIsCompactInitiator = true;
+        EnterOptimizeMode();
         break;
 
     case kOptimizeNetData:
-        LogInfo("Optimizing netdata use - check if we can re-add optimized entries");
-
-        for (PrefixEntry &entry : mPrefixEntries)
+        if (mInRecoverBackoff)
         {
-            entry.ReaddIfOptimized();
-        }
+            mInRecoverBackoff = false;
 
-        mMode = kRecoverFromOptimize;
-        mModeTimer.Start(kOptimizeNetDataRecoveryWaitInterval);
+            if (CanRecoverFromOptimized())
+            {
+                mModeTimer.Start(kWaitToRecoverFromOptimzed);
+            }
+        }
+        else if (CanRecoverFromOptimized())
+        {
+            EnterRecoverFromOptimizeMode();
+        }
         break;
 
     case kRecoverFromOptimize:
@@ -481,6 +692,9 @@ void Publisher::HandleModeTimer(void)
         EnterNormalMode();
         break;
     }
+
+exit:
+    return;
 }
 
 #endif // OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
@@ -489,6 +703,13 @@ void Publisher::HandleModeTimer(void)
 
 void Publisher::HandleNotifierEvents(Events aEvents)
 {
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
+    if (aEvents.Contains(kEventThreadNetdataChanged))
+    {
+        HandleNetDataChange();
+    }
+#endif
+
 #if OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE
     mDnsSrpServiceEntry.HandleNotifierEvents(aEvents);
 #endif

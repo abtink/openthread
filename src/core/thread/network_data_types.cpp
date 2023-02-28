@@ -198,6 +198,11 @@ uint8_t ExternalRouteConfig::ConvertToTlvFlags(void) const
 {
     uint8_t flags = 0;
 
+    if (mCompactInitiator)
+    {
+        flags |= HasRouteEntry::kCompactInitiatorFlag;
+    }
+
     if (mNat64)
     {
         flags |= HasRouteEntry::kNat64Flag;
@@ -226,8 +231,9 @@ void ExternalRouteConfig::SetFrom(Instance            &aInstance,
 
 void ExternalRouteConfig::SetFromTlvFlags(uint8_t aFlags)
 {
-    mNat64      = ((aFlags & HasRouteEntry::kNat64Flag) != 0);
-    mPreference = RoutePreferenceFromValue(aFlags >> HasRouteEntry::kPreferenceOffset);
+    mNat64            = ((aFlags & HasRouteEntry::kNat64Flag) != 0);
+    mCompactInitiator = ((aFlags & HasRouteEntry::kCompactInitiatorFlag) != 0);
+    mPreference       = RoutePreferenceFromValue(aFlags >> HasRouteEntry::kPreferenceOffset);
 }
 
 bool ServiceConfig::ServerConfig::operator==(const ServerConfig &aOther) const

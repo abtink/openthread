@@ -61,7 +61,7 @@ RegisterLogModule("NetworkData");
 Leader::Leader(Instance &aInstance)
     : LeaderBase(aInstance)
     , mWaitingForNetDataSync(false)
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     , mIsClone(false)
 #endif
     , mTimer(aInstance)
@@ -80,7 +80,7 @@ void Leader::Reset(void)
 
 void Leader::Start(Mle::LeaderStartMode aStartMode)
 {
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     OT_ASSERT(!mIsClone);
 #endif
 
@@ -133,7 +133,7 @@ void Leader::RemoveBorderRouter(uint16_t aRloc16, MatchMode aMatchMode)
 
     RemoveRloc(aRloc16, aMatchMode, flags);
 
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     if (!mIsClone)
 #endif
     {
@@ -692,8 +692,8 @@ exit:
     return status;
 }
 
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
-Error Leader::CanRegisterNetworkData(const NetworkData &aNetworkData, uint16_t aOldRloc16) const
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
+Error Leader::CanRegisterNetworkData(const NetworkData &aNetworkData, uint8_t &aNewLength) const
 {
     // Create a clone of the leader's network data, and try to register
     // `aNetworkData` into the copy (as if this device itself is the
@@ -703,17 +703,16 @@ Error Leader::CanRegisterNetworkData(const NetworkData &aNetworkData, uint16_t a
     // using `Get<ot::Notifier>().Signal()`, or allocate service or
     // context ID.
 
+    Error  error;
     Leader leaderClone(GetInstance());
 
     leaderClone.mIsClone = true;
     SuccessOrAssert(CopyNetworkData(kFullSet, leaderClone));
+    SuccessOrExit(error = leaderClone.RegisterNetworkData(Get<Mle::Mle>().GetRloc16(), aNetworkData));
+    aNewLength = leaderClone.GetLength();
 
-    if (aOldRloc16 != Mac::kShortAddrInvalid)
-    {
-        leaderClone.RemoveBorderRouter(aOldRloc16, kMatchModeRloc16);
-    }
-
-    return leaderClone.RegisterNetworkData(Get<Mle::Mle>().GetRloc16(), aNetworkData);
+exit:
+    return error;
 }
 #endif
 
@@ -993,7 +992,7 @@ Error Leader::AllocateServiceId(uint8_t &aServiceId) const
     Error   error = kErrorNotFound;
     uint8_t serviceId;
 
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     if (mIsClone)
     {
         aServiceId = Mle::kServiceMinId;
@@ -1037,7 +1036,7 @@ Error Leader::AllocateContextId(uint8_t &aContextId)
 {
     Error error = kErrorNotFound;
 
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     if (mIsClone)
     {
         aContextId = kMinContextId;
@@ -1072,7 +1071,7 @@ void Leader::FreeContextId(uint8_t aContextId)
 
 void Leader::StartContextReuseTimer(uint8_t aContextId)
 {
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     if (!mIsClone)
 #endif
     {
@@ -1089,7 +1088,7 @@ void Leader::StartContextReuseTimer(uint8_t aContextId)
 
 void Leader::StopContextReuseTimer(uint8_t aContextId)
 {
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     if (!mIsClone)
 #endif
     {
@@ -1391,7 +1390,7 @@ void Leader::HandleTimer(void)
 {
     bool contextsWaiting = false;
 
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     VerifyOrExit(!mIsClone);
 #endif
 

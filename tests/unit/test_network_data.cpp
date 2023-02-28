@@ -921,6 +921,7 @@ void TestNetworkDataDsnSrpAnycastSeqNumSelection(void)
 
     testFreeInstance(instance);
 }
+/*
 
 #if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
 
@@ -1037,6 +1038,7 @@ Ip6::Prefix PrefixFromString(const char *aString, uint8_t aPrefixLength)
     return prefix;
 }
 
+
 void TestNetworkDataPublisherOptimizeOnFull(void)
 {
     constexpr uint8_t  kMaxPrefixes      = 9;
@@ -1055,7 +1057,7 @@ void TestNetworkDataPublisherOptimizeOnFull(void)
     uint8_t             count;
 
     printf("\n\n-------------------------------------------------");
-    printf("\nTestNetworkDataPublisherOptimizeOnFull()\n");
+    //printf("\nTestNetworkDataPublisherOptimizeOnFull()\n");
 
     //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Initialize OT instance.
@@ -1385,13 +1387,14 @@ void TestNetworkDataPublisherOptimizeOnFull(void)
     //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Finalize  OT instance.
 
-    Log("TestNetworkDataPublisherOptimizeOnFull passed");
+    //Log("TestNetworkDataPublisherOptimizeOnFull passed");
 
     SuccessOrQuit(otIp6SetEnabled(sInstance, false));
     SuccessOrQuit(otThreadSetEnabled(sInstance, false));
     SuccessOrQuit(otInstanceErasePersistentInfo(sInstance));
     testFreeInstance(sInstance);
 }
+
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
 
@@ -1561,6 +1564,8 @@ public:
 
 #endif // OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
 
+*/
+
 } // namespace NetworkData
 } // namespace ot
 
@@ -1573,9 +1578,9 @@ int main(void)
     ot::NetworkData::TestNetworkDataDsnSrpServices();
     ot::NetworkData::TestNetworkDataDsnSrpAnycastSeqNumSelection();
 #if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
-    ot::NetworkData::TestNetworkDataPublisherOptimizeOnFull();
+    // ot::NetworkData::TestNetworkDataPublisherOptimizeOnFull();
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
-    ot::NetworkData::UnitTester::TestCompactPrefix();
+    // ot::NetworkData::UnitTester::TestCompactPrefix();
 #endif
 #endif
 

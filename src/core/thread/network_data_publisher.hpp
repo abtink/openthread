@@ -36,6 +36,10 @@
 
 #include "openthread-core-config.h"
 
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA && !OPENTHREAD_CONFIG_NETDATA_PUBLISHER_ENABLE
+#error "OPTIMIZE_ROUTES_ON_FULL_NETDATA cannot be used without NETDATA_PUBLISHER_ENABLE"
+#endif
+
 #if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_ENABLE
 
 #if !OPENTHREAD_CONFIG_TMF_NETDATA_SERVICE_ENABLE && !OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
@@ -47,9 +51,6 @@
 
 #if !OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE
 #error "OPTIMIZE_ROUTES_ON_FULL_NETDATA requires OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE"
-#endif
-#if !OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
-#error "OPTIMIZE_ROUTES_ON_FULL_NETDATA requires OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL"
 #endif
 
 #endif
@@ -72,6 +73,7 @@
 namespace ot {
 namespace NetworkData {
 
+class Local;
 class Notifier;
 class UnitTester;
 
@@ -86,6 +88,7 @@ class Publisher : public InstanceLocator, private NonCopyable
 {
     friend class ot::Notifier;
     friend class Notifier;
+    friend class Local;
     friend class UnitTester;
 
 public:
@@ -450,13 +453,13 @@ private:
         void      Unpublish(void);
         void      HandleTimer(void) { Entry::HandleTimer(); }
         void      HandleNotifierEvents(Events aEvents);
+        Error     AddExternalRoute(void);
 
 #if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
         Error              Optimize(void);
         void               ReaddIfOptimized(void);
         const Ip6::Prefix &GetPrefix(void) const { return mPrefix; }
         bool               IsExternalRoute(void) const { return (mType == kTypeExternalRoute); }
-
 #endif
 
     private:
@@ -475,7 +478,6 @@ private:
         void  Publish(const Ip6::Prefix &aPrefix, uint16_t aNewFlags, Type aNewType, Requester aRequester);
         void  Add(void);
         Error AddOnMeshPrefix(void);
-        Error AddExternalRoute(void);
         void  Remove(State aNextState);
         void  Process(void);
         void  CountOnMeshPrefixEntries(uint8_t &aNumEntries, uint8_t &aNumPreferredEntries) const;
@@ -488,16 +490,23 @@ private:
     };
 
 #if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
-    static constexpr uint8_t kMaxCompactPrefixEntries = 20;
+
+    static constexpr uint8_t kLengthThresholdHigh = 205; // Threshold to enter optimized mode
+    static constexpr uint8_t kLengthThresholdLow  = 110; // Threshold to try to exit optimized mode
+
+    static constexpr uint8_t kMaxCompactPrefixEntries = 40;
 
     // All intervals are in msec
-    static constexpr uint32_t kOptimizeNetDataRecoveryAttemptInterval =
-        OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_MODE_RECOVERY_ATTEMPT_INTERVAL;
-    static constexpr uint32_t kOptimizeNetDataRecoveryJitter =
-        OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_MODE_RECOVERY_JITTER;
+
+    static constexpr uint32_t kMinWaitToOptimize = TimeMilli::SecToMsec(7);
+    static constexpr uint32_t kMaxWaitToOptimize = TimeMilli::SecToMsec(15);
+    static constexpr uint32_t kWaitToRecoverFromOptimzed = 5 * TimeMilli::kOneMinuteInMsec;
     static constexpr uint32_t kOptimizeNetDataRecoveryWaitInterval = 1 * Time::kOneMinuteInMsec;
 
-    enum Mode : uint8_t{
+    static constexpr uint32_t kRecoveryBackoff = 4 * TimeMilli::kOneHourInMsec;
+
+    enum Mode : uint8_t
+    {
         kNormalOperation,
         kOptimizeNetData,
         kRecoverFromOptimize,
@@ -564,10 +573,20 @@ private:
     bool               IsAPrefixEntry(const Entry &aEntry) const;
     void               NotifyPrefixEntryChange(Event aEvent, const Ip6::Prefix &aPrefix) const;
 #if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
-    void  HandleNetDataFull(void);
-    void  OptimizeNetDataUse(void);
+    bool IsNetDataGettingFull(void) const;
+    bool NetDataContainsCompactInitiator(void) const;
+    bool CanRecoverFromOptimized(void) const;
+    void HandleLocalNetDataFull(void);
+    void HandleNetDataChange(void);
+    void CheckNetDataLength(void);
+    void ResolveCompactInitatorConflict(void);
+    void EnterOptimizeMode(void);
+    void EnterNormalMode(void);
+    void EnterRecoverFromOptimizeMode(void);
+
+    void AddCompactPrefixes(void);
     Error DetermineCompactPrefixes(void);
-    void  EnterNormalMode(void);
+    void  RemoveCompactPrefixes(void);
     void  HandleModeTimer(void);
 
     using ModeTimer = TimerMilliIn<Publisher, &Publisher::HandleModeTimer>;
@@ -592,6 +611,9 @@ private:
     CompactPrefixesArray mCompactPrefixes;
     CompactPrefixLength  mCompactPrefixLength;
     Mode                 mMode;
+    bool                 mLocalWasFull : 1;
+    bool                 mIsCompactInitiator : 1;
+    bool                 mInRecoverBackoff : 1;
     ModeTimer            mModeTimer;
 #endif
 

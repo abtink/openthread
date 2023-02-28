@@ -468,6 +468,15 @@ public:
     bool IsNat64(void) const { return (mFlags & kNat64Flag) != 0; }
 
     /**
+     * This method indicates whether or not the Compact Initiator flag is set.
+     *
+     * @retval TRUE   If the Compact Initiator flag is set.
+     * @retval FALSE  If the Compact Initiator flag is not set.
+     *
+     */
+    bool IsCompactInitiator(void) const { return (mFlags & kCompactInitiatorFlag) != 0; }
+
+    /**
      * This method returns a pointer to the next HasRouteEntry.
      *
      * @returns A pointer to the next HasRouteEntry.
@@ -505,9 +514,10 @@ public:
     static int8_t PreferenceFromFlags(uint8_t aFlags) { return RoutePreferenceFromValue(aFlags >> kPreferenceOffset); }
 
 private:
-    static constexpr uint8_t kPreferenceOffset = 6;
-    static constexpr uint8_t kPreferenceMask   = 3 << kPreferenceOffset;
-    static constexpr uint8_t kNat64Flag        = 1 << 5;
+    static constexpr uint8_t kPreferenceOffset     = 6;
+    static constexpr uint8_t kPreferenceMask       = 3 << kPreferenceOffset;
+    static constexpr uint8_t kNat64Flag            = 1 << 5;
+    static constexpr uint8_t kCompactInitiatorFlag = 1 << 4;
 
     uint16_t mRloc;
     uint8_t  mFlags;

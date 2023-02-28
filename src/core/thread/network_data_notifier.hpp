@@ -80,25 +80,6 @@ public:
      */
     void HandleServerDataUpdated(void);
 
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
-    typedef otBorderRouterNetDataFullCallback NetDataCallback; ///< Network Data full callback.
-
-    /**
-     * This method sets the callback to indicate when Network Data gets full.
-     *
-     * @param[in] aCallback   The callback.
-     * @param[in] aContext    The context to use with @p aCallback.
-     *
-     */
-    void SetNetDataFullCallback(NetDataCallback aCallback, void *aContext);
-
-    /**
-     * This method signals that network data (local or leader) is getting full.
-     *
-     */
-    void SignalNetworkDataFull(void) { mNetDataFullTask.Post(); }
-#endif
-
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE && OPENTHREAD_CONFIG_BORDER_ROUTER_REQUEST_ROUTER_ROLE
     /**
      * This method indicates whether the device as border router is eligible for router role upgrade request using the
@@ -119,6 +100,19 @@ public:
      *
      */
     bool IsEligibleForRouterRoleUpgradeAsBorderRouter(void) const;
+#endif
+
+#if OPENTHREAD_FTD && OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
+    /**
+     * This method determines the expected Network Data length after registering the local entries.
+     *
+     * If there is not enough space left for the local entries, `NetworkData::kMaxSize` is returned.
+     *
+     * @returns The expected Network Data length after incorporating the local entries, `NetworkData::kMaxSize`
+     *          indicates there was no space.
+     *
+     */
+    uint8_t DetermineExpectedLength(void) const;
 #endif
 
 private:
@@ -144,10 +138,6 @@ private:
                                    Error                aResult);
     void        HandleCoapResponse(Error aResult);
 
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
-    void HandleNetDataFull(void);
-#endif
-
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE && OPENTHREAD_CONFIG_BORDER_ROUTER_REQUEST_ROUTER_ROLE
     void ScheduleRouterRoleUpgradeIfEligible(void);
     void HandleTimeTick(void);
@@ -155,20 +145,12 @@ private:
 
     using SynchronizeDataTask = TaskletIn<Notifier, &Notifier::SynchronizeServerData>;
     using DelayTimer          = TimerMilliIn<Notifier, &Notifier::HandleTimer>;
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
-    using NetDataFullTask = TaskletIn<Notifier, &Notifier::HandleNetDataFull>;
-#endif
 
     DelayTimer          mTimer;
     SynchronizeDataTask mSynchronizeDataTask;
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
-    NetDataFullTask mNetDataFullTask;
-    NetDataCallback mNetDataFullCallback;
-    void *          mNetDataFullCallbackContext;
-#endif
-    uint32_t mNextDelay;
-    uint16_t mOldRloc;
-    bool     mWaitingForResponse : 1;
+    uint32_t            mNextDelay;
+    uint16_t            mOldRloc;
+    bool                mWaitingForResponse : 1;
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE && OPENTHREAD_CONFIG_BORDER_ROUTER_REQUEST_ROUTER_ROLE
     bool    mDidRequestRouterRoleUpgrade : 1;

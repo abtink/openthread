@@ -163,26 +163,24 @@ public:
      */
     const ServiceTlv *FindServiceById(uint8_t aServiceId) const;
 
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     /**
-     * This method checks whether a given Network Data can be successfully registered into leader's Network Data.
+     * This method checks whether a given Network Data can be successfully registered into leader's Network Data and
+     * determines the resulting Network Data length.
      *
      * This method is used to determine whether there is still room in Network Data to register @p aNetworkData
      * entries. The @p aNetworkData MUST follow the format of local Network Data (e.g., all entries associated with the
      * RLOC16 of this device).
      *
-     * Input @p aOldRloc16 can be used to indicate the old RLOC16 of the device. If provided, then entries matching old
-     * RLOC16 are first removed, before checking if new entries from @p aNetworkData can fit.
+     * @param[in]  aNetworkData The Network Data to check if can be registered.
+     * @param[out] aNewLength   Variable to output the new Network Data length after registering @p aNetworkData.
      *
-     * @param[in] aNetworkData   The Network Data to check if can be registered.
-     * @param[in] aOldRloc16     Indicates the old RLOC16 of this device. `Mac::kShortAddrInvalid` is no old RLOC16.
-     *
-     * @retval kErrorNone     The @p aNetworkData can be registered (there is still room in Network Data).
+     * @retval kErrorNone     The @p aNetworkData can be registered. @p aLength is updated.
      * @retval kErrorNotBufs  No more room in Network Data to register new entries.
      * @retval kErrorParse    The TLVs in @p aNetworkData are not well-formed.
      *
      */
-    Error CanRegisterNetworkData(const NetworkData &aNetworkData, uint16_t aOldRloc16) const;
+    Error CanRegisterNetworkData(const NetworkData &aNetworkData, uint8_t &aNewLength) const;
 #endif
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
@@ -314,7 +312,7 @@ private:
     static constexpr uint32_t kMaxNetDataSyncWait  = 60 * 1000;    // Maximum time to wait for netdata sync.
 
     bool mWaitingForNetDataSync : 1;
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     bool mIsClone : 1;
 #endif
     uint16_t    mContextUsed;

@@ -134,10 +134,10 @@ Error Local::AddPrefix(const Ip6::Prefix &aPrefix, NetworkDataTlv::Type aSubTlvT
     DumpDebg("AddPrefix", GetBytes(), GetLength());
 
 exit:
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     if (error == kErrorNoBufs)
     {
-        Get<Notifier>().SignalNetworkDataFull();
+        Get<Publisher>().HandleLocalNetDataFull();
     }
 #endif
 
@@ -218,10 +218,10 @@ Error Local::AddService(uint32_t           aEnterpriseNumber,
     DumpDebg("AddService", GetBytes(), GetLength());
 
 exit:
-#if OPENTHREAD_CONFIG_BORDER_ROUTER_SIGNAL_NETWORK_DATA_FULL
+#if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_OPTIMIZE_ROUTES_ON_FULL_NETDATA
     if (error == kErrorNoBufs)
     {
-        Get<Notifier>().SignalNetworkDataFull();
+        Get<Publisher>().HandleLocalNetDataFull();
     }
 #endif
 

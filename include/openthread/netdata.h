@@ -81,6 +81,7 @@ typedef struct otExternalRouteConfig
     uint16_t    mRloc16;                  ///< The border router's RLOC16 (value ignored on config add).
     signed int  mPreference : 2;          ///< A 2-bit signed int preference (`OT_ROUTE_PREFERENCE_*` values).
     bool        mNat64 : 1;               ///< Whether this is a NAT64 prefix.
+    bool        mCompactInitiator : 1;    ///< Whether device added this is compact mode initiator.
     bool        mStable : 1;              ///< Whether this configuration is considered Stable Network Data.
     bool        mNextHopIsThisDevice : 1; ///< Whether the next hop is this device (value ignored on config add).
 } otExternalRouteConfig;
