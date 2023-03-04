@@ -50,6 +50,10 @@
 
 namespace ot {
 
+namespace Utils {
+class MeshDiag;
+}
+
 namespace NetworkDiagnostic {
 
 /**
@@ -68,6 +72,7 @@ namespace NetworkDiagnostic {
 class NetworkDiagnostic : public InstanceLocator, private NonCopyable
 {
     friend class Tmf::Agent;
+    friend class Utils::MeshDiag;
 
 public:
     typedef otNetworkDiagIterator          Iterator;    ///< Iterator to go through TLVs in `GetNextDiagTlv()`.
@@ -125,6 +130,8 @@ public:
     static Error GetNextDiagTlv(const Coap::Message &aMessage, Iterator &aIterator, TlvInfo &aTlvInfo);
 
 private:
+    static constexpr uint16_t kMaxAnswerMessageLength = 800;
+
     static constexpr uint16_t kMaxChildEntries = 398;
 
     enum Action : uint8_t
@@ -134,16 +141,20 @@ private:
     };
 
     Error SendCommand(Uri                   aUri,
+                      Message::Priority     aPriority,
                       const Ip6::Address   &aDestination,
                       const uint8_t         aTlvTypes[],
                       uint8_t               aCount,
                       Coap::ResponseHandler aHandler = nullptr,
                       void                 *aContext = nullptr);
 
+    void SendAnswer(const Ip6::Address &aDestination, const Message &aRequest);
+
     Error AppendDiagTlv(uint8_t aTlvType, Message &aMessage);
     Error AppendIp6AddressList(Message &aMessage);
     Error AppendMacCounters(Message &aMessage);
     Error AppendChildTable(Message &aMessage);
+    Error AppendChildTableAsChildTlvs(Coap::Message *&aAnswer, const Ip6::MessageInfo &aAnswerInfo);
     Error AppendRequestedTlvs(const Message &aRequest, Message &aResponse);
     void  PrepareMessageInfoForDest(const Ip6::Address &aDestination, Tmf::MessageInfo &aMessageInfo) const;
 

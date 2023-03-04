@@ -28,7 +28,7 @@
 
 /**
  * @file
- *   This file includes definitions for generating and processing MLE TLVs.
+ *   This file includes definitions for generating and processing Network Diagnostics TLVs.
  */
 
 #ifndef NETWORK_DIAGNOSTIC_TLVS_HPP_
@@ -48,6 +48,7 @@
 #include "thread/link_quality.hpp"
 #include "thread/mle_tlvs.hpp"
 #include "thread/mle_types.hpp"
+#include "thread/topology.hpp"
 
 namespace ot {
 namespace NetworkDiagnostic {
@@ -86,6 +87,7 @@ public:
         kTypeList        = OT_NETWORK_DIAGNOSTIC_TLV_TYPE_LIST,
         kMaxChildTimeout = OT_NETWORK_DIAGNOSTIC_TLV_MAX_CHILD_TIMEOUT,
         kVersion         = OT_NETWORK_DIAGNOSTIC_TLV_VERSION,
+        kChild           = 25,
     };
 
     /**
@@ -614,6 +616,58 @@ public:
         SetLength(sizeof(*this) - sizeof(Tlv));
     }
 } OT_TOOL_PACKED_END;
+
+#if OPENTHREAD_FTD
+
+/**
+ * This class implements Child TLV generation and parsing.
+ *
+ */
+OT_TOOL_PACKED_BEGIN
+class ChildTlv : public Tlv, public TlvInfo<Tlv::kChild>, public Clearable<ChildTlv>
+{
+public:
+    /**
+     * This method initializes the TLV using information from a given `Child`.
+     *
+     * @param[in] aChild   The child to initialize the TLV from.
+     *
+     */
+    void InitFrom(const Child &aChild);
+
+    /**
+     * This method initializes the TLV as empty (zero length).
+     *
+     */
+    void InitAsEmpty(void)
+    {
+        SetType(kChild);
+        SetLength(0);
+    }
+
+    static constexpr uint8_t kFlagsRxOnWhenIdle = 1 << 0; ///< Device mode - Rx-on when idle.
+    static constexpr uint8_t kFlagsFtd          = 1 << 1; ///< Device mode - Full Thread Device (FTD).
+    static constexpr uint8_t kFlagsFullNetdta   = 1 << 2; ///< Device mode - Full Network Data.
+    static constexpr uint8_t kFlagsCslSync      = 1 << 3; ///< Is CSL capable and CSL synchronized.
+    static constexpr uint8_t kFlagsTrackErrRate = 1 << 4; ///< Supports tracking error rates.
+
+    uint8_t         mFlags;               ///< Flags (`kFlags*` constants).
+    uint16_t        mRloc16;              ///< RLOC16.
+    Mac::ExtAddress mExtAddress;          ///< Extended Address.
+    uint16_t        mVersion;             ///< Version.
+    uint32_t        mTimeout;             ///< Timeout in seconds.
+    uint32_t        mAge;                 ///< Seconds since last heard from the child.
+    uint16_t        mSupervisionInterval; ///< Supervision interval in seconds. Zero to indicate not used.
+    int8_t          mAverageRssi;         ///< Average RSSI. 127 if not available or unknown
+    int8_t          mLastRssi;            ///< RSSI of last received frame. 127 if not available or unknown.
+    uint16_t        mFrameErrorRate;      ///< Frame error rate (0xffff->100%). Zero if not known or supported.
+    uint16_t        mMessageErrorRate;    ///< (IPv6) msg error rate (0xffff->100%). Zero if not known or supported.
+    uint16_t        mQueuedMessageCount;  ///< Number of queued message for indirect tx to child.
+    uint16_t        mCslPeriod;           ///< CSL Period in unit of 10 symbols. Zero indicated disabled.
+    uint32_t        mCslTimeout;          ///< CSL Timeout in seconds. Zero if not suppurated.
+} OT_TOOL_PACKED_END;
+
+#endif // OPENTHREAD_FTD
 
 } // namespace NetworkDiagnostic
 } // namespace ot
