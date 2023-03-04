@@ -48,6 +48,10 @@
 
 namespace ot {
 
+namespace Utils {
+class MeshDiag;
+}
+
 namespace NetworkDiagnostic {
 
 /**
@@ -80,16 +84,48 @@ public:
     explicit Server(Instance &aInstance);
 
 private:
-    static constexpr uint16_t kMaxChildEntries = 398;
+    static constexpr uint16_t kMaxChildEntries              = 398;
+    static constexpr uint16_t kAnswerMessageLengthThreshold = 800;
 
+    struct AnswerInfo
+    {
+        AnswerInfo(Instance &aInstance)
+            : mMessageInfo(aInstance)
+            , mAnswerIndex(0)
+            , mQueryId(0)
+            , mHasQueryId(false)
+        {
+        }
+
+        Tmf::MessageInfo mMessageInfo;
+        uint16_t         mAnswerIndex;
+        uint16_t         mQueryId;
+        bool             mHasQueryId;
+    };
+
+    Error AllocateAnswer(Coap::Message *&aAnswer, AnswerInfo &aInfo);
+    Error CheckAnswerLength(Coap::Message *&aAnswer, AnswerInfo &aInfo);
+
+    void  SendAnswer(AnswerInfo &aInfo, const Message &aRequest);
     Error AppendDiagTlv(uint8_t aTlvType, Message &aMessage);
     Error AppendIp6AddressList(Message &aMessage);
     Error AppendMacCounters(Message &aMessage);
-    Error AppendChildTable(Message &aMessage);
     Error AppendRequestedTlvs(const Message &aRequest, Message &aResponse);
     void  PrepareMessageInfoForDest(const Ip6::Address &aDestination, Tmf::MessageInfo &aMessageInfo) const;
 
+#if OPENTHREAD_FTD
+    Error AppendChildTable(Message &aMessage);
+    Error AppendChildTableAsChildTlvs(Coap::Message *&aAnswer, AnswerInfo &aInfo);
+    Error AppendChildTableIp6AddressList(Coap::Message *&aAnswer, AnswerInfo &aInfo);
+    Error AppendChildIp6AddressListTlv(Coap::Message &aAnswer, const Child &aChild);
+
+#endif
+
     template <Uri kUri> void HandleTmf(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+
+#if OPENTHREAD_FTD
+    // MessageQueue mAnswerQueue;
+#endif
 };
 
 DeclareTmfHandler(Server, kUriDiagnosticGetRequest);
@@ -105,6 +141,7 @@ DeclareTmfHandler(Server, kUriDiagnosticGetAnswer);
 class Client : public InstanceLocator, private NonCopyable
 {
     friend class Tmf::Agent;
+    friend class Utils::MeshDiag;
 
 public:
     typedef otNetworkDiagIterator          Iterator;    ///< Iterator to go through TLVs in `GetNextDiagTlv()`.
@@ -163,10 +200,17 @@ public:
      */
     static Error GetNextDiagTlv(const Coap::Message &aMessage, Iterator &aIterator, TlvInfo &aTlvInfo);
 
-private:
-    static constexpr uint16_t kMaxChildEntries = 398;
+    /**
+     * This method returns the query ID used for the last Network Diagnostic Query command.
+     *
+     * @returns The query ID used for last query.
+     *
+     */
+    uint16_t GetLastQueryId(void) const { return mQueryId; }
 
+private:
     Error SendCommand(Uri                   aUri,
+                      Message::Priority     aPriority,
                       const Ip6::Address   &aDestination,
                       const uint8_t         aTlvTypes[],
                       uint8_t               aCount,
@@ -185,6 +229,7 @@ private:
     static const char *UriToString(Uri aUri);
 #endif
 
+    uint16_t              mQueryId;
     Callback<GetCallback> mGetCallback;
 };
 

@@ -68,23 +68,25 @@ extern "C" {
 
 enum
 {
-    OT_NETWORK_DIAGNOSTIC_TLV_EXT_ADDRESS       = 0,  ///< MAC Extended Address TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_SHORT_ADDRESS     = 1,  ///< Address16 TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_MODE              = 2,  ///< Mode TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_TIMEOUT           = 3,  ///< Timeout TLV (the maximum polling time period for SEDs)
-    OT_NETWORK_DIAGNOSTIC_TLV_CONNECTIVITY      = 4,  ///< Connectivity TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_ROUTE             = 5,  ///< Route64 TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_LEADER_DATA       = 6,  ///< Leader Data TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_NETWORK_DATA      = 7,  ///< Network Data TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_IP6_ADDR_LIST     = 8,  ///< IPv6 Address List TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_MAC_COUNTERS      = 9,  ///< MAC Counters TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_BATTERY_LEVEL     = 14, ///< Battery Level TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_SUPPLY_VOLTAGE    = 15, ///< Supply Voltage TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_CHILD_TABLE       = 16, ///< Child Table TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_CHANNEL_PAGES     = 17, ///< Channel Pages TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_TYPE_LIST         = 18, ///< Type List TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_MAX_CHILD_TIMEOUT = 19, ///< Max Child Timeout TLV
-    OT_NETWORK_DIAGNOSTIC_TLV_VERSION           = 24, ///< Version TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_EXT_ADDRESS         = 0,  ///< MAC Extended Address TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_SHORT_ADDRESS       = 1,  ///< Address16 TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_MODE                = 2,  ///< Mode TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_TIMEOUT             = 3,  ///< Timeout TLV (the maximum polling time period for SEDs)
+    OT_NETWORK_DIAGNOSTIC_TLV_CONNECTIVITY        = 4,  ///< Connectivity TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_ROUTE               = 5,  ///< Route64 TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_LEADER_DATA         = 6,  ///< Leader Data TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_NETWORK_DATA        = 7,  ///< Network Data TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_IP6_ADDR_LIST       = 8,  ///< IPv6 Address List TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_MAC_COUNTERS        = 9,  ///< MAC Counters TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_BATTERY_LEVEL       = 14, ///< Battery Level TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_SUPPLY_VOLTAGE      = 15, ///< Supply Voltage TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_CHILD_TABLE         = 16, ///< Child Table TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_CHANNEL_PAGES       = 17, ///< Channel Pages TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_TYPE_LIST           = 18, ///< Type List TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_MAX_CHILD_TIMEOUT   = 19, ///< Max Child Timeout TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_VERSION             = 24, ///< Version TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_CHILD               = 29, ///< Child TLV
+    OT_NETWORK_DIAGNOSTIC_TLV_CHILD_IP6_ADDR_LIST = 30, ///< Child IPv6 Address List TLV
 };
 
 typedef uint16_t otNetworkDiagIterator; ///< Used to iterate through Network Diagnostic TLV.
