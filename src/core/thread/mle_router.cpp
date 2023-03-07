@@ -3421,7 +3421,7 @@ void MleRouter::HandleAddressSolicitResponse(Coap::Message          *aMessage,
     ThreadRouterMaskTlv routerMaskTlv;
     uint8_t             routerId;
     Router             *router;
-    bool                isRouterIdAllocated;
+    //bool                isRouterIdAllocated;
 
     mAddressSolicitPending = false;
 
@@ -3453,7 +3453,7 @@ void MleRouter::HandleAddressSolicitResponse(Coap::Message          *aMessage,
     SuccessOrExit(Tlv::Find<ThreadRloc16Tlv>(*aMessage, rloc16));
     routerId = RouterIdFromRloc16(rloc16);
 
-    isRouterIdAllocated = mRouterTable.IsAllocated(routerId);
+    //isRouterIdAllocated = mRouterTable.IsAllocated(routerId);
 
     SuccessOrExit(Tlv::FindTlv(*aMessage, routerMaskTlv));
     VerifyOrExit(routerMaskTlv.IsValid());
@@ -3497,7 +3497,7 @@ void MleRouter::HandleAddressSolicitResponse(Coap::Message          *aMessage,
         leader->SetNextHopAndCost(RouterIdFromRloc16(mParent.GetRloc16()), mParent.GetLeaderCost());
     }
 
-    if (!isRouterIdAllocated)
+    //if (!isRouterIdAllocated)
     {
         // We send an Advertisement to inform our former parent of our
         // newly allocated Router ID. This will cause the parent to
