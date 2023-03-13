@@ -71,6 +71,12 @@ typedef struct otBorderRouterConfig
     uint16_t    mRloc16;           ///< The border router's RLOC16 (value ignored on config add).
 } otBorderRouterConfig;
 
+typedef struct otNetDataPrefixContextId
+{
+    otIp6Prefix mPrefix;
+    uint8_t     mContextId;
+} otNetDataPrefixContextId;
+
 /**
  * This structure represents an External Route configuration.
  *
@@ -213,6 +219,9 @@ otError otNetDataGetNextRoute(otInstance *aInstance, otNetworkDataIterator *aIte
  *
  */
 otError otNetDataGetNextService(otInstance *aInstance, otNetworkDataIterator *aIterator, otServiceConfig *aConfig);
+
+otError otNetDataGetPrefixContextId(otInstance *aInstance, otNetworkDataIterator *aIterator,
+                                    otNetDataPrefixContextId *aPrefixContexId);
 
 /**
  * Get the Network Data Version.

@@ -275,6 +275,14 @@ exit:
     return error;
 }
 
+Error NetworkData::GetNextPrefixContextId(Iterator &aIterator, PrefixContextId &aPrefixContextId) const
+{
+    OT_UNUSED_VARIABLE(aIterator);
+    OT_UNUSED_VARIABLE(aPrefixContextId);
+
+    return kErrorNone;
+}
+
 bool NetworkData::ContainsOnMeshPrefix(const OnMeshPrefixConfig &aPrefix) const
 {
     bool               contains = false;

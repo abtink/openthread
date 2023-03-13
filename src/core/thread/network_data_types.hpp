@@ -292,6 +292,34 @@ private:
     void SetFromTlvFlags(uint8_t aFlags);
 };
 
+class PrefixContextId : public otNetDataPrefixContextId, public Clearable<PrefixContextId>
+{
+public:
+    /**
+     * This method gets the prefix.
+     *
+     * @return The prefix.
+     *
+     */
+    const Ip6::Prefix &GetPrefix(void) const { return AsCoreType(&mPrefix); }
+
+    /**
+     * This method gets the prefix.
+     *
+     * @return The prefix.
+     *
+     */
+    Ip6::Prefix &GetPrefix(void) { return AsCoreType(&mPrefix); }
+
+    /**
+     * This method sets the prefix.
+     *
+     * @param[in]  aPrefix  The prefix to set to.
+     *
+     */
+    void SetPrefix(const Ip6::Prefix &aPrefix) { mPrefix = aPrefix; }
+};
+
 /**
  * This class represents a Service Data.
  *
@@ -392,6 +420,7 @@ private:
 
 DefineCoreType(otBorderRouterConfig, NetworkData::OnMeshPrefixConfig);
 DefineCoreType(otExternalRouteConfig, NetworkData::ExternalRouteConfig);
+DefineCoreType(otNetDataPrefixContextId, NetworkData::PrefixContextId);
 DefineCoreType(otServiceConfig, NetworkData::ServiceConfig);
 DefineCoreType(otServerConfig, NetworkData::ServiceConfig::ServerConfig);
 

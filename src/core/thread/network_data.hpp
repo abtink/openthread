@@ -216,6 +216,8 @@ public:
      */
     Error GetNextOnMeshPrefix(Iterator &aIterator, uint16_t aRloc16, OnMeshPrefixConfig &aConfig) const;
 
+    Error GetNextPrefixContextId(Iterator &aIterator, PrefixContextId &aPrefixContextId) const;
+
     /**
      * This method provides the next external route in the Thread Network Data.
      *
