@@ -392,7 +392,12 @@ private:
         static constexpr Type kHostMessageType    = 0xf915;
         static constexpr Type kTimeOffsetType     = 0xf916;
         static constexpr Type kKeyIdType          = 0xf917;
-        static constexpr Type kNewPeerType        = 0xf918;
+        // 18 is used (server stable ID)
+        static constexpr Type kSrplVersion        = 0xf919;
+        static constexpr Type kDomainName         = 0xf91a;
+        static constexpr Type kNewPeerType        = 0xf91b;
+        static constexpr Type kDatasetId          = 0xf91c;
+
 
         // Host Message TLV contains:
         //   - Rx Time offset as `uint32_t`
