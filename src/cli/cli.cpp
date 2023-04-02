@@ -3504,7 +3504,7 @@ template <> otError Interpreter::Process<Cmd("eidcache")>(Arg aArgs[])
 
     memset(&iterator, 0, sizeof(iterator));
 
-    for (uint8_t i = 0;; i++)
+    while (true)
     {
         SuccessOrExit(otThreadGetNextCacheEntry(GetInstancePtr(), &entry, &iterator));
         OutputEidCacheEntry(entry);
