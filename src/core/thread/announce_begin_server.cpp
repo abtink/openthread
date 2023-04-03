@@ -82,7 +82,7 @@ void AnnounceBeginServer::HandleTmf<kUriAnnounceBegin>(Coap::Message &aMessage, 
     if (aMessage.IsConfirmable() && !aMessageInfo.GetSockAddr().IsMulticast())
     {
         SuccessOrExit(Get<Tmf::Agent>().SendEmptyAck(aMessage, responseInfo));
-        LogInfo("Sent announce begin response");
+        LogInfo("Sent %s response", UriToString<kUriAnnounceBegin>());
     }
 
 exit:
