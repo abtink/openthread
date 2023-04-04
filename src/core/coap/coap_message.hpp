@@ -823,6 +823,22 @@ public:
      */
     const Message *GetNextCoapMessage(void) const { return static_cast<const Message *>(GetNext()); }
 
+    /**
+     * This method gets the `Uri` associated with the message (part of messages' meta data).
+     *
+     * @returns The `Uri` enumerator associated with the message.
+     *
+     */
+    Uri GetUri(void) const { return static_cast<Uri>(GetInfo());}
+
+    /**
+     * This method sets the `Uri` associated with the message (part of messages' meta data).
+     *
+     * @param[in] aUri   The `Uri` to associate with the message.
+     *
+     */
+    void SetUri(Uri aUri) { SetInfo(aUri); }
+
 private:
     /*
      * Header field first byte (RFC 7252).
@@ -968,6 +984,7 @@ private:
     }
 
     uint8_t WriteExtendedOptionField(uint16_t aValue, uint8_t *&aBuffer);
+
 };
 
 /**

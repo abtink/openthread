@@ -34,9 +34,13 @@
 #include "thread/tmf.hpp"
 
 #include "common/locator_getters.hpp"
+#include "common/log.hpp"
+#include "common/instance.hpp"
 
 namespace ot {
 namespace Tmf {
+
+RegisterLogModule("TmfAgent");
 
 //----------------------------------------------------------------------------------------------------------------------
 // MessageInfo
@@ -86,6 +90,50 @@ Agent::Agent(Instance &aInstance)
 
 Error Agent::Start(void) { return Coap::Start(kUdpPort, Ip6::kNetifThread); }
 
+Error Agent::SendMessage(Message                &aMessage,
+                      const Ip6::MessageInfo &aMessageInfo)
+{
+    return SendMessage(aMessage, aMessageInfo, nullptr, nullptr);
+}
+
+Error Agent::SendMessage(Message                &aMessage,
+                      const Ip6::MessageInfo &aMessageInfo,
+                      ot::Coap::ResponseHandler         aHandler,
+                      void                   *aContext)
+{
+    Error error;
+    bool  isResponse = aMessage.IsResponse();
+
+    OT_UNUSED_VARIABLE(isResponse);
+
+    SuccessOrExit(error = ot::Coap::Coap::SendMessage(aMessage, aMessageInfo, aHandler, aContext));
+
+    LogInfo("Sent %s%s to %s", UriToString(aMessage.GetUri()),
+        isResponse ? " response" : "",
+        aMessageInfo.GetPeerAddr().ToString().AsCString());
+
+exit:
+    return error;
+}
+
+Error Agent::SendEmptyAck(const Message &aRequest, const Ip6::MessageInfo &aMessageInfo)
+{
+    return SendEmptyAck(aRequest, aMessageInfo, ot::Coap::kCodeChanged);
+}
+
+Error Agent::SendEmptyAck(const Message &aRequest, const Ip6::MessageInfo &aMessageInfo, ot::Coap::Code aCode)
+{
+    Error error;
+
+    SuccessOrExit(error = ot::Coap::Coap::SendEmptyAck(aRequest, aMessageInfo, aCode));
+
+    LogInfo("Sent empty ack for %s to %s", UriToString(aRequest.GetUri()),
+            aMessageInfo.GetPeerAddr().ToString().AsCString());
+
+exit:
+    return error;
+}
+
 template <> void Agent::HandleTmf<kUriRelayRx>(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     OT_UNUSED_VARIABLE(aMessage);
@@ -111,6 +159,16 @@ bool Agent::HandleResource(const char *aUriPath, Message &aMessage, const Ip6::M
 {
     bool didHandle = true;
     Uri  uri       = UriFromPath(aUriPath);
+
+    if (uri != kUriUnknown)
+    {
+        aMessage.SetUri(uri);
+
+        if (aMessage.IsPostRequest())
+        {
+            LogInfo("Received %s from %s", UriToString(uri), aMessageInfo.GetPeerAddr().ToString().AsCString());
+        }
+    }
 
 #define Case(kUri, Type)                                     \
     case kUri:                                               \
@@ -230,6 +288,38 @@ SecureAgent::SecureAgent(Instance &aInstance)
     SetResourceHandler(&HandleResource);
 }
 
+Error SecureAgent::SendMessage(Message                &aMessage,
+    ot::Coap::ResponseHandler aHandler, void *aContext)
+{
+    Error error;
+
+    SuccessOrExit(error = ot::Coap::CoapSecure::SendMessage(aMessage, aHandler, aContext));
+
+    LogInfo("Sent %s", UriToString(aMessage.GetUri()));
+
+exit:
+    return error;
+}
+
+Error SecureAgent::SendMessage(Message                &aMessage,
+                      const Ip6::MessageInfo &aMessageInfo)
+
+{
+    Error error;
+    bool  isResponse = aMessage.IsResponse();
+
+    OT_UNUSED_VARIABLE(isResponse);
+
+    SuccessOrExit(error = ot::Coap::CoapSecure::SendMessage(aMessage, aMessageInfo));
+
+    LogInfo("Sent %s%s to %s", UriToString(aMessage.GetUri()),
+        isResponse ? " response" : "",
+        aMessageInfo.GetPeerAddr().ToString().AsCString());
+
+exit:
+    return error;
+}
+
 bool SecureAgent::HandleResource(CoapBase               &aCoapBase,
                                  const char             *aUriPath,
                                  Message                &aMessage,
@@ -245,6 +335,16 @@ bool SecureAgent::HandleResource(const char *aUriPath, Message &aMessage, const 
 
     bool didHandle = true;
     Uri  uri       = UriFromPath(aUriPath);
+
+    if (uri != kUriUnknown)
+    {
+        aMessage.SetUri(uri);
+
+        if (aMessage.IsPostRequest())
+        {
+            LogInfo("Received %s from %s", UriToString(uri), aMessageInfo.GetPeerAddr().ToString().AsCString());
+        }
+    }
 
 #define Case(kUri, Type)                                     \
     case kUri:                                               \

@@ -164,6 +164,64 @@ public:
     Error Start(void);
 
     /**
+     * This method sends a TMF message.
+     *
+     * @param[in]  aMessage      A reference to the message to send.
+     * @param[in]  aMessageInfo  A reference to the message info associated with @p aMessage.
+     *
+     * @retval kErrorNone    Successfully sent CoAP message.
+     * @retval kErrorNoBufs  Insufficient buffers available to send the CoAP response.
+     *
+     */
+    Error SendMessage(Message                &aMessage,
+                      const Ip6::MessageInfo &aMessageInfo);
+
+    /**
+     * This method sends a TMF message.
+     *
+     * @param[in]  aMessage      A reference to the message to send.
+     * @param[in]  aMessageInfo  A reference to the message info associated with @p aMessage.
+     * @param[in]  aHandler      A function pointer that shall be called on response reception or time-out.
+     * @param[in]  aContext      A pointer to arbitrary context information.
+     *
+     * @retval kErrorNone    Successfully sent CoAP message.
+     * @retval kErrorNoBufs  Insufficient buffers available to send the CoAP response.
+     *
+     */
+    Error SendMessage(Message                &aMessage,
+                      const Ip6::MessageInfo &aMessageInfo,
+                      ot::Coap::ResponseHandler         aHandler,
+                      void                   *aContext);
+
+    /**
+     * This method sends a CoAP ACK message on which a dummy CoAP response is piggybacked.
+     *
+     * @param[in]  aRequest        A reference to the CoAP Message that was used in CoAP request.
+     * @param[in]  aMessageInfo    The message info corresponding to the CoAP request.
+     * @param[in]  aCode           The CoAP code of the dummy CoAP response.
+     *
+     * @retval kErrorNone          Successfully enqueued the CoAP response message.
+     * @retval kErrorNoBufs        Insufficient buffers available to send the CoAP response.
+     * @retval kErrorInvalidArgs   The @p aRequest header is not of confirmable type.
+     *
+     */
+    Error SendEmptyAck(const Message &aRequest, const Ip6::MessageInfo &aMessageInfo);
+
+    /**
+     * This method sends a CoAP ACK message on which a dummy CoAP response is piggybacked.
+     *
+     * @param[in]  aRequest        A reference to the CoAP Message that was used in CoAP request.
+     * @param[in]  aMessageInfo    The message info corresponding to the CoAP request.
+     * @param[in]  aCode           The CoAP code of the dummy CoAP response.
+     *
+     * @retval kErrorNone          Successfully enqueued the CoAP response message.
+     * @retval kErrorNoBufs        Insufficient buffers available to send the CoAP response.
+     * @retval kErrorInvalidArgs   The @p aRequest header is not of confirmable type.
+     *
+     */
+    Error SendEmptyAck(const Message &aRequest, const Ip6::MessageInfo &aMessageInfo, ot::Coap::Code aCode);
+
+    /**
      * This method indicates whether or not a message meets TMF addressing rules.
      *
      * A TMF message MUST comply with following rules:
@@ -210,6 +268,22 @@ public:
      *
      */
     explicit SecureAgent(Instance &aInstance);
+
+    Error SendMessage(Message &aMessage, ot::Coap::ResponseHandler aHandler, void *aContext);
+
+    /**
+     * This method sends a TMF message.
+     *
+     * @param[in]  aMessage      A reference to the message to send.
+     * @param[in]  aMessageInfo  A reference to the message info associated with @p aMessage.
+     *
+     * @retval kErrorNone    Successfully sent CoAP message.
+     * @retval kErrorNoBufs  Insufficient buffers available to send the CoAP response.
+     *
+     */
+    Error SendMessage(Message                &aMessage,
+                      const Ip6::MessageInfo &aMessageInfo);
+
 
 private:
     static bool HandleResource(CoapBase               &aCoapBase,

@@ -50,6 +50,7 @@ void Message::Init(void)
     GetHelpData().Clear();
     SetVersion(kVersion1);
     SetOffset(0);
+    SetUri(kUriUnknown);
     GetHelpData().mHeaderLength = kMinHeaderLength;
 
     IgnoreError(SetLength(GetHelpData().mHeaderLength));
@@ -72,6 +73,7 @@ Error Message::Init(Type aType, Code aCode, Uri aUri)
     Error error;
 
     Init(aType, aCode);
+    SetUri(aUri);
     SuccessOrExit(error = GenerateRandomToken(kDefaultTokenLength));
     SuccessOrExit(error = AppendUriPathOptions(PathForUri(aUri)));
 

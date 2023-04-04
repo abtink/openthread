@@ -199,11 +199,13 @@ protected:
         uint16_t     mMeshDest;    // Used for unicast non-link-local messages.
         uint16_t     mPanId;       // PAN ID (used for MLE Discover Request and Response).
         uint8_t      mChannel;     // The message channel (used for MLE Announce).
+        uint8_t      mInfo;        // Arbitrary info associated with the message.
         RssAverager  mRssAverager; // The averager maintaining the received signal strength (RSS) average.
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
         LqiAverager mLqiAverager; // The averager maintaining the Link quality indicator (LQI) average.
 #endif
         ChildMask mChildMask; // ChildMask to indicate which sleepy children need to receive this.
+
 
         uint8_t mType : 3;             // The message type.
         uint8_t mSubType : 4;          // The message sub type.
@@ -1370,6 +1372,8 @@ protected:
 
     uint16_t GetReserved(void) const { return GetMetadata().mReserved; }
     void     SetReserved(uint16_t aReservedHeader) { GetMetadata().mReserved = aReservedHeader; }
+    uint8_t  GetInfo(void) const { return GetMetadata().mInfo;}
+    void     SetInfo(uint8_t aInfo) { GetMetadata().mInfo = aInfo; }
 
 private:
     class Chunk : public Data<kWithUint16Length>

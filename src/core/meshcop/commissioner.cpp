@@ -695,8 +695,6 @@ Error Commissioner::SendMgmtCommissionerGetRequest(const uint8_t *aTlvs, uint8_t
     SuccessOrExit(error = Get<Tmf::Agent>().SendMessage(*message, messageInfo,
                                                         Commissioner::HandleMgmtCommissionerGetResponse, this));
 
-    LogInfo("Sent %s to leader", UriToString<kUriCommissionerGet>());
-
 exit:
     FreeMessageOnError(message, error);
     return error;
@@ -718,7 +716,6 @@ void Commissioner::HandleMgmtCommissionerGetResponse(Coap::Message          *aMe
     OT_UNUSED_VARIABLE(aMessageInfo);
 
     VerifyOrExit(aResult == kErrorNone && aMessage->GetCode() == Coap::kCodeChanged);
-    LogInfo("Received %s response", UriToString<kUriCommissionerGet>());
 
 exit:
     return;
@@ -764,8 +761,6 @@ Error Commissioner::SendMgmtCommissionerSetRequest(const Dataset &aDataset, cons
     SuccessOrExit(error = Get<Tmf::Agent>().SendMessage(*message, messageInfo,
                                                         Commissioner::HandleMgmtCommissionerSetResponse, this));
 
-    LogInfo("Sent %s to leader", UriToString<kUriCommissionerSet>());
-
 exit:
     FreeMessageOnError(message, error);
     return error;
@@ -787,7 +782,6 @@ void Commissioner::HandleMgmtCommissionerSetResponse(Coap::Message          *aMe
     OT_UNUSED_VARIABLE(aMessageInfo);
 
     VerifyOrExit(aResult == kErrorNone && aMessage->GetCode() == Coap::kCodeChanged);
-    LogInfo("Received %s response", UriToString<kUriCommissionerSet>());
 
 exit:
     return;
@@ -812,8 +806,6 @@ Error Commissioner::SendPetition(void)
     SuccessOrExit(error = messageInfo.SetSockAddrToRlocPeerAddrToLeaderAloc());
     SuccessOrExit(
         error = Get<Tmf::Agent>().SendMessage(*message, messageInfo, Commissioner::HandleLeaderPetitionResponse, this));
-
-    LogInfo("Sent %s", UriToString<kUriLeaderPetition>());
 
 exit:
     FreeMessageOnError(message, error);
@@ -841,8 +833,6 @@ void Commissioner::HandleLeaderPetitionResponse(Coap::Message          *aMessage
     VerifyOrExit(mState != kStateActive);
     VerifyOrExit(aResult == kErrorNone && aMessage->GetCode() == Coap::kCodeChanged,
                  retransmit = (mState == kStatePetition));
-
-    LogInfo("Received %s response", UriToString<kUriLeaderPetition>());
 
     SuccessOrExit(Tlv::Find<StateTlv>(*aMessage, state));
     VerifyOrExit(state == StateTlv::kAccept, IgnoreError(Stop(kDoNotSendKeepAlive)));
@@ -900,8 +890,6 @@ void Commissioner::SendKeepAlive(uint16_t aSessionId)
     SuccessOrExit(error = Get<Tmf::Agent>().SendMessage(*message, messageInfo,
                                                         Commissioner::HandleLeaderKeepAliveResponse, this));
 
-    LogInfo("Sent %s", UriToString<kUriLeaderKeepAlive>());
-
 exit:
     FreeMessageOnError(message, error);
     LogError("send keep alive", error);
@@ -927,8 +915,6 @@ void Commissioner::HandleLeaderKeepAliveResponse(Coap::Message          *aMessag
     VerifyOrExit(mState == kStateActive);
     VerifyOrExit(aResult == kErrorNone && aMessage->GetCode() == Coap::kCodeChanged,
                  IgnoreError(Stop(kDoNotSendKeepAlive)));
-
-    LogInfo("Received %s response", UriToString<kUriLeaderKeepAlive>());
 
     SuccessOrExit(Tlv::Find<StateTlv>(*aMessage, state));
     VerifyOrExit(state == StateTlv::kAccept, IgnoreError(Stop(kDoNotSendKeepAlive)));

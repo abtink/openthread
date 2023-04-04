@@ -110,6 +110,7 @@ Message *CoapBase::NewMessage(const Message::Settings &aSettings)
 
     VerifyOrExit((message = AsCoapMessagePtr(Get<Ip6::Udp>().NewMessage(0, aSettings))) != nullptr);
     message->SetOffset(0);
+    message->SetUri(kUriUnknown);
 
 exit:
     return message;
@@ -161,6 +162,7 @@ Message *CoapBase::InitResponse(Message *aMessage, const Message &aResponse)
 
     SuccessOrExit(error = aMessage->SetDefaultResponseHeader(aResponse));
     SuccessOrExit(error = aMessage->SetPayloadMarker());
+    aMessage->SetUri(aResponse.GetUri());
 
 exit:
     FreeAndNullMessageOnError(aMessage, error);
@@ -1026,6 +1028,8 @@ exit:
 void CoapBase::Receive(ot::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     Message &message = AsCoapMessage(&aMessage);
+
+    message.SetUri(kUriUnknown);
 
     if (message.ParseHeader() != kErrorNone)
     {

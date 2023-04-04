@@ -48,8 +48,6 @@
 
 namespace ot {
 
-RegisterLogModule("MeshCoP");
-
 AnnounceBeginClient::AnnounceBeginClient(Instance &aInstance)
     : InstanceLocator(aInstance)
 {
@@ -84,8 +82,6 @@ Error AnnounceBeginClient::SendRequest(uint32_t            aChannelMask,
     messageInfo.SetSockAddrToRlocPeerAddrTo(aAddress);
 
     SuccessOrExit(error = Get<Tmf::Agent>().SendMessage(*message, messageInfo));
-
-    LogInfo("Sent %s", UriToString<kUriAnnounceBegin>());
 
 exit:
     FreeMessageOnError(message, error);

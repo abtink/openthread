@@ -161,6 +161,55 @@ exit:
     return uri;
 }
 
+const char *UriToString(Uri aUri)
+{
+    static const char * const kUriStrings[] =
+    {
+        "AddressError", // (0) kUriAddressError
+        "AddressNotify", // (1) kUriAddressNotify
+        "AddressQuery", // (2) kUriAddressQuery
+        "AddressRelease", // (3) kUriAddressRelease
+        "AddressSolicit", // (4) kUriAddressSolicit
+        "ServerData", // (5) kUriServerData
+        "AnycastLocate", // (6) kUriAnycastLocate
+        "BackboneAnswer", // (7) kUriBackboneAnswer
+        "BackboneMlr", // (8) kUriBackboneMlr
+        "BackboneQuery", // (9) kUriBackboneQuery
+        "AnnounceBegin", // (10) kUriAnnounceBegin
+        "ActiveGet", // (11) kUriActiveGet
+        "ActiveSet", // (12) kUriActiveSet
+        "CommissionerKeepAlive", // (13) kUriCommissionerKeepAlive
+        "CommissionerGet", // (14) kUriCommissionerGet
+        "CommissionerPetition", // (15) kUriCommissionerPetition
+        "CommissionerSet", // (16) kUriCommissionerSet
+        "DatasetChanged", // (17) kUriDatasetChanged
+        "EnergyReport", // (18) kUriEnergyReport
+        "EnergyScan", // (19) kUriEnergyScan
+        "JoinerEntrust", // (20) kUriJoinerEntrust
+        "JoinerFinalize", // (21) kUriJoinerFinalize
+        "LeaderKeepAlive", // (22) kUriLeaderKeepAlive
+        "LeaderPetition", // (23) kUriLeaderPetition
+        "PanIdConflict", // (24) kUriPanIdConflict
+        "PendingGet", // (25) kUriPendingGet
+        "PanIdQuery", // (26) kUriPanIdQuery
+        "PendingSet", // (27) kUriPendingSet
+        "RelayRx", // (28) kUriRelayRx
+        "RelayTx", // (29) kUriRelayTx
+        "ProxyRx", // (30) kUriProxyRx
+        "ProxyTx", // (31) kUriProxyTx
+        "DiagGetAnswer", // (32) kUriDiagnosticGetAnswer
+        "DiagGetRequest", // (33) kUriDiagnosticGetRequest
+        "DiagGetQuery", // (34) kUriDiagnosticGetQuery
+        "DiagReset", // (35) kUriDiagnosticReset
+        "DuaRegNotify", // (36) kUriDuaRegistrationNotify
+        "DuaRegRequest", // (37) kUriDuaRegistrationRequest
+        "Mlr", // (38) kUriMlr
+    };
+
+    return (aUri < kUriUnknown) ? kUriStrings[aUri] : "Unknown";
+}
+
+
 template <> const char *UriToString<kUriAddressError>(void) { return "AddressError"; }
 template <> const char *UriToString<kUriAddressNotify>(void) { return "AddressNotify"; }
 template <> const char *UriToString<kUriAddressQuery>(void) { return "AddressQuery"; }

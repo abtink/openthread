@@ -108,6 +108,8 @@ const char *PathForUri(Uri aUri);
  */
 Uri UriFromPath(const char *aPath);
 
+const char *UriToString(Uri aUri);
+
 /**
  * This template function converts a given URI to a human-readable string.
  *
