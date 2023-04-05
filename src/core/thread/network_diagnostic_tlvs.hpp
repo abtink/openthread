@@ -88,6 +88,7 @@ public:
         kMaxChildTimeout = OT_NETWORK_DIAGNOSTIC_TLV_MAX_CHILD_TIMEOUT,
         kVersion         = OT_NETWORK_DIAGNOSTIC_TLV_VERSION,
         kChild           = 25,
+        kAnswer          = 26,
     };
 
     /**
@@ -668,6 +669,47 @@ public:
 } OT_TOOL_PACKED_END;
 
 #endif // OPENTHREAD_FTD
+
+/**
+ * This class implements Answer TLV generation and parsing.
+ *
+ */
+OT_TOOL_PACKED_BEGIN
+class AnswerTlv : public Tlv, public TlvInfo<Tlv::kAnswer>
+{
+public:
+    /**
+     * This method initializes the TLV.
+     *
+     * @param[in] aIndex   The index value.
+     * @param[in] aIsLast  The "IsLast" flag value.
+     *
+     */
+    void Init(uint16_t aIndex, bool aIsLast);
+
+    /**
+     * This method indicates whether or not the "IsLast" flag is set
+     *
+     * @retval TRUE   "IsLast" flag si set (this is the last answer for this query).
+     * @retval FALSE  "IsLast" flag is not set (more answer messages are expected for this query).
+     *
+     */
+    bool IsLast(void) const { return mFlagIndex & kIsLastFlag; }
+
+    /**
+     * This method gets the index.
+     *
+     * @returns The index.
+     *
+     */
+    uint16_t GetIndex(void) const { return mFlagIndex & kIndexMask; }
+
+private:
+    static constexpr uint16_t kIsLastFlag = 1 << 15;
+    static constexpr uint16_t kIndexMask  = 0x7f;
+
+    uint16_t        mFlagIndex;
+} OT_TOOL_PACKED_END;
 
 } // namespace NetworkDiagnostic
 } // namespace ot

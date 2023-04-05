@@ -489,9 +489,11 @@ void NetworkDiagnostic::SendAnswer(const Ip6::Address &aDestination, const Messa
 {
     Coap::Message   *answer = nullptr;
     Tmf::MessageInfo answerInfo(GetInstance());
+    uint16_t         answerIndex = 0;
     uint16_t         offset;
     uint16_t         length;
     uint16_t         endOffset;
+    AnswerTlv        answerTlv;
 
     PrepareMessageInfoForDest(aDestination, answerInfo);
 
@@ -519,9 +521,13 @@ void NetworkDiagnostic::SendAnswer(const Ip6::Address &aDestination, const Messa
         {
             SuccessOrExit(AppendDiagTlv(tlvType, *answer));
 
-            if (answer->GetLength() >= kMaxAnswerMessageLength)
+            if (answer->GetLength() >= kAnswerMessageLengthThreshold)
             {
                 IgnoreError(answer->SetLength(length));
+
+                answerTlv.Init(answerIndex++, /* aIsLast */ false);
+                SuccessOrExit(answer->Append(answerTlv));
+
                 SuccessOrExit(Get<Tmf::Agent>().SendMessage(*answer, answerInfo));
 
                 answer = Get<Tmf::Agent>().NewConfirmablePostMessage(kUriDiagnosticGetAnswer);
@@ -530,6 +536,9 @@ void NetworkDiagnostic::SendAnswer(const Ip6::Address &aDestination, const Messa
             }
         }
     }
+
+    answerTlv.Init(answerIndex, /* aIsLast */ true);
+    SuccessOrExit(answer->Append(answerTlv));
 
     SuccessOrExit(Get<Tmf::Agent>().SendMessage(*answer, answerInfo));
     answer = nullptr;
@@ -554,7 +563,7 @@ Error NetworkDiagnostic::AppendChildTableAsChildTlvs(Coap::Message *&aAnswer, co
 
         SuccessOrExit(error = childTlv.AppendTo(*aAnswer));
 
-        if (aAnswer->GetLength() >= kMaxAnswerMessageLength)
+        if (aAnswer->GetLength() >= kAnswerMessageLengthThreshold)
         {
             IgnoreError(aAnswer->SetLength(length));
             SuccessOrExit(error = Get<Tmf::Agent>().SendMessage(*aAnswer, aAnswerInfo));

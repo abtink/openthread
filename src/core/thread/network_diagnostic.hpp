@@ -130,7 +130,7 @@ public:
     static Error GetNextDiagTlv(const Coap::Message &aMessage, Iterator &aIterator, TlvInfo &aTlvInfo);
 
 private:
-    static constexpr uint16_t kMaxAnswerMessageLength = 800;
+    static constexpr uint16_t kAnswerMessageLengthThreshold = 800;
 
     static constexpr uint16_t kMaxChildEntries = 398;
 

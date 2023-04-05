@@ -73,5 +73,13 @@ void ChildTlv::InitFrom(const Child &aChild)
 
 #endif // OPENTHREAD_FTD
 
+void AnswerTlv::Init(uint16_t aIndex, bool aIsLast)
+{
+    SetType(kAnswer);
+    SetLength(sizeof(*this) - sizeof(Tlv));
+
+    mFlagIndex = (aIndex & kIndexMask) | (aIsLast ? kIsLastFlag : 0);
+}
+
 } // namespace NetworkDiagnostic
 } // namespace ot
