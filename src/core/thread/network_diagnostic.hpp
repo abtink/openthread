@@ -87,44 +87,58 @@ private:
     static constexpr uint16_t kMaxChildEntries              = 398;
     static constexpr uint16_t kAnswerMessageLengthThreshold = 800;
 
+#if OPENTHREAD_FTD
     struct AnswerInfo
     {
-        AnswerInfo(Instance &aInstance)
-            : mMessageInfo(aInstance)
-            , mAnswerIndex(0)
+        AnswerInfo(void)
+            : mAnswerIndex(0)
             , mQueryId(0)
             , mHasQueryId(false)
+            , mFirstAnswer(nullptr)
         {
         }
 
-        Tmf::MessageInfo mMessageInfo;
-        uint16_t         mAnswerIndex;
-        uint16_t         mQueryId;
-        bool             mHasQueryId;
+        uint16_t       mAnswerIndex;
+        uint16_t       mQueryId;
+        bool           mHasQueryId;
+        Coap::Message *mFirstAnswer;
     };
+#endif
 
-    Error AllocateAnswer(Coap::Message *&aAnswer, AnswerInfo &aInfo);
-    Error CheckAnswerLength(Coap::Message *&aAnswer, AnswerInfo &aInfo);
-
-    void  SendAnswer(AnswerInfo &aInfo, const Message &aRequest);
     Error AppendDiagTlv(uint8_t aTlvType, Message &aMessage);
     Error AppendIp6AddressList(Message &aMessage);
     Error AppendMacCounters(Message &aMessage);
     Error AppendRequestedTlvs(const Message &aRequest, Message &aResponse);
     void  PrepareMessageInfoForDest(const Ip6::Address &aDestination, Tmf::MessageInfo &aMessageInfo) const;
 
-#if OPENTHREAD_FTD
-    Error AppendChildTable(Message &aMessage);
-    Error AppendChildTableAsChildTlvs(Coap::Message *&aAnswer, AnswerInfo &aInfo);
-    Error AppendChildTableIp6AddressList(Coap::Message *&aAnswer, AnswerInfo &aInfo);
-    Error AppendChildIp6AddressListTlv(Coap::Message &aAnswer, const Child &aChild);
+#if OPENTHREAD_MTD
+    void SendAnswer(const Ip6::Address &aDestination, const Message &aRequest);
+#elif OPENTHREAD_FTD
+    Error       AllocateAnswer(Coap::Message *&aAnswer, AnswerInfo &aInfo);
+    Error       CheckAnswerLength(Coap::Message *&aAnswer, AnswerInfo &aInfo);
+    bool        IsLastAnswer(const Coap::Message &aAnswer) const;
+    void        FreeAllRelatedAnswers(Coap::Message &aFirstAnswer);
+    void        PrepareAndSendAnswers(const Ip6::Address &aDestination, const Message &aRequest);
+    void        SendNextAnswer(Coap::Message &aAnswer, const Ip6::Address &aDestination);
+    Error       AppendChildTable(Message &aMessage);
+    Error       AppendChildTableAsChildTlvs(Coap::Message *&aAnswer, AnswerInfo &aInfo);
+    Error       AppendChildTableIp6AddressList(Coap::Message *&aAnswer, AnswerInfo &aInfo);
+    Error       AppendChildIp6AddressListTlv(Coap::Message &aAnswer, const Child &aChild);
+    static void HandleAnswerResponse(void                *aContext,
+                                     otMessage           *aMessage,
+                                     const otMessageInfo *aMessageInfo,
+                                     Error                aResult);
+    void        HandleAnswerResponse(Coap::Message          &aNextAnswer,
+                                     Coap::Message          *aResponse,
+                                     const Ip6::MessageInfo *aMessageInfo,
+                                     Error                   aResult);
 
 #endif
 
     template <Uri kUri> void HandleTmf(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 
 #if OPENTHREAD_FTD
-    // MessageQueue mAnswerQueue;
+    Coap::MessageQueue mAnswerQueue;
 #endif
 };
 
