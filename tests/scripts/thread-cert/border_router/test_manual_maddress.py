@@ -90,7 +90,8 @@ class ManualMulticastAddressConfig(thread_cert.TestCase):
 
         # Host sends a ping packet to the multicast address, MA1. TD should
         # respond to the ping request.
-        host.ping(MA1, backbone=True, ttl=10, interface=host.get_ip6_address(config.ADDRESS_TYPE.ONLINK_ULA)[0])
+        output = host.ping(MA1, backbone=True, ttl=10, interface=host.get_ip6_address(config.ADDRESS_TYPE.ONLINK_ULA)[0])
+        print("ABTIN ~ output ping {}".format(output))
         self.simulator.go(5)
 
     def verify(self, pv: pktverify.packet_verifier.PacketVerifier):
