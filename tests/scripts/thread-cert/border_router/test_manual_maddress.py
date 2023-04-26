@@ -86,7 +86,7 @@ class ManualMulticastAddressConfig(thread_cert.TestCase):
 
         # TD registers for multicast address, MA1, at BR_1.
         td.add_ipmaddr_tun(MA1)
-        self.simulator.go(5)
+        self.simulator.go(10)
 
         # Host sends a ping packet to the multicast address, MA1. TD should
         # respond to the ping request.
@@ -103,6 +103,8 @@ class ManualMulticastAddressConfig(thread_cert.TestCase):
             .filter_ipv6_dst(MA1) \
             .filter_ping_request() \
             .must_next()
+
+        print("ABTIN~ _pkt.ipv6.src is {}".format(_pkt.ipv6.src))
 
         # 1. TD receives the multicast ping packet and sends a ping response
         # packet back to Host.
