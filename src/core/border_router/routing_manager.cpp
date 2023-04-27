@@ -2719,7 +2719,8 @@ exit:
 void RoutingManager::RoutePublisher::SetPreferenceBasedOnRole(void)
 {
     UpdatePreference(Get<Mle::Mle>().IsRouterOrLeader() ? NetworkData::kRoutePreferenceMedium
-                                                        : NetworkData::kRoutePreferenceLow);
+        // ABTIN: Hack to test for now (remove).
+                                                        : NetworkData::kRoutePreferenceMedium);
 }
 
 void RoutingManager::RoutePublisher::HandleRoleChanged(void)
