@@ -1077,6 +1077,10 @@ Error Ip6::PassToHost(Message           &aMessage,
     }
 #endif
 
+    LogInfo("ABTIN~ Pass to Host");
+    LogInfo("ABTIN~ sock %s", aMessageInfo.GetSockAddr().ToString().AsCString());
+    LogInfo("ABTIN~ peer %s", aMessageInfo.GetPeerAddr().ToString().AsCString());
+
     // Pass message to callback transferring its ownership.
     mReceiveIp6DatagramCallback.Invoke(message);
     message = nullptr;
@@ -1103,6 +1107,9 @@ Error Ip6::SendRaw(Message &aMessage, bool aAllowLoopBackToHost)
 
     SuccessOrExit(error = header.ParseFrom(aMessage));
     VerifyOrExit(!header.GetSource().IsMulticast(), error = kErrorInvalidSourceAddress);
+
+    LogInfo("ABTIN~ SendRaw() header.source %s", header.GetSource().ToString().AsCString());
+    LogInfo("ABTIN~ SendRaw() header.dst %s", header.GetDestination().ToString().AsCString());
 
     if (header.GetDestination().IsMulticast())
     {
