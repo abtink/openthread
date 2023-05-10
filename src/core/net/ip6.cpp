@@ -76,9 +76,6 @@ Ip6::Ip6(Instance &aInstance)
     , mTcp(aInstance)
 #endif
 {
-#if OPENTHREAD_CONFIG_IP6_BR_COUNTERS_ENABLE
-    ResetBorderRoutingCounters();
-#endif
 }
 
 Message *Ip6::NewMessage(uint16_t aReserved, const Message::Settings &aSettings)
@@ -1480,7 +1477,7 @@ Error Ip6::RouteLookup(const Address &aSource, const Address &aDestination) cons
 #if OPENTHREAD_CONFIG_IP6_BR_COUNTERS_ENABLE
 void Ip6::UpdateBorderRoutingCounters(const Header &aHeader, uint16_t aMessageLength, bool aIsInbound)
 {
-    otPacketsAndBytes *counter = nullptr;
+    otPacketsAndBytes *counter;
 
     VerifyOrExit(!aHeader.GetSource().IsLinkLocal());
     VerifyOrExit(!aHeader.GetDestination().IsLinkLocal());
@@ -1494,11 +1491,11 @@ void Ip6::UpdateBorderRoutingCounters(const Header &aHeader, uint16_t aMessageLe
         if (aHeader.GetDestination().IsMulticast())
         {
             VerifyOrExit(aHeader.GetDestination().IsMulticastLargerThanRealmLocal());
-            counter = &mBorderRoutingCounters.mInboundMulticast;
+            counter = &mBrCounters.mInboundMulticast;
         }
         else
         {
-            counter = &mBorderRoutingCounters.mInboundUnicast;
+            counter = &mBrCounters.mInboundUnicast;
         }
     }
     else
@@ -1508,23 +1505,21 @@ void Ip6::UpdateBorderRoutingCounters(const Header &aHeader, uint16_t aMessageLe
         if (aHeader.GetDestination().IsMulticast())
         {
             VerifyOrExit(aHeader.GetDestination().IsMulticastLargerThanRealmLocal());
-            counter = &mBorderRoutingCounters.mOutboundMulticast;
+            counter = &mBrCounters.mOutboundMulticast;
         }
         else
         {
-            counter = &mBorderRoutingCounters.mOutboundUnicast;
+            counter = &mBrCounters.mOutboundUnicast;
         }
     }
 
-exit:
+    counter->mPackets++;
+    counter->mBytes += aMessageLength;
 
-    if (counter)
-    {
-        counter->mPackets += 1;
-        counter->mBytes += aMessageLength;
-    }
+exit:
+    return;
 }
-#endif
+#endif // OPENTHREAD_CONFIG_IP6_BR_COUNTERS_ENABLE
 
 // LCOV_EXCL_START
 

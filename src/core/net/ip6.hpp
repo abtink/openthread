@@ -344,12 +344,18 @@ public:
 
 #if OPENTHREAD_CONFIG_IP6_BR_COUNTERS_ENABLE
     /**
-     * This method returns a reference to the Border Routing counters.
-     *
-     * @returns A reference to the Border Routing counters.
+     * This class represents BR counters.
      *
      */
-    const otBorderRoutingCounters &GetBorderRoutingCounters(void) const { return mBorderRoutingCounters; }
+    class BrCounters :  public otBorderRoutingCounters, public Clearable<BrCounters>
+    {
+    public:
+        /**
+         * This constructor initializes the `BrCounters`
+         *
+         */
+        BrCounters(void) { Clear(); }
+    };
 
     /**
      * This method returns a reference to the Border Routing counters.
@@ -357,13 +363,21 @@ public:
      * @returns A reference to the Border Routing counters.
      *
      */
-    otBorderRoutingCounters &GetBorderRoutingCounters(void) { return mBorderRoutingCounters; }
+    const BrCounters &GetBorderRoutingCounters(void) const { return mBrCounters; }
+
+    /**
+     * This method returns a reference to the Border Routing counters.
+     *
+     * @returns A reference to the Border Routing counters.
+     *
+     */
+    BrCounters &GetBorderRoutingCounters(void) { return mBrCounters; }
 
     /**
      * This method resets the Border Routing counters.
      *
      */
-    void ResetBorderRoutingCounters(void) { memset(&mBorderRoutingCounters, 0, sizeof(mBorderRoutingCounters)); }
+    void ResetBorderRoutingCounters(void) { mBrCounters.Clear(); }
 #endif
 
 private:
@@ -440,7 +454,7 @@ private:
 #endif
 
 #if OPENTHREAD_CONFIG_IP6_BR_COUNTERS_ENABLE
-    otBorderRoutingCounters mBorderRoutingCounters;
+    BrCounters mBrCounters;
 #endif
 };
 
