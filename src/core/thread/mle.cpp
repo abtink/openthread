@@ -271,6 +271,15 @@ void Mle::ResetCounters(void)
 #if OPENTHREAD_CONFIG_UPTIME_ENABLE
 void Mle::UpdateRoleTimeCounters(DeviceRole aRole)
 {
+    static uint64_t Counters::* const kRoleTimes[] =
+    {
+        &Counters::mDisabledTime,
+        &Counters::mDetachedTime,
+        &Counters::mChildTime,
+        &Counters::mRouterTime,
+        &Counters::mLeaderTime,
+    };
+
     uint64_t currentUptimeMsec = Get<Uptime>().GetUptime();
     uint64_t durationMsec      = currentUptimeMsec - mLastUpdatedTimestamp;
 
@@ -278,30 +287,28 @@ void Mle::UpdateRoleTimeCounters(DeviceRole aRole)
 
     mCounters.mTrackedTime += durationMsec;
 
-    switch (aRole)
-    {
-    case kRoleDisabled:
-        mCounters.mDisabledTime += durationMsec;
-        break;
-    case kRoleDetached:
-        mCounters.mDetachedTime += durationMsec;
-        break;
-    case kRoleChild:
-        mCounters.mChildTime += durationMsec;
-        break;
-    case kRoleRouter:
-        mCounters.mRouterTime += durationMsec;
-        break;
-    case kRoleLeader:
-        mCounters.mLeaderTime += durationMsec;
-        break;
-    }
+    (mCounters.*kRoleTimes[aRole]) += durationMsec;
 }
 #endif
 
 void Mle::SetRole(DeviceRole aRole)
 {
+    static uint16_t Counters::* const kRoleCounters[] =
+    {
+        &Counters::mDisabledRole,
+        &Counters::mDetachedRole,
+        &Counters::mChildRole,
+        &Counters::mRouterRole,
+        &Counters::mLeaderRole,
+    };
+
     DeviceRole oldRole = mRole;
+
+    static_assert(kRoleDisabled == 0, "kRoleDisabled value is incorrect");
+    static_assert(kRoleDetached == 1, "kRoleDetached value is incorrect");
+    static_assert(kRoleChild    == 2, "kRoleChild value is incorrect");
+    static_assert(kRoleRouter   == 3, "kRoleRouter value is incorrect");
+    static_assert(kRoleLeader   == 4, "kRoleLeader value is incorrect");
 
     SuccessOrExit(Get<Notifier>().Update(mRole, aRole, kEventThreadRoleChanged));
 
@@ -311,24 +318,7 @@ void Mle::SetRole(DeviceRole aRole)
     UpdateRoleTimeCounters(oldRole);
 #endif
 
-    switch (mRole)
-    {
-    case kRoleDisabled:
-        mCounters.mDisabledRole++;
-        break;
-    case kRoleDetached:
-        mCounters.mDetachedRole++;
-        break;
-    case kRoleChild:
-        mCounters.mChildRole++;
-        break;
-    case kRoleRouter:
-        mCounters.mRouterRole++;
-        break;
-    case kRoleLeader:
-        mCounters.mLeaderRole++;
-        break;
-    }
+    (mCounters.*kRoleCounters[mRole])++;
 
     // If the previous state is disabled, the parent can be in kStateRestored.
     if (!IsChild() && oldRole != kRoleDisabled)
