@@ -175,6 +175,7 @@ SOURCES_COMMON                                  = \
     api/trel_api.cpp                              \
     api/udp_api.cpp                               \
     backbone_router/backbone_tmf.cpp              \
+    backbone_router/bbr_config.cpp                \
     backbone_router/bbr_leader.cpp                \
     backbone_router/bbr_local.cpp                 \
     backbone_router/bbr_manager.cpp               \
@@ -423,6 +424,7 @@ endif # OPENTHREAD_ENABLE_VENDOR_EXTENSION
 
 HEADERS_COMMON                                  = \
     backbone_router/backbone_tmf.hpp              \
+    backbone_router/bbr_config.hpp                \
     backbone_router/bbr_leader.hpp                \
     backbone_router/bbr_local.hpp                 \
     backbone_router/bbr_manager.hpp               \

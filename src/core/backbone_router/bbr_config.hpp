@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019, The OpenThread Authors.
+ *  Copyright (c) 2023, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,8 +28,11 @@
 
 /**
  * @file
- *  This file defines the OpenThread Backbone Router API (Thread 1.2)
+ *   This file includes definitions for Backbone Router config.
  */
+
+#ifndef BACKBONE_ROUTER_CONFIG_HPP_
+#define BACKBONE_ROUTER_CONFIG_HPP_
 
 #include "openthread-core-config.h"
 
@@ -37,14 +40,54 @@
 
 #include <openthread/backbone_router.h>
 
+#include "common/error.hpp"
+#include "common/equatable.hpp"
 #include "common/as_core_type.hpp"
-#include "common/locator_getters.hpp"
+#include "mac/mac_types.hpp"
 
-using namespace ot;
+namespace ot {
+namespace BackboneRouter {
 
-otError otBackboneRouterGetPrimary(otInstance *aInstance, otBackboneRouterConfig *aConfig)
+/**
+ * Represents Backbone Router configuration.
+ *
+ */
+class Config : public otBackboneRouterConfig, public Unequatable<Config>
 {
-    return AsCoreType(aInstance).Get<BackboneRouter::Leader>().GetConfig(AsCoreType(aConfig));
-}
+public:
+    /**
+     * Sets Primary Backbone Router `mServer16` field to invalid `Mac::kShortAddrInvalid`.
+     *
+     */
+    void SetServer16ToInvalid(void) { mServer16 = Mac::kShortAddrInvalid; }
+
+    /**
+     * Indicates whether or not Primary Backbone Router `mServer16` is valid.
+     *
+     * @retval TRUE   If the Primary Backbone Router `mServer16` is valid.
+     * @retval FALSE  If the Primary Backbone Router `mServer16` is not valid.
+     *
+     */
+    bool IsServer16Valid(void) const { return (mServer16 != Mac::kShortAddrInvalid); }
+
+    /**
+     * Overloads operator `==` to evaluate whether or not two `Config` instances are equal.
+     *
+     * @param[in]  aOther  The other `Config` to compare with.
+     *
+     * @retval TRUE   If the two `Config` instances are equal.
+     * @retval FALSE  If the two `Config` instances are not equal.
+     *
+     */
+    bool operator==(const Config &aOther);
+};
+
+} // namespace BackboneRouter
+
+DefineCoreType(otBackboneRouterConfig, BackboneRouter::Config);
+
+} // namespace ot
 
 #endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
+
+#endif // BACKBONE_ROUTER_CONFIG_HPP_

@@ -52,7 +52,7 @@ Leader::Leader(Instance &aInstance)
 void Leader::Reset(void)
 {
     // Invalid server short address indicates no available Backbone Router service in the Thread Network.
-    mConfig.mServer16 = Mac::kShortAddrInvalid;
+    mConfig.SetServer16ToInvalid();
 
     // Domain Prefix Length 0 indicates no available Domain Prefix in the Thread network.
     mDomainPrefix.SetLength(0);

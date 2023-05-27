@@ -354,6 +354,8 @@ openthread_core_files = [
   "api/udp_api.cpp",
   "backbone_router/backbone_tmf.cpp",
   "backbone_router/backbone_tmf.hpp",
+  "backbone_router/bbr_config.cpp",
+  "backbone_router/bbr_config.hpp",
   "backbone_router/bbr_leader.cpp",
   "backbone_router/bbr_leader.hpp",
   "backbone_router/bbr_local.cpp",

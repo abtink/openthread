@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2019, The OpenThread Authors.
+ *  Copyright (c) 2023, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,23 +28,22 @@
 
 /**
  * @file
- *  This file defines the OpenThread Backbone Router API (Thread 1.2)
+ *   This file implements Backbone Router configuration
  */
 
-#include "openthread-core-config.h"
+#include "bbr_config.hpp"
 
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
 
-#include <openthread/backbone_router.h>
-
-#include "common/as_core_type.hpp"
+#include "common/instance.hpp"
 #include "common/locator_getters.hpp"
 
-using namespace ot;
+namespace ot {
+namespace BackboneRouter {
 
-otError otBackboneRouterGetPrimary(otInstance *aInstance, otBackboneRouterConfig *aConfig)
-{
-    return AsCoreType(aInstance).Get<BackboneRouter::Leader>().GetConfig(AsCoreType(aConfig));
-}
+
+
+} // namespace BackboneRouter
+} // namespace ot
 
 #endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)

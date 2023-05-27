@@ -41,6 +41,7 @@
 #include <openthread/backbone_router.h>
 #include <openthread/ip6.h>
 
+#include "backbone_router/bbr_config.hpp"
 #include "coap/coap.hpp"
 #include "coap/coap_message.hpp"
 #include "common/locator.hpp"
@@ -51,8 +52,6 @@
 namespace ot {
 
 namespace BackboneRouter {
-
-typedef otBackboneRouterConfig Config;
 
 /**
  * This class implements the basic Primary Backbone Router service operations.
@@ -140,7 +139,7 @@ public:
      * @retval FALSE  If there is no Primary Backbone Router.
      *
      */
-    bool HasPrimary(void) const { return mConfig.mServer16 != Mac::kShortAddrInvalid; }
+    bool HasPrimary(void) const { return mConfig.IsServer16Valid(); }
 
     /**
      * This method gets the Domain Prefix in the Thread Network.
@@ -191,11 +190,6 @@ private:
 };
 
 } // namespace BackboneRouter
-
-/**
- * @}
- */
-
 } // namespace ot
 
 #endif // (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
