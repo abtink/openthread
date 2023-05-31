@@ -31,7 +31,7 @@ set -euxo pipefail
 
 reset_source()
 {
-    rm -rf build output tmp
+    git clean -dfx
 }
 
 build()
@@ -51,6 +51,8 @@ build()
 
         reset_source
         ./tests/toranj/build.sh posix-trel
+
+        reset_source
     fi
 }
 

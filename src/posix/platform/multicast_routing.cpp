@@ -236,14 +236,14 @@ void MulticastRoutingManager::InitMulticastRouterSock(void)
 
     // Add Thread network interface to MIF
     mif6ctl.mif6c_mifi = kMifIndexThread;
-    mif6ctl.mif6c_pifi = if_nametoindex(gNetifName);
+    mif6ctl.mif6c_pifi = static_cast<uint16_t>(if_nametoindex(gNetifName));
     VerifyOrDie(mif6ctl.mif6c_pifi > 0, OT_EXIT_ERROR_ERRNO);
     VerifyOrDie(0 == setsockopt(mMulticastRouterSock, IPPROTO_IPV6, MRT6_ADD_MIF, &mif6ctl, sizeof(mif6ctl)),
                 OT_EXIT_ERROR_ERRNO);
 
     // Add Backbone network interface to MIF
     mif6ctl.mif6c_mifi = kMifIndexBackbone;
-    mif6ctl.mif6c_pifi = if_nametoindex(gBackboneNetifName);
+    mif6ctl.mif6c_pifi = static_cast<uint16_t>(if_nametoindex(gBackboneNetifName));
     VerifyOrDie(mif6ctl.mif6c_pifi > 0, OT_EXIT_ERROR_ERRNO);
     VerifyOrDie(0 == setsockopt(mMulticastRouterSock, IPPROTO_IPV6, MRT6_ADD_MIF, &mif6ctl, sizeof(mif6ctl)),
                 OT_EXIT_ERROR_ERRNO);
