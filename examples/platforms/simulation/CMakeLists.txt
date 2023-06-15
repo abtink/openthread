@@ -61,6 +61,7 @@ add_library(openthread-simulation
     alarm.c
     crypto.c
     diag.c
+    dnssd.c
     dso_transport.c
     entropy.c
     flash.c
