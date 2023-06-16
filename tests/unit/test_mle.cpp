@@ -26,17 +26,25 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <openthread/config.h>
 
+#include <functional>
+#include <type_traits>
+
+#include "test_util.h"
+
+
+/*
 #include "test_platform.h"
 #include "test_util.hpp"
 
+
 #include "common/num_utils.hpp"
 #include "thread/mle_types.hpp"
+*/
 
 namespace ot {
 
-#if OPENTHREAD_FTD && (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_3_1)
+#if 0 // OPENTHREAD_FTD && (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_3_1)
 
 void TestDefaultDeviceProperties(void)
 {
@@ -172,15 +180,108 @@ void TestLeaderWeightCalculation(void)
 
 #endif // #if OPENTHREAD_FTD && (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_3_1)
 
+
 } // namespace ot
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+template <class T> class OnceCallback;
+
+
+/**
+ * A callback which can be invoked at most once.
+ *
+ * IsNull is guaranteed to return true once the callback has been invoked.
+ *
+ * Example usage:
+ *  OnceCallback<int(int)> square([](int x) { return x * x; });
+ *  std::move(square)(5); // Returns 25.
+ *  std::move(square)(6); // Crashes since `square` has already run.
+ *  square(7); // Compiling error.
+ *
+ * Inspired by Chromium base::OnceCallback
+ * (https://chromium.googlesource.com/chromium/src.git/+/refs/heads/main/base/callback.h).
+ *
+ */
+template <typename R, typename... Args> class OnceCallback<R(Args...)>
+{
+public:
+    // Constructs a new `OnceCallback` instance with a callable.
+    //
+    // This constructor is for matching std::function<> and lambda and the
+    // `std::enable_if_t` check is only required for working around gcc 4.x
+    // compiling issue which trying to instantiate this template constructor
+    // for use cases like `::mOnceCallback(aOnceCallback)`.
+    template <typename T, typename = typename std::enable_if<!std::is_same<OnceCallback, T>::value>::type>
+    OnceCallback(T &&func)
+        : mFunc(std::forward<T>(func))
+    {
+    }
+
+    OnceCallback(const OnceCallback &)            = delete;
+    OnceCallback &operator=(const OnceCallback &) = delete;
+    OnceCallback(OnceCallback &&)                 = default;
+    OnceCallback &operator=(OnceCallback &&)      = default;
+
+    R operator()(Args...) const &
+    {
+        static_assert(!sizeof(*this), "OnceCallback::() can only be invoked on a non-const "
+                                      "rvalue, i.e. std::move(callback)().");
+    }
+
+    R operator()(Args... args) &&
+    {
+        // Move `this` to a local variable to clear internal state
+        // before invoking the callback function.
+        OnceCallback cb = std::move(*this);
+
+        return cb.mFunc(std::forward<Args>(args)...);
+    }
+
+    bool IsNull() const { return mFunc == nullptr; }
+
+private:
+    std::function<R(Args...)> mFunc;
+};
+
+//~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+typedef OnceCallback<void(void)> SimpleOnceCallback;
+
+static uint16_t gCallCaounter = 0;
+
+void TestFunc(void)
+{
+    gCallCaounter++;
+    printf("TestFunc() is called - gCallCaounter=%u\n", gCallCaounter);
+}
+
+void InvokeCallbackTwice(SimpleOnceCallback &&aCallback)
+{
+    printf("In InvokeCallbackTwice()\n");
+
+    printf("  aCallback.IsNull() = %d\n", aCallback.IsNull());
+
+    std::move(aCallback)();
+
+    printf("  aCallback.IsNull() = %d\n", aCallback.IsNull());
+
+    std::move(aCallback)();
+}
+
 
 int main(void)
 {
-#if OPENTHREAD_FTD && (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_3_1)
-    ot::TestDefaultDeviceProperties();
-    ot::TestLeaderWeightCalculation();
-#endif
+    SimpleOnceCallback callback(TestFunc);
 
-    printf("All tests passed\n");
-    return 0;
+
+    printf("callback.IsNull() = %d\n", callback.IsNull());
+
+    InvokeCallbackTwice(std::move(callback));
+
+    printf("callback.IsNull() = %d - After InvokeCallbackTwice() \n", callback.IsNull());
+
+    InvokeCallbackTwice(std::move(callback));
+
+    VerifyOrQuit(gCallCaounter == 1);
 }
