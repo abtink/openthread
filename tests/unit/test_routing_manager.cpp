@@ -182,6 +182,8 @@ void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat
 
 extern "C" {
 
+otRadioCaps otPlatRadioGetCaps(otInstance *) { return OT_RADIO_CAPS_ACK_TIMEOUT | OT_RADIO_CAPS_CSMA_BACKOFF; }
+
 otError otPlatRadioTransmit(otInstance *, otRadioFrame *)
 {
     sRadioTxOngoing = true;
