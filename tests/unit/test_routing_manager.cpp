@@ -217,7 +217,9 @@ void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat
 {
     OT_UNUSED_VARIABLE(aLogLevel);
     OT_UNUSED_VARIABLE(aLogRegion);
+    OT_UNUSED_VARIABLE(aFormat);
 
+/*
     va_list args;
 
     printf("   ");
@@ -225,6 +227,7 @@ void otPlatLog(otLogLevel aLogLevel, otLogRegion aLogRegion, const char *aFormat
     vprintf(aFormat, args);
     va_end(args);
     printf("\n");
+*/
 }
 #endif
 
