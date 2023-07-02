@@ -3226,7 +3226,11 @@ void VerifyPdOmrPrefix(const Ip6::Prefix &aPrefix)
 {
     otBorderRoutingPrefixTableEntry platformPrefixInfo;
 
+    Log("VerifyPdOmrPrefix(%s)", aPrefix.ToString().AsCString());
     VerifyOrQuit(otBorderRoutingGetPdOmrPrefix(sInstance, &platformPrefixInfo) == OT_ERROR_NONE);
+
+    Log("In VerifyPdOmrPrefix(), we got %s", AsCoreType(&platformPrefixInfo.mPrefix).ToString().AsCString());
+
     VerifyOrQuit(AsCoreType(&platformPrefixInfo.mPrefix) == aPrefix);
 }
 
