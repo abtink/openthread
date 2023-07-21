@@ -89,6 +89,10 @@ public:
     {
     };
 
+    class Key : public otPlatDnssdKey, public Clearable<Key> ///< Key information
+    {
+    };
+
     /**
      * Represents a range of `RequestId` values.
      *
@@ -223,12 +227,38 @@ public:
      * Refer to the documentation for `otPlatDnssdUnregisterHost()`, for a more detailed description of the behavior
      * of this method.
      *
-     * @param[in] aHost         Information about host to register.
+     * @param[in] aHost         Information about the host to unregister.
      * @param[in] aRequestId    The ID associated with this request.
      * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
      *
      */
     void UnregisterHost(const Host &aHost, RequestId aRequestId, RegisterCallback aCallback);
+
+    /**
+     * Registers or updates a key record on the infrastructure network's DNS-SD module.
+     *
+     * Refer to the documentation for `otPlatDnssdRegisterKey()`, for a more detailed description of the behavior
+     * of this method.
+     *
+     * @param[in] aKey          Information about the key to register.
+     * @param[in] aRequestId    The ID associated with this request.
+     * @param[in] aCallback     The callback function pointer to report the outcome (may be `nullptr`).
+     *
+     */
+    void RegisterKey(const Key &aKey, RequestId aRequestId, RegisterCallback aCallback);
+
+    /**
+     * Unregisters a key record on the infrastructure network's DNS-SD module.
+     *
+     * Refer to the documentation for `otPlatDnssdUnregisterKey()`, for a more detailed description of the behavior
+     * of this method.
+     *
+     * @param[in] aKey          Information about the key to unregister.
+     * @param[in] aRequestId    The ID associated with this request.
+     * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
+     *
+     */
+    void UnregisterKey(const Key &aKey, RequestId aRequestId, RegisterCallback aCallback);
 
 private:
     void HandleStateChange(void);
@@ -242,6 +272,7 @@ private:
 DefineMapEnum(otPlatDnssdState, Dnssd::State);
 DefineCoreType(otPlatDnssdService, Dnssd::Service);
 DefineCoreType(otPlatDnssdHost, Dnssd::Host);
+DefineCoreType(otPlatDnssdKey, Dnssd::Key);
 
 } // namespace ot
 

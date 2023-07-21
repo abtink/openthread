@@ -82,4 +82,26 @@ void otPlatDnssdUnregisterHost(otInstance                 *aInstance,
     OT_UNUSED_VARIABLE(aCallback);
 }
 
+void otPlatDnssdRegisterKey(otInstance                 *aInstance,
+                            const otPlatDnssdKey       *aKey,
+                            otPlatDnssdRequestId        aRequestId,
+                            otPlatDnssdRegisterCallback aCallback)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aKey);
+    OT_UNUSED_VARIABLE(aRequestId);
+    OT_UNUSED_VARIABLE(aCallback);
+}
+
+void otPlatDnssdUnregisterKey(otInstance                 *aInstance,
+                              const otPlatDnssdKey       *aKey,
+                              otPlatDnssdRequestId        aRequestId,
+                              otPlatDnssdRegisterCallback aCallback)
+{
+    OT_UNUSED_VARIABLE(aInstance);
+    OT_UNUSED_VARIABLE(aKey);
+    OT_UNUSED_VARIABLE(aRequestId);
+    OT_UNUSED_VARIABLE(aCallback);
+}
+
 #endif // OPENTHREAD_CONFIG_PLATFORM_DNSSD_ENABLE

@@ -129,6 +129,8 @@ static Array<DnssdRequest, kDnssdArraySize> sDnssdRegHostRequests;
 static Array<DnssdRequest, kDnssdArraySize> sDnssdUnregHostRequests;
 static Array<DnssdRequest, kDnssdArraySize> sDnssdRegServiceRequests;
 static Array<DnssdRequest, kDnssdArraySize> sDnssdUnregServiceRequests;
+static Array<DnssdRequest, kDnssdArraySize> sDnssdRegKeyRequests;
+static Array<DnssdRequest, kDnssdArraySize> sDnssdUnregKeyRequests;
 
 static bool             sDnssdShouldCheckWithClient = true;
 static Error            sDnssdCallbackError         = kErrorPending;
@@ -137,8 +139,6 @@ static otPlatDnssdState sDnssdState                 = OT_PLAT_DNSSD_READY;
 otPlatDnssdState otPlatDnssdGetState(otInstance *aInstance)
 {
     OT_UNUSED_VARIABLE(aInstance);
-
-    Log("otPlatDnssdGetState()");
 
     return sDnssdState;
 }
@@ -258,7 +258,7 @@ void otPlatDnssdRegisterHost(otInstance                 *aInstance,
 
     Log("   TTL            : %u", aHost->mTtl);
 
-    VerifyOrQuit(aInstance == aInstance);
+    VerifyOrQuit(aInstance == sInstance);
 
     if (sDnssdShouldCheckWithClient)
     {
@@ -293,6 +293,124 @@ void otPlatDnssdUnregisterHost(otInstance                 *aInstance,
     if ((sDnssdCallbackError != kErrorPending) && (aCallback != nullptr))
     {
         aCallback(aInstance, aRequestId, sDnssdCallbackError);
+    }
+}
+
+void otPlatDnssdRegisterKey(otInstance                 *aInstance,
+                            const otPlatDnssdKey       *aKey,
+                            otPlatDnssdRequestId        aRequestId,
+                            otPlatDnssdRegisterCallback aCallback)
+{
+    Log("otPlatDnssdRegisterKey(aRequestId: %lu)", ToUlong(aRequestId));
+    Log("   name           : %s", aKey->mName);
+    Log("   serviceType    : %s", aKey->mServiceType == nullptr ? "(null)" : aKey->mServiceType);
+    Log("   key data-len   : %u", aKey->mKeyDataLength);
+    Log("   TTL            : %u", aKey->mTtl);
+
+    VerifyOrQuit(aInstance == sInstance);
+
+    if (sDnssdShouldCheckWithClient)
+    {
+        if (aKey->mServiceType == nullptr)
+        {
+            VerifyOrQuit(StringMatch(AsCoreType(aInstance).Get<Srp::Client>().GetHostInfo().GetName(), aKey->mName));
+        }
+        else
+        {
+            bool didFind = false;
+
+            for (const Srp::Client::Service &service : AsCoreType(aInstance).Get<Srp::Client>().GetServices())
+            {
+                if (StringMatch(service.GetInstanceName(), aKey->mName))
+                {
+                    didFind = true;
+                    VerifyOrQuit(StringMatch(service.GetName(), aKey->mServiceType));
+                }
+            }
+
+            VerifyOrQuit(didFind);
+        }
+    }
+
+    SuccessOrQuit(sDnssdRegKeyRequests.PushBack(DnssdRequest(aRequestId, aCallback)));
+
+    if ((sDnssdCallbackError != kErrorPending) && (aCallback != nullptr))
+    {
+        aCallback(aInstance, aRequestId, sDnssdCallbackError);
+    }
+}
+
+void otPlatDnssdUnregisterKey(otInstance                 *aInstance,
+                              const otPlatDnssdKey       *aKey,
+                              otPlatDnssdRequestId        aRequestId,
+                              otPlatDnssdRegisterCallback aCallback)
+{
+    Log("otPlatDnssdUnregisterKey(aRequestId: %lu)", ToUlong(aRequestId));
+    Log("   name           : %s", aKey->mName);
+
+    VerifyOrQuit(aInstance == sInstance);
+
+    if (sDnssdShouldCheckWithClient)
+    {
+        if (aKey->mServiceType == nullptr)
+        {
+            VerifyOrQuit(StringMatch(AsCoreType(aInstance).Get<Srp::Client>().GetHostInfo().GetName(), aKey->mName));
+        }
+        else
+        {
+            bool didFind = false;
+
+            for (const Srp::Client::Service &service : AsCoreType(aInstance).Get<Srp::Client>().GetServices())
+            {
+                if (StringMatch(service.GetInstanceName(), aKey->mName))
+                {
+                    didFind = true;
+                    VerifyOrQuit(StringMatch(service.GetName(), aKey->mServiceType));
+                }
+            }
+
+            VerifyOrQuit(didFind);
+        }
+    }
+
+    SuccessOrQuit(sDnssdUnregKeyRequests.PushBack(DnssdRequest(aRequestId, aCallback)));
+
+    if ((sDnssdCallbackError != kErrorPending) && (aCallback != nullptr))
+    {
+        aCallback(aInstance, aRequestId, sDnssdCallbackError);
+    }
+}
+
+// Number of times we expect each `otPlatDnssd` request to be called
+struct DnssdRequestCounts : public Clearable<DnssdRequestCounts>
+{
+    DnssdRequestCounts(void) { Clear(); }
+
+    uint16_t mKeyReg;
+    uint16_t mHostReg;
+    uint16_t mServiceReg;
+    uint16_t mKeyUnreg;
+    uint16_t mHostUnreg;
+    uint16_t mServiceUnreg;
+};
+
+void VerifyDnnsdRequests(const DnssdRequestCounts &aRequestCounts, bool aAllowMoreUnregs = false)
+{
+    VerifyOrQuit(sDnssdRegKeyRequests.GetLength() == aRequestCounts.mKeyReg);
+    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == aRequestCounts.mHostReg);
+    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == aRequestCounts.mServiceReg);
+
+    if (aAllowMoreUnregs)
+    {
+        VerifyOrQuit(sDnssdUnregKeyRequests.GetLength() >= aRequestCounts.mKeyUnreg);
+        VerifyOrQuit(sDnssdUnregHostRequests.GetLength() >= aRequestCounts.mHostUnreg);
+        VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() >= aRequestCounts.mServiceUnreg);
+    }
+    else
+    {
+        VerifyOrQuit(sDnssdUnregKeyRequests.GetLength() == aRequestCounts.mKeyUnreg);
+        VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == aRequestCounts.mHostUnreg);
+        VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == aRequestCounts.mServiceUnreg);
     }
 }
 
@@ -454,8 +572,8 @@ static const char kHostName[] = "awesomehost";
 
 void PrepareService1(Srp::Client::Service &aService)
 {
-    static const char          kServiceName[]   = "_srv._udp";
-    static const char          kInstanceLabel[] = "awesome.srv";
+    static const char          kServiceName[]   = "_srv1._udp";
+    static const char          kInstanceLabel[] = "service1";
     static const char          kSub1[]          = "_sub1";
     static const char          kSub2[]          = "_sub2";
     static const char          kSub3[]          = "_sub3";
@@ -485,8 +603,8 @@ void PrepareService1(Srp::Client::Service &aService)
 
 void PrepareService2(Srp::Client::Service &aService)
 {
-    static const char  kService2Name[]   = "_00112233667882554._matter._udp";
-    static const char  kInstance2Label[] = "ABCDEFGHI";
+    static const char  kService2Name[]   = "_matter._udp";
+    static const char  kInstance2Label[] = "service2";
     static const char  kSub4[]           = "_44444444";
     static const char *kSubLabels2[]     = {kSub4, nullptr};
 
@@ -641,6 +759,7 @@ void TestSrpAdvProxy(void)
     Srp::AdvertisingProxy          *advProxy;
     Srp::Client::Service            service1;
     Srp::Client::Service            service2;
+    DnssdRequestCounts              dnssdCounts;
     uint16_t                        heapAllocations;
 
     Log("--------------------------------------------------------------------------------------------");
@@ -673,12 +792,15 @@ void TestSrpAdvProxy(void)
     SuccessOrQuit(otBorderRouterAddOnMeshPrefix(sInstance, &prefixConfig));
     SuccessOrQuit(otBorderRouterRegister(sInstance));
 
-    // Configured Dnssd platform API behavior
+    // Configure Dnssd platform API behavior
 
     sDnssdRegHostRequests.Clear();
     sDnssdRegServiceRequests.Clear();
     sDnssdUnregHostRequests.Clear();
     sDnssdUnregServiceRequests.Clear();
+    sDnssdRegKeyRequests.Clear();
+    sDnssdUnregKeyRequests.Clear();
+
     sDnssdState                 = OT_PLAT_DNSSD_READY;
     sDnssdShouldCheckWithClient = true;
     sDnssdCallbackError         = kErrorNone; // Invoke callback directly from dnssd APIs
@@ -724,10 +846,10 @@ void TestSrpAdvProxy(void)
 
     AdvanceTime(2 * 1000);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mKeyReg += 2;
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
@@ -746,13 +868,12 @@ void TestSrpAdvProxy(void)
 
     AdvanceTime(2 * 1000);
 
-    // This time we should only see the new service being
+    // This time we should only see the new service and its key being
     // registered as the host is same as before and already registered
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mKeyReg++;
+    dnssdCounts.mServiceReg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
@@ -775,12 +896,9 @@ void TestSrpAdvProxy(void)
     // Validate that adv-proxy does not update any of registration on
     // DNS-SD platform since there is no change.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    VerifyDnnsdRequests(dnssdCounts);
 
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal > 3);
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal >= 3);
     VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == advProxy->GetCounters().mAdvTotal);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
@@ -806,10 +924,8 @@ void TestSrpAdvProxy(void)
     // This time we should only see new host registration
     // since that's the only thing that changes
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mHostReg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
@@ -827,12 +943,11 @@ void TestSrpAdvProxy(void)
     AdvanceTime(2 * 1000);
 
     // We should see the service being unregistered
-    // by advertising proxy on DNS-SD platform.
+    // by advertising proxy on DNS-SD platform but its key
+    // remains registered.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 1);
+    dnssdCounts.mServiceUnreg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
@@ -850,10 +965,7 @@ void TestSrpAdvProxy(void)
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 1);
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(service1.GetState() == Srp::Client::kRemoved);
     VerifyOrQuit(service2.GetState() == Srp::Client::kRegistered);
@@ -874,10 +986,8 @@ void TestSrpAdvProxy(void)
     // Since the service is now changed, advertising proxy
     // should update it (re-register it) on DNS-SD APIs.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 3);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 1);
+    dnssdCounts.mServiceReg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
@@ -895,12 +1005,11 @@ void TestSrpAdvProxy(void)
     AdvanceTime(2 * 1000);
 
     // We should see the host and service being unregistered
-    // on DNS-SD APIs.
+    // on DNS-SD APIs but keys remain unchanged.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 3);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 2);
+    dnssdCounts.mHostUnreg++;
+    dnssdCounts.mServiceUnreg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
@@ -920,10 +1029,7 @@ void TestSrpAdvProxy(void)
 
     // We should see no changes (no calls) to DNS-SD APIs.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 3);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 2);
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
@@ -941,12 +1047,11 @@ void TestSrpAdvProxy(void)
     AdvanceTime(2 * 1000);
 
     // We should see one host register and one service register
-    // on DNS-SD APIs.
+    // on DNS-SD APIs. Keys are already registered.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 3);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 4);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 2);
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
@@ -963,10 +1068,7 @@ void TestSrpAdvProxy(void)
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 3);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 4);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 2);
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
 
@@ -984,10 +1086,9 @@ void TestSrpAdvProxy(void)
 
     // Make sure host and service are unregistered.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 3);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 4);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 3);
+    dnssdCounts.mHostUnreg++;
+    dnssdCounts.mServiceUnreg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Disable SRP server");
@@ -1005,10 +1106,8 @@ void TestSrpAdvProxy(void)
     VerifyOrQuit(advProxy->GetCounters().mAdvSkipped == 0);
     VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 0);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 3);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 4);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 3);
+    dnssdCounts.mKeyUnreg += 3;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(heapAllocations == sHeapAllocatedPtrs.GetLength());
 
@@ -1030,6 +1129,7 @@ void TestSrpAdvProxyDnssdStateChange(void)
     Srp::AdvertisingProxy          *advProxy;
     Srp::Client::Service            service1;
     Srp::Client::Service            service2;
+    DnssdRequestCounts              dnssdCounts;
     uint16_t                        heapAllocations;
 
     Log("--------------------------------------------------------------------------------------------");
@@ -1068,6 +1168,9 @@ void TestSrpAdvProxyDnssdStateChange(void)
     sDnssdRegServiceRequests.Clear();
     sDnssdUnregHostRequests.Clear();
     sDnssdUnregServiceRequests.Clear();
+    sDnssdRegKeyRequests.Clear();
+    sDnssdUnregKeyRequests.Clear();
+
     sDnssdState                 = OT_PLAT_DNSSD_STOPPED;
     sDnssdShouldCheckWithClient = true;
     sDnssdCallbackError         = kErrorNone; // Invoke callback directly
@@ -1120,10 +1223,7 @@ void TestSrpAdvProxyDnssdStateChange(void)
 
     VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Register a second service");
@@ -1141,11 +1241,8 @@ void TestSrpAdvProxyDnssdStateChange(void)
     VerifyOrQuit(service2.GetState() == Srp::Client::kRegistered);
 
     // None of the DNS-SD APIs should be called since its state
-    // `OT_PLAT_DNSSD_STOPPED`
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    // `OT_PLAT_DNSSD_STOPPED` (`dnssdCounts` is all zeros).
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Update DNS-SD state and signal that state is changed");
@@ -1161,10 +1258,10 @@ void TestSrpAdvProxyDnssdStateChange(void)
     // Now the host and two services should be registered on
     // DNS-SD platform
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg += 2;
+    dnssdCounts.mKeyReg += 3;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
     VerifyOrQuit(service2.GetState() == Srp::Client::kRegistered);
@@ -1180,11 +1277,7 @@ void TestSrpAdvProxyDnssdStateChange(void)
 
     // Validate that adv-proxy does not update any of registration on
     // DNS-SD platform since there is no change.
-
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Update DNS-SD state to `STOPPED` and signal its change");
@@ -1200,10 +1293,7 @@ void TestSrpAdvProxyDnssdStateChange(void)
     // Since DNS-SD platform signal that it is stopped,
     // there should be no calls to any of APIs.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Wait for longer than lease interval for client to refresh");
@@ -1218,10 +1308,7 @@ void TestSrpAdvProxyDnssdStateChange(void)
 
     // The DNS-SD API counters should remain unchanged
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Update DNS-SD state to `READY` and signal its change");
@@ -1237,10 +1324,10 @@ void TestSrpAdvProxyDnssdStateChange(void)
     // Check that the host and two services are again registered
     // on DNS-SD platform by advertising proxy.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 4);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg += 2;
+    dnssdCounts.mKeyReg += 3;
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Update DNS-SD state to `STOPPED` and signal its change");
@@ -1256,10 +1343,7 @@ void TestSrpAdvProxyDnssdStateChange(void)
     // Since DNS-SD platform signal that it is stopped,
     // there should be no calls to any of APIs.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 4);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Remove the first service on client");
@@ -1270,9 +1354,6 @@ void TestSrpAdvProxyDnssdStateChange(void)
 
     AdvanceTime(2 * 1000);
 
-    // We should see the service being unregistered
-    // by advertising proxy on DNS-SD platform.
-
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
     VerifyOrQuit(service1.GetState() == Srp::Client::kRemoved);
@@ -1280,13 +1361,10 @@ void TestSrpAdvProxyDnssdStateChange(void)
 
     // No changes to DNS-SD API counters (since it is stopped)
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 4);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Update DNS-SD state to `READY` and signal its change");
+    Log("Update DNS-SD state to `READY` and signal its change #2");
 
     // Since the already removed `service1` is no longer available
     // on SRP client, we disable checking the services with client
@@ -1301,13 +1379,14 @@ void TestSrpAdvProxyDnssdStateChange(void)
     VerifyOrQuit(advProxy->IsRunning());
     VerifyOrQuit(advProxy->GetCounters().mStateChanges == 5);
 
-    // We should see the host and `service2` registered again,
-    // and removed `service1` unregistered.
+    // We should see the host and `service2` registered again.
+    // And all 3 keys (even for removed `service1`) to be
+    // registered.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 3);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 5);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 1);
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg++;
+    dnssdCounts.mKeyReg += 3;
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Disable SRP server");
@@ -1327,10 +1406,10 @@ void TestSrpAdvProxyDnssdStateChange(void)
     VerifyOrQuit(advProxy->GetCounters().mAdvRejected == 0);
     VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 0);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 3);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 5);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 2);
+    dnssdCounts.mHostUnreg++;
+    dnssdCounts.mServiceUnreg++;
+    dnssdCounts.mKeyUnreg += 3;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(heapAllocations == sHeapAllocatedPtrs.GetLength());
 
@@ -1352,6 +1431,7 @@ void TestSrpAdvProxyDelayedCallback(void)
     Srp::AdvertisingProxy          *advProxy;
     Srp::Client::Service            service1;
     Srp::Client::Service            service2;
+    DnssdRequestCounts              dnssdCounts;
     uint16_t                        heapAllocations;
     const DnssdRequest             *request;
 
@@ -1385,12 +1465,15 @@ void TestSrpAdvProxyDelayedCallback(void)
     SuccessOrQuit(otBorderRouterAddOnMeshPrefix(sInstance, &prefixConfig));
     SuccessOrQuit(otBorderRouterRegister(sInstance));
 
-    // Configured Dnssd platform API behavior
+    // Configure Dnssd platform API behavior
 
     sDnssdRegHostRequests.Clear();
     sDnssdRegServiceRequests.Clear();
     sDnssdUnregHostRequests.Clear();
     sDnssdUnregServiceRequests.Clear();
+    sDnssdRegKeyRequests.Clear();
+    sDnssdUnregKeyRequests.Clear();
+
     sDnssdState                 = OT_PLAT_DNSSD_READY;
     sDnssdShouldCheckWithClient = true;
     sDnssdCallbackError         = kErrorPending; // Do not call the callbacks directly
@@ -1436,18 +1519,26 @@ void TestSrpAdvProxyDelayedCallback(void)
 
     AdvanceTime(1000);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg++;
+    dnssdCounts.mKeyReg += 2;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 1);
 
     VerifyOrQuit(!sProcessedClientCallback);
     VerifyOrQuit(srpServer->GetNextHost(nullptr) == nullptr);
 
-    // Invoke the service callback first
+    // Invoke the service and key callbacks first
     request = &sDnssdRegServiceRequests[0];
+    VerifyOrQuit(request->mCallback != nullptr);
+    request->mCallback(sInstance, request->mId, kErrorNone);
+
+    request = &sDnssdRegKeyRequests[0];
+    VerifyOrQuit(request->mCallback != nullptr);
+    request->mCallback(sInstance, request->mId, kErrorNone);
+
+    request = &sDnssdRegKeyRequests[1];
     VerifyOrQuit(request->mCallback != nullptr);
     request->mCallback(sInstance, request->mId, kErrorNone);
 
@@ -1482,10 +1573,9 @@ void TestSrpAdvProxyDelayedCallback(void)
 
     VerifyOrQuit(!sProcessedClientCallback);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mServiceReg++;
+    dnssdCounts.mKeyReg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 2);
     VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 1);
@@ -1520,18 +1610,21 @@ void TestSrpAdvProxyDelayedCallback(void)
 
     // We should see a new service registration request.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 3);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mServiceReg++;
+    dnssdCounts.mKeyReg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 3);
     VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 1);
     VerifyOrQuit(advProxy->GetCounters().mAdvRejected == 1);
 
-    // Invoked the service callback with success.
+    // Invoked the service and key callback with success.
 
-    request = &sDnssdRegServiceRequests[2];
+    request = &sDnssdRegKeyRequests[sDnssdRegKeyRequests.GetLength() - 1];
+    VerifyOrQuit(request->mCallback != nullptr);
+    request->mCallback(sInstance, request->mId, kErrorNone);
+
+    request = &sDnssdRegServiceRequests[sDnssdRegServiceRequests.GetLength() - 1];
     VerifyOrQuit(request->mCallback != nullptr);
     request->mCallback(sInstance, request->mId, kErrorNone);
 
@@ -1562,15 +1655,8 @@ void TestSrpAdvProxyDelayedCallback(void)
 
     // We should see a new service registration request.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 4);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 4);
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 2);
-    VerifyOrQuit(advProxy->GetCounters().mAdvRejected == 1);
-    VerifyOrQuit(advProxy->GetCounters().mAdvTimeout == 0);
+    dnssdCounts.mServiceReg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     // Wait for advertising proxy timeout (there will be no callback from
     // platform) so validate that registration failure is reported to
@@ -1602,8 +1688,10 @@ void TestSrpAdvProxyDelayedCallback(void)
 
     VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
     VerifyOrQuit(sDnssdRegServiceRequests.GetLength() >= 4);
+    VerifyOrQuit(sDnssdRegKeyRequests.GetLength() >= 3);
     VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 1);
     VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 2);
+    VerifyOrQuit(sDnssdUnregKeyRequests.GetLength() == 3);
 
     VerifyOrQuit(heapAllocations == sHeapAllocatedPtrs.GetLength());
 
@@ -1625,6 +1713,7 @@ void TestSrpAdvProxyReplacedEntries(void)
     Srp::AdvertisingProxy          *advProxy;
     Srp::Client::Service            service1;
     Srp::Client::Service            service2;
+    DnssdRequestCounts              dnssdCounts;
     uint16_t                        heapAllocations;
     const DnssdRequest             *request;
     uint16_t                        numServices;
@@ -1659,12 +1748,15 @@ void TestSrpAdvProxyReplacedEntries(void)
     SuccessOrQuit(otBorderRouterAddOnMeshPrefix(sInstance, &prefixConfig));
     SuccessOrQuit(otBorderRouterRegister(sInstance));
 
-    // Configured Dnssd platform API behavior
+    // Configure Dnssd platform API behavior
 
     sDnssdRegHostRequests.Clear();
     sDnssdRegServiceRequests.Clear();
     sDnssdUnregHostRequests.Clear();
     sDnssdUnregServiceRequests.Clear();
+    sDnssdRegKeyRequests.Clear();
+    sDnssdUnregKeyRequests.Clear();
+
     sDnssdState                 = OT_PLAT_DNSSD_READY;
     sDnssdShouldCheckWithClient = true;
     sDnssdCallbackError         = kErrorPending; // Do not call the callbacks directly
@@ -1719,10 +1811,10 @@ void TestSrpAdvProxyReplacedEntries(void)
 
     AdvanceTime(1200);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg++;
+    dnssdCounts.mKeyReg += 2;
+    VerifyDnnsdRequests(dnssdCounts);
 
     VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 1);
     VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 0);
@@ -1733,7 +1825,7 @@ void TestSrpAdvProxyReplacedEntries(void)
     // SRP client min retry is 1800 msec, we wait for longer
     // to make sure client retries.
 
-    AdvanceTime(1900);
+    AdvanceTime(2000);
 
     VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 2);
     VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 0);
@@ -1742,10 +1834,7 @@ void TestSrpAdvProxyReplacedEntries(void)
     // DNS-SD platform APIs as the requests should be same
     // and fully matching the outstanding ones.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Invoke the DNS-SD API callbacks");
@@ -1757,6 +1846,13 @@ void TestSrpAdvProxyReplacedEntries(void)
     request = &sDnssdRegHostRequests[0];
     VerifyOrQuit(request->mCallback != nullptr);
     request->mCallback(sInstance, request->mId, kErrorNone);
+
+    for (uint16_t index = 0; index < 2; index++)
+    {
+        request = &sDnssdRegKeyRequests[index];
+        VerifyOrQuit(request->mCallback != nullptr);
+        request->mCallback(sInstance, request->mId, kErrorNone);
+    }
 
     AdvanceTime(100);
 
@@ -1788,10 +1884,8 @@ void TestSrpAdvProxyReplacedEntries(void)
     // We should see the changed service registered on DNS-SD
     // platform APIs.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 2);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mServiceReg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     // Change service 1 again (add sub-types back).
     SuccessOrQuit(srpClient->ClearService(service1));
@@ -1807,10 +1901,8 @@ void TestSrpAdvProxyReplacedEntries(void)
     // We should see the changed service registered on DNS-SD
     // platform APIs again.
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 3);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mServiceReg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Invoke the replaced entry DNS-SD API callback");
@@ -1872,10 +1964,15 @@ void TestSrpAdvProxyReplacedEntries(void)
     VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 4);
     VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 1);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 5);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mServiceReg += 2;
+    dnssdCounts.mKeyReg++;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    // Invoke the key registration callback
+
+    request = &sDnssdRegKeyRequests[sDnssdRegKeyRequests.GetLength() - 1];
+    VerifyOrQuit(request->mCallback != nullptr);
+    request->mCallback(sInstance, request->mId, kErrorNone);
 
     // Now have SRP client send a new SRP update message
     // just changing `service2`. We clear `servcie1` on client
@@ -1896,12 +1993,10 @@ void TestSrpAdvProxyReplacedEntries(void)
     VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 4);
     VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 2);
 
-    // We should new registration for the changed `service2`
+    // We should see new registration for the changed `service2`
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 6);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mServiceReg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Invoke the callback for new registration replacing old one first");
@@ -1997,10 +2092,8 @@ void TestSrpAdvProxyReplacedEntries(void)
     VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 6);
     VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 2);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 8);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 0);
+    dnssdCounts.mServiceReg += 2;
+    VerifyDnnsdRequests(dnssdCounts);
 
     // Now have SRP client send a new SRP update message
     // just removing `service1`. We clear `servcie2` on client
@@ -2018,10 +2111,8 @@ void TestSrpAdvProxyReplacedEntries(void)
     VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 6);
     VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 3);
 
-    VerifyOrQuit(sDnssdRegHostRequests.GetLength() == 1);
-    VerifyOrQuit(sDnssdRegServiceRequests.GetLength() == 8);
-    VerifyOrQuit(sDnssdUnregHostRequests.GetLength() == 0);
-    VerifyOrQuit(sDnssdUnregServiceRequests.GetLength() == 1);
+    dnssdCounts.mServiceUnreg++;
+    VerifyDnnsdRequests(dnssdCounts);
 
     // Even though the new SRP update which removed `servcie2`
     // is already unregistered, it should be blocked by the
@@ -2105,6 +2196,837 @@ void TestSrpAdvProxyReplacedEntries(void)
     Log("End of TestSrpAdvProxyReplacedEntries");
 }
 
+void TestSrpAdvProxyHostWithOffMeshRoutableAddress(void)
+{
+    NetworkData::OnMeshPrefixConfig prefixConfig;
+    Srp::Server                    *srpServer;
+    Srp::Client                    *srpClient;
+    Srp::AdvertisingProxy          *advProxy;
+    Srp::Client::Service            service1;
+    Srp::Client::Service            service2;
+    DnssdRequestCounts              dnssdCounts;
+    uint16_t                        heapAllocations;
+    const DnssdRequest             *request;
+
+    Log("--------------------------------------------------------------------------------------------");
+    Log("TestSrpAdvProxyHostWithOffMeshRoutableAddress");
+
+    InitTest();
+
+    srpServer = &sInstance->Get<Srp::Server>();
+    srpClient = &sInstance->Get<Srp::Client>();
+    advProxy  = &sInstance->Get<Srp::AdvertisingProxy>();
+
+    heapAllocations = sHeapAllocatedPtrs.GetLength();
+
+    PrepareService1(service1);
+    PrepareService2(service2);
+
+    // Configure Dnssd platform API behavior
+
+    sDnssdRegHostRequests.Clear();
+    sDnssdRegServiceRequests.Clear();
+    sDnssdUnregHostRequests.Clear();
+    sDnssdUnregServiceRequests.Clear();
+    sDnssdRegKeyRequests.Clear();
+    sDnssdUnregKeyRequests.Clear();
+
+    sDnssdState                 = OT_PLAT_DNSSD_READY;
+    sDnssdShouldCheckWithClient = true;
+    sDnssdCallbackError         = kErrorNone; // Invoke callback directly from dnssd APIs
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Start SRP server");
+
+    SuccessOrQuit(srpServer->SetAddressMode(Srp::Server::kAddressModeUnicast));
+    VerifyOrQuit(srpServer->GetAddressMode() == Srp::Server::kAddressModeUnicast);
+
+    VerifyOrQuit(srpServer->GetState() == Srp::Server::kStateDisabled);
+
+    srpServer->SetServiceHandler(nullptr, sInstance);
+
+    srpServer->SetEnabled(true);
+    VerifyOrQuit(srpServer->GetState() != Srp::Server::kStateDisabled);
+
+    AdvanceTime(10000);
+    VerifyOrQuit(srpServer->GetState() == Srp::Server::kStateRunning);
+    VerifyOrQuit(advProxy->IsRunning());
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Start SRP client");
+
+    srpClient->SetCallback(HandleSrpClientCallback, sInstance);
+    srpClient->SetLeaseInterval(400);
+
+    srpClient->EnableAutoStartMode(nullptr, nullptr);
+    VerifyOrQuit(srpClient->IsAutoStartModeEnabled());
+
+    AdvanceTime(2000);
+    VerifyOrQuit(srpClient->IsRunning());
+
+    SuccessOrQuit(srpClient->SetHostName(kHostName));
+    SuccessOrQuit(srpClient->EnableAutoHostAddress());
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Register a service");
+
+    SuccessOrQuit(srpClient->AddService(service1));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(2 * 1000);
+
+    // Since the host has no off-mesh routable address,
+    // we should not advertise the host or service, but
+    // should still register keys for them.
+
+    dnssdCounts.mKeyReg += 2;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(sProcessedClientCallback);
+    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
+
+    VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 1);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 1);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Register a second service");
+
+    SuccessOrQuit(srpClient->AddService(service2));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(2 * 1000);
+
+    // We should see key for new service is registered.
+
+    dnssdCounts.mKeyReg++;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(sProcessedClientCallback);
+    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
+
+    VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
+    VerifyOrQuit(service2.GetState() == Srp::Client::kRegistered);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 2);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 2);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Wait for longer than lease interval of 400s for client to refresh");
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(401 * 1000);
+
+    VerifyOrQuit(sProcessedClientCallback);
+
+    // Validate that adv-proxy does not update any of registration on
+    // DNS-SD platform since there is no change.
+
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 3);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 3);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Remove the second service");
+
+    sDnssdShouldCheckWithClient = false;
+
+    SuccessOrQuit(srpClient->RemoveService(service2));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(2 * 1000);
+
+    // Key for host and both services (even the removed one)
+    // should be still registered.
+
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(sProcessedClientCallback);
+    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
+
+    VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
+    VerifyOrQuit(service2.GetState() == Srp::Client::kRemoved);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 4);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 4);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Remove host while keeping key-lease");
+
+    SuccessOrQuit(srpClient->RemoveHostAndServices(/* aShouldRemoveKeyLease */ false));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(2 * 1000);
+
+    // Still all keys should be registered.
+
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(sProcessedClientCallback);
+    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 5);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 5);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Re-add first service");
+
+    SuccessOrQuit(srpClient->SetHostName(kHostName));
+    SuccessOrQuit(srpClient->EnableAutoHostAddress());
+    PrepareService1(service1);
+    SuccessOrQuit(srpClient->AddService(service1));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(2 * 1000);
+
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(sProcessedClientCallback);
+    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
+
+    VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 6);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 6);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Remove host and remove key-lease");
+
+    SuccessOrQuit(srpClient->RemoveHostAndServices(/* aShouldRemoveKeyLease */ true));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(2 * 1000);
+
+    // All keys for host and two services should now
+    // be unregistered.
+
+    dnssdCounts.mKeyUnreg += 3;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(sProcessedClientCallback);
+    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 7);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 7);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Add host and one service");
+
+    SuccessOrQuit(srpClient->SetHostName(kHostName));
+    SuccessOrQuit(srpClient->EnableAutoHostAddress());
+    PrepareService1(service1);
+    SuccessOrQuit(srpClient->AddService(service1));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(2 * 1000);
+
+    // Only keys for host and service should be registered.
+
+    dnssdCounts.mKeyReg += 2;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(sProcessedClientCallback);
+    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
+
+    VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 8);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 8);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Set AdvTimeout to 5 minutes on AdvProxy");
+
+    // Change the timeout on AvdertisingProxy to 5 minutes
+    // so that we can send multiple SRP updates and create
+    // situations where previous advertisement are still
+    // outstanding.
+
+    advProxy->SetAdvTimeout(5 * 60 * 1000);
+    VerifyOrQuit(advProxy->GetAdvTimeout() == 5 * 60 * 1000);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Add a second service but delay the callback for key registration");
+
+    sDnssdCallbackError = kErrorPending;
+
+    PrepareService2(service2);
+    SuccessOrQuit(srpClient->AddService(service2));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(1000);
+
+    // We should see key for service 2 registered.
+    // We do not invoke its callback so to keep this
+    // as an outstanding advertisement to be committed
+    // later.
+
+    dnssdCounts.mKeyReg++;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    // Since we do not yet invoke the callback for new
+    // key registration, we expect no response back to
+    // SRP client.
+
+    VerifyOrQuit(!sProcessedClientCallback);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 9);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Add an on-mesh prefix (with SLAAC) to network data");
+
+    // Set the callback config, so that we emit immediate callback for
+    // all  new `otPlatRegister{Item}()` requests.
+    sDnssdCallbackError = kErrorNone;
+
+    prefixConfig.Clear();
+    SuccessOrQuit(AsCoreType(&prefixConfig.mPrefix.mPrefix).FromString("fd00:cafe:beef::"));
+    prefixConfig.mPrefix.mLength = 64;
+    prefixConfig.mStable         = true;
+    prefixConfig.mSlaac          = true;
+    prefixConfig.mPreferred      = true;
+    prefixConfig.mOnMesh         = true;
+    prefixConfig.mDefaultRoute   = false;
+    prefixConfig.mPreference     = NetworkData::kRoutePreferenceMedium;
+
+    SuccessOrQuit(otBorderRouterAddOnMeshPrefix(sInstance, &prefixConfig));
+    SuccessOrQuit(otBorderRouterRegister(sInstance));
+
+    AdvanceTime(1 * 1000);
+
+    // Now that host has off-mesh routable address, we should
+    // see host being registered and
+
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg += 2;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    // We still did not invoke callback on key registration
+    // for service2, and new update should still be blocked
+    // and waiting for that.
+
+    VerifyOrQuit(!sProcessedClientCallback);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 10);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Invoke callback for second service key registration");
+
+    request = &sDnssdRegKeyRequests[sDnssdRegKeyRequests.GetLength() - 1];
+    VerifyOrQuit(request->mCallback != nullptr);
+    request->mCallback(sInstance, request->mId, kErrorNone);
+
+    AdvanceTime(50);
+
+    // We should now response send back to SRP client
+
+    VerifyOrQuit(sProcessedClientCallback);
+    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 10);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Remove on-mesh prefix (with SLAAC) from network data");
+
+    SuccessOrQuit(otBorderRouterRemoveOnMeshPrefix(sInstance, &prefixConfig.mPrefix));
+    SuccessOrQuit(otBorderRouterRegister(sInstance));
+
+    AdvanceTime(2 * 1000);
+
+    // Since there is no off-mesh routable address,
+    // we should see proxy unregistering host and the
+    // two services (while keeping the keys unchanged).
+
+    dnssdCounts.mHostUnreg++;
+    dnssdCounts.mServiceUnreg += 2;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(sProcessedClientCallback);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 11);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 11);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Wait for longer than lease interval of 400s for client to refresh");
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(401 * 1000);
+
+    VerifyOrQuit(sProcessedClientCallback);
+
+    // Validate that adv-proxy does not update any of registration on
+    // DNS-SD platform since there is no change.
+
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 12);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 12);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Re-add the on-mesh prefix (with SLAAC) to network data");
+
+    SuccessOrQuit(otBorderRouterAddOnMeshPrefix(sInstance, &prefixConfig));
+    SuccessOrQuit(otBorderRouterRegister(sInstance));
+
+    AdvanceTime(2 * 1000);
+
+    // Since there is no off-mesh routable address,
+    // we should see proxy unregistering host and the
+    // two services (while keeping the keys unchanged).
+
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg += 2;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(sProcessedClientCallback);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 13);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 13);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Wait for longer than lease interval of 400s for client to refresh");
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(401 * 1000);
+
+    VerifyOrQuit(sProcessedClientCallback);
+
+    // Validate that adv-proxy does not update any of registration on
+    // DNS-SD platform since there is no change.
+
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 14);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 14);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Disable SRP server");
+
+    // Verify that all heap allocations by SRP server
+    // and Advertising Proxy are freed.
+
+    srpServer->SetEnabled(false);
+    AdvanceTime(100);
+    VerifyOrQuit(!advProxy->IsRunning());
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == advProxy->GetCounters().mAdvTotal);
+    VerifyOrQuit(advProxy->GetCounters().mAdvTimeout == 0);
+    VerifyOrQuit(advProxy->GetCounters().mAdvRejected == 0);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSkipped == 0);
+    VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 1);
+
+    VerifyOrQuit(heapAllocations == sHeapAllocatedPtrs.GetLength());
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Finalize OT instance and validate all heap allocations are freed");
+
+    FinalizeTest();
+
+    VerifyOrQuit(sHeapAllocatedPtrs.IsEmpty());
+
+    Log("End of TestSrpAdvProxyHostWithOffMeshRoutableAddress");
+}
+
+void TestSrpAdvProxyRemoveBeforeCommitted(void)
+{
+    NetworkData::OnMeshPrefixConfig prefixConfig;
+    Srp::Server                    *srpServer;
+    Srp::Client                    *srpClient;
+    Srp::AdvertisingProxy          *advProxy;
+    Srp::Client::Service            service1;
+    Srp::Client::Service            service2;
+    DnssdRequestCounts              dnssdCounts;
+    uint16_t                        heapAllocations;
+    const DnssdRequest             *request;
+
+    Log("--------------------------------------------------------------------------------------------");
+    Log("TestSrpAdvProxyRemoveBeforeCommitted");
+
+    InitTest();
+
+    srpServer = &sInstance->Get<Srp::Server>();
+    srpClient = &sInstance->Get<Srp::Client>();
+    advProxy  = &sInstance->Get<Srp::AdvertisingProxy>();
+
+    heapAllocations = sHeapAllocatedPtrs.GetLength();
+
+    PrepareService1(service1);
+    PrepareService2(service2);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Add an on-mesh prefix (with SLAAC) to network data");
+
+    prefixConfig.Clear();
+    SuccessOrQuit(AsCoreType(&prefixConfig.mPrefix.mPrefix).FromString("fd00:cafe:beef::"));
+    prefixConfig.mPrefix.mLength = 64;
+    prefixConfig.mStable         = true;
+    prefixConfig.mSlaac          = true;
+    prefixConfig.mPreferred      = true;
+    prefixConfig.mOnMesh         = true;
+    prefixConfig.mDefaultRoute   = false;
+    prefixConfig.mPreference     = NetworkData::kRoutePreferenceMedium;
+
+    SuccessOrQuit(otBorderRouterAddOnMeshPrefix(sInstance, &prefixConfig));
+    SuccessOrQuit(otBorderRouterRegister(sInstance));
+
+    // Configure Dnssd platform API behavior
+
+    sDnssdRegHostRequests.Clear();
+    sDnssdRegServiceRequests.Clear();
+    sDnssdUnregHostRequests.Clear();
+    sDnssdUnregServiceRequests.Clear();
+    sDnssdRegKeyRequests.Clear();
+    sDnssdUnregKeyRequests.Clear();
+
+    sDnssdState                 = OT_PLAT_DNSSD_READY;
+    sDnssdShouldCheckWithClient = true;
+    sDnssdCallbackError         = kErrorNone; // Do not call the callbacks directly
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Start SRP server");
+
+    SuccessOrQuit(srpServer->SetAddressMode(Srp::Server::kAddressModeUnicast));
+    VerifyOrQuit(srpServer->GetAddressMode() == Srp::Server::kAddressModeUnicast);
+
+    VerifyOrQuit(srpServer->GetState() == Srp::Server::kStateDisabled);
+
+    srpServer->SetServiceHandler(nullptr, sInstance);
+
+    srpServer->SetEnabled(true);
+    VerifyOrQuit(srpServer->GetState() != Srp::Server::kStateDisabled);
+
+    AdvanceTime(10000);
+    VerifyOrQuit(srpServer->GetState() == Srp::Server::kStateRunning);
+    VerifyOrQuit(advProxy->IsRunning());
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Start SRP client");
+
+    srpClient->SetCallback(HandleSrpClientCallback, sInstance);
+
+    srpClient->EnableAutoStartMode(nullptr, nullptr);
+    VerifyOrQuit(srpClient->IsAutoStartModeEnabled());
+
+    AdvanceTime(2000);
+    VerifyOrQuit(srpClient->IsRunning());
+
+    SuccessOrQuit(srpClient->SetHostName(kHostName));
+    SuccessOrQuit(srpClient->EnableAutoHostAddress());
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Register host and one service");
+
+    SuccessOrQuit(srpClient->AddService(service1));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(2000);
+
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg++;
+    dnssdCounts.mKeyReg += 2;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 1);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 1);
+    VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 0);
+
+    VerifyOrQuit(sProcessedClientCallback);
+    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
+
+    VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Set AdvTimeout to 5 minutes on AdvProxy");
+
+    // Change the timeout on AvdertisingProxy to 5 minutes
+    // so that we can send multiple SRP updates and create
+    // situations where previous advertisement are replaced.
+
+    advProxy->SetAdvTimeout(5 * 60 * 1000);
+    VerifyOrQuit(advProxy->GetAdvTimeout() == 5 * 60 * 1000);
+
+    sDnssdCallbackError = kErrorPending; // Do not invoke callback
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Remove service1 while adding a new service2 and do not invoke callback from DNSSD plat");
+
+    SuccessOrQuit(srpClient->RemoveService(service1));
+    SuccessOrQuit(srpClient->AddService(service2));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(1000);
+
+    dnssdCounts.mServiceReg++;
+    dnssdCounts.mServiceUnreg++;
+    dnssdCounts.mKeyReg++;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 2);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 1);
+    VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 0);
+
+    VerifyOrQuit(!sProcessedClientCallback);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Remove host and its services without removing key-lease");
+
+    SuccessOrQuit(srpClient->RemoveHostAndServices(/* aShouldRemoveKeyLease */ false));
+
+    AdvanceTime(1000);
+
+    // Proxy will unregister both services again
+    // (to be safe).
+
+    dnssdCounts.mHostUnreg++;
+    dnssdCounts.mServiceUnreg++;
+    VerifyDnnsdRequests(dnssdCounts, /* aAllowMoreUnregs */ true);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 3);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 1);
+    VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 1);
+
+    VerifyOrQuit(!sProcessedClientCallback);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Invoke callback for last key registration");
+
+    // This should be enough for all `AdvInfo` entries to be finished.
+
+    request = &sDnssdRegKeyRequests[sDnssdRegKeyRequests.GetLength() - 1];
+    VerifyOrQuit(request->mCallback != nullptr);
+    request->mCallback(sInstance, request->mId, kErrorNone);
+
+    AdvanceTime(50);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 3);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 3);
+    VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 1);
+
+    VerifyOrQuit(sProcessedClientCallback);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Disable SRP server");
+
+    sDnssdShouldCheckWithClient = false;
+
+    // Verify that all heap allocations by SRP server
+    // and Advertising Proxy are freed.
+
+    srpServer->SetEnabled(false);
+    AdvanceTime(100);
+
+    VerifyOrQuit(heapAllocations == sHeapAllocatedPtrs.GetLength());
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Finalize OT instance and validate all heap allocations are freed");
+
+    FinalizeTest();
+
+    VerifyOrQuit(sHeapAllocatedPtrs.IsEmpty());
+
+    Log("End of TestSrpAdvProxyRemoveBeforeCommitted");
+}
+
+void TestSrpAdvProxyFullyRemoveBeforeCommitted(void)
+{
+    NetworkData::OnMeshPrefixConfig prefixConfig;
+    Srp::Server                    *srpServer;
+    Srp::Client                    *srpClient;
+    Srp::AdvertisingProxy          *advProxy;
+    Srp::Client::Service            service1;
+    Srp::Client::Service            service2;
+    DnssdRequestCounts              dnssdCounts;
+    uint16_t                        heapAllocations;
+    const DnssdRequest             *request;
+
+    Log("--------------------------------------------------------------------------------------------");
+    Log("TestSrpAdvProxyFullyRemoveBeforeCommitted");
+
+    InitTest();
+
+    srpServer = &sInstance->Get<Srp::Server>();
+    srpClient = &sInstance->Get<Srp::Client>();
+    advProxy  = &sInstance->Get<Srp::AdvertisingProxy>();
+
+    heapAllocations = sHeapAllocatedPtrs.GetLength();
+
+    PrepareService1(service1);
+    PrepareService2(service2);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Add an on-mesh prefix (with SLAAC) to network data");
+
+    prefixConfig.Clear();
+    SuccessOrQuit(AsCoreType(&prefixConfig.mPrefix.mPrefix).FromString("fd00:cafe:beef::"));
+    prefixConfig.mPrefix.mLength = 64;
+    prefixConfig.mStable         = true;
+    prefixConfig.mSlaac          = true;
+    prefixConfig.mPreferred      = true;
+    prefixConfig.mOnMesh         = true;
+    prefixConfig.mDefaultRoute   = false;
+    prefixConfig.mPreference     = NetworkData::kRoutePreferenceMedium;
+
+    SuccessOrQuit(otBorderRouterAddOnMeshPrefix(sInstance, &prefixConfig));
+    SuccessOrQuit(otBorderRouterRegister(sInstance));
+
+    // Configure Dnssd platform API behavior
+
+    sDnssdRegHostRequests.Clear();
+    sDnssdRegServiceRequests.Clear();
+    sDnssdUnregHostRequests.Clear();
+    sDnssdUnregServiceRequests.Clear();
+    sDnssdRegKeyRequests.Clear();
+    sDnssdUnregKeyRequests.Clear();
+
+    sDnssdState                 = OT_PLAT_DNSSD_READY;
+    sDnssdShouldCheckWithClient = true;
+    sDnssdCallbackError         = kErrorNone; // Do not call the callbacks directly
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Start SRP server");
+
+    SuccessOrQuit(srpServer->SetAddressMode(Srp::Server::kAddressModeUnicast));
+    VerifyOrQuit(srpServer->GetAddressMode() == Srp::Server::kAddressModeUnicast);
+
+    VerifyOrQuit(srpServer->GetState() == Srp::Server::kStateDisabled);
+
+    srpServer->SetServiceHandler(nullptr, sInstance);
+
+    srpServer->SetEnabled(true);
+    VerifyOrQuit(srpServer->GetState() != Srp::Server::kStateDisabled);
+
+    AdvanceTime(10000);
+    VerifyOrQuit(srpServer->GetState() == Srp::Server::kStateRunning);
+    VerifyOrQuit(advProxy->IsRunning());
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Start SRP client");
+
+    srpClient->SetCallback(HandleSrpClientCallback, sInstance);
+
+    srpClient->EnableAutoStartMode(nullptr, nullptr);
+    VerifyOrQuit(srpClient->IsAutoStartModeEnabled());
+
+    AdvanceTime(2000);
+    VerifyOrQuit(srpClient->IsRunning());
+
+    SuccessOrQuit(srpClient->SetHostName(kHostName));
+    SuccessOrQuit(srpClient->EnableAutoHostAddress());
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Register host and one service");
+
+    SuccessOrQuit(srpClient->AddService(service1));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(2000);
+
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg++;
+    dnssdCounts.mKeyReg += 2;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 1);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 1);
+    VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 0);
+
+    VerifyOrQuit(sProcessedClientCallback);
+    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
+
+    VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Set AdvTimeout to 5 minutes on AdvProxy");
+
+    // Change the timeout on AvdertisingProxy to 5 minutes
+    // so that we can send multiple SRP updates and create
+    // situations where previous advertisement are replaced.
+
+    advProxy->SetAdvTimeout(5 * 60 * 1000);
+    VerifyOrQuit(advProxy->GetAdvTimeout() == 5 * 60 * 1000);
+
+    sDnssdCallbackError = kErrorPending; // Do not invoke callback
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Remove service1 while adding a new service2 and do not invoke callback from DNSSD plat");
+
+    SuccessOrQuit(srpClient->RemoveService(service1));
+    SuccessOrQuit(srpClient->AddService(service2));
+
+    sProcessedClientCallback = false;
+
+    AdvanceTime(1000);
+
+    dnssdCounts.mServiceReg++;
+    dnssdCounts.mServiceUnreg++;
+    dnssdCounts.mKeyReg++;
+    VerifyDnnsdRequests(dnssdCounts);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 2);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 1);
+    VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 0);
+
+    VerifyOrQuit(!sProcessedClientCallback);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Remove host and its services and remove key-lease");
+
+    SuccessOrQuit(srpClient->RemoveHostAndServices(/* aShouldRemoveKeyLease */ true));
+
+    AdvanceTime(1000);
+
+    // Proxy should unregister everything.
+    //  Keys may be unregistered multiple times.
+
+    dnssdCounts.mHostUnreg++;
+    dnssdCounts.mServiceUnreg++;
+    dnssdCounts.mKeyUnreg += 3;
+    VerifyDnnsdRequests(dnssdCounts, /* aAllowMoreUnregs */ true);
+
+    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 3);
+    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 3);
+    VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 1);
+
+    VerifyOrQuit(sProcessedClientCallback);
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Disable SRP server");
+
+    sDnssdShouldCheckWithClient = false;
+
+    // Verify that all heap allocations by SRP server
+    // and Advertising Proxy are freed.
+
+    srpServer->SetEnabled(false);
+    AdvanceTime(100);
+
+    VerifyOrQuit(heapAllocations == sHeapAllocatedPtrs.GetLength());
+
+    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
+    Log("Finalize OT instance and validate all heap allocations are freed");
+
+    FinalizeTest();
+
+    VerifyOrQuit(sHeapAllocatedPtrs.IsEmpty());
+
+    Log("End of TestSrpAdvProxyFullyRemoveBeforeCommitted");
+}
+
 #endif // ENABLE_ADV_PROXY_TEST
 
 int main(void)
@@ -2115,6 +3037,10 @@ int main(void)
     TestSrpAdvProxyDnssdStateChange();
     TestSrpAdvProxyDelayedCallback();
     TestSrpAdvProxyReplacedEntries();
+    TestSrpAdvProxyHostWithOffMeshRoutableAddress();
+    TestSrpAdvProxyRemoveBeforeCommitted();
+    TestSrpAdvProxyFullyRemoveBeforeCommitted();
+
     printf("All tests passed\n");
 #else
     printf("SRP_ADV_PROXY feature is not enabled\n");

@@ -41,6 +41,7 @@
 #include "common/locator_getters.hpp"
 #include "common/log.hpp"
 #include "common/serial_number.hpp"
+#include "common/type_traits.hpp"
 
 namespace ot {
 namespace Srp {
@@ -99,6 +100,8 @@ void AdvertisingProxy::Stop(void)
 
         mCounters.mAdvRejected++;
 
+        UnregisterHostAndItsServicesAndKeys(advPtr->mHost);
+
         advPtr->mError = kErrorAbort;
         advPtr->mHost.mAdvIdRange.Clear();
         advPtr->mBlockingAdv = nullptr;
@@ -107,14 +110,16 @@ void AdvertisingProxy::Stop(void)
 
     for (Host &host : Get<Server>().GetHosts())
     {
+        UnregisterHostAndItsServicesAndKeys(host);
+
         host.mAdvIdRange.Clear();
         host.mAdvId        = kInvalidRequestId;
-        host.mIsAdvertised = false;
+        host.mIsRegistered = false;
 
         for (Service &service : host.mServices)
         {
             service.mAdvId        = kInvalidRequestId;
-            service.mIsAdvertised = false;
+            service.mIsRegistered = false;
         }
     }
 
@@ -160,6 +165,44 @@ AdvertisingProxy::RequestId AdvertisingProxy::AllocateNextRequestId(void)
     return mCurrentRequestId;
 }
 
+template <> void AdvertisingProxy::UpdateAdvIdRangeOn(Host &aHost)
+{
+    // Determine and update `mAdvIdRange` on `aHost` based on
+    // `mAdvId` and `mKeyAdvId` of host and its services.
+
+    aHost.mAdvIdRange.Clear();
+
+    for (const Service &service : aHost.mServices)
+    {
+        if (service.mKeyAdvId != kInvalidRequestId)
+        {
+            aHost.mAdvIdRange.Add(service.mKeyAdvId);
+        }
+
+        if (service.mAdvId != kInvalidRequestId)
+        {
+            aHost.mAdvIdRange.Add(service.mAdvId);
+        }
+    }
+
+    if (aHost.mKeyAdvId != kInvalidRequestId)
+    {
+        aHost.mAdvIdRange.Add(aHost.mKeyAdvId);
+    }
+
+    if (aHost.mAdvId != kInvalidRequestId)
+    {
+        aHost.mAdvIdRange.Add(aHost.mAdvId);
+    }
+
+    if (aHost.mAdvIdRange.IsEmpty())
+    {
+        mTasklet.Post();
+    }
+}
+
+template <> void AdvertisingProxy::UpdateAdvIdRangeOn(Service &aService) { UpdateAdvIdRangeOn<Host>(*aService.mHost); }
+
 void AdvertisingProxy::AdvertiseRemovalOf(Host &aHost)
 {
     LogInfo("Adv removal of host '%s'", aHost.GetFullName());
@@ -168,18 +211,20 @@ void AdvertisingProxy::AdvertiseRemovalOf(Host &aHost)
     VerifyOrExit(mState == kStateRunning);
     VerifyOrExit(aHost.IsDeleted());
 
-    aHost.mShouldAdvertise = !aHost.mIsAdvertised;
+    aHost.mShouldAdvertise = aHost.mIsRegistered;
 
     for (Service &service : aHost.mServices)
     {
         if (!service.mIsDeleted)
         {
-            service.mIsDeleted    = true;
-            service.mIsAdvertised = false;
+            service.mIsDeleted = true;
         }
 
-        service.mShouldAdvertise = !service.mIsAdvertised;
+        service.mShouldAdvertise = service.mIsRegistered;
     }
+
+    // Reject any outstanding `AdvInfo` that matches `aHost` that is
+    // being removed.
 
     for (AdvInfo &adv : mAdvInfoList)
     {
@@ -194,30 +239,43 @@ void AdvertisingProxy::AdvertiseRemovalOf(Host &aHost)
         {
             Service *service;
 
-            if (advService.IsDeleted())
-            {
-                continue;
-            }
-
             service = aHost.FindService(advService.GetInstanceName());
 
             if (service == nullptr)
             {
-                UnregisterService(advService);
+                // `AdvInfo` contains a service that is not present in
+                // `aHost`, we we unregister the service and its key
+
+                if (!advService.IsDeleted())
+                {
+                    UnregisterService(advService);
+                }
+
+                UnregisterKey(advService);
             }
             else
             {
                 service->mShouldAdvertise = true;
+
+                if (aHost.mKeyLease == 0)
+                {
+                    advService.mIsKeyRegistered = false;
+                }
             }
 
-            advService.mAdvId        = kInvalidRequestId;
-            advService.mIsReplaced   = true;
-            advService.mIsAdvertised = false;
+            advService.mAdvId      = kInvalidRequestId;
+            advService.mKeyAdvId   = kInvalidRequestId;
+            advService.mIsReplaced = true;
         }
 
-        advHost.mAdvId        = kInvalidRequestId;
-        advHost.mIsReplaced   = true;
-        advHost.mIsAdvertised = false;
+        if (aHost.mKeyLease == 0)
+        {
+            advHost.mIsKeyRegistered = false;
+        }
+
+        advHost.mAdvId      = kInvalidRequestId;
+        advHost.mKeyAdvId   = kInvalidRequestId;
+        advHost.mIsReplaced = true;
         advHost.mAdvIdRange.Clear();
 
         adv.mError = kErrorAbort;
@@ -230,11 +288,21 @@ void AdvertisingProxy::AdvertiseRemovalOf(Host &aHost)
         {
             UnregisterService(service);
         }
+
+        if (aHost.mKeyLease == 0)
+        {
+            UnregisterKey(service);
+        }
     }
 
     if (aHost.mShouldAdvertise)
     {
         UnregisterHost(aHost);
+    }
+
+    if (aHost.mKeyLease == 0)
+    {
+        UnregisterKey(aHost);
     }
 
 exit:
@@ -246,9 +314,13 @@ void AdvertisingProxy::AdvertiseRemovalOf(Service &aService)
     LogInfo("Adv removal of service '%s' '%s'", aService.GetInstanceLabel(), aService.GetServiceName());
     mCounters.mAdvServiceRemovals++;
 
-    VerifyOrExit((mState == kStateRunning) && !aService.mIsAdvertised);
+    VerifyOrExit(mState == kStateRunning);
 
-    aService.mShouldAdvertise = true;
+    aService.mShouldAdvertise = aService.mIsRegistered;
+
+    // Check if any outstanding `AdvInfo` is re-adding the `aService`
+    // (which is being removed), and if so, skip unregistering the
+    // service and its key.
 
     for (const AdvInfo &adv : mAdvInfoList)
     {
@@ -269,14 +341,18 @@ void AdvertisingProxy::AdvertiseRemovalOf(Service &aService)
 
         if ((advService != nullptr) && !advService->IsDeleted())
         {
-            aService.mShouldAdvertise = false;
-            break;
+            ExitNow();
         }
     }
 
     if (aService.mShouldAdvertise)
     {
         UnregisterService(aService);
+    }
+
+    if (aService.mKeyLease == 0)
+    {
+        UnregisterKey(aService);
     }
 
 exit:
@@ -298,12 +374,6 @@ void AdvertisingProxy::Advertise(Host &aHost, const Server::MessageMetadata &aMe
     VerifyOrExit(advPtr != nullptr);
     mAdvInfoList.Push(*advPtr);
 
-    if (!aHost.IsDeleted() && !HasExternallyReachableAddress(aHost))
-    {
-        LogInfo("No externally reachable addr on '%s' - skip adv", aHost.GetFullName());
-        ExitNow();
-    }
-
     // Compare the new `aHost` with outstanding advertisements and
     // already committed entries on server.
 
@@ -324,7 +394,7 @@ void AdvertisingProxy::Advertise(Host &aHost, const Server::MessageMetadata &aMe
             // a removed entry due to a delay in registration on
             // infra DNS-SD.
 
-            if ((advPtr != nullptr) && (advPtr->mBlockingAdv == nullptr))
+            if (advPtr->mBlockingAdv == nullptr)
             {
                 mCounters.mAdvReplaced++;
                 advPtr->mBlockingAdv = &adv;
@@ -340,6 +410,30 @@ void AdvertisingProxy::Advertise(Host &aHost, const Server::MessageMetadata &aMe
     }
 
     Advertise(aHost);
+
+    if (!aHost.IsDeleted() && HasOffMeshRoutableAddress(aHost))
+    {
+        // If `aHost` has an off-mesh routable address, we check if
+        // there are any committed or ongoing advertisements for the
+        // same host where the services were not registered because
+        // the host did not have an off-mesh routable address
+        // earlier. If so, we register the services now.
+
+        if (existingHost != nullptr)
+        {
+            RegisterUnadvertisedServices(*existingHost);
+        }
+
+        for (AdvInfo &adv : mAdvInfoList)
+        {
+            if ((&adv == advPtr) || !aHost.Matches(adv.mHost.GetFullName()))
+            {
+                continue;
+            }
+
+            RegisterUnadvertisedServices(adv.mHost);
+        }
+    }
 
 exit:
     if (advPtr != nullptr)
@@ -363,64 +457,136 @@ exit:
 
 void AdvertisingProxy::Advertise(Host &aHost)
 {
-    if (aHost.IsDeleted())
+    bool shouldUnregisterHostAndServices = (aHost.IsDeleted() || !HasOffMeshRoutableAddress(aHost));
+    bool shouldUnregisterKeys            = (aHost.mKeyLease == 0);
+
+    // If host has no off-mesh routable address, we cannot advertise it
+    // so we treat it as if it is being deleted.
+
+    if (!shouldUnregisterKeys && !aHost.mIsKeyRegistered && (aHost.mKeyAdvId == kInvalidRequestId))
     {
-        for (Service &service : aHost.mServices)
-        {
-            if (!service.mIsAdvertised)
-            {
-                UnregisterService(service);
-            }
-        }
-
-        if (!aHost.mIsAdvertised)
-        {
-            UnregisterHost(aHost);
-        }
-
-        ExitNow();
+        aHost.mShouldRegisterKey = true;
+        aHost.mKeyAdvId          = AllocateNextRequestId();
     }
 
-    // Decide whether to advertise the host and its services if not
-    // decided yet. We need to determine this before calling
-    // `RegisterHost` or `RegisterService`. This ensures that
-    // `mAdvIdRange` is properly set on `aHost` before we receive any
-    // `HandleRegistered` callbacks (which the DNS-SD platform can
-    // invoke from within `RegisterHost()` or `RegisterService()`
-    // calls).
-
-    if (!aHost.mIsAdvertised && (aHost.mAdvId == kInvalidRequestId))
+    if (!aHost.mShouldAdvertise)
     {
-        aHost.mShouldAdvertise = true;
-        UpdateAdvIdOn(aHost, AllocateNextRequestId());
+        if (shouldUnregisterHostAndServices)
+        {
+            aHost.mShouldAdvertise = aHost.mIsRegistered;
+        }
+        else if (!aHost.mIsRegistered && (aHost.mAdvId == kInvalidRequestId))
+        {
+            aHost.mShouldAdvertise = true;
+            aHost.mAdvId           = AllocateNextRequestId();
+        }
     }
 
     for (Service &service : aHost.mServices)
     {
-        if (!service.IsDeleted() && !service.mIsAdvertised && (service.mAdvId == kInvalidRequestId))
+        if (!shouldUnregisterKeys && !service.mIsKeyRegistered && (service.mKeyAdvId == kInvalidRequestId))
         {
-            service.mShouldAdvertise = true;
-            UpdateAdvIdOn(service, AllocateNextRequestId());
+            service.mShouldRegisterKey = true;
+            service.mKeyAdvId          = AllocateNextRequestId();
+        }
+
+        if (!service.mShouldAdvertise)
+        {
+            if (shouldUnregisterHostAndServices || service.IsDeleted())
+            {
+                service.mShouldAdvertise = service.mIsRegistered;
+            }
+            else if (!service.mIsRegistered && (service.mAdvId == kInvalidRequestId))
+            {
+                service.mShouldAdvertise = true;
+                service.mAdvId           = AllocateNextRequestId();
+            }
         }
     }
 
-    if (!aHost.mIsAdvertised && aHost.mShouldAdvertise)
+    // We call `UpdateAdvIdRangeOn()` to determine the `mAdvIdRange`
+    // on `aHost` before we call any of `UnregisterHost()`,
+    // `UnregisterService()`, or `UnregisterKey()` methods, and
+    // and receive any `HandleRegistered()` callbacks. The DNS-SD
+    // platform may invoke `HandleRegistered()` callbacks from within
+    // the `Register{Host/Service/Key}()` calls.
+
+    UpdateAdvIdRangeOn(aHost);
+
+    if (shouldUnregisterKeys)
+    {
+        UnregisterKey(aHost);
+    }
+    else if (aHost.mShouldRegisterKey)
+    {
+        RegisterKey(aHost);
+    }
+
+    if (aHost.mShouldAdvertise && !shouldUnregisterHostAndServices)
     {
         RegisterHost(aHost);
     }
 
     for (Service &service : aHost.mServices)
     {
-        if (service.mIsAdvertised)
+        if (shouldUnregisterKeys)
+        {
+            UnregisterKey(service);
+        }
+        else if (service.mShouldRegisterKey)
+        {
+            RegisterKey(service);
+        }
+
+        if (service.mShouldAdvertise)
+        {
+            if (shouldUnregisterHostAndServices || service.IsDeleted())
+            {
+                UnregisterService(service);
+            }
+            else
+            {
+                RegisterService(service);
+            }
+        }
+    }
+
+    if (aHost.mShouldAdvertise && shouldUnregisterHostAndServices)
+    {
+        UnregisterHost(aHost);
+    }
+}
+
+void AdvertisingProxy::RegisterUnadvertisedServices(Host &aHost)
+{
+    // Register all services of `aHost` that are not yet advertised,
+    // excluding any deleted services.
+    //
+    // This is used to register services of a host that were not
+    // previously registered because the host did not have any
+    // off-mesh routable addresses. This method is called
+    // after we receive a new update where the host gains an
+    // off-mesh routable address.
+
+    VerifyOrExit(!aHost.IsDeleted() && !HasOffMeshRoutableAddress(aHost));
+
+    for (Service &service : aHost.mServices)
+    {
+        if (service.IsDeleted() || service.mIsReplaced || service.mIsRegistered ||
+            (service.mAdvId != kInvalidRequestId))
         {
             continue;
         }
 
-        if (service.IsDeleted())
-        {
-            UnregisterService(service);
-        }
-        else if (service.mShouldAdvertise)
+        service.mShouldAdvertise = true;
+        service.mAdvId           = AllocateNextRequestId();
+    }
+
+    UpdateAdvIdRangeOn(aHost);
+
+    for (Service &service : aHost.mServices)
+    {
+        if (service.mShouldAdvertise)
         {
             RegisterService(service);
         }
@@ -430,42 +596,75 @@ exit:
     return;
 }
 
-bool AdvertisingProxy::HasExternallyReachableAddress(const Host &aHost) const
+void AdvertisingProxy::UnregisterHostAndItsServicesAndKeys(Host &aHost)
+{
+    for (Service &service : aHost.mServices)
+    {
+        if (service.mIsKeyRegistered)
+        {
+            UnregisterKey(service);
+        }
+
+        if (!service.mIsReplaced && (service.mIsRegistered || (service.mAdvId != kInvalidRequestId)))
+        {
+            UnregisterService(service);
+        }
+    }
+
+    if (aHost.mIsKeyRegistered)
+    {
+        UnregisterKey(aHost);
+    }
+
+    if (!aHost.mIsReplaced && (aHost.mIsRegistered || (aHost.mAdvId != kInvalidRequestId)))
+    {
+        UnregisterHost(aHost);
+    }
+}
+
+bool AdvertisingProxy::HasOffMeshRoutableAddress(const Host &aHost) const
 {
     bool hasAddress = false;
 
-    OT_ASSERT(!aHost.IsDeleted());
+    VerifyOrExit(!aHost.IsDeleted());
 
     for (const Ip6::Address &address : aHost.mAddresses)
     {
         if (!address.IsLinkLocal() && !Get<Mle::Mle>().IsMeshLocalAddress(address))
         {
-            hasAddress = true;
-            break;
+            ExitNow(hasAddress = true);
         }
     }
 
+exit:
     return hasAddress;
 }
 
 bool AdvertisingProxy::CompareAndUpdateHostAndServices(Host &aHost, Host &aExistingHost)
 {
     // This method compares and updates flags used by `AdvertisingProxy`
-    // on new `aHost` and `aExistingHost` with same host name.
+    // on new `aHost` and `aExistingHost` and their services.
     //
     // It returns a boolean indicating whether the new `aHost` replaced
-    // any of entries on `aExistingHost`.
+    // any of the entries on the `aExistingHost`.
     //
     // The `AdvertisingProxy` uses the following flags and variables
     // on `Host` and `Service` entries:
     //
-    // - `mIsAdvertised` indicates whether or not the entry has been
-    //   successfully advertised by the proxy.
+    // - `mIsRegistered` indicates whether or not the entry has been
+    //   successfully registered by the proxy.
+    //
+    // - `mIsKeyRegistered` indicates whether or not a key record
+    //   associated with the entry name has been successfully
+    //   registered by the proxy on infrastructure DNS-SD.
     //
     // - `mAdvId` specifies the ongoing registration request ID
     //   associated with this entry by the proxy. A value of zero or
     //   `kInvalidRequestId` indicates that there is no ongoing
     //   registration for this entry.
+    //
+    // - `mKeyAdvId` is similar to `mAdvId` but for registering the
+    //   key record.
     //
     // - `mIsReplaced` tracks whether this entry has been replaced by
     //   a newer advertisement request that changes some of its
@@ -475,14 +674,15 @@ bool AdvertisingProxy::CompareAndUpdateHostAndServices(Host &aHost, Host &aExist
     //
     // - `mShouldAdvertise` is only used in the `Advertise()` call
     //   chain to track whether we need to advertise the entry.
+    //
+    // - `mShouldRegisterKey` is similar to `mShouldAdvertise` and
+    //   only used in `Advertise()` call chain.
 
     bool replaced = false;
 
     VerifyOrExit(&aHost != &aExistingHost);
 
     replaced = CompareAndUpdateHost(aHost, aExistingHost);
-
-    VerifyOrExit(!aHost.IsDeleted());
 
     // Compare services of `aHost` against services of
     // `aExistingHost`.
@@ -501,230 +701,47 @@ exit:
     return replaced;
 }
 
-bool AdvertisingProxy::CompareAndUpdateHost(Host &aHost, Host &aExistingHost)
+template <typename Entry> void AdvertisingProxy::UpdateKeyRegistrationStatus(Entry &aEntry, const Entry &aExistingEntry)
 {
-    bool replaced = false;
+    // Updates key registration status on `aEntry` based
+    // on its state on `aExistingEntry`.
 
-    if (aHost.IsDeleted())
+    static_assert(TypeTraits::IsSame<Entry, Host>::kValue || TypeTraits::IsSame<Entry, Service>::kValue,
+                  "`Entry` must be `Host` or `Service` types");
+
+    // If the new `aEntry` has a zero key lease, we always unregister
+    // it, just to be safe. Therefore, there is no need to check the
+    // key registration status of the existing `aExistingEntry`.
+
+    VerifyOrExit(aEntry.GetKeyLease() != 0);
+
+    if (aEntry.mIsKeyRegistered || (aEntry.mKeyAdvId != kInvalidRequestId))
     {
-        // Thew new `aHost` is removing the host and all its services.
-
-        if (aExistingHost.IsDeleted())
-        {
-            if (!aHost.mShouldAdvertise && !aExistingHost.mIsReplaced && aExistingHost.mIsAdvertised)
-            {
-                // Existing host already removed the same host and
-                // unregistered the entry.
-
-                aHost.mIsAdvertised = true;
-            }
-
-            ExitNow();
-        }
-
-        // `aExistingHost` is updating the same host that is being
-        // removed by the new `aHost`. We need to advertise the new
-        // `aHost` to make sure it is unregistered on DNS-SD/mDNS. We
-        // should also stop waiting for any outstanding registration
-        // requests associated with `aExistingHost` and unregister
-        // any services being registered by it that are not included
-        // in the new `aHost`.
-
-        aHost.mShouldAdvertise = true;
-
-        if (!aExistingHost.mAdvIdRange.IsEmpty())
-        {
-            aExistingHost.mAdvIdRange.Clear();
-            mTasklet.Post();
-        }
-
-        for (Service &existingService : aExistingHost.mServices)
-        {
-            if (existingService.IsDeleted())
-            {
-                continue;
-            }
-
-            existingService.mAdvId      = kInvalidRequestId;
-            existingService.mIsReplaced = true;
-
-            if (!aHost.HasService(existingService.GetInstanceName()))
-            {
-                UnregisterService(existingService);
-                existingService.mIsAdvertised = false;
-            }
-        }
-
-        aExistingHost.mAdvId        = kInvalidRequestId;
-        aExistingHost.mIsReplaced   = true;
-        aExistingHost.mIsAdvertised = false;
-        replaced                    = true;
-        ExitNow();
-    }
-
-    // If we determined that `aHost` was previously advertised,
-    // no need to update any existing hosts.
-
-    VerifyOrExit(!aHost.mIsAdvertised);
-
-    if (aHost.mShouldAdvertise || aExistingHost.mIsReplaced || !HostsMatch(aHost, aExistingHost))
-    {
-        // If we previously determined that we should advertise the
-        // new `aHost`, we enter this block to mark `aExistingHost`
-        // as being replaced.
-        //
-        // If `aExistingHost` was already marked as replaced, we
-        // cannot compare it to the new `aHost`. Therefore, we assume
-        // that there may be a change and always advertise the new
-        // `aHost`. Otherwise, we compare it to the new `aHost` using
-        // `HostsMatch()` and only if there are any differences, we
-        // mark that `aHost` needs to be advertised.
-
-        aExistingHost.mIsReplaced = true;
-        replaced                  = true;
-
-        if (aHost.mAdvId == kInvalidRequestId)
-        {
-            aHost.mShouldAdvertise = true;
-            UpdateAdvIdOn(aHost, AllocateNextRequestId());
-        }
-
-        // If there is an outstanding registration request for
-        // `aExistngHost` we replace it with the request ID of the
-        // new `aHost` registration.
-
-        if (aExistingHost.mAdvId != kInvalidRequestId)
-        {
-            UpdateAdvIdOn(aExistingHost, aHost.mAdvId);
-        }
+        // If we have already determined that the key is registered,
+        // or if there is an ongoing iteration request for it, then
+        // there is nothing to do.
 
         ExitNow();
     }
 
-    // `aHost` fully matches `aExistingHost` and `aExistingHost` was
-    // not replaced.
-
-    VerifyOrExit(aHost.mAdvId == kInvalidRequestId);
-
-    if (aExistingHost.mIsAdvertised)
+    if (aExistingEntry.mIsKeyRegistered)
     {
-        aHost.mIsAdvertised = true;
-    }
-    else if (aExistingHost.mAdvId != kInvalidRequestId)
-    {
-        // There is an outstanding registration request for
-        // `aExistingHost`. We use the same ID for the new `aHost`.
-        UpdateAdvIdOn(aHost, aExistingHost.mAdvId);
+        aEntry.mIsKeyRegistered = true;
     }
     else
     {
-        // The earlier advertisement of `aExistingHost` seems to have
-        // failed since there is no outstanding registration request
-        // (no ID) and it is not marked as advertised. We mark the
-        // new `aHost` to be advertised (to try again) but keep
-        // `aExistingHost` as is.
+        // Use the key registration request ID by `aExistingEntry` for
+        // the new `aEntry` if there is any. If there is none the
+        // `mKeyAdvId` remains as `kInvalidRequestId`.
 
-        aHost.mShouldAdvertise = true;
-        UpdateAdvIdOn(aHost, AllocateNextRequestId());
+        aEntry.mKeyAdvId = aExistingEntry.mKeyAdvId;
     }
 
 exit:
-    return replaced;
+    return;
 }
 
-bool AdvertisingProxy::CompareAndUpdateService(Service &aService, Service &aExistingService)
-{
-    bool replaced = false;
-
-    if (aService.IsDeleted())
-    {
-        if (aExistingService.IsDeleted())
-        {
-            if (!aService.mShouldAdvertise && !aExistingService.mIsReplaced && aExistingService.mIsAdvertised)
-            {
-                aService.mIsAdvertised = true;
-            }
-
-            ExitNow();
-        }
-
-        aService.mShouldAdvertise = true;
-
-        aExistingService.mIsReplaced = true;
-        replaced                     = true;
-
-        if (aExistingService.mAdvId != kInvalidRequestId)
-        {
-            // If there is an outstanding registration request for the
-            // existing service, clear the ID and re-calculate the
-            // `mAdvIdRange` to determine if advertisement of this
-            // entry is finished and if so post the tasklet to signal
-            // this.
-
-            aExistingService.mAdvId        = kInvalidRequestId;
-            aExistingService.mIsAdvertised = false;
-
-            aExistingService.mHost->mAdvIdRange.Clear();
-
-            for (Service &service : aExistingService.mHost->mServices)
-            {
-                if (service.mAdvId != kInvalidRequestId)
-                {
-                    aExistingService.mHost->mAdvIdRange.Add(service.mAdvId);
-                }
-            }
-
-            if (aExistingService.mHost->mAdvIdRange.IsEmpty())
-            {
-                mTasklet.Post();
-            }
-        }
-
-        ExitNow();
-    }
-
-    VerifyOrExit(!aService.mIsAdvertised);
-
-    if (aService.mShouldAdvertise || aExistingService.mIsReplaced || !ServicesMatch(aService, aExistingService))
-    {
-        aExistingService.mIsReplaced = true;
-        replaced                     = true;
-
-        if (aService.mAdvId == kInvalidRequestId)
-        {
-            aService.mShouldAdvertise = true;
-            UpdateAdvIdOn(aService, AllocateNextRequestId());
-        }
-
-        if (aExistingService.mAdvId != kInvalidRequestId)
-        {
-            UpdateAdvIdOn(aExistingService, aService.mAdvId);
-        }
-
-        ExitNow();
-    }
-
-    VerifyOrExit(aService.mAdvId == kInvalidRequestId);
-
-    if (aExistingService.mIsAdvertised)
-    {
-        aService.mIsAdvertised = true;
-    }
-    else if (aExistingService.mAdvId != kInvalidRequestId)
-    {
-        UpdateAdvIdOn(aService, aExistingService.mAdvId);
-    }
-    else
-    {
-        aService.mShouldAdvertise = true;
-        UpdateAdvIdOn(aService, AllocateNextRequestId());
-    }
-
-exit:
-    return replaced;
-}
-
-bool AdvertisingProxy::HostsMatch(const Host &aFirstHost, const Host &aSecondHost)
+template <> bool AdvertisingProxy::EntriesMatch(const Host &aFirstHost, const Host &aSecondHost)
 {
     bool match = false;
 
@@ -749,7 +766,7 @@ exit:
     return match;
 }
 
-bool AdvertisingProxy::ServicesMatch(const Service &aFirstService, const Service &aSecondService)
+template <> bool AdvertisingProxy::EntriesMatch(const Service &aFirstService, const Service &aSecondService)
 {
     bool match = false;
 
@@ -782,52 +799,221 @@ exit:
     return match;
 }
 
-bool AdvertisingProxy::UpdateAdvIdOn(Host &aHost, RequestId aId)
+template <typename Entry> bool AdvertisingProxy::CompareAndUpdate(Entry &aEntry, Entry &aExistingEntry)
 {
-    bool didUpdate = false;
+    // This is called when the new `aEntry` is not deleted.
 
-    VerifyOrExit(aHost.mAdvId != aId);
+    bool replaced = false;
 
-    if (aHost.mAdvId != kInvalidRequestId)
+    // If we previously determined that `aEntry` is registered,
+    // nothing else to do.
+
+    VerifyOrExit(!aEntry.mIsRegistered);
+
+    if (aEntry.mShouldAdvertise || aExistingEntry.mIsReplaced || !EntriesMatch(aEntry, aExistingEntry))
     {
-        aHost.mAdvIdRange.Remove(aHost.mAdvId);
+        // If we previously determined that we should advertise the
+        // new `aEntry`, we enter this block to mark `aExistingEntry`
+        // as being replaced.
+        //
+        // If `aExistingEntry` was already marked as replaced, we
+        // cannot compare it to the new `aEntry`. Therefore, we assume
+        // that there may be a change and always advertise the new
+        // `aEntry`. Otherwise, we compare it to the new `aEntry` using
+        // `HostsMatch()` and only if there are any differences, we
+        // mark that `aEntry` needs to be advertised.
+
+        aExistingEntry.mIsReplaced = true;
+        replaced                   = true;
+
+        if (aEntry.mAdvId == kInvalidRequestId)
+        {
+            aEntry.mShouldAdvertise = true;
+            aEntry.mAdvId           = AllocateNextRequestId();
+        }
+
+        // If there is an outstanding registration request for
+        // `aExistngHost` we replace it with the request ID of the
+        // new `aEntry` registration.
+
+        if (aExistingEntry.mAdvId != kInvalidRequestId)
+        {
+            aExistingEntry.mAdvId = aEntry.mAdvId;
+            UpdateAdvIdRangeOn(aExistingEntry);
+        }
+
+        ExitNow();
     }
 
-    aHost.mAdvId = aId;
+    // `aEntry` fully matches `aExistingEntry` and `aExistingEntry` was
+    // not replaced.
 
-    if (aId != kInvalidRequestId)
+    VerifyOrExit(aEntry.mAdvId == kInvalidRequestId);
+
+    if (aExistingEntry.mIsRegistered)
     {
-        aHost.mAdvIdRange.Add(aId);
+        aEntry.mIsRegistered = true;
     }
+    else if (aExistingEntry.mAdvId != kInvalidRequestId)
+    {
+        // There is an outstanding registration request for
+        // `aExistingEntry`. We use the same ID for the new `aEntry`.
 
-    didUpdate = true;
+        aEntry.mAdvId = aExistingEntry.mAdvId;
+    }
+    else
+    {
+        // The earlier advertisement of `aExistingEntry` seems to have
+        // failed since there is no outstanding registration request
+        // (no ID) and it is not marked as registered. We mark the
+        // new `aEntry` to be advertised (to try again). This situation
+        // can also happen if `aExistingEntry` did not have any off-mesh
+        // routable address and therefore was not registered.
+
+        aEntry.mShouldAdvertise    = true;
+        aEntry.mAdvId              = AllocateNextRequestId();
+        aExistingEntry.mIsReplaced = true;
+    }
 
 exit:
-    return didUpdate;
+    return replaced;
 }
 
-bool AdvertisingProxy::UpdateAdvIdOn(Service &aService, RequestId aId)
+bool AdvertisingProxy::CompareAndUpdateHost(Host &aHost, Host &aExistingHost)
 {
-    bool didUpdate = false;
+    bool replaced = false;
 
-    VerifyOrExit(aService.mAdvId != aId);
+    UpdateKeyRegistrationStatus(aHost, aExistingHost);
 
-    if (aService.mAdvId != kInvalidRequestId)
+    if (!aHost.IsDeleted() && HasOffMeshRoutableAddress(aHost))
     {
-        aService.mHost->mAdvIdRange.Remove(aService.mAdvId);
+        replaced = CompareAndUpdate(aHost, aExistingHost);
+        ExitNow();
     }
 
-    aService.mAdvId = aId;
+    // The new `aHost` is removing the host and all its services
+    // or has no off-mesh routable address (which we treat as if
+    // the host is being removed).
 
-    if (aId != kInvalidRequestId)
+    if (aExistingHost.IsDeleted() || !HasOffMeshRoutableAddress(aExistingHost))
     {
-        aService.mHost->mAdvIdRange.Add(aId);
+        // If `aHost` has zero key-lease (fully removed),
+        // we need to unregister keys for any services on
+        // existing host that are not present in `aHost`.
+
+        if (aHost.mKeyLease == 0)
+        {
+            for (Service &existingService : aExistingHost.mServices)
+            {
+                if (!aHost.HasService(existingService.GetInstanceName()))
+                {
+                    UnregisterKey(existingService);
+                }
+            }
+        }
+
+        ExitNow();
     }
 
-    didUpdate = true;
+    // `aExistingHost` is updating the same host that is being
+    // removed by the new `aHost` update. We need to advertise
+    // the new `aHost` to make sure it is unregistered.
+
+    aHost.mShouldAdvertise = true;
+
+    // We unregister any services that were registered by
+    // `aExistingHost` but are not included in the now being
+    // removed `aHost`, and unregister any registered keys when
+    // `aHost` has zero key lease.
+
+    for (Service &existingService : aExistingHost.mServices)
+    {
+        if (existingService.IsDeleted() || !HasOffMeshRoutableAddress(aExistingHost))
+        {
+            if (aHost.GetKeyLease() == 0)
+            {
+                existingService.mIsReplaced = true;
+                UnregisterKey(existingService);
+            }
+
+            continue;
+        }
+
+        if (aHost.HasService(existingService.GetInstanceName()))
+        {
+            // The `existingService` that are contained in `aHost`
+            // are updated in `CompareAndUpdateService()`.
+            continue;
+        }
+
+        UnregisterService(existingService);
+
+        if (aHost.IsDeleted())
+        {
+            // We mark `existingService` as replaced when the
+            // `aHost` is being deleted. In the case where
+            // `aHost` has no off-mesh routable address we keep
+            // the `existingService` as is so we can re-register
+            // it if/when host gains off-mesh routable address.
+
+            existingService.mIsReplaced = true;
+        }
+
+        if (aHost.GetKeyLease() == 0)
+        {
+            UnregisterKey(existingService);
+        }
+    }
+
+    aExistingHost.mAdvId      = kInvalidRequestId;
+    aExistingHost.mIsReplaced = true;
+    replaced                  = true;
+
+    if (aHost.GetKeyLease() == 0)
+    {
+        UnregisterKey(aExistingHost);
+    }
+
+    UpdateAdvIdRangeOn(aExistingHost);
 
 exit:
-    return didUpdate;
+    return replaced;
+}
+
+bool AdvertisingProxy::CompareAndUpdateService(Service &aService, Service &aExistingService)
+{
+    bool replaced = false;
+
+    UpdateKeyRegistrationStatus(aService, aExistingService);
+
+    if (!aService.IsDeleted() && HasOffMeshRoutableAddress(*aService.mHost))
+    {
+        replaced = CompareAndUpdate(aService, aExistingService);
+        ExitNow();
+    }
+
+    if (aExistingService.IsDeleted() || !HasOffMeshRoutableAddress(*aExistingService.mHost))
+    {
+        ExitNow();
+    }
+
+    aService.mShouldAdvertise = true;
+
+    aExistingService.mIsReplaced = true;
+    replaced                     = true;
+
+    if (aExistingService.mAdvId != kInvalidRequestId)
+    {
+        // If there is an outstanding registration request for the
+        // existing service, clear its request ID.
+
+        aExistingService.mAdvId = kInvalidRequestId;
+
+        UpdateAdvIdRangeOn(*aExistingService.mHost);
+    }
+
+exit:
+    return replaced;
 }
 
 void AdvertisingProxy::RegisterHost(Host &aHost)
@@ -875,7 +1061,8 @@ void AdvertisingProxy::UnregisterHost(Host &aHost)
     DnsName     hostName;
 
     aHost.mShouldAdvertise = false;
-    aHost.mIsAdvertised    = true;
+    aHost.mIsRegistered    = false;
+    aHost.mAdvId           = false;
 
     CopyNameAndRemoveDomain(hostName, aHost.GetFullName());
 
@@ -946,7 +1133,8 @@ void AdvertisingProxy::UnregisterService(Service &aService)
     DnsName        serviceName;
 
     aService.mShouldAdvertise = false;
-    aService.mIsAdvertised    = true;
+    aService.mIsRegistered    = false;
+    aService.mAdvId           = kInvalidRequestId;
 
     CopyNameAndRemoveDomain(hostName, aService.GetHost().GetFullName());
     CopyNameAndRemoveDomain(serviceName, aService.GetServiceName());
@@ -958,6 +1146,98 @@ void AdvertisingProxy::UnregisterService(Service &aService)
     serviceInfo.mServiceInstance = aService.GetInstanceLabel();
     serviceInfo.mServiceType     = serviceName;
     Get<Dnssd>().UnregisterService(serviceInfo, 0, nullptr);
+}
+
+void AdvertisingProxy::RegisterKey(Host &aHost)
+{
+    DnsName hostName;
+
+    aHost.mShouldRegisterKey = false;
+
+    CopyNameAndRemoveDomain(hostName, aHost.GetFullName());
+
+    LogInfo("Registering key for host '%s', id:%lu", hostName, ToUlong(aHost.mKeyAdvId));
+
+    RegisterKey(hostName, /* aServiceType */ nullptr, aHost.mKey, aHost.mKeyAdvId, aHost.GetTtl());
+}
+
+void AdvertisingProxy::RegisterKey(Service &aService)
+{
+    DnsName serviceType;
+
+    aService.mShouldRegisterKey = false;
+
+    CopyNameAndRemoveDomain(serviceType, aService.GetServiceName());
+
+    LogInfo("Registering key for service '%s' '%s', id:%lu", aService.GetInstanceLabel(), serviceType,
+            ToUlong(aService.mKeyAdvId));
+
+    RegisterKey(aService.GetInstanceLabel(), serviceType, aService.mHost->mKey, aService.mKeyAdvId, aService.GetTtl());
+}
+
+void AdvertisingProxy::RegisterKey(const char      *aName,
+                                   const char      *aServiceType,
+                                   const Host::Key &aKey,
+                                   RequestId        aRequestId,
+                                   uint32_t         aTtl)
+{
+    Dnssd::Key             keyInfo;
+    Dns::Ecdsa256KeyRecord keyRecord;
+
+    keyRecord.Init();
+    keyRecord.SetFlags(Dns::KeyRecord::kAuthConfidPermitted, Dns::KeyRecord::kOwnerNonZone,
+                       Dns::KeyRecord::kSignatoryFlagGeneral);
+    keyRecord.SetProtocol(Dns::KeyRecord::kProtocolDnsSec);
+    keyRecord.SetAlgorithm(Dns::KeyRecord::kAlgorithmEcdsaP256Sha256);
+    keyRecord.SetLength(sizeof(Dns::Ecdsa256KeyRecord) - sizeof(Dns::ResourceRecord));
+    keyRecord.SetKey(aKey);
+
+    keyInfo.Clear();
+    keyInfo.mName          = aName;
+    keyInfo.mServiceType   = aServiceType;
+    keyInfo.mKeyData       = reinterpret_cast<uint8_t *>(&keyRecord) + sizeof(Dns::ResourceRecord);
+    keyInfo.mKeyDataLength = keyRecord.GetLength();
+    keyInfo.mClass         = Dns::ResourceRecord::kClassInternet;
+    keyInfo.mTtl           = aTtl;
+    Get<Dnssd>().RegisterKey(keyInfo, aRequestId, HandleRegistered);
+}
+
+void AdvertisingProxy::UnregisterKey(Host &aHost)
+{
+    DnsName hostName;
+
+    aHost.mIsKeyRegistered = false;
+    aHost.mKeyAdvId        = kInvalidRequestId;
+
+    CopyNameAndRemoveDomain(hostName, aHost.GetFullName());
+
+    LogInfo("Unregistering key for host '%s'", hostName);
+
+    UnregisterKey(hostName, /* aServiceType */ nullptr);
+}
+
+void AdvertisingProxy::UnregisterKey(Service &aService)
+{
+    DnsName serviceType;
+
+    aService.mIsKeyRegistered = false;
+    aService.mKeyAdvId        = kInvalidRequestId;
+
+    CopyNameAndRemoveDomain(serviceType, aService.GetServiceName());
+
+    LogInfo("Unregistering key for service '%s' '%s'", aService.GetInstanceLabel(), serviceType);
+
+    UnregisterKey(aService.GetInstanceLabel(), serviceType);
+}
+
+void AdvertisingProxy::UnregisterKey(const char *aName, const char *aServiceType)
+{
+    Dnssd::Key keyInfo;
+
+    keyInfo.Clear();
+    keyInfo.mName        = aName;
+    keyInfo.mServiceType = aServiceType;
+    Get<Dnssd>().UnregisterKey(keyInfo, 0, nullptr);
 }
 
 void AdvertisingProxy::CopyNameAndRemoveDomain(DnsName &aName, const char *aFullName)
@@ -1018,20 +1298,18 @@ bool AdvertisingProxy::HandleRegisteredRequestIdOn(Host &aHost, RequestId aReque
 
     VerifyOrExit(aHost.mAdvIdRange.Contains(aRequestId));
 
-    // Determine the `mAdvIdRange` as we go through all
-    // entries.
-
-    aHost.mAdvIdRange.Clear();
-
     if (aHost.mAdvId == aRequestId)
     {
         aHost.mAdvId        = kInvalidRequestId;
-        aHost.mIsAdvertised = (aError == kErrorNone);
+        aHost.mIsRegistered = (aError == kErrorNone);
         didUpdate           = true;
     }
-    else if (aHost.mAdvId != kInvalidRequestId)
+
+    if (aHost.mKeyAdvId == aRequestId)
     {
-        aHost.mAdvIdRange.Add(aHost.mAdvId);
+        aHost.mKeyAdvId        = kInvalidRequestId;
+        aHost.mIsKeyRegistered = true;
+        didUpdate              = true;
     }
 
     for (Service &service : aHost.mServices)
@@ -1039,14 +1317,19 @@ bool AdvertisingProxy::HandleRegisteredRequestIdOn(Host &aHost, RequestId aReque
         if (service.mAdvId == aRequestId)
         {
             service.mAdvId        = kInvalidRequestId;
-            service.mIsAdvertised = (aError == kErrorNone);
+            service.mIsRegistered = (aError == kErrorNone);
             didUpdate             = true;
         }
-        else if (service.mAdvId != kInvalidRequestId)
+
+        if (service.mKeyAdvId == aRequestId)
         {
-            aHost.mAdvIdRange.Add(service.mAdvId);
+            service.mKeyAdvId        = kInvalidRequestId;
+            service.mIsKeyRegistered = true;
+            didUpdate                = true;
         }
     }
+
+    UpdateAdvIdRangeOn(aHost);
 
 exit:
     return didUpdate;

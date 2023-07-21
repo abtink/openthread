@@ -125,6 +125,22 @@ typedef struct otPlatDnssdHost
 } otPlatDnssdHost;
 
 /**
+ * Represent a DNS-SD key record.
+ *
+ * See `otPlatDnssdRegisterKey()`, `otPlatDnssdUnregisterKey()` for more details about fields in each case.
+ *
+ */
+typedef struct otPlatDnssdKey
+{
+    const char    *mName;          ///< A host or a service instance name (does not include domain name).
+    const char    *mServiceType;   ///< The service type if key is for a service (does not include domain name).
+    const uint8_t *mKeyData;       ///< Byte array containing the key record data.
+    uint16_t       mKeyDataLength; ///< Length of @p mKeyData in bytes.
+    uint16_t       mClass;         ///< The resource record class.
+    uint32_t       mTtl;           ///< The TTL in seconds.
+} otPlatDnssdKey;
+
+/**
  * Callback from platform to notify OpenThread of state changes to DNS-SD module.
  *
  * OpenThread stack will call `otPlatDnssdGetState()` (from this callback or later) to get the new state. The platform
@@ -194,7 +210,7 @@ otPlatDnssdState otPlatDnssdGetState(otInstance *aInstance);
  * implementations.
  *
  * @param[in] aInstance     The OpenThread instance.
- * @param[in] aService      Information about service to register.
+ * @param[in] aService      Information about the service to register.
  * @param[in] aRequestId    The ID associated with this request.
  * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
  *
@@ -229,7 +245,7 @@ void otPlatDnssdRegisterService(otInstance                 *aInstance,
  * will handle either case correctly.
  *
  * @param[in] aInstance     The OpenThread instance.
- * @param[in] aService      Information about service to unregister.
+ * @param[in] aService      Information about the service to unregister.
  * @param[in] aRequestId    The ID associated with this request.
  * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
  *
@@ -264,7 +280,7 @@ void otPlatDnssdUnregisterService(otInstance                 *aInstance,
  *
  *
  * @param[in] aInstance     The OpenThread instance.
- * @param[in] aHost         Information about host to register.
+ * @param[in] aHost         Information about the host to register.
  * @param[in] aRequestId    The ID associated with this request.
  * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
  *
@@ -283,7 +299,7 @@ void otPlatDnssdRegisterHost(otInstance                 *aInstance,
  *
  * The fields in @p aHost follow these rules:
  *
- * - The `mHostName` field specifies the host name to register. It is never NULL.
+ * - The `mHostName` field specifies the host name to unregister. It is never NULL.
  * - The rest of the fields in @p aHost structure MUST be ignored in `otPlatDnssdUnregisterHost()` call and may
  *   be set to zero by OpenThread stack.
  *
@@ -300,7 +316,7 @@ void otPlatDnssdRegisterHost(otInstance                 *aInstance,
  * SHOULD assume that unregistering a host also unregisters all its associated services.
  *
  * @param[in] aInstance     The OpenThread instance.
- * @param[in] aHost         Information about host to register.
+ * @param[in] aHost         Information about the host to unregister.
  * @param[in] aRequestId    The ID associated with this request.
  * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
  *
@@ -309,6 +325,75 @@ void otPlatDnssdUnregisterHost(otInstance                 *aInstance,
                                const otPlatDnssdHost      *aHost,
                                otPlatDnssdRequestId        aRequestId,
                                otPlatDnssdRegisterCallback aCallback);
+
+/**
+ * Registers or updates a key record on the infrastructure network's DNS-SD module.
+ *
+ * The @p aKey and all its contained information (strings and arrays) are only valid during this call. The
+ * platform MUST save a copy of the information if it wants to retain the information after returning from this
+ * function.
+ *
+ * The fields in @p aKey follow these rules:
+ *
+ * - If the key is associated with a host, `mName` specifies the host name and `mServcieType` will be NULL.
+ * - If the key is associated with a service, `mName` specifies the service instance label and `mServiceType` specifies
+ *   the service type. In this case the DNS name for key record is `{mName}.{mServiceTye}`.
+ * - The `mKeyData` field contains the key record's data with `mKeyDataLength` as its length in byes. It is never NULL.
+ * - The `mClass` fields specifies the resource record class to use when registering key record.
+ * - The `mTtl` specifies the TTL if non-zero. If zero, the platform can choose the TTL to use.
+ *
+ * Regarding the invocation of the @p aCallback and the reuse of the @p aRequestId, this function follows the same
+ * rules as described in `otPlatDnssdRegisterService()`.
+ *
+ * OpenThread stack will not register the same key (with no changes) that was registered successfully earlier.
+ * Therefore, the platform implementation does not need to check for duplicate/same name and can assume that calls
+ * to this function are either registering a new key or changing the key data in a previously registered one. As
+ * a result, these changes always need to be synced on the infrastructure DNS-SD module.
+ *
+ * @param[in] aInstance     The OpenThread instance.
+ * @param[in] aHost         Information about the key record to register.
+ * @param[in] aRequestId    The ID associated with this request.
+ * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
+ *
+ */
+void otPlatDnssdRegisterKey(otInstance                 *aInstance,
+                            const otPlatDnssdKey       *aKey,
+                            otPlatDnssdRequestId        aRequestId,
+                            otPlatDnssdRegisterCallback aCallback);
+
+/**
+ * Unregisters a key record on the infrastructure network's DNS-SD module.
+ *
+ * The @p aKey and all its contained information (strings and arrays) are only valid during this call. The
+ * platform MUST save a copy of the information if it wants to retain the information after returning from this
+ * function.
+ *
+ * The fields in @p aKey follow these rules:
+ *
+ * - If the key is associated with a host, `mName` specifies the host name and `mServcieType` will be NULL.
+ * - If the key is associated with a service, `mName` specifies the service instance label and `mServiceType` specifies
+ *   the service type. In this case the DNS name for key record is `{mName}.{mServiceTye}`.
+ * - The rest of the fields in @p aKey structure MUST be ignored in `otPlatDnssdUnregisterKey()` call and may
+ *   be set to zero by OpenThread stack.
+ *
+ * Regarding the invocation of the @p aCallback and the reuse of the @p aRequestId, this function follows the same
+ * rules as described in `otPlatDnssdRegisterService()`.
+ *
+ * OpenThread stack may request the unregistration of a key that was not previously registered, and the platform
+ * implementation MUST handle this case. In such a case, the platform can use either `OT_ERROR_NOT_FOUND` to indicate
+ * that there was no such registration, or `OT_ERROR_NONE` when invoking the @p aCallback function. OpenThread stack
+ * will handle either case correctly.
+ *
+ * @param[in] aInstance     The OpenThread instance.
+ * @param[in] aKey          Information about the key to unregister.
+ * @param[in] aRequestId    The ID associated with this request.
+ * @param[in] aCallback     The callback function pointer to report the outcome (may be NULL if no callback needed).
+ *
+ */
+void otPlatDnssdUnregisterKey(otInstance                 *aInstance,
+                              const otPlatDnssdKey       *aKey,
+                              otPlatDnssdRequestId        aRequestId,
+                              otPlatDnssdRegisterCallback aCallback);
 
 /**
  * @}

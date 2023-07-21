@@ -436,10 +436,13 @@ public:
         bool                      mParsedSrv : 1;
         bool                      mParsedTxt : 1;
 #if OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE
-        bool             mIsAdvertised : 1;
+        bool             mIsRegistered : 1;
+        bool             mIsKeyRegistered : 1;
         bool             mIsReplaced : 1;
         bool             mShouldAdvertise : 1;
+        bool             mShouldRegisterKey : 1;
         Dnssd::RequestId mAdvId;
+        Dnssd::RequestId mKeyAdvId;
 #endif
     };
 
@@ -614,10 +617,13 @@ public:
         bool                      mParsedKey : 1;
         bool                      mUseShortLeaseOption : 1; // Use short lease option (lease only 4 bytes).
 #if OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE
-        bool                  mIsAdvertised : 1;
+        bool                  mIsRegistered : 1;
+        bool                  mIsKeyRegistered : 1;
         bool                  mIsReplaced : 1;
         bool                  mShouldAdvertise : 1;
+        bool                  mShouldRegisterKey : 1;
         Dnssd::RequestId      mAdvId;
+        Dnssd::RequestId      mKeyAdvId;
         Dnssd::RequestIdRange mAdvIdRange;
 #endif
     };

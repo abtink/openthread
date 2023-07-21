@@ -95,22 +95,50 @@ Dnssd::State Dnssd::GetState(void) const { return MapEnum(otPlatDnssdGetState(&G
 
 void Dnssd::RegisterService(const Service &aService, RequestId aRequestId, RegisterCallback aCallback)
 {
-    otPlatDnssdRegisterService(&GetInstance(), &aService, aRequestId, aCallback);
+    if (IsReady())
+    {
+        otPlatDnssdRegisterService(&GetInstance(), &aService, aRequestId, aCallback);
+    }
 }
 
 void Dnssd::UnregisterService(const Service &aService, RequestId aRequestId, RegisterCallback aCallback)
 {
-    otPlatDnssdUnregisterService(&GetInstance(), &aService, aRequestId, aCallback);
+    if (IsReady())
+    {
+        otPlatDnssdUnregisterService(&GetInstance(), &aService, aRequestId, aCallback);
+    }
 }
 
 void Dnssd::RegisterHost(const Host &aHost, RequestId aRequestId, RegisterCallback aCallback)
 {
-    otPlatDnssdRegisterHost(&GetInstance(), &aHost, aRequestId, aCallback);
+    if (IsReady())
+    {
+        otPlatDnssdRegisterHost(&GetInstance(), &aHost, aRequestId, aCallback);
+    }
 }
 
 void Dnssd::UnregisterHost(const Host &aHost, RequestId aRequestId, RegisterCallback aCallback)
 {
-    otPlatDnssdUnregisterHost(&GetInstance(), &aHost, aRequestId, aCallback);
+    if (IsReady())
+    {
+        otPlatDnssdUnregisterHost(&GetInstance(), &aHost, aRequestId, aCallback);
+    }
+}
+
+void Dnssd::RegisterKey(const Key &aKey, RequestId aRequestId, RegisterCallback aCallback)
+{
+    if (IsReady())
+    {
+        otPlatDnssdRegisterKey(&GetInstance(), &aKey, aRequestId, aCallback);
+    }
+}
+
+void Dnssd::UnregisterKey(const Key &aKey, RequestId aRequestId, RegisterCallback aCallback)
+{
+    if (IsReady())
+    {
+        otPlatDnssdUnregisterKey(&GetInstance(), &aKey, aRequestId, aCallback);
+    }
 }
 
 void Dnssd::HandleStateChange(void)

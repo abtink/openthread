@@ -312,13 +312,6 @@ void Server::RemoveHost(Host *aHost, RetainName aRetainName)
 {
     VerifyOrExit(aHost != nullptr);
 
-#if OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE
-    if (!aHost->IsDeleted())
-    {
-        aHost->mIsAdvertised = false;
-    }
-#endif
-
     aHost->mLease = 0;
     aHost->ClearResources();
 
@@ -1229,18 +1222,25 @@ Error Server::ProcessAdditionalSection(Host *aHost, const Message &aMessage, Mes
     aHost->SetLease(leaseOption.GetLeaseInterval());
     aHost->SetKeyLease(leaseOption.GetKeyLeaseInterval());
 
+    for (Service &service : aHost->mServices)
+    {
+        if (aHost->GetLease() == 0)
+        {
+            service.mIsDeleted = true;
+        }
+
+        service.mLease    = service.mIsDeleted ? 0 : leaseOption.GetLeaseInterval();
+        service.mKeyLease = leaseOption.GetKeyLeaseInterval();
+    }
+
     // If the client included the short variant of Lease Option,
     // server must also use the short variant in its response.
     aHost->SetUseShortLeaseOption(leaseOption.IsShortVariant());
 
     if (aHost->GetLease() > 0)
     {
-        uint8_t hostAddressesNum;
-
-        aHost->GetAddresses(hostAddressesNum);
-
         // There MUST be at least one valid address if we have nonzero lease.
-        VerifyOrExit(hostAddressesNum > 0, error = kErrorFailed);
+        VerifyOrExit(aHost->mAddresses.GetLength() > 0, error = kErrorFailed);
     }
 
     // SIG(0).
@@ -1367,6 +1367,7 @@ void Server::HandleUpdate(Host &aHost, const MessageMetadata &aMetadata)
 
         SuccessOrExit(error = service->mServiceName.Set(existingService.GetServiceName()));
         service->mIsDeleted = true;
+        service->mKeyLease  = existingService.mKeyLease;
     }
 
 exit:
@@ -1781,10 +1782,13 @@ Error Server::Service::Init(const char *aInstanceName, const char *aInstanceLabe
     mIsDeleted   = false;
     mIsCommitted = false;
 #if OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE
-    mIsAdvertised    = false;
-    mIsReplaced      = false;
-    mShouldAdvertise = false;
-    mAdvId           = kInvalidRequestId;
+    mIsRegistered      = false;
+    mIsKeyRegistered   = false;
+    mIsReplaced        = false;
+    mShouldAdvertise   = false;
+    mShouldRegisterKey = false;
+    mAdvId             = kInvalidRequestId;
+    mKeyAdvId          = kInvalidRequestId;
 #endif
 
     mParsedDeleteAllRrset = false;
@@ -1965,10 +1969,13 @@ Server::Host::Host(Instance &aInstance, TimeMilli aUpdateTime)
     , mParsedKey(false)
     , mUseShortLeaseOption(false)
 #if OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE
-    , mIsAdvertised(false)
+    , mIsRegistered(false)
+    , mIsKeyRegistered(false)
     , mIsReplaced(false)
     , mShouldAdvertise(false)
+    , mShouldRegisterKey(false)
     , mAdvId(kInvalidRequestId)
+    , mKeyAdvId(kInvalidRequestId)
 #endif
 {
 }
@@ -2080,14 +2087,13 @@ void Server::Host::RemoveService(Service *aService, RetainName aRetainName, Noti
 
     VerifyOrExit(aService != nullptr);
 
-#if OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE
-    if (!aService->mIsDeleted)
-    {
-        aService->mIsAdvertised = false;
-    }
-#endif
-
     aService->mIsDeleted = true;
+    aService->mLease     = 0;
+
+    if (!aRetainName)
+    {
+        aService->mKeyLease = 0;
+    }
 
     aService->Log(aRetainName ? Service::kRemoveButRetainName : Service::kFullyRemove);
 

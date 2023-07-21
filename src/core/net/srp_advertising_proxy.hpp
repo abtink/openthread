@@ -253,23 +253,36 @@ private:
         Error                   mError;
     };
 
+    template <typename Entry> void UpdateKeyRegistrationStatus(Entry &aEntry, const Entry &aExistingEntry);
+    template <typename Entry> bool CompareAndUpdate(Entry &aEntry, Entry &aExistingEntry);
+    template <typename Entry> bool EntriesMatch(const Entry &aFirstEntry, const Entry &aSecondEntry);
+    template <typename Entry> void UpdateAdvIdRangeOn(Entry &aEntry);
+
     void        Start(void);
     void        Stop(void);
     void        UpdateState(void);
     RequestId   AllocateNextRequestId(void);
     void        Advertise(Host &aHost);
-    bool        HasExternallyReachableAddress(const Host &aHost) const;
+    void        RegisterUnadvertisedServices(Host &aHost);
+    void        UnregisterHostAndItsServicesAndKeys(Host &aHost);
+    bool        HasOffMeshRoutableAddress(const Host &aHost) const;
     bool        CompareAndUpdateHostAndServices(Host &aHost, Host &aExistingHost);
     bool        CompareAndUpdateHost(Host &aHost, Host &aExistingHost);
     bool        CompareAndUpdateService(Service &aService, Service &aExistingService);
-    static bool HostsMatch(const Host &aFirstHost, const Host &aSecondHost);
-    static bool ServicesMatch(const Service &aFirstService, const Service &aSecondService);
-    bool        UpdateAdvIdOn(Host &aHost, RequestId aId);
-    bool        UpdateAdvIdOn(Service &aService, RequestId aId);
     void        RegisterHost(Host &aHost);
     void        UnregisterHost(Host &aHost);
     void        RegisterService(Service &aService);
     void        UnregisterService(Service &aService);
+    void        RegisterKey(Host &aHost);
+    void        RegisterKey(Service &aService);
+    void        RegisterKey(const char      *aName,
+                            const char      *aServiceType,
+                            const Host::Key &aKey,
+                            RequestId        aRequestId,
+                            uint32_t         aTtl);
+    void        UnregisterKey(Service &aService);
+    void        UnregisterKey(Host &aHost);
+    void        UnregisterKey(const char *aName, const char *aServiceType);
     void        CopyNameAndRemoveDomain(DnsName &aName, const char *aFullName);
     static void HandleRegistered(otInstance *aInstance, otPlatDnssdRequestId aRequestId, otError aError);
     void        HandleRegistered(RequestId aRequestId, Error aError);
