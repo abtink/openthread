@@ -27,8 +27,6 @@
  */
 
 #include "platform-simulation.h"
-#include <openthread-core-config.h>
-#include <openthread/config.h>
 
 #include <ctype.h>
 #include <errno.h>

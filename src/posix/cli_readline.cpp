@@ -30,7 +30,6 @@
 
 #if !OPENTHREAD_POSIX_CONFIG_DAEMON_ENABLE
 
-#include <openthread/config.h>
 #include <openthread/openthread-system.h>
 
 #include <assert.h>
@@ -53,7 +52,6 @@
 #include "cli/cli_config.h"
 #include "common/code_utils.hpp"
 
-#include "openthread-core-config.h"
 #include "platform-posix.h"
 
 static void InputCallback(char *aLine)

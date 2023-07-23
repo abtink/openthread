@@ -28,8 +28,6 @@
 
 #include "test_platform.h"
 
-#include <openthread/config.h>
-
 #include "test_util.h"
 #include "common/array.hpp"
 #include "common/code_utils.hpp"

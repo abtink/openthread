@@ -26,17 +26,14 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <openthread/config.h>
-
-#include "core/utils/heap.hpp"
-
 #include <stdlib.h>
-
-#include "common/debug.hpp"
-#include "crypto/aes_ccm.hpp"
 
 #include "test_platform.h"
 #include "test_util.h"
+
+#include "common/debug.hpp"
+#include "core/utils/heap.hpp"
+#include "crypto/aes_ccm.hpp"
 
 #if !OPENTHREAD_CONFIG_HEAP_EXTERNAL_ENABLE
 

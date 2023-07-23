@@ -30,7 +30,6 @@
 
 #if !OPENTHREAD_POSIX_CONFIG_DAEMON_ENABLE
 
-#include <openthread/config.h>
 #include <openthread/openthread-system.h>
 
 #if !(defined(HAVE_LIBEDIT) || defined(HAVE_LIBREADLINE))

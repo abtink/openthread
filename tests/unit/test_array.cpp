@@ -31,8 +31,6 @@
 
 #include "test_platform.h"
 
-#include <openthread/config.h>
-
 #include "common/array.hpp"
 #include "common/debug.hpp"
 #include "common/equatable.hpp"

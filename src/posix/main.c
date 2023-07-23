@@ -28,8 +28,6 @@
 
 #include "platform/openthread-posix-config.h"
 
-#include <openthread/config.h>
-
 #include <assert.h>
 #include <errno.h>
 #include <getopt.h>

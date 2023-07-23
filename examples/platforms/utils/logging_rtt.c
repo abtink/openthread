@@ -33,7 +33,6 @@
  */
 
 #include <openthread-core-config.h>
-#include <openthread/config.h>
 
 #include <utils/code_utils.h>
 #include <openthread/platform/alarm-milli.h>

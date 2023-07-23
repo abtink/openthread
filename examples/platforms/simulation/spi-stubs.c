@@ -31,7 +31,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <openthread/config.h>
 #include <openthread/platform/spi-slave.h>
 
 #if OPENTHREAD_CONFIG_NCP_SPI_ENABLE

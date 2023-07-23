@@ -26,7 +26,8 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <openthread/config.h>
+#include "test_platform.h"
+#include "test_util.hpp"
 
 #include "common/array.hpp"
 #include "common/code_utils.hpp"
@@ -34,9 +35,6 @@
 #include "thread/network_data_leader.hpp"
 #include "thread/network_data_local.hpp"
 #include "thread/network_data_service.hpp"
-
-#include "test_platform.h"
-#include "test_util.hpp"
 
 namespace ot {
 namespace NetworkData {

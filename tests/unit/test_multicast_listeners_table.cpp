@@ -32,7 +32,6 @@
 
 #include "test_platform.h"
 
-#include <openthread/config.h>
 #include <openthread/ip6.h>
 
 #include "test_util.h"

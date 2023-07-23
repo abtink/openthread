@@ -30,8 +30,6 @@
 
 #include "test_platform.h"
 
-#include <openthread/config.h>
-
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
 #include "common/instance.hpp"

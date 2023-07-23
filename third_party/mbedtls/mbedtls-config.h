@@ -36,7 +36,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include <openthread/config.h>
 #include <openthread/platform/logging.h>
 #include <openthread/platform/memory.h>
 

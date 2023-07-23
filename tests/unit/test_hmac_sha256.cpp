@@ -26,16 +26,14 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <openthread/config.h>
+#include "test_platform.h"
+#include "test_util.h"
 
 #include "common/array.hpp"
 #include "common/debug.hpp"
 #include "common/message.hpp"
 #include "crypto/hmac_sha256.hpp"
 #include "crypto/sha256.hpp"
-
-#include "test_platform.h"
-#include "test_util.h"
 
 namespace ot {
 

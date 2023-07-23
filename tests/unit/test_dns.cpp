@@ -28,8 +28,6 @@
 
 #include <string.h>
 
-#include <openthread/config.h>
-
 #include "test_platform.h"
 #include "test_util.hpp"
 

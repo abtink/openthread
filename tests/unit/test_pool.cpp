@@ -28,8 +28,6 @@
 
 #include "test_platform.h"
 
-#include <openthread/config.h>
-
 #include "common/instance.hpp"
 #include "common/pool.hpp"
 

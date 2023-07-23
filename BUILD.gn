@@ -30,7 +30,7 @@ import("etc/gn/openthread.gni")
 config("openthread_config") {
   defines = []
   if (openthread_config_file != "") {
-    defines += [ "OPENTHREAD_CONFIG_FILE=${openthread_config_file}" ]
+    defines += [ "OPENTHREAD_PROJECT_CORE_CONFIG_FILE=${openthread_config_file}" ]
   }
 
   include_dirs = openthread_project_include_dirs

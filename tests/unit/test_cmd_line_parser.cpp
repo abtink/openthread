@@ -30,8 +30,6 @@
 
 #include "test_platform.h"
 
-#include <openthread/config.h>
-
 #include "common/instance.hpp"
 #include "utils/parse_cmdline.hpp"
 

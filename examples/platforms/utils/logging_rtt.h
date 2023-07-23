@@ -40,7 +40,7 @@
 #include <stdio.h>
 
 #include "openthread-core-config.h"
-#include <openthread/config.h>
+
 #include <openthread/platform/logging.h>
 
 #ifdef __cplusplus

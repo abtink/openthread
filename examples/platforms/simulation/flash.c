@@ -36,7 +36,6 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <openthread/config.h>
 #include <openthread/logging.h>
 #include <openthread/platform/flash.h>
 

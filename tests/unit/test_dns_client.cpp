@@ -26,8 +26,6 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <openthread/config.h>
-
 #include "test_platform.h"
 #include "test_util.hpp"
 

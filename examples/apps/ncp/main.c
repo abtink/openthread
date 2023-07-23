@@ -28,7 +28,6 @@
 
 #include <assert.h>
 #include <openthread-core-config.h>
-#include <openthread/config.h>
 
 #include <openthread/diag.h>
 #include <openthread/ncp.h>

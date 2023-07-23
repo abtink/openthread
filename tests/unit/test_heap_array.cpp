@@ -30,8 +30,6 @@
 
 #include <string.h>
 
-#include <openthread/config.h>
-
 #include "test_util.hpp"
 
 #include "common/heap_array.hpp"

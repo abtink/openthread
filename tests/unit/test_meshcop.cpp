@@ -28,8 +28,6 @@
 
 #include "test_platform.h"
 
-#include <openthread/config.h>
-
 #include "test_util.hpp"
 #include "meshcop/meshcop.hpp"
 #include "meshcop/timestamp.hpp"

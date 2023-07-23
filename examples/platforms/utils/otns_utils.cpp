@@ -26,7 +26,6 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 #include <openthread-core-config.h>
-#include <openthread/config.h>
 
 #include <openthread/platform/otns.h>
 #include <openthread/platform/toolchain.h>

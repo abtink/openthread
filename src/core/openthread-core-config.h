@@ -34,8 +34,6 @@
 #ifndef OPENTHREAD_CORE_CONFIG_H_
 #define OPENTHREAD_CORE_CONFIG_H_
 
-#include <openthread/config.h>
-
 #define OT_THREAD_VERSION_INVALID 0
 
 #define OT_THREAD_VERSION_1_1 2
@@ -44,6 +42,12 @@
 #define OT_THREAD_VERSION_1_3_1 5
 
 #define OPENTHREAD_CORE_CONFIG_H_IN
+
+#ifdef OPENTHREAD_CONFIG_FILE
+#warning "OPENTHREAD_CONFIG_FILE is deprecated." \
+         "Please use OPENTHREAD_PROJECT_CORE_CONFIG_FILE or OPENTHREAD_PLATFORM_CORE_CONFIG_FILE".
+#include OPENTHREAD_CONFIG_FILE
+#endif
 
 /**
  * Include project and platform specific header files in the following order:

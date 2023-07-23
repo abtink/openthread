@@ -26,13 +26,11 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <openthread/config.h>
+#include "test_platform.h"
+#include "test_util.hpp"
 
 #include "common/debug.hpp"
 #include "crypto/aes_ccm.hpp"
-
-#include "test_platform.h"
-#include "test_util.hpp"
 
 /**
  * Verifies test vectors from IEEE 802.15.4-2006 Annex C Section C.2.1

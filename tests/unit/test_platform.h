@@ -29,9 +29,10 @@
 #ifndef TEST_PLATFORM_H
 #define TEST_PLATFORM_H
 
+#include "openthread-core-config.h"
+
 #include <string.h>
 
-#include <openthread/config.h>
 #include <openthread/platform/alarm-milli.h>
 #include <openthread/platform/dns.h>
 #include <openthread/platform/dso_transport.h>

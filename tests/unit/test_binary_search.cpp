@@ -31,8 +31,6 @@
 #include "test_platform.h"
 #include "test_util.h"
 
-#include <openthread/config.h>
-
 #include "common/binary_search.hpp"
 #include "common/string.hpp"
 

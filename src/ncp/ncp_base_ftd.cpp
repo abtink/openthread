@@ -31,7 +31,6 @@
  */
 
 #include "ncp_base.hpp"
-#include <openthread/config.h>
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
 #include <openthread/backbone_router_ftd.h>

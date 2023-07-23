@@ -28,7 +28,6 @@
 #include <openthread-core-config.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include <openthread/config.h>
 
 #include <openthread/platform/alarm-milli.h>
 #include <openthread/platform/debug_uart.h>
