@@ -108,6 +108,7 @@ typedef struct otPlatDnssdService
     uint16_t           mPriority;            ///< The service priority.
     uint16_t           mWeight;              ///< The service weight.
     uint32_t           mTtl;                 ///< The service TTL in seconds.
+    uint32_t           mInfraIfIndex;        ///< The infrastructure network interface index.
 } otPlatDnssdService;
 
 /**
@@ -122,6 +123,7 @@ typedef struct otPlatDnssdHost
     const otIp6Address *mAddresses;    ///< Array of IPv6 host addresses.
     uint16_t            mNumAddresses; ///< Number of entries in @p mAddresses array.
     uint32_t            mTtl;          ///< The host TTL in seconds.
+    uint32_t            mInfraIfIndex; ///< The infrastructure network interface index.
 } otPlatDnssdHost;
 
 /**
@@ -138,6 +140,7 @@ typedef struct otPlatDnssdKey
     uint16_t       mKeyDataLength; ///< Length of @p mKeyData in bytes.
     uint16_t       mClass;         ///< The resource record class.
     uint32_t       mTtl;           ///< The TTL in seconds.
+    uint32_t       mInfraIfIndex;  ///< The infrastructure network interface index.
 } otPlatDnssdKey;
 
 /**
@@ -181,6 +184,9 @@ otPlatDnssdState otPlatDnssdGetState(otInstance *aInstance);
  * - The `mTxtData` and `mTxtDataLength` specify the encoded TXT data.
  * - The `mPort`, `mWeight`, and `mPriority` specify the service's parameters (as specified in DNS SRV record).
  * - The `mTtl` specifies the TTL if non-zero. If zero, the platform can choose the TTL to use.
+ * - The `mInfraIfIndex`, if non-zero, specifies the infrastructure network interface index to use for this request. If
+ *   zero, the platform implementation can decided the interface.
+
  *
  * When the `mHostName` field in @p aService is not NULL (indicating that this registration is on behalf of another
  * host), the OpenThread stack will ensure that `otPlatDnssdRegisterHost()` is also called for the same host before any
@@ -233,6 +239,8 @@ void otPlatDnssdRegisterService(otInstance                 *aInstance,
  *   respectively. They are never NULL.
  * - The `mHostName` field specifies the host name of the service if it is not NULL. Otherwise, if it is NULL, it
  *   indicates that this service is for the device itself and leaves the host name selection to the DNS-SD platform.
+ * - The `mInfraIfIndex`, if non-zero, specifies the infrastructure network interface index to use for this request. If
+ *   zero, the platform implementation can decided the interface.
  * - The rest of the fields in @p aService structure MUST be ignored in `otPlatDnssdUnregisterService()` call and may
  *   be set to zero by OpenThread stack.
  *
@@ -269,6 +277,8 @@ void otPlatDnssdUnregisterService(otInstance                 *aInstance,
  *   entries in `mAddresses` array. OpenThread stack will ensure that the given addresses are externally reachable
  *   (link-local or mesh-local addresses associated the host are not included in `mAddresses` array).
  * - The `mTtl` specifies the TTL if non-zero. If zero, the platform can choose the TTL to use.
+ * - The `mInfraIfIndex`, if non-zero, specifies the infrastructure network interface index to use for this request. If
+ *   zero, the platform implementation can decided the interface.
  *
  * Regarding the invocation of the @p aCallback and the reuse of the @p aRequestId, this function follows the same
  * rules as described in `otPlatDnssdRegisterService()`.
@@ -300,6 +310,8 @@ void otPlatDnssdRegisterHost(otInstance                 *aInstance,
  * The fields in @p aHost follow these rules:
  *
  * - The `mHostName` field specifies the host name to unregister. It is never NULL.
+ * - The `mInfraIfIndex`, if non-zero, specifies the infrastructure network interface index to use for this request. If
+ *   zero, the platform implementation can decided the interface.
  * - The rest of the fields in @p aHost structure MUST be ignored in `otPlatDnssdUnregisterHost()` call and may
  *   be set to zero by OpenThread stack.
  *
@@ -341,6 +353,8 @@ void otPlatDnssdUnregisterHost(otInstance                 *aInstance,
  * - The `mKeyData` field contains the key record's data with `mKeyDataLength` as its length in byes. It is never NULL.
  * - The `mClass` fields specifies the resource record class to use when registering key record.
  * - The `mTtl` specifies the TTL if non-zero. If zero, the platform can choose the TTL to use.
+ * - The `mInfraIfIndex`, if non-zero, specifies the infrastructure network interface index to use for this request. If
+ *   zero, the platform implementation can decided the interface.
  *
  * Regarding the invocation of the @p aCallback and the reuse of the @p aRequestId, this function follows the same
  * rules as described in `otPlatDnssdRegisterService()`.
@@ -373,6 +387,8 @@ void otPlatDnssdRegisterKey(otInstance                 *aInstance,
  * - If the key is associated with a host, `mName` specifies the host name and `mServcieType` will be NULL.
  * - If the key is associated with a service, `mName` specifies the service instance label and `mServiceType` specifies
  *   the service type. In this case the DNS name for key record is `{mName}.{mServiceTye}`.
+ * - The `mInfraIfIndex`, if non-zero, specifies the infrastructure network interface index to use for this request. If
+ *   zero, the platform implementation can decided the interface.
  * - The rest of the fields in @p aKey structure MUST be ignored in `otPlatDnssdUnregisterKey()` call and may
  *   be set to zero by OpenThread stack.
  *

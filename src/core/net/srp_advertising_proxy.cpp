@@ -131,7 +131,7 @@ exit:
 
 void AdvertisingProxy::UpdateState(void)
 {
-    if (!Get<Dnssd>().IsReady())
+    if (!Get<Dnssd>().IsReady() || !Get<BorderRouter::InfraIf>().IsRunning())
     {
         Stop();
         ExitNow();
@@ -1055,6 +1055,8 @@ void AdvertisingProxy::RegisterHost(Host &aHost)
     hostInfo.mAddresses    = hostAddresses.AsCArray();
     hostInfo.mNumAddresses = hostAddresses.GetLength();
     hostInfo.mTtl          = aHost.GetTtl();
+    hostInfo.mInfraIfIndex = Get<BorderRouter::InfraIf>().GetIfIndex();
+
     Get<Dnssd>().RegisterHost(hostInfo, aHost.mAdvId, HandleRegistered);
 
 exit:
@@ -1078,7 +1080,9 @@ void AdvertisingProxy::UnregisterHost(Host &aHost)
     LogInfo("Unregistering host '%s'", hostName);
 
     hostInfo.Clear();
-    hostInfo.mHostName = hostName;
+    hostInfo.mHostName     = hostName;
+    hostInfo.mInfraIfIndex = Get<BorderRouter::InfraIf>().GetIfIndex();
+
     Get<Dnssd>().UnregisterHost(hostInfo, 0, nullptr);
 }
 
@@ -1125,6 +1129,8 @@ void AdvertisingProxy::RegisterService(Service &aService)
     serviceInfo.mWeight              = aService.GetWeight();
     serviceInfo.mPriority            = aService.GetPriority();
     serviceInfo.mTtl                 = aService.GetTtl();
+    serviceInfo.mInfraIfIndex        = Get<BorderRouter::InfraIf>().GetIfIndex();
+
     Get<Dnssd>().RegisterService(serviceInfo, aService.mAdvId, HandleRegistered);
 
 exit:
@@ -1154,6 +1160,8 @@ void AdvertisingProxy::UnregisterService(Service &aService)
     serviceInfo.mHostName        = hostName;
     serviceInfo.mServiceInstance = aService.GetInstanceLabel();
     serviceInfo.mServiceType     = serviceName;
+    serviceInfo.mInfraIfIndex    = Get<BorderRouter::InfraIf>().GetIfIndex();
+
     Get<Dnssd>().UnregisterService(serviceInfo, 0, nullptr);
 }
 
@@ -1208,6 +1216,8 @@ void AdvertisingProxy::RegisterKey(const char      *aName,
     keyInfo.mKeyDataLength = keyRecord.GetLength();
     keyInfo.mClass         = Dns::ResourceRecord::kClassInternet;
     keyInfo.mTtl           = aTtl;
+    keyInfo.mInfraIfIndex  = Get<BorderRouter::InfraIf>().GetIfIndex();
+
     Get<Dnssd>().RegisterKey(keyInfo, aRequestId, HandleRegistered);
 }
 
@@ -1244,8 +1254,10 @@ void AdvertisingProxy::UnregisterKey(const char *aName, const char *aServiceType
     Dnssd::Key keyInfo;
 
     keyInfo.Clear();
-    keyInfo.mName        = aName;
-    keyInfo.mServiceType = aServiceType;
+    keyInfo.mName         = aName;
+    keyInfo.mServiceType  = aServiceType;
+    keyInfo.mInfraIfIndex = Get<BorderRouter::InfraIf>().GetIfIndex();
+
     Get<Dnssd>().UnregisterKey(keyInfo, 0, nullptr);
 }
 

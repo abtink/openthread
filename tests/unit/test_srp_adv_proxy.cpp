@@ -135,6 +135,7 @@ static Array<DnssdRequest, kDnssdArraySize> sDnssdUnregKeyRequests;
 static bool             sDnssdShouldCheckWithClient = true;
 static Error            sDnssdCallbackError         = kErrorPending;
 static otPlatDnssdState sDnssdState                 = OT_PLAT_DNSSD_READY;
+constexpr uint32_t      kInfraIfIndex               = 1;
 
 otPlatDnssdState otPlatDnssdGetState(otInstance *aInstance)
 {
@@ -164,8 +165,10 @@ void otPlatDnssdRegisterService(otInstance                 *aInstance,
     Log("   priority       : %u", aService->mPriority);
     Log("   weight         : %u", aService->mWeight);
     Log("   TTL            : %u", aService->mTtl);
+    Log("   Infra-if index : %u", aService->mInfraIfIndex);
 
     VerifyOrQuit(aInstance == sInstance);
+    VerifyOrQuit(aService->mInfraIfIndex == kInfraIfIndex);
 
     if (sDnssdShouldCheckWithClient)
     {
@@ -209,8 +212,10 @@ void otPlatDnssdUnregisterService(otInstance                 *aInstance,
     Log("   hostName       : %s", aService->mHostName);
     Log("   serviceInstance: %s", aService->mServiceInstance);
     Log("   serviceName    : %s", aService->mServiceType);
+    Log("   Infra-if index : %u", aService->mInfraIfIndex);
 
     VerifyOrQuit(aInstance == sInstance);
+    VerifyOrQuit(aService->mInfraIfIndex == kInfraIfIndex);
 
     if (sDnssdShouldCheckWithClient)
     {
@@ -257,8 +262,10 @@ void otPlatDnssdRegisterHost(otInstance                 *aInstance,
     }
 
     Log("   TTL            : %u", aHost->mTtl);
+    Log("   Infra-if index : %u", aHost->mInfraIfIndex);
 
     VerifyOrQuit(aInstance == sInstance);
+    VerifyOrQuit(aHost->mInfraIfIndex == kInfraIfIndex);
 
     if (sDnssdShouldCheckWithClient)
     {
@@ -280,8 +287,10 @@ void otPlatDnssdUnregisterHost(otInstance                 *aInstance,
 {
     Log("otPlatDnssdUnregisterHost(aRequestId: %lu)", ToUlong(aRequestId));
     Log("   hostName       : %s", aHost->mHostName);
+    Log("   Infra-if index : %u", aHost->mInfraIfIndex);
 
     VerifyOrQuit(sInstance == aInstance);
+    VerifyOrQuit(aHost->mInfraIfIndex == kInfraIfIndex);
 
     if (sDnssdShouldCheckWithClient)
     {
@@ -308,6 +317,7 @@ void otPlatDnssdRegisterKey(otInstance                 *aInstance,
     Log("   TTL            : %u", aKey->mTtl);
 
     VerifyOrQuit(aInstance == sInstance);
+    VerifyOrQuit(aKey->mInfraIfIndex == kInfraIfIndex);
 
     if (sDnssdShouldCheckWithClient)
     {
@@ -349,6 +359,7 @@ void otPlatDnssdUnregisterKey(otInstance                 *aInstance,
     Log("   name           : %s", aKey->mName);
 
     VerifyOrQuit(aInstance == sInstance);
+    VerifyOrQuit(aKey->mInfraIfIndex == kInfraIfIndex);
 
     if (sDnssdShouldCheckWithClient)
     {
@@ -808,6 +819,8 @@ void TestSrpAdvProxy(void)
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Start SRP server");
 
+    SuccessOrQuit(otBorderRoutingInit(sInstance, /* aInfraIfIndex */ kInfraIfIndex, /* aInfraIfIsRunning */ true));
+
     SuccessOrQuit(srpServer->SetAddressMode(Srp::Server::kAddressModeUnicast));
     VerifyOrQuit(srpServer->GetAddressMode() == Srp::Server::kAddressModeUnicast);
 
@@ -1180,6 +1193,8 @@ void TestSrpAdvProxyDnssdStateChange(void)
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Start SRP server");
 
+    SuccessOrQuit(otBorderRoutingInit(sInstance, /* aInfraIfIndex */ kInfraIfIndex, /* aInfraIfIsRunning */ true));
+
     SuccessOrQuit(srpServer->SetAddressMode(Srp::Server::kAddressModeUnicast));
     VerifyOrQuit(srpServer->GetAddressMode() == Srp::Server::kAddressModeUnicast);
 
@@ -1481,6 +1496,8 @@ void TestSrpAdvProxyDelayedCallback(void)
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Start SRP server");
 
+    SuccessOrQuit(otBorderRoutingInit(sInstance, /* aInfraIfIndex */ kInfraIfIndex, /* aInfraIfIsRunning */ true));
+
     SuccessOrQuit(srpServer->SetAddressMode(Srp::Server::kAddressModeUnicast));
     VerifyOrQuit(srpServer->GetAddressMode() == Srp::Server::kAddressModeUnicast);
 
@@ -1763,6 +1780,8 @@ void TestSrpAdvProxyReplacedEntries(void)
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Start SRP server");
+
+    SuccessOrQuit(otBorderRoutingInit(sInstance, /* aInfraIfIndex */ kInfraIfIndex, /* aInfraIfIsRunning */ true));
 
     SuccessOrQuit(srpServer->SetAddressMode(Srp::Server::kAddressModeUnicast));
     VerifyOrQuit(srpServer->GetAddressMode() == Srp::Server::kAddressModeUnicast);
@@ -2238,6 +2257,8 @@ void TestSrpAdvProxyHostWithOffMeshRoutableAddress(void)
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Start SRP server");
 
+    SuccessOrQuit(otBorderRoutingInit(sInstance, /* aInfraIfIndex */ kInfraIfIndex, /* aInfraIfIsRunning */ true));
+
     SuccessOrQuit(srpServer->SetAddressMode(Srp::Server::kAddressModeUnicast));
     VerifyOrQuit(srpServer->GetAddressMode() == Srp::Server::kAddressModeUnicast);
 
@@ -2697,6 +2718,8 @@ void TestSrpAdvProxyRemoveBeforeCommitted(void)
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Start SRP server");
 
+    SuccessOrQuit(otBorderRoutingInit(sInstance, /* aInfraIfIndex */ kInfraIfIndex, /* aInfraIfIsRunning */ true));
+
     SuccessOrQuit(srpServer->SetAddressMode(Srp::Server::kAddressModeUnicast));
     VerifyOrQuit(srpServer->GetAddressMode() == Srp::Server::kAddressModeUnicast);
 
@@ -2898,6 +2921,8 @@ void TestSrpAdvProxyFullyRemoveBeforeCommitted(void)
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Start SRP server");
+
+    SuccessOrQuit(otBorderRoutingInit(sInstance, /* aInfraIfIndex */ kInfraIfIndex, /* aInfraIfIsRunning */ true));
 
     SuccessOrQuit(srpServer->SetAddressMode(Srp::Server::kAddressModeUnicast));
     VerifyOrQuit(srpServer->GetAddressMode() == Srp::Server::kAddressModeUnicast);

@@ -46,6 +46,10 @@
 #error "OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE requires OPENTHREAD_CONFIG_SRP_SERVER_ENABLE"
 #endif
 
+#if !OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
+#error "OPENTHREAD_CONFIG_SRP_SERVER_ADVERTISING_PROXY_ENABLE requires OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE"
+#endif
+
 #include "common/clearable.hpp"
 #include "common/heap_allocatable.hpp"
 #include "common/locator.hpp"
@@ -204,6 +208,12 @@ public:
      *
      */
     void HandleDnssdPlatformStateChange(void) { UpdateState(); }
+
+    /**
+     * Notifies `AdvertisingProxy` that `InfraIf` state changed.
+     *
+     */
+    void HandleInfraIfStateChanged(void) { UpdateState(); }
 
 private:
     typedef Dnssd::RequestId RequestId;
