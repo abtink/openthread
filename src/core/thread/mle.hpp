@@ -1936,14 +1936,6 @@ private:
     Error SendDataRequest(const Ip6::Address &aDestination, const uint8_t *aTlvs, uint8_t aTlvsLength, uint16_t aDelay);
 #endif
 
-#if OPENTHREAD_FTD
-    static void HandleDetachGracefullyAddressReleaseResponse(void                *aContext,
-                                                             otMessage           *aMessage,
-                                                             const otMessageInfo *aMessageInfo,
-                                                             Error                aResult);
-    void        HandleDetachGracefullyAddressReleaseResponse(void);
-#endif
-
     void HandleAdvertisement(RxInfo &aRxInfo);
     void HandleChildIdResponse(RxInfo &aRxInfo);
     void HandleChildUpdateRequest(RxInfo &aRxInfo);
