@@ -289,24 +289,15 @@ private:
     class NameCompressInfo : public Clearable<NameCompressInfo>
     {
     public:
-        explicit NameCompressInfo(void) = default;
-
-        explicit NameCompressInfo(const char *aDomainName)
-            : mDomainName(aDomainName)
-            , mDomainNameOffset(kUnknownOffset)
-            , mServiceNameOffset(kUnknownOffset)
-            , mInstanceNameOffset(kUnknownOffset)
-            , mHostNameOffset(kUnknownOffset)
-        {
-        }
-
         static constexpr uint16_t kUnknownOffset = 0; // Unknown offset value (used when offset is not yet set).
+
+        NameCompressInfo(void) { Clear(); }
 
         uint16_t GetDomainNameOffset(void) const { return mDomainNameOffset; }
 
         void SetDomainNameOffset(uint16_t aOffset) { mDomainNameOffset = aOffset; }
 
-        const char *GetDomainName(void) const { return mDomainName; }
+        const char *GetDomainName(void) const { return kDefaultDomainName; }
 
         uint16_t GetServiceNameOffset(const Message &aMessage, const char *aServiceName) const
         {
@@ -357,11 +348,10 @@ private:
             return aOffset != kUnknownOffset && Name::CompareName(aMessage, aOffset, aName) == kErrorNone;
         }
 
-        const char *mDomainName;         // The serialized domain name.
-        uint16_t    mDomainNameOffset;   // Offset of domain name serialization into the response message.
-        uint16_t    mServiceNameOffset;  // Offset of service name serialization into the response message.
-        uint16_t    mInstanceNameOffset; // Offset of instance name serialization into the response message.
-        uint16_t    mHostNameOffset;     // Offset of host name serialization into the response message.
+        uint16_t mDomainNameOffset;   // Offset of domain name serialization into the response message.
+        uint16_t mServiceNameOffset;  // Offset of service name serialization into the response message.
+        uint16_t mInstanceNameOffset; // Offset of instance name serialization into the response message.
+        uint16_t mHostNameOffset;     // Offset of host name serialization into the response message.
     };
 
     static constexpr bool     kBindUnspecifiedNetif         = OPENTHREAD_CONFIG_DNSSD_SERVER_BIND_UNSPECIFIED_NETIF;
@@ -390,127 +380,93 @@ private:
 
         bool IsHostName(void) const { return mProtocolOffset == kNotPresent && mDomainOffset != 0; }
 
-        uint8_t mDomainOffset;   // The offset to the beginning of <Domain>.
-        uint8_t mProtocolOffset; // The offset to the beginning of <Protocol> (i.e. _tcp or _udp) or `kNotPresent` if
-                                 // the name is not a service or instance.
-        uint8_t mServiceOffset;  // The offset to the beginning of <Service> or `kNotPresent` if the name is not a
-                                 // service or instance.
-        uint8_t mSubTypeOffset;  // The offset to the beginning of sub-type label or `kNotPresent` is not a sub-type.
-        uint8_t mInstanceOffset; // The offset to the beginning of <Instance> or `kNotPresent` if the name is not a
-                                 // instance.
+        uint8_t mDomainOffset;   // Offset to <Domain>.
+        uint8_t mProtocolOffset; // Offset to <Protocol> (i.e. _tcp or _udp) or `kNotPresent` if not service name.
+        uint8_t mServiceOffset;  // Offset to <Service> or `kNotPresent` if not service or instance.
+        uint8_t mSubTypeOffset;  // Offset to sub-type label or `kNotPresent` is not a sub-type.
+        uint8_t mInstanceOffset; // Offset to <Instance> or `kNotPresent` if the name is not a instance.
     };
 
-    /**
-     * Contains the compress information for a dns packet.
-     *
-     */
-    class QueryTransaction : public InstanceLocatorInit
+    struct Request
     {
-    public:
-        explicit QueryTransaction(void)
-            : mResponseMessage(nullptr)
+        const Message          *mMessage;
+        const Ip6::MessageInfo *mMessageInfo;
+        Header                  mHeader;
+    };
+
+    struct Response
+    {
+        Response(void)
+            : mMessage(nullptr)
+            , mAdditional(false)
         {
         }
 
-        void                    Init(const Header           &aResponseHeader,
-                                     Message                &aResponseMessage,
-                                     const NameCompressInfo &aCompressInfo,
-                                     const Ip6::MessageInfo &aMessageInfo,
-                                     Instance               &aInstance);
-        bool                    IsValid(void) const { return mResponseMessage != nullptr; }
-        const Ip6::MessageInfo &GetMessageInfo(void) const { return mMessageInfo; }
-        const Header           &GetResponseHeader(void) const { return mResponseHeader; }
-        Header                 &GetResponseHeader(void) { return mResponseHeader; }
-        const Message          &GetResponseMessage(void) const { return *mResponseMessage; }
-        Message                &GetResponseMessage(void) { return const_cast<Message &>(*mResponseMessage); }
-        TimeMilli               GetStartTime(void) const { return mStartTime; }
-        NameCompressInfo       &GetNameCompressInfo(void) { return mCompressInfo; };
-        void                    Finalize(Header::Response aResponseMessage, Ip6::Udp::Socket &aSocket);
-
-        Header           mResponseHeader;
-        Message         *mResponseMessage;
+        Message         *mMessage;
+        Header           mHeader;
         NameCompressInfo mCompressInfo;
+        bool             mAdditional; // Whether or not appending new records in additional data section.
+    };
+
+    struct QueryTransaction : public Clearable<QueryTransaction>
+    {
+        QueryTransaction(void) { Clear(); }
+        bool IsValid(void) const { return mResponse.mMessage != nullptr; }
+
+        Response         mResponse;
         Ip6::MessageInfo mMessageInfo;
         TimeMilli        mStartTime;
     };
 
     static constexpr uint32_t kQueryTimeout = OPENTHREAD_CONFIG_DNSSD_QUERY_TIMEOUT;
 
-    bool        IsRunning(void) const { return mSocket.IsBound(); }
-    static void HandleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
-    void        HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
-    void ProcessQuery(const Header &aRequestHeader, Message &aRequestMessage, const Ip6::MessageInfo &aMessageInfo);
-    static Header::Response AddQuestions(const Header     &aRequestHeader,
-                                         const Message    &aRequestMessage,
-                                         Header           &aResponseHeader,
-                                         Message          &aResponseMessage,
-                                         NameCompressInfo &aCompressInfo);
-    static Error            AppendQuestion(const char       *aName,
-                                           const Question   &aQuestion,
-                                           Message          &aMessage,
-                                           NameCompressInfo &aCompressInfo);
-    static Error            AppendPtrRecord(Message          &aMessage,
-                                            const char       *aServiceName,
-                                            const char       *aInstanceName,
-                                            uint32_t          aTtl,
-                                            NameCompressInfo &aCompressInfo);
-    static Error            AppendSrvRecord(Message          &aMessage,
-                                            const char       *aInstanceName,
-                                            const char       *aHostName,
-                                            uint32_t          aTtl,
-                                            uint16_t          aPriority,
-                                            uint16_t          aWeight,
-                                            uint16_t          aPort,
-                                            NameCompressInfo &aCompressInfo);
-    static Error            AppendTxtRecord(Message          &aMessage,
-                                            const char       *aInstanceName,
-                                            const void       *aTxtData,
-                                            uint16_t          aTxtLength,
-                                            uint32_t          aTtl,
-                                            NameCompressInfo &aCompressInfo);
-    static Error            AppendAaaaRecord(Message            &aMessage,
-                                             const char         *aHostName,
-                                             const Ip6::Address &aAddress,
-                                             uint32_t            aTtl,
-                                             NameCompressInfo   &aCompressInfo);
-    static Error            AppendServiceName(Message &aMessage, const char *aName, NameCompressInfo &aCompressInfo);
-    static Error            AppendInstanceName(Message &aMessage, const char *aName, NameCompressInfo &aCompressInfo);
-    static Error            AppendHostName(Message &aMessage, const char *aName, NameCompressInfo &aCompressInfo);
-    static void             IncResourceRecordCount(Header &aHeader, bool aAdditional);
-    static Error            FindNameComponents(const char *aName, const char *aDomain, NameComponentsOffsetInfo &aInfo);
-    static Error            FindPreviousLabel(const char *aName, uint8_t &aStart, uint8_t &aStop);
-    void                    SendResponse(Header                  aHeader,
-                                         Header::Response        aResponseCode,
-                                         Message                &aMessage,
-                                         const Ip6::MessageInfo &aMessageInfo,
-                                         Ip6::Udp::Socket       &aSocket);
+    bool         IsRunning(void) const { return mSocket.IsBound(); }
+    static void  HandleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo);
+    void         HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void         ProcessQuery(const Request &aRequest);
+    static void  AddQuestions(const Request &aRequest, Response &aResponse);
+    static Error AppendQuestion(Response &aResponse, const char *aName, const Question &aQuestion);
+    static Error AppendPtrRecord(Response   &aResponse,
+                                 const char *aServiceName,
+                                 const char *aInstanceName,
+                                 uint32_t    aTtl);
+    static Error AppendSrvRecord(Response   &aResponse,
+                                 const char *aInstanceName,
+                                 const char *aHostName,
+                                 uint32_t    aTtl,
+                                 uint16_t    aPriority,
+                                 uint16_t    aWeight,
+                                 uint16_t    aPort);
+    static Error AppendTxtRecord(Response   &aResponse,
+                                 const char *aInstanceName,
+                                 const void *aTxtData,
+                                 uint16_t    aTxtLength,
+                                 uint32_t    aTtl);
+    static Error AppendAaaaRecord(Response           &aResponse,
+                                  const char         *aHostName,
+                                  const Ip6::Address &aAddress,
+                                  uint32_t            aTtl);
+    static Error AppendServiceName(Response &aResponse, const char *aName);
+    static Error AppendInstanceName(Response &aResponse, const char *aName);
+    static Error AppendHostName(Response &aResponse, const char *aName);
+    static void  IncResourceRecordCount(Response &aResponse);
+    static Error FindNameComponents(const char *aName, const char *aDomain, NameComponentsOffsetInfo &aInfo);
+    static Error FindPreviousLabel(const char *aName, uint8_t &aStart, uint8_t &aStop);
+    void         SendResponse(Response &aResponse, const Ip6::MessageInfo &aMessageInfo);
 #if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
-    Header::Response ResolveBySrp(Header                   &aResponseHeader,
-                                  Message                  &aResponseMessage,
-                                  Server::NameCompressInfo &aCompressInfo);
-    Header::Response ResolveQuestionBySrp(const char       *aName,
-                                          const Question   &aQuestion,
-                                          Header           &aResponseHeader,
-                                          Message          &aResponseMessage,
-                                          NameCompressInfo &aCompressInfo,
-                                          bool              aAdditional);
+    void ResolveBySrp(Response &aResponse);
+    void ResolveQuestionBySrp(const char *aName, const Question &aQuestion, Response &aResponse);
 #endif
 
 #if OPENTHREAD_CONFIG_DNS_UPSTREAM_QUERY_ENABLE
-    static bool               ShouldForwardToUpstream(const Header &aRequestHeader, const Message &aRequestMessage);
+    static bool               ShouldForwardToUpstream(const Request &aRequest);
     UpstreamQueryTransaction *AllocateUpstreamQueryTransaction(const Ip6::MessageInfo &aMessageInfo);
     void                      ResetUpstreamQueryTransaction(UpstreamQueryTransaction &aTxn, Error aError);
-    Error                     ResolveByUpstream(const Message &aRequestMessage, const Ip6::MessageInfo &aMessageInfo);
+    Error                     ResolveByUpstream(const Request &aRequest);
 #endif
 
-    Error             ResolveByQueryCallbacks(Header                 &aResponseHeader,
-                                              Message                &aResponseMessage,
-                                              NameCompressInfo       &aCompressInfo,
-                                              const Ip6::MessageInfo &aMessageInfo);
-    QueryTransaction *NewQuery(const Header           &aResponseHeader,
-                               Message                &aResponseMessage,
-                               const NameCompressInfo &aCompressInfo,
-                               const Ip6::MessageInfo &aMessageInfo);
+    Error             ResolveByQueryCallbacks(Response &aResponse, const Ip6::MessageInfo &aMessageInfo);
+    QueryTransaction *NewQuery(Response &aResponse, const Ip6::MessageInfo &aMessageInfo);
     static bool       CanAnswerQuery(const QueryTransaction           &aQuery,
                                      const char                       *aServiceFullName,
                                      const otDnssdServiceInstanceInfo &aInstanceInfo);
@@ -520,10 +476,8 @@ private:
     static bool       CanAnswerQuery(const Server::QueryTransaction &aQuery, const char *aHostFullName);
     void AnswerQuery(QueryTransaction &aQuery, const char *aHostFullName, const otDnssdHostInfo &aHostInfo);
     void FinalizeQuery(QueryTransaction &aQuery, Header::Response aResponseCode);
-    static DnsQueryType GetQueryTypeAndName(const Header  &aHeader,
-                                            const Message &aMessage,
-                                            char (&aName)[Name::kMaxNameSize]);
-    static bool HasQuestion(const Header &aHeader, const Message &aMessage, const char *aName, uint16_t aQuestionType);
+    static DnsQueryType GetQueryTypeAndName(const Response &aResponse, char (&aName)[Name::kMaxNameSize]);
+    static bool         HasQuestion(const Response &aResponse, const char *aName, uint16_t aQuestionType);
 
     void HandleTimer(void);
     void ResetTimer(void);
