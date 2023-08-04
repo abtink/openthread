@@ -158,10 +158,10 @@ exit:
 
 void Server::ProcessQuery(const Request &aRequest)
 {
-    Error            error = kErrorNone;
-    Response         response;
-    bool             shouldSendResponse = true;
-    Header::Response rcode              = Header::kResponseSuccess;
+    Error        error = kErrorNone;
+    Response     response;
+    bool         shouldSendResponse = true;
+    ResponseCode rcode              = Header::kResponseSuccess;
 
 #if OPENTHREAD_CONFIG_DNS_UPSTREAM_QUERY_ENABLE
     if (mEnableUpstreamQuery && ShouldForwardToUpstream(aRequest))
@@ -207,18 +207,11 @@ void Server::ProcessQuery(const Request &aRequest)
     VerifyOrExit(rcode == Header::kResponseSuccess);
 #endif
 
-    // Validate the query
     VerifyOrExit(aRequest.mHeader.GetQueryType() == Header::kQueryTypeStandard,
                  rcode = Header::kResponseNotImplemented);
     VerifyOrExit(!aRequest.mHeader.IsTruncationFlagSet(), rcode = Header::kResponseFormatError);
-    VerifyOrExit(aRequest.mHeader.GetQuestionCount() > 0, rcode = Header::kResponseFormatError);
 
-    if (mTestMode & kTestModeSingleQuestionOnly)
-    {
-        VerifyOrExit(aRequest.mHeader.GetQuestionCount() == 1, rcode = Header::kResponseFormatError);
-    }
-
-    SuccessOrExit(response.AddQuestionsFrom(aRequest));
+    SuccessOrExit(response.ParseAndAddQuestionsFrom(aRequest));
 
 #if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
     response.ResolveBySrp();
@@ -255,8 +248,8 @@ exit:
 
 void Server::Response::Send(const Ip6::MessageInfo &aMessageInfo)
 {
-    Error            error;
-    Header::Response rcode = mHeader.GetResponseCode();
+    Error        error;
+    ResponseCode rcode = mHeader.GetResponseCode();
 
     if (rcode == Header::kResponseServerFailure)
     {
@@ -284,65 +277,110 @@ void Server::Response::Send(const Ip6::MessageInfo &aMessageInfo)
     Get<Server>().UpdateResponseCounters(rcode);
 }
 
-Error Server::Response::AddQuestionsFrom(const Request &aRequest)
+Error Server::Response::ParseAndAddQuestionsFrom(const Request &aRequest)
 {
-    uint16_t         readOffset;
-    Header::Response rcode = Header::kResponseSuccess;
+    uint16_t                 offset;
+    ResponseCode             rcode;
+    uint16_t                 questionCount;
+    char                     name[Name::kMaxNameSize];
+    NameComponentsOffsetInfo nameInfo;
+    Question                 question;
 
-    readOffset = sizeof(Header);
+    rcode = Header::kResponseFormatError;
 
-    for (uint16_t i = 0; i < aRequest.mHeader.GetQuestionCount(); i++)
+    questionCount = aRequest.mHeader.GetQuestionCount();
+    VerifyOrExit(questionCount > 0);
+
+    if (Get<Server>().mTestMode & kTestModeSingleQuestionOnly)
     {
-        char                     name[Name::kMaxNameSize];
-        NameComponentsOffsetInfo nameInfo;
-        Question                 question;
+        VerifyOrExit(questionCount == 1);
+    }
+    else
+    {
+        VerifyOrExit(questionCount <= 2);
+    }
 
-        VerifyOrExit(Name::ReadName(*aRequest.mMessage, readOffset, name, sizeof(name)) == kErrorNone,
-                     rcode = Header::kResponseFormatError);
-        VerifyOrExit(aRequest.mMessage->Read(readOffset, question) == kErrorNone, rcode = Header::kResponseFormatError);
-        readOffset += sizeof(question);
+    offset = sizeof(Header);
+    SuccessOrExit(Name::ReadName(*aRequest.mMessage, offset, name, sizeof(name)));
+    SuccessOrExit(aRequest.mMessage->Read(offset, question));
+    offset += sizeof(question);
+
+    switch (question.GetType())
+    {
+    case ResourceRecord::kTypePtr:
+        mType = kPtrQuery;
+        break;
+    case ResourceRecord::kTypeSrv:
+        mType = kSrvQuery;
+        break;
+    case ResourceRecord::kTypeTxt:
+        mType = kTxtQuery;
+        break;
+    case ResourceRecord::kTypeAaaa:
+        mType = kAaaaQuery;
+        break;
+    default:
+        ExitNow(rcode = Header::kResponseNotImplemented);
+    }
+
+    rcode = Header::kResponseNameError;
+    SuccessOrExit(FindNameComponents(name, kDefaultDomainName, nameInfo));
+
+    switch (mType)
+    {
+    case kPtrQuery:
+        VerifyOrExit(nameInfo.IsServiceName());
+        break;
+    case kSrvQuery:
+    case kTxtQuery:
+    case kSrvTxtQuery:
+        VerifyOrExit(nameInfo.IsServiceInstanceName());
+        break;
+    case kAaaaQuery:
+        VerifyOrExit(nameInfo.IsHostName());
+        break;
+    }
+
+    VerifyOrExit(AppendQuestion(name, question) == kErrorNone, rcode = Header::kResponseServerFailure);
+
+    if (questionCount == 2)
+    {
+        rcode = Header::kResponseFormatError;
+
+        SuccessOrExit(Name::CompareName(*aRequest.mMessage, offset, name));
+        SuccessOrExit(aRequest.mMessage->Read(offset, question));
+        offset += sizeof(question);
 
         switch (question.GetType())
         {
-        case ResourceRecord::kTypePtr:
         case ResourceRecord::kTypeSrv:
+            VerifyOrExit(mType == kTxtQuery);
+            break;
+
         case ResourceRecord::kTypeTxt:
-        case ResourceRecord::kTypeAaaa:
+            VerifyOrExit(mType == kSrvQuery);
             break;
 
         default:
-            rcode = Header::kResponseNotImplemented;
             ExitNow();
         }
 
-        VerifyOrExit(FindNameComponents(name, kDefaultDomainName, nameInfo) == kErrorNone,
-                     rcode = Header::kResponseNameError);
-
-        switch (question.GetType())
-        {
-        case ResourceRecord::kTypePtr:
-            VerifyOrExit(nameInfo.IsServiceName(), rcode = Header::kResponseNameError);
-            break;
-        case ResourceRecord::kTypeSrv:
-            VerifyOrExit(nameInfo.IsServiceInstanceName(), rcode = Header::kResponseNameError);
-            break;
-        case ResourceRecord::kTypeTxt:
-            VerifyOrExit(nameInfo.IsServiceInstanceName(), rcode = Header::kResponseNameError);
-            break;
-        case ResourceRecord::kTypeAaaa:
-            VerifyOrExit(nameInfo.IsHostName(), rcode = Header::kResponseNameError);
-            break;
-        default:
-            break;
-        }
+        mType = kSrvTxtQuery;
 
         VerifyOrExit(AppendQuestion(name, question) == kErrorNone, rcode = Header::kResponseServerFailure);
     }
 
-    mHeader.SetQuestionCount(aRequest.mHeader.GetQuestionCount());
+    mHeader.SetQuestionCount(questionCount);
+    rcode = Header::kResponseSuccess;
 
 exit:
     mHeader.SetResponseCode(rcode);
+
+    if (rcode != Header::kResponseSuccess)
+    {
+        IgnoreError(mMessage->SetLength(sizeof(Header)));
+    }
+
     return (rcode == Header::kResponseSuccess) ? kErrorNone : kErrorFailed;
 }
 
@@ -350,20 +388,19 @@ Error Server::Response::AppendQuestion(const char *aName, const Question &aQuest
 {
     Error error = kErrorNone;
 
-    switch (aQuestion.GetType())
+    switch (mType)
     {
-    case ResourceRecord::kTypePtr:
+    case kPtrQuery:
         SuccessOrExit(error = AppendServiceName(aName));
         break;
-    case ResourceRecord::kTypeSrv:
-    case ResourceRecord::kTypeTxt:
+    case kSrvQuery:
+    case kTxtQuery:
+    case kSrvTxtQuery:
         SuccessOrExit(error = AppendInstanceName(aName));
         break;
-    case ResourceRecord::kTypeAaaa:
+    case kAaaaQuery:
         SuccessOrExit(error = AppendHostName(aName));
         break;
-    default:
-        OT_ASSERT(false);
     }
 
     error = mMessage->Append(aQuestion);
@@ -386,6 +423,7 @@ Error Server::Response::AppendPtrRecord(const char *aServiceName, const char *aI
     recordOffset = mMessage->GetLength();
     SuccessOrExit(error = mMessage->SetLength(recordOffset + sizeof(ptrRecord)));
 
+    mInstanceCompressOffset = kUnknownOffset;
     SuccessOrExit(error = AppendInstanceName(aInstanceName));
 
     ptrRecord.SetLength(mMessage->GetLength() - (recordOffset + sizeof(ResourceRecord)));
@@ -451,7 +489,6 @@ exit:
 Error Server::Response::AppendServiceName(const char *aName)
 {
     Error       error;
-    uint16_t    serviceCompressOffset = mCompressInfo.GetServiceNameOffset(*mMessage, aName);
     const char *serviceName;
 
     // Check whether `aName` is a sub-type service name.
@@ -471,28 +508,25 @@ Error Server::Response::AppendServiceName(const char *aName)
         serviceName = aName;
     }
 
-    if (serviceCompressOffset != NameCompressInfo::kUnknownOffset)
+    if (mServiceCompressOffset != kUnknownOffset)
     {
-        error = Name::AppendPointerLabel(serviceCompressOffset, *mMessage);
+        error = Name::AppendPointerLabel(mServiceCompressOffset, *mMessage);
     }
     else
     {
-        uint16_t domainStart = StringLength(serviceName, Name::kMaxNameSize - 1) - (sizeof(kDefaultDomainName) - 1);
-        uint16_t domainCompressOffset = mCompressInfo.GetDomainNameOffset();
+        uint8_t domainStart = GetNameLength(serviceName) - (sizeof(kDefaultDomainName) - 1);
 
-        serviceCompressOffset = mMessage->GetLength();
-        mCompressInfo.SetServiceNameOffset(serviceCompressOffset);
+        mServiceCompressOffset = mMessage->GetLength();
 
-        if (domainCompressOffset == NameCompressInfo::kUnknownOffset)
+        if (mDomainCompressOffset == kUnknownOffset)
         {
-            mCompressInfo.SetDomainNameOffset(serviceCompressOffset + domainStart);
-            error = Name::AppendName(serviceName, *mMessage);
+            mDomainCompressOffset = mMessage->GetLength() + domainStart;
+            error                 = Name::AppendName(serviceName, *mMessage);
         }
         else
         {
-            SuccessOrExit(error =
-                              Name::AppendMultipleLabels(serviceName, static_cast<uint8_t>(domainStart), *mMessage));
-            error = Name::AppendPointerLabel(domainCompressOffset, *mMessage);
+            SuccessOrExit(error = Name::AppendMultipleLabels(serviceName, domainStart, *mMessage));
+            error = Name::AppendPointerLabel(mDomainCompressOffset, *mMessage);
         }
     }
 
@@ -502,37 +536,35 @@ exit:
 
 Error Server::Response::AppendInstanceName(const char *aName)
 {
-    Error    error;
-    uint16_t instanceCompressOffset = mCompressInfo.GetInstanceNameOffset(*mMessage, aName);
+    Error error;
 
-    if (instanceCompressOffset != NameCompressInfo::kUnknownOffset)
+    if (mInstanceCompressOffset != kUnknownOffset)
     {
-        error = Name::AppendPointerLabel(instanceCompressOffset, *mMessage);
+        error = Name::AppendPointerLabel(mInstanceCompressOffset, *mMessage);
     }
     else
     {
-        NameComponentsOffsetInfo nameComponentsInfo;
+        NameComponentsOffsetInfo nameInfo;
 
-        IgnoreError(FindNameComponents(aName, kDefaultDomainName, nameComponentsInfo));
-        OT_ASSERT(nameComponentsInfo.IsServiceInstanceName());
+        IgnoreError(FindNameComponents(aName, kDefaultDomainName, nameInfo));
+        OT_ASSERT(nameInfo.IsServiceInstanceName());
 
-        mCompressInfo.SetInstanceNameOffset(mMessage->GetLength());
+        mInstanceCompressOffset = mMessage->GetLength();
 
         // Append the instance name as one label
-        SuccessOrExit(error = Name::AppendLabel(aName, nameComponentsInfo.mServiceOffset - 1, *mMessage));
+        SuccessOrExit(error = Name::AppendLabel(aName, nameInfo.mServiceOffset - 1, *mMessage));
 
         {
-            const char *serviceName           = aName + nameComponentsInfo.mServiceOffset;
-            uint16_t    serviceCompressOffset = mCompressInfo.GetServiceNameOffset(*mMessage, serviceName);
+            const char *serviceName = aName + nameInfo.mServiceOffset;
 
-            if (serviceCompressOffset != NameCompressInfo::kUnknownOffset)
+            if (mServiceCompressOffset != kUnknownOffset)
             {
-                error = Name::AppendPointerLabel(serviceCompressOffset, *mMessage);
+                error = Name::AppendPointerLabel(mServiceCompressOffset, *mMessage);
             }
             else
             {
-                mCompressInfo.SetServiceNameOffset(mMessage->GetLength());
-                error = Name::AppendName(serviceName, *mMessage);
+                mServiceCompressOffset = mMessage->GetLength();
+                error                  = Name::AppendName(serviceName, *mMessage);
             }
         }
     }
@@ -575,30 +607,27 @@ exit:
 
 Error Server::Response::AppendHostName(const char *aName)
 {
-    Error    error;
-    uint16_t hostCompressOffset = mCompressInfo.GetHostNameOffset(*mMessage, aName);
+    Error error;
 
-    if (hostCompressOffset != NameCompressInfo::kUnknownOffset)
+    if (mHostCompressOffset != kUnknownOffset)
     {
-        error = Name::AppendPointerLabel(hostCompressOffset, *mMessage);
+        error = Name::AppendPointerLabel(mHostCompressOffset, *mMessage);
     }
     else
     {
-        uint16_t domainStart          = StringLength(aName, Name::kMaxNameLength) - (sizeof(kDefaultDomainName) - 1);
-        uint16_t domainCompressOffset = mCompressInfo.GetDomainNameOffset();
+        uint8_t domainStart = GetNameLength(aName) - (sizeof(kDefaultDomainName) - 1);
 
-        hostCompressOffset = mMessage->GetLength();
-        mCompressInfo.SetHostNameOffset(hostCompressOffset);
+        mHostCompressOffset = mMessage->GetLength();
 
-        if (domainCompressOffset == NameCompressInfo::kUnknownOffset)
+        if (mDomainCompressOffset == kUnknownOffset)
         {
-            mCompressInfo.SetDomainNameOffset(hostCompressOffset + domainStart);
-            error = Name::AppendName(aName, *mMessage);
+            mDomainCompressOffset = mMessage->GetLength() + domainStart;
+            error                 = Name::AppendName(aName, *mMessage);
         }
         else
         {
-            SuccessOrExit(error = Name::AppendMultipleLabels(aName, static_cast<uint8_t>(domainStart), *mMessage));
-            error = Name::AppendPointerLabel(domainCompressOffset, *mMessage);
+            SuccessOrExit(error = Name::AppendMultipleLabels(aName, domainStart, *mMessage));
+            error = Name::AppendPointerLabel(mDomainCompressOffset, *mMessage);
         }
     }
 
@@ -618,10 +647,15 @@ void Server::Response::IncResourceRecordCount(void)
     }
 }
 
+uint8_t Server::GetNameLength(const char *aName)
+{
+    return static_cast<uint8_t>(StringLength(aName, Name::kMaxNameLength));
+}
+
 Error Server::FindNameComponents(const char *aName, const char *aDomain, NameComponentsOffsetInfo &aInfo)
 {
-    uint8_t nameLen   = static_cast<uint8_t>(StringLength(aName, Name::kMaxNameLength));
-    uint8_t domainLen = static_cast<uint8_t>(StringLength(aDomain, Name::kMaxNameLength));
+    uint8_t nameLen   = GetNameLength(aName);
+    uint8_t domainLen = GetNameLength(aDomain);
     Error   error     = kErrorNone;
     uint8_t labelBegin, labelEnd;
 
@@ -714,7 +748,7 @@ void Server::Response::ResolveBySrp(void)
     for (uint16_t i = 0; i < mHeader.GetQuestionCount(); i++)
     {
         // The names and questions in the request message are validated
-        // from `AddQuestionsFrom()`, so we `IgnoreError()`  here.
+        // from `ParseAndAddQuestionsFrom()`, so we `IgnoreError()`  here.
 
         IgnoreError(Name::ReadName(*mMessage, readOffset, name, sizeof(name)));
         IgnoreError(mMessage->Read(readOffset, question));
@@ -766,10 +800,10 @@ exit:
 
 void Server::Response::ResolveQuestionBySrp(const char *aName, const Question &aQuestion)
 {
-    Error            error = kErrorNone;
-    TimeMilli        now   = TimerMilli::GetNow();
-    uint16_t         qtype = aQuestion.GetType();
-    Header::Response rcode = Header::kResponseNameError;
+    Error        error = kErrorNone;
+    TimeMilli    now   = TimerMilli::GetNow();
+    uint16_t     qtype = aQuestion.GetType();
+    ResponseCode rcode = Header::kResponseNameError;
 
     for (const Srp::Server::Host &host : Get<Srp::Server>().GetHosts())
     {
@@ -1291,7 +1325,7 @@ void Server::HandleTimer(void)
     }
 }
 
-void Server::QueryTransaction::Finalize(Header::Response aResponseCode)
+void Server::QueryTransaction::Finalize(ResponseCode aResponseCode)
 {
     char         name[Name::kMaxNameSize];
     DnsQueryType sdType;
@@ -1311,7 +1345,7 @@ void Server::QueryTransaction::Finalize(Header::Response aResponseCode)
     mMessage = nullptr;
 }
 
-void Server::UpdateResponseCounters(Header::Response aResponseCode)
+void Server::UpdateResponseCounters(ResponseCode aResponseCode)
 {
     switch (aResponseCode)
     {
