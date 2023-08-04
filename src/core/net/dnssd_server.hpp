@@ -337,6 +337,8 @@ private:
 
     struct Request
     {
+        ResponseCode ParseQuestions(QueryType &aType, uint8_t aTestMode) const;
+
         const Message          *mMessage;
         const Ip6::MessageInfo *mMessageInfo;
         Header                  mHeader;
@@ -350,8 +352,10 @@ private:
 
         Instance &GetInstance(void) const { return mMessage->GetInstance(); }
 
-        Error ParseAndAddQuestionsFrom(const Request &aRequest);
-        Error AppendQuestion(const char *aName, const Question &aQuestion);
+        ResponseCode AddQuestionsFrom(const Request &aRequest);
+        Error        AppendQueryName(void);
+        void         UpdateRecordLength(ResourceRecord &aRecord, uint16_t aOffset);
+
         Error AppendPtrRecord(const char *aServiceName, const char *aInstanceName, uint32_t aTtl);
         Error AppendSrvRecord(const char *aInstanceName,
                               const char *aHostName,
@@ -364,22 +368,28 @@ private:
         Error AppendServiceName(const char *aName);
         Error AppendInstanceName(const char *aName);
         Error AppendHostName(const char *aName);
-        void  IncResourceRecordCount(void);
-        bool  HasQuestion(const char *aName, uint16_t aQuestionType) const;
-        void  Send(const Ip6::MessageInfo &aMessageInfo);
-        void  GetQueryTypeAndName(DnsQueryType &aType, char (&aName)[Name::kMaxNameSize]) const;
+        void IncResourceRecordCount(void);
+        bool HasQuestion(const char *aName, uint16_t aQuestionType) const;
+        void Send(const Ip6::MessageInfo &aMessageInfo);
+        void GetQueryTypeAndName(DnsQueryType &aType, char (&aName)[Name::kMaxNameSize]) const;
 
 #if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
         void ResolveBySrp(void);
-        void ResolveQuestionBySrp(const char *aName, const Question &aQuestion);
+        Error ResolvePtrQueryBySrp(const char *aName);
+        Error ResolveSrvTxtQueryBySrp(const char *aName);
+        Error ResolveAaaaQueryBySrp(const char *aName);
+
+        Error AppendSrvRecord(const Srp::Server::Service &aService);
+        Error AppendTxtRecord(const Srp::Server::Service &aService);
+        Error AppendHostAddresses(const Srp::Server::Host &aHost);
 #endif
 
         Message  *mMessage;
         Header    mHeader;
-        uint16_t  mDomainCompressOffset;
-        uint16_t  mServiceCompressOffset;
-        uint16_t  mInstanceCompressOffset;
-        uint16_t  mHostCompressOffset;
+        uint16_t  mDomainOffset;
+        uint16_t  mServiceOffset;
+        uint16_t  mInstanceOffset;
+        uint16_t  mHostOffset;
         QueryType mType;
         bool      mAdditional; // Whether or not appending new records in additional data section.
     };
