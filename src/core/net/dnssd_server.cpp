@@ -476,7 +476,7 @@ Error Server::Response::ParseQueryName(void)
         uint8_t  labelLength = sizeof(label);
         uint16_t comapreOffset;
 
-        SuccessOrExit(Name::ReadLabel(*mMessage, offset, label, labelLength));
+        SuccessOrExit(error = Name::ReadLabel(*mMessage, offset, label, labelLength));
 
         if ((mType == kPtrQuery) && StringMatch(label, kSubLabel, kStringCaseInsensitiveMatch))
         {
