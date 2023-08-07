@@ -164,6 +164,8 @@ void Server::ProcessQuery(const Request &aRequest)
     bool         shouldSendResponse = true;
     ResponseCode rcode              = Header::kResponseSuccess;
 
+    LogInfo("ABTIN ~ ProcessQuery()");
+
 #if OPENTHREAD_CONFIG_DNS_UPSTREAM_QUERY_ENABLE
     if (mEnableUpstreamQuery && ShouldForwardToUpstream(aRequest))
     {
@@ -202,18 +204,30 @@ void Server::ProcessQuery(const Request &aRequest)
     // Header will be updated in the message before sending it.
     SuccessOrExit(error = response.mMessage->Append(response.mHeader));
 
+    LogInfo("ABTIN ~ ProcessQuery() response allocated and header added");
+
+
 #if OPENTHREAD_CONFIG_DNS_UPSTREAM_QUERY_ENABLE
     // Forwarding the query to the upstream may have already set the
     // response error code.
     SuccessOrExit(rcode);
 #endif
 
+    LogInfo("ABTIN ~ ProcessQuery() about to call ParseQuestions()");
+
     SuccessOrExit(rcode = aRequest.ParseQuestions(response.mType, mTestMode));
+
+    LogInfo("ABTIN ~ ProcessQuery() After ParseQuestions()");
 
     SuccessOrExit(rcode = response.AddQuestionsFrom(aRequest));
 
+    LogInfo("ABTIN ~ ProcessQuery() After AddQuestionsFrom()");
+
+
 #if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
     response.ResolveBySrp();
+
+    LogInfo("ABTIN ~ After ResolveBySrp(), rcode in header is %u", response.mHeader.GetResponseCode());
 
     if (response.mHeader.GetAnswerCount() != 0)
     {
@@ -228,12 +242,18 @@ void Server::ProcessQuery(const Request &aRequest)
         // allocated `response.mMessage` on success. Therefore,
         // there is no need to free it at `exit`.
 
+        LogInfo("ABTIN ~ In ResolveByQueryCallbacks() if block, we should not send response");
+
         shouldSendResponse = false;
     }
 
 exit:
+    LogInfo("ABTIN ~ ProcessQuery() - exit with error %s, shouldSendResponse %u", ErrorToString(error), shouldSendResponse);
+
     if ((error == kErrorNone) && shouldSendResponse)
     {
+        LogInfo("ABTIN ~ ProcessQuery() donw with rcode:%u", rcode);
+
         if (rcode != Header::kResponseSuccess)
         {
             response.mHeader.SetResponseCode(rcode);
@@ -285,6 +305,8 @@ Server::ResponseCode Server::Request::ParseQuestions(QueryType &aType, uint8_t a
     uint16_t     offset        = sizeof(Header);
     uint16_t     questionCount = mHeader.GetQuestionCount();
     Question     question;
+
+    LogInfo("ABTIN ~~~~~ ParseQuestions()");
 
     VerifyOrExit(mHeader.GetQueryType() == Header::kQueryTypeStandard, rcode = Header::kResponseNotImplemented);
     VerifyOrExit(!mHeader.IsTruncationFlagSet());
@@ -341,7 +363,11 @@ Server::ResponseCode Server::Request::ParseQuestions(QueryType &aType, uint8_t a
 
     rcode = Header::kResponseSuccess;
 
+    LogInfo("ABTIN ~~~~~ ParseQuestions(), mType is %u", aType);
+
 exit:
+    LogInfo("ABTIN ~~~~~ ParseQuestions() return rcode %u", rcode);
+
     return rcode;
 }
 
@@ -350,6 +376,8 @@ Server::ResponseCode Server::Response::AddQuestionsFrom(const Request &aRequest)
     ResponseCode rcode = Header::kResponseServerFailure;
     uint16_t     offset;
 
+    LogInfo("ABTIN ~~~~~~~~~~~~ AddQuestionsFrom(), mType is %u", mType);
+
     // Read the name from `aRequest.mMessage` and append it as is to
     // the response message. This ensures all name formats, including
     // service instance names with dot characters in the instance
@@ -357,10 +385,14 @@ Server::ResponseCode Server::Response::AddQuestionsFrom(const Request &aRequest)
 
     SuccessOrExit(Name(*aRequest.mMessage, sizeof(Header)).AppendTo(*mMessage));
 
+    LogInfo("ABTIN ~~~~~~~~~~~~ AddQuestionsFrom(), after append name");
+
     // Check the name to include the correct domain name and determine
     // the domain name offset (for DNS name compression).
 
     VerifyOrExit(ParseQueryName() == kErrorNone, rcode = Header::kResponseNameError);
+
+    LogInfo("ABTIN ~~~~~~~~~~~~ AddQuestionsFrom(), after ParseQueryName(), rcode %u", rcode);
 
     mHeader.SetQuestionCount(aRequest.mHeader.GetQuestionCount());
 
@@ -379,15 +411,23 @@ Server::ResponseCode Server::Response::AddQuestionsFrom(const Request &aRequest)
 
         if (questionCount != 0)
         {
+            LogInfo("ABTIN ~~~~~~~~~~~~ AddQuestionsFrom(), before AppendQueryName()");
             SuccessOrExit(AppendQueryName());
+            LogInfo("ABTIN ~~~~~~~~~~~~ AddQuestionsFrom(), after AppendQueryName()");
+
         }
 
+        LogInfo("ABTIN ~~~~~~~~~~~~ AddQuestionsFrom(), before Append(question)");
         SuccessOrExit(mMessage->Append(question));
+        LogInfo("ABTIN ~~~~~~~~~~~~ AddQuestionsFrom(), after Append(question)");
+
     }
 
     rcode = Header::kResponseSuccess;
 
 exit:
+    LogInfo("ABTIN ~~~~~~~~~~~~ AddQuestionsFrom(), RETURNING rcode %u", rcode);
+
     return rcode;
 }
 
@@ -402,6 +442,8 @@ Error Server::Response::ParseQueryName(void)
 
     offset = sizeof(Header);
     SuccessOrExit(error = Name::ReadName(*mMessage, offset, name, sizeof(name)));
+
+    LogInfo("ABTIN ~~~~~~~~~~~~~~~~ ParseQueryName, name: '%s'", name);
 
     switch (mType)
     {
@@ -677,6 +719,8 @@ void Server::Response::ResolveBySrp(void)
 
     ReadQueryName(name);
 
+    LogInfo("ABTIN ~~~ ResolveBySrp, name: '%s'", name);
+
     mSection = kAnswerSection;
 
     for (const Srp::Server::Host &host : Get<Srp::Server>().GetHosts())
@@ -768,6 +812,8 @@ void Server::Response::ResolveBySrp(void)
     SuccessOrExit(error = AppendHostAddresses(matchedService->GetHost()));
 
 exit:
+    LogInfo("ABTIN ~~~ ResolveBySrp, got to end with error %s", ErrorToString(error));
+
     switch (error)
     {
     case kErrorNone:
@@ -795,6 +841,7 @@ Error Server::ResolveByQueryCallbacks(Response &aResponse, const Ip6::MessageInf
     VerifyOrExit(query != nullptr, error = kErrorNoBufs);
 
     query->ReadQueryName(name);
+    LogInfo("ABTIN ------ ResolveByQueryCallbacks() - name '%s'", name);
     mQuerySubscribe.Invoke(name);
 
 exit:
@@ -1038,6 +1085,9 @@ void Server::HandleDiscoveredServiceInstance(const char *aServiceFullName, const
     OT_ASSERT(StringEndsWith(aInstanceInfo.mFullName, Name::kLabelSeparatorChar));
     OT_ASSERT(StringEndsWith(aInstanceInfo.mHostName, Name::kLabelSeparatorChar));
 
+
+    LogInfo("ABTIN --- HandleDiscoveredServiceInstance(%s)", aServiceFullName);
+
     for (QueryTransaction &query : mQueryTransactions)
     {
         if (query.IsValid() && query.CanAnswer(aServiceFullName, aInstanceInfo))
@@ -1050,6 +1100,8 @@ void Server::HandleDiscoveredServiceInstance(const char *aServiceFullName, const
 void Server::HandleDiscoveredHost(const char *aHostFullName, const HostInfo &aHostInfo)
 {
     OT_ASSERT(StringEndsWith(aHostFullName, Name::kLabelSeparatorChar));
+
+    LogInfo("ABTIN --- HandleDiscoveredHost(%s)", aHostFullName);
 
     for (QueryTransaction &query : mQueryTransactions)
     {
@@ -1169,8 +1221,12 @@ void Server::QueryTransaction::Finalize(Error aError)
 {
     DnsName name;
 
+    LogInfo("ABTIN ------ Finalize(%s)", ErrorToString(aError));
+
     ReadQueryName(name);
     Get<Server>().mQueryUnsubscribe.InvokeIfSet(name);
+
+    LogInfo("ABTIN ------ Finalize() - name '%s'", name);
 
     mHeader.SetResponseCode((aError == kErrorNone) ? Header::kResponseSuccess : Header::kResponseServerFailure);
     Send(mMessageInfo);
