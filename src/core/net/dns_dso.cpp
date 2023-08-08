@@ -991,7 +991,7 @@ Error Dso::Connection::ProcessKeepAliveMessage(const Dns::Header &aHeader, const
     AdjustInactivityTimeout(keepAliveTlv.GetInactivityTimeout());
     mKeepAlive.SetInterval(keepAliveTlv.GetKeepAliveInterval());
 
-    LogInfo("Timeouts Inactivity:%u, KeepAlive:%u", mInactivity.GetInterval(), mKeepAlive.GetInterval());
+    LogInfo("Timeouts Inactivity:%lu, KeepAlive:%lu", ToUlong(mInactivity.GetInterval()), ToUlong(mKeepAlive.GetInterval()));
 
     error = kErrorNone;
 
@@ -1020,7 +1020,7 @@ Error Dso::Connection::ProcessRetryDelayMessage(const Dns::Header &aHeader, cons
     mRetryDelay          = retryDelayTlv.GetRetryDelay();
 
     LogInfo("Received Retry Delay message from server %s", mPeerSockAddr.ToString().AsCString());
-    LogInfo("   RetryDelay:%u ms, ResponseCode:%d", mRetryDelay, mRetryDelayErrorCode);
+    LogInfo("   RetryDelay:%lu ms, ResponseCode:%d", ToUlong(mRetryDelay), mRetryDelayErrorCode);
 
     Disconnect(kGracefullyClose, kReasonServerRetryDelayRequest);
 
