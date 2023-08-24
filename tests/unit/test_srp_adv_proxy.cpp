@@ -135,7 +135,9 @@ static Array<DnssdRequest, kDnssdArraySize> sDnssdUnregKeyRequests;
 static bool             sDnssdShouldCheckWithClient = true;
 static Error            sDnssdCallbackError         = kErrorPending;
 static otPlatDnssdState sDnssdState                 = OT_PLAT_DNSSD_READY;
-constexpr uint32_t      kInfraIfIndex               = 1;
+static uint16_t         sDnssdNumHostAddresses      = 0;
+
+constexpr uint32_t kInfraIfIndex = 1;
 
 otPlatDnssdState otPlatDnssdGetState(otInstance *aInstance)
 {
@@ -266,6 +268,8 @@ void otPlatDnssdRegisterHost(otInstance                 *aInstance,
 
     VerifyOrQuit(aInstance == sInstance);
     VerifyOrQuit(aHost->mInfraIfIndex == kInfraIfIndex);
+
+    sDnssdNumHostAddresses = aHost->mNumAddresses;
 
     if (sDnssdShouldCheckWithClient)
     {
@@ -2297,12 +2301,12 @@ void TestSrpAdvProxyHostWithOffMeshRoutableAddress(void)
 
     AdvanceTime(2 * 1000);
 
-    // Since the host has no off-mesh routable address,
-    // we should not advertise the host or service, but
-    // should still register keys for them.
-
+    dnssdCounts.mHostReg++;
+    dnssdCounts.mServiceReg++;
     dnssdCounts.mKeyReg += 2;
+
     VerifyDnnsdRequests(dnssdCounts);
+    VerifyOrQuit(sDnssdNumHostAddresses == 0);
 
     VerifyOrQuit(sProcessedClientCallback);
     VerifyOrQuit(sLastClientCallbackError == kErrorNone);
@@ -2321,8 +2325,7 @@ void TestSrpAdvProxyHostWithOffMeshRoutableAddress(void)
 
     AdvanceTime(2 * 1000);
 
-    // We should see key for new service is registered.
-
+    dnssdCounts.mServiceReg++;
     dnssdCounts.mKeyReg++;
     VerifyDnnsdRequests(dnssdCounts);
 
@@ -2334,303 +2337,6 @@ void TestSrpAdvProxyHostWithOffMeshRoutableAddress(void)
 
     VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 2);
     VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 2);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Wait for longer than lease interval of 400s for client to refresh");
-
-    sProcessedClientCallback = false;
-
-    AdvanceTime(401 * 1000);
-
-    VerifyOrQuit(sProcessedClientCallback);
-
-    // Validate that adv-proxy does not update any of registration on
-    // DNS-SD platform since there is no change.
-
-    VerifyDnnsdRequests(dnssdCounts);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 3);
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 3);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Remove the second service");
-
-    sDnssdShouldCheckWithClient = false;
-
-    SuccessOrQuit(srpClient->RemoveService(service2));
-
-    sProcessedClientCallback = false;
-
-    AdvanceTime(2 * 1000);
-
-    // Key for host and both services (even the removed one)
-    // should be still registered.
-
-    VerifyDnnsdRequests(dnssdCounts);
-
-    VerifyOrQuit(sProcessedClientCallback);
-    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
-
-    VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
-    VerifyOrQuit(service2.GetState() == Srp::Client::kRemoved);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 4);
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 4);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Remove host while keeping key-lease");
-
-    SuccessOrQuit(srpClient->RemoveHostAndServices(/* aShouldRemoveKeyLease */ false));
-
-    sProcessedClientCallback = false;
-
-    AdvanceTime(2 * 1000);
-
-    // Still all keys should be registered.
-
-    VerifyDnnsdRequests(dnssdCounts);
-
-    VerifyOrQuit(sProcessedClientCallback);
-    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 5);
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 5);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Re-add first service");
-
-    SuccessOrQuit(srpClient->SetHostName(kHostName));
-    SuccessOrQuit(srpClient->EnableAutoHostAddress());
-    PrepareService1(service1);
-    SuccessOrQuit(srpClient->AddService(service1));
-
-    sProcessedClientCallback = false;
-
-    AdvanceTime(2 * 1000);
-
-    VerifyDnnsdRequests(dnssdCounts);
-
-    VerifyOrQuit(sProcessedClientCallback);
-    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
-
-    VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 6);
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 6);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Remove host and remove key-lease");
-
-    SuccessOrQuit(srpClient->RemoveHostAndServices(/* aShouldRemoveKeyLease */ true));
-
-    sProcessedClientCallback = false;
-
-    AdvanceTime(2 * 1000);
-
-    // All keys for host and two services should now
-    // be unregistered.
-
-    dnssdCounts.mKeyUnreg += 3;
-    VerifyDnnsdRequests(dnssdCounts);
-
-    VerifyOrQuit(sProcessedClientCallback);
-    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 7);
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 7);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Add host and one service");
-
-    SuccessOrQuit(srpClient->SetHostName(kHostName));
-    SuccessOrQuit(srpClient->EnableAutoHostAddress());
-    PrepareService1(service1);
-    SuccessOrQuit(srpClient->AddService(service1));
-
-    sProcessedClientCallback = false;
-
-    AdvanceTime(2 * 1000);
-
-    // Only keys for host and service should be registered.
-
-    dnssdCounts.mKeyReg += 2;
-    VerifyDnnsdRequests(dnssdCounts);
-
-    VerifyOrQuit(sProcessedClientCallback);
-    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
-
-    VerifyOrQuit(service1.GetState() == Srp::Client::kRegistered);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 8);
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 8);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Set AdvTimeout to 5 minutes on AdvProxy");
-
-    // Change the timeout on AvdertisingProxy to 5 minutes
-    // so that we can send multiple SRP updates and create
-    // situations where previous advertisement are still
-    // outstanding.
-
-    advProxy->SetAdvTimeout(5 * 60 * 1000);
-    VerifyOrQuit(advProxy->GetAdvTimeout() == 5 * 60 * 1000);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Add a second service but delay the callback for key registration");
-
-    sDnssdCallbackError = kErrorPending;
-
-    PrepareService2(service2);
-    SuccessOrQuit(srpClient->AddService(service2));
-
-    sProcessedClientCallback = false;
-
-    AdvanceTime(1000);
-
-    // We should see key for service 2 registered.
-    // We do not invoke its callback so to keep this
-    // as an outstanding advertisement to be committed
-    // later.
-
-    dnssdCounts.mKeyReg++;
-    VerifyDnnsdRequests(dnssdCounts);
-
-    // Since we do not yet invoke the callback for new
-    // key registration, we expect no response back to
-    // SRP client.
-
-    VerifyOrQuit(!sProcessedClientCallback);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 9);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Add an on-mesh prefix (with SLAAC) to network data");
-
-    // Set the callback config, so that we emit immediate callback for
-    // all  new `otPlatRegister{Item}()` requests.
-    sDnssdCallbackError = kErrorNone;
-
-    prefixConfig.Clear();
-    SuccessOrQuit(AsCoreType(&prefixConfig.mPrefix.mPrefix).FromString("fd00:cafe:beef::"));
-    prefixConfig.mPrefix.mLength = 64;
-    prefixConfig.mStable         = true;
-    prefixConfig.mSlaac          = true;
-    prefixConfig.mPreferred      = true;
-    prefixConfig.mOnMesh         = true;
-    prefixConfig.mDefaultRoute   = false;
-    prefixConfig.mPreference     = NetworkData::kRoutePreferenceMedium;
-
-    SuccessOrQuit(otBorderRouterAddOnMeshPrefix(sInstance, &prefixConfig));
-    SuccessOrQuit(otBorderRouterRegister(sInstance));
-
-    AdvanceTime(1 * 1000);
-
-    // Now that host has off-mesh routable address, we should
-    // see host being registered and
-
-    dnssdCounts.mHostReg++;
-    dnssdCounts.mServiceReg += 2;
-    VerifyDnnsdRequests(dnssdCounts);
-
-    // We still did not invoke callback on key registration
-    // for service2, and new update should still be blocked
-    // and waiting for that.
-
-    VerifyOrQuit(!sProcessedClientCallback);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 10);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Invoke callback for second service key registration");
-
-    request = &sDnssdRegKeyRequests[sDnssdRegKeyRequests.GetLength() - 1];
-    VerifyOrQuit(request->mCallback != nullptr);
-    request->mCallback(sInstance, request->mId, kErrorNone);
-
-    AdvanceTime(50);
-
-    // We should now response send back to SRP client
-
-    VerifyOrQuit(sProcessedClientCallback);
-    VerifyOrQuit(sLastClientCallbackError == kErrorNone);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 10);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Remove on-mesh prefix (with SLAAC) from network data");
-
-    SuccessOrQuit(otBorderRouterRemoveOnMeshPrefix(sInstance, &prefixConfig.mPrefix));
-    SuccessOrQuit(otBorderRouterRegister(sInstance));
-
-    AdvanceTime(2 * 1000);
-
-    // Since there is no off-mesh routable address,
-    // we should see proxy unregistering host and the
-    // two services (while keeping the keys unchanged).
-
-    dnssdCounts.mHostUnreg++;
-    dnssdCounts.mServiceUnreg += 2;
-    VerifyDnnsdRequests(dnssdCounts);
-
-    VerifyOrQuit(sProcessedClientCallback);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 11);
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 11);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Wait for longer than lease interval of 400s for client to refresh");
-
-    sProcessedClientCallback = false;
-
-    AdvanceTime(401 * 1000);
-
-    VerifyOrQuit(sProcessedClientCallback);
-
-    // Validate that adv-proxy does not update any of registration on
-    // DNS-SD platform since there is no change.
-
-    VerifyDnnsdRequests(dnssdCounts);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 12);
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 12);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Re-add the on-mesh prefix (with SLAAC) to network data");
-
-    SuccessOrQuit(otBorderRouterAddOnMeshPrefix(sInstance, &prefixConfig));
-    SuccessOrQuit(otBorderRouterRegister(sInstance));
-
-    AdvanceTime(2 * 1000);
-
-    // Since there is no off-mesh routable address,
-    // we should see proxy unregistering host and the
-    // two services (while keeping the keys unchanged).
-
-    dnssdCounts.mHostReg++;
-    dnssdCounts.mServiceReg += 2;
-    VerifyDnnsdRequests(dnssdCounts);
-
-    VerifyOrQuit(sProcessedClientCallback);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 13);
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 13);
-
-    Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
-    Log("Wait for longer than lease interval of 400s for client to refresh");
-
-    sProcessedClientCallback = false;
-
-    AdvanceTime(401 * 1000);
-
-    VerifyOrQuit(sProcessedClientCallback);
-
-    // Validate that adv-proxy does not update any of registration on
-    // DNS-SD platform since there is no change.
-
-    VerifyDnnsdRequests(dnssdCounts);
-
-    VerifyOrQuit(advProxy->GetCounters().mAdvTotal == 14);
-    VerifyOrQuit(advProxy->GetCounters().mAdvSuccessful == 14);
 
     Log("- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ");
     Log("Disable SRP server");
@@ -2646,7 +2352,7 @@ void TestSrpAdvProxyHostWithOffMeshRoutableAddress(void)
     VerifyOrQuit(advProxy->GetCounters().mAdvTimeout == 0);
     VerifyOrQuit(advProxy->GetCounters().mAdvRejected == 0);
     VerifyOrQuit(advProxy->GetCounters().mAdvSkipped == 0);
-    VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 1);
+    VerifyOrQuit(advProxy->GetCounters().mAdvReplaced == 0);
 
     VerifyOrQuit(heapAllocations == sHeapAllocatedPtrs.GetLength());
 

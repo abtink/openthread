@@ -252,7 +252,7 @@ void AdvertisingProxy::AdvertiseRemovalOf(Host &aHost)
             if (service == nullptr)
             {
                 // `AdvInfo` contains a service that is not present in
-                // `aHost`, we we unregister the service and its key
+                // `aHost`, we unregister the service and its key.
 
                 if (!advService.IsDeleted())
                 {
@@ -419,30 +419,6 @@ void AdvertisingProxy::Advertise(Host &aHost, const Server::MessageMetadata &aMe
 
     Advertise(aHost);
 
-    if (!aHost.IsDeleted() && HasOffMeshRoutableAddress(aHost))
-    {
-        // If `aHost` has an off-mesh routable address, we check if
-        // there are any committed or ongoing advertisements for the
-        // same host where the services were not registered because
-        // the host did not have an off-mesh routable address
-        // earlier. If so, we register the services now.
-
-        if (existingHost != nullptr)
-        {
-            RegisterUnadvertisedServices(*existingHost);
-        }
-
-        for (AdvInfo &adv : mAdvInfoList)
-        {
-            if ((&adv == advPtr) || !aHost.Matches(adv.mHost.GetFullName()))
-            {
-                continue;
-            }
-
-            RegisterUnadvertisedServices(adv.mHost);
-        }
-    }
-
 exit:
     if (advPtr != nullptr)
     {
@@ -502,10 +478,7 @@ exit:
 
 void AdvertisingProxy::Advertise(Host &aHost)
 {
-    // If host has no off-mesh routable address, we cannot advertise it
-    // so we treat it as if it is being deleted.
-
-    bool shouldUnregisterHostAndServices = (aHost.IsDeleted() || !HasOffMeshRoutableAddress(aHost));
+    bool shouldUnregisterHostAndServices = aHost.IsDeleted();
     bool shouldUnregisterKeys            = (aHost.mKeyLease == 0);
 
     DecideToAdvertise(aHost, shouldUnregisterHostAndServices, shouldUnregisterKeys);
@@ -572,44 +545,6 @@ void AdvertisingProxy::Advertise(Host &aHost)
     }
 }
 
-void AdvertisingProxy::RegisterUnadvertisedServices(Host &aHost)
-{
-    // Register all services of `aHost` that are not yet advertised,
-    // excluding any deleted services.
-    //
-    // This is used to register services of a host that were not
-    // previously registered because the host did not have any
-    // off-mesh routable addresses. This method is called
-    // after we receive a new update where the host gains an
-    // off-mesh routable address.
-
-    VerifyOrExit(!aHost.IsDeleted() && !HasOffMeshRoutableAddress(aHost));
-
-    for (Service &service : aHost.mServices)
-    {
-        if (service.IsDeleted() || service.mIsReplaced || IsRegisteredOrRegistering(service))
-        {
-            continue;
-        }
-
-        service.mShouldAdvertise = true;
-        service.mAdvId           = AllocateNextRequestId();
-    }
-
-    UpdateAdvIdRangeOn(aHost);
-
-    for (Service &service : aHost.mServices)
-    {
-        if (service.mShouldAdvertise)
-        {
-            RegisterService(service);
-        }
-    }
-
-exit:
-    return;
-}
-
 void AdvertisingProxy::UnregisterHostAndItsServicesAndKeys(Host &aHost)
 {
     for (Service &service : aHost.mServices)
@@ -634,24 +569,6 @@ void AdvertisingProxy::UnregisterHostAndItsServicesAndKeys(Host &aHost)
     {
         UnregisterHost(aHost);
     }
-}
-
-bool AdvertisingProxy::HasOffMeshRoutableAddress(const Host &aHost) const
-{
-    bool hasAddress = false;
-
-    VerifyOrExit(!aHost.IsDeleted());
-
-    for (const Ip6::Address &address : aHost.mAddresses)
-    {
-        if (!address.IsLinkLocal() && !Get<Mle::Mle>().IsMeshLocalAddress(address))
-        {
-            ExitNow(hasAddress = true);
-        }
-    }
-
-exit:
-    return hasAddress;
 }
 
 bool AdvertisingProxy::CompareAndUpdateHostAndServices(Host &aHost, Host &aExistingHost)
@@ -875,9 +792,7 @@ template <typename Entry> bool AdvertisingProxy::CompareAndUpdate(Entry &aEntry,
         // The earlier advertisement of `aExistingEntry` seems to have
         // failed since there is no outstanding registration request
         // (no ID) and it is not marked as registered. We mark the
-        // new `aEntry` to be advertised (to try again). This situation
-        // can also happen if `aExistingEntry` did not have any off-mesh
-        // routable address and therefore was not registered.
+        // new `aEntry` to be advertised (to try again).
 
         aEntry.mShouldAdvertise    = true;
         aEntry.mAdvId              = AllocateNextRequestId();
@@ -894,17 +809,15 @@ bool AdvertisingProxy::CompareAndUpdateHost(Host &aHost, Host &aExistingHost)
 
     UpdateKeyRegistrationStatus(aHost, aExistingHost);
 
-    if (!aHost.IsDeleted() && HasOffMeshRoutableAddress(aHost))
+    if (!aHost.IsDeleted())
     {
         replaced = CompareAndUpdate(aHost, aExistingHost);
         ExitNow();
     }
 
-    // The new `aHost` is removing the host and all its services
-    // or has no off-mesh routable address (which we treat as if
-    // the host is being removed).
+    // The new `aHost` is removing the host and all its services.
 
-    if (aExistingHost.IsDeleted() || !HasOffMeshRoutableAddress(aExistingHost))
+    if (aExistingHost.IsDeleted())
     {
         // If `aHost` has zero key-lease (fully removed),
         // we need to unregister keys for any services on
@@ -937,7 +850,7 @@ bool AdvertisingProxy::CompareAndUpdateHost(Host &aHost, Host &aExistingHost)
 
     for (Service &existingService : aExistingHost.mServices)
     {
-        if (existingService.IsDeleted() || !HasOffMeshRoutableAddress(aExistingHost))
+        if (existingService.IsDeleted())
         {
             if (aHost.GetKeyLease() == 0)
             {
@@ -957,16 +870,7 @@ bool AdvertisingProxy::CompareAndUpdateHost(Host &aHost, Host &aExistingHost)
 
         UnregisterService(existingService);
 
-        if (aHost.IsDeleted())
-        {
-            // We mark `existingService` as replaced when the
-            // `aHost` is being deleted. In the case where
-            // `aHost` has no off-mesh routable address we keep
-            // the `existingService` as is so we can re-register
-            // it if/when host gains off-mesh routable address.
-
-            existingService.mIsReplaced = true;
-        }
+        existingService.mIsReplaced = true;
 
         if (aHost.GetKeyLease() == 0)
         {
@@ -995,13 +899,13 @@ bool AdvertisingProxy::CompareAndUpdateService(Service &aService, Service &aExis
 
     UpdateKeyRegistrationStatus(aService, aExistingService);
 
-    if (!aService.IsDeleted() && HasOffMeshRoutableAddress(*aService.mHost))
+    if (!aService.IsDeleted())
     {
         replaced = CompareAndUpdate(aService, aExistingService);
         ExitNow();
     }
 
-    if (aExistingService.IsDeleted() || !HasOffMeshRoutableAddress(*aExistingService.mHost))
+    if (aExistingService.IsDeleted())
     {
         ExitNow();
     }
@@ -1045,8 +949,6 @@ void AdvertisingProxy::RegisterHost(Host &aHost)
             IgnoreError(hostAddresses.PushBack(address));
         }
     }
-
-    OT_ASSERT(hostAddresses.GetLength() != 0);
 
     LogInfo("Registering host '%s', id:%lu", hostName, ToUlong(aHost.mAdvId));
 

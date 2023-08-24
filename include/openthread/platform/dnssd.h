@@ -274,7 +274,9 @@ void otPlatDnssdUnregisterService(otInstance                 *aInstance,
  * - The `mHostName` field specifies the host name to register. It is never NULL.
  * - The `mAddresses` is array of IPv6 addresses to register with the host. `mNumAddresses` provides the number of
  *   entries in `mAddresses` array. OpenThread stack will ensure that the given addresses are externally reachable
- *   (link-local or mesh-local addresses associated the host are not included in `mAddresses` array).
+ *   (link-local or mesh-local addresses associated the host are not included in `mAddresses` array). The `mAddresses`
+ *   array can be empty with zero `mNumAddresses`. In such a case, the platform MUST stop advertising any addresses
+ *   for this the host name on infrastructure DNS-SD.
  * - The `mTtl` specifies the TTL if non-zero. If zero, the platform can choose the TTL to use.
  * - The `mInfraIfIndex`, if non-zero, specifies the infrastructure network interface index to use for this request. If
  *   zero, the platform implementation can decided the interface.
@@ -286,7 +288,6 @@ void otPlatDnssdUnregisterService(otInstance                 *aInstance,
  * Therefore, the platform implementation does not need to check for duplicate/same host and can assume that calls
  * to this function are either registering a new entry or changing some parameter in a previously registered item. As
  * a result, these changes always need to be synced on the infrastructure DNS-SD module.
- *
  *
  * @param[in] aInstance     The OpenThread instance.
  * @param[in] aHost         Information about the host to register.
@@ -322,9 +323,9 @@ void otPlatDnssdRegisterHost(otInstance                 *aInstance,
  * that there was no such registration, or `OT_ERROR_NONE` when invoking the @p aCallback function. OpenThread stack
  * will handle either case correctly.
  *
- * When unregistering a host, the OpenThread stack will generally unregister any previously registered services
+ * When unregistering a host, the OpenThread stack will also unregister any previously registered services
  * associated with the same host (by calling `otPlatDnssdUnregisterService()`). However, the platform implementation
- * SHOULD assume that unregistering a host also unregisters all its associated services.
+ * MAY assume that unregistering a host also unregisters all its associated services.
  *
  * @param[in] aInstance     The OpenThread instance.
  * @param[in] aHost         Information about the host to unregister.

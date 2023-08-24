@@ -276,9 +276,7 @@ private:
     void        UpdateState(void);
     RequestId   AllocateNextRequestId(void);
     void        Advertise(Host &aHost);
-    void        RegisterUnadvertisedServices(Host &aHost);
     void        UnregisterHostAndItsServicesAndKeys(Host &aHost);
-    bool        HasOffMeshRoutableAddress(const Host &aHost) const;
     bool        CompareAndUpdateHostAndServices(Host &aHost, Host &aExistingHost);
     bool        CompareAndUpdateHost(Host &aHost, Host &aExistingHost);
     bool        CompareAndUpdateService(Service &aService, Service &aExistingService);
