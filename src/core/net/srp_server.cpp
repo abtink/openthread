@@ -133,6 +133,8 @@ Error Server::SetEnabled(bool aEnabled)
 {
     Error error = kErrorNone;
 
+    LogInfo("ABTIN -. Srp::Server::SetEnabled(%u)", aEnabled);
+
 #if OPENTHREAD_CONFIG_SRP_REPLICATION_ENABLE
     if (Get<Srpl>().IsEnabled())
     {
@@ -199,6 +201,8 @@ exit:
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
 void Server::SetAutoEnableMode(bool aEnabled)
 {
+    LogInfo("ABTIN -. Srp::Server::SetAutoEnableMode(%u)", aEnabled);
+
     VerifyOrExit(mAutoEnable != aEnabled);
     mAutoEnable = aEnabled;
 
