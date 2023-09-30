@@ -1158,13 +1158,7 @@ uint16_t MeshHeader::GetHeaderLength(void) const
     return (mHopsLeft >= kDeepHopsLeft) ? kDeepHopsHeaderLength : kMinHeaderLength;
 }
 
-void MeshHeader::DecrementHopsLeft(void)
-{
-    if (mHopsLeft > 0)
-    {
-        mHopsLeft--;
-    }
-}
+void MeshHeader::DecrementHopsLeft(void) { DecrementCounter(mHopsLeft); }
 
 Error MeshHeader::AppendTo(FrameBuilder &aFrameBuilder) const
 {

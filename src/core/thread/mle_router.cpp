@@ -1522,45 +1522,31 @@ void MleRouter::HandleTimeTick(void)
 
     VerifyOrExit(IsFullThreadDevice(), Get<TimeTicker>().UnregisterReceiver(TimeTicker::kMleRouter));
 
-    if (mChallengeTimeout > 0)
-    {
-        mChallengeTimeout--;
-    }
+    DecrementCounter(mChallengeTimeout);
+    DecrementCounter(mPreviousPartitionIdTimeout);
 
-    if (mPreviousPartitionIdTimeout > 0)
+    switch (DecrementCounter(mRouterSelectionJitterTimeout))
     {
-        mPreviousPartitionIdTimeout--;
-    }
+    case kIsNonZero:
+        break;
+    case kBecameZero:
+        routerStateUpdate = true;
+        break;
 
-    if (mRouterSelectionJitterTimeout > 0)
-    {
-        mRouterSelectionJitterTimeout--;
-
-        if (mRouterSelectionJitterTimeout == 0)
-        {
-            routerStateUpdate = true;
-        }
-    }
+    case kWasAlreadyZero:
 #if OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
-    // Delay register only when `mRouterSelectionJitterTimeout` is 0,
-    // that is, when the device has decided to stay as REED or Router.
-    else if (mBackboneRouterRegistrationDelay > 0)
-    {
-        mBackboneRouterRegistrationDelay--;
+        // Update BBR registration delay only when  `mRouterSelectionJitterTimeout`
+        // is already 0, indicating that there would be not pending
+        // role change.
 
-        if (mBackboneRouterRegistrationDelay == 0)
+        if ((DecrementCounter(mBackboneRouterRegistrationDelay) == kBecameZero) &&
+            !Get<BackboneRouter::Leader>().HasPrimary())
         {
-            // If no Backbone Router service after jitter, try to register its own Backbone Router Service.
-            if (!Get<BackboneRouter::Leader>().HasPrimary())
-            {
-                if (Get<BackboneRouter::Local>().AddService() == kErrorNone)
-                {
-                    Get<NetworkData::Notifier>().HandleServerDataUpdated();
-                }
-            }
+            IgnoreError(Get<BackboneRouter::Local>().AddService());
         }
-    }
 #endif
+        break;
+    }
 
     switch (mRole)
     {

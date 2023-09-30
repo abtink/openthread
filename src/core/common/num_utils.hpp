@@ -154,6 +154,20 @@ template <typename IntType> int8_t ClampToInt8(IntType aValue)
                                      static_cast<IntType>(NumericLimits<int8_t>::kMax)));
 }
 
+enum DecrementOutcome : uint8_t
+{
+    kWasAlreadyZero,
+    kIsNonZero,
+    kBecameZero,
+};
+
+/**
+ */
+template <typename Type> DecrementOutcome DecrementCounter(Type &aCounter)
+{
+    return (aCounter == 0) ? kWasAlreadyZero : ((--aCounter == 0) ? kBecameZero : kIsNonZero);
+}
+
 /**
  * This template function performs a three-way comparison between two values.
  *
