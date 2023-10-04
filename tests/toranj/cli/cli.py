@@ -328,6 +328,19 @@ class Node(object):
     def add_ip_maddr(self, maddr):
         return self._cli_no_output('ipmaddr add', maddr)
 
+    def get_ip_addrs_info(self):
+        lines = self.cli('ipaddr -v')
+        results = {}
+        for line in lines:
+            components = line.split(' ')
+            addr = components[0]
+            result = {}
+            for component in components[1:]:
+                fields = component.split(':')
+                result[fields[0].strip()] = fields[1].strip()
+            results[addr] = result
+        return results
+
     def get_pollperiod(self):
         return self._cli_single_output('pollperiod')
 

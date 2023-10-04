@@ -135,12 +135,17 @@ exit:
     return;
 }
 
+uint8_t Slaac::PrefixLengthForConfig(const NetworkData::OnMeshPrefixConfig &aConfig)
+{
+    return aConfig.mOnMesh ? aConfig.mPrefix.mLength : 128;
+}
+
 bool Slaac::DoesConfigMatchNetifAddr(const NetworkData::OnMeshPrefixConfig &aConfig,
                                      const Ip6::Netif::UnicastAddress      &aAddr)
 {
-    return (((aConfig.mOnMesh && (aAddr.mPrefixLength == aConfig.mPrefix.mLength)) ||
-             (!aConfig.mOnMesh && (aAddr.mPrefixLength == 128))) &&
-            (aAddr.GetAddress().MatchesPrefix(aConfig.GetPrefix())));
+    return aAddr.mValid && (aAddr.mPreferred == aConfig.mPreferred) &&
+           (aAddr.mPrefixLength == PrefixLengthForConfig(aConfig)) &&
+           aAddr.GetAddress().MatchesPrefix(aConfig.GetPrefix());
 }
 
 void Slaac::Update(UpdateMode aMode)
@@ -232,7 +237,7 @@ void Slaac::Update(UpdateMode aMode)
                         continue;
                     }
 
-                    slaacAddr.InitAsSlaacOrigin(config.mOnMesh ? prefix.mLength : 128, config.mPreferred);
+                    slaacAddr.InitAsSlaacOrigin(PrefixLengthForConfig(config), config.mPreferred);
                     slaacAddr.GetAddress().SetPrefix(prefix);
 
                     IgnoreError(GenerateIid(slaacAddr));

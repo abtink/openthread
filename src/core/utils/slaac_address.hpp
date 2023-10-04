@@ -158,12 +158,13 @@ private:
     // - When SLAAC is disabled, remove all previously added addresses.
     static constexpr UpdateMode kModeRemove = 1 << 1;
 
-    bool        ShouldFilter(const Ip6::Prefix &aPrefix) const;
-    void        Update(UpdateMode aMode);
-    void        GetIidSecretKey(IidSecretKey &aKey) const;
-    void        HandleNotifierEvents(Events aEvents);
-    static bool DoesConfigMatchNetifAddr(const NetworkData::OnMeshPrefixConfig &aConfig,
-                                         const Ip6::Netif::UnicastAddress      &aAddr);
+    bool           ShouldFilter(const Ip6::Prefix &aPrefix) const;
+    void           Update(UpdateMode aMode);
+    void           GetIidSecretKey(IidSecretKey &aKey) const;
+    void           HandleNotifierEvents(Events aEvents);
+    static uint8_t PrefixLengthForConfig(const NetworkData::OnMeshPrefixConfig &aConfig);
+    static bool    DoesConfigMatchNetifAddr(const NetworkData::OnMeshPrefixConfig &aConfig,
+                                            const Ip6::Netif::UnicastAddress      &aAddr);
 
     bool                       mEnabled;
     otIp6SlaacPrefixFilter     mFilter;
