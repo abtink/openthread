@@ -415,6 +415,7 @@ Error MeshForwarder::RemoveAgedMessages(void)
             continue;
         }
 
+
         if (UpdateEcnOrDrop(*message, /* aPreparingToSend */ false) == kErrorDrop)
         {
             error = kErrorNone;

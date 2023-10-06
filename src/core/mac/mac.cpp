@@ -1244,9 +1244,32 @@ exit:
     return;
 }
 
+static uint32_t sTxDoneCounter = 0;
+
 void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, Error aError)
 {
     bool ackRequested = aFrame.GetAckRequest();
+
+    {
+        // Emulate radio getting stuck and not invoking callback.
+        // - We do this when last bye in EUI64 to be 1 (node 1 in simulation only)
+        // - After 20 frame tx, exit early.
+
+        ExtAddress eui64;
+
+        Get<Radio>().GetIeeeEui64(eui64);
+
+        if (eui64.m8[7] == 0x01)
+        {
+            if (sTxDoneCounter >= 15)
+            {
+                LogWarn("TxDone SKIPPED - emulate radio misbehavior");
+                ExitNow();
+            }
+
+            sTxDoneCounter++;
+        }
+    }
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
     if (!aFrame.IsEmpty()
