@@ -273,8 +273,6 @@ Error MeshForwarder::UpdateEcnOrDrop(Message &aMessage, bool aPreparingToSend)
 
         IgnoreError(aMessage.Read(0, ip6Header));
 
-        VerifyOrExit(!Get<ThreadNetif>().HasUnicastAddress(ip6Header.GetSource()));
-
         isEcnCapable = (ip6Header.GetEcn() != Ip6::kEcnNotCapable);
 
         if ((shouldMarkEcn && !isEcnCapable) || (timeInQueue >= kTimeInQueueDropMsg))
