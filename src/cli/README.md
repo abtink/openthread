@@ -1555,13 +1555,14 @@ Use `-v` to get more verbose information about the address:
 - `plen`: prefix length (in bits)
 - `preferred`: preferred flag (boolean)
 - `valid`: valid flag (boolean)
+- `ml`: mesh-local flag (boolean)
 
 ```bash
 > ipaddr -v
-fd5e:18fa:f4a5:b8:0:ff:fe00:fc00 origin:thread plen:64 preferred:0 valid:1
-fd5e:18fa:f4a5:b8:0:ff:fe00:dc00 origin:thread plen:64 preferred:0 valid:1
-fd5e:18fa:f4a5:b8:f8e:5d95:87a0:e82c origin:thread plen:64 preferred:0 valid:1
-fe80:0:0:0:4891:b191:e277:8826 origin:thread plen:64 preferred:1 valid:1
+fd5e:18fa:f4a5:b8:0:ff:fe00:fc00 origin:thread plen:64 preferred:0 valid:1 ml:1
+fd5e:18fa:f4a5:b8:0:ff:fe00:dc00 origin:thread plen:64 preferred:0 valid:1  ml:1
+fd5e:18fa:f4a5:b8:f8e:5d95:87a0:e82c origin:thread plen:64 preferred:0 valid:1 ml:1
+fe80:0:0:0:4891:b191:e277:8826 origin:thread plen:64 preferred:1 valid:1 ml:1
 Done
 ```
 

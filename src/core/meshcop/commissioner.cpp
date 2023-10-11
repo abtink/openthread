@@ -80,6 +80,7 @@ Commissioner::Commissioner(Instance &aInstance)
     mCommissionerAloc.mValid              = true;
     mCommissionerAloc.mScopeOverride      = Ip6::Address::kRealmLocalScope;
     mCommissionerAloc.mScopeOverrideValid = true;
+    mCommissionerAloc.mMeshLocal          = true;
 
     IgnoreError(SetId("OpenThread Commissioner"));
 
@@ -1153,18 +1154,6 @@ Error Commissioner::SendRelayTransmit(Message &aMessage, const Ip6::MessageInfo 
 exit:
     FreeMessageOnError(message, error);
     return error;
-}
-
-void Commissioner::ApplyMeshLocalPrefix(void)
-{
-    VerifyOrExit(mState == kStateActive);
-
-    Get<ThreadNetif>().RemoveUnicastAddress(mCommissionerAloc);
-    mCommissionerAloc.GetAddress().SetPrefix(Get<Mle::MleRouter>().GetMeshLocalPrefix());
-    Get<ThreadNetif>().AddUnicastAddress(mCommissionerAloc);
-
-exit:
-    return;
 }
 
 // LCOV_EXCL_START

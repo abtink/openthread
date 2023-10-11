@@ -253,10 +253,10 @@ public:
     const Ip6::Address &GetAllDomainBackboneRoutersAddress(void) const { return mAllDomainBackboneRouters; }
 
     /**
-     * Applies the Mesh Local Prefix.
+     * Applies new Mesh Local Prefix.
      *
      */
-    void ApplyMeshLocalPrefix(void);
+    void ApplyNewMeshLocalPrefix(void);
 
     /**
      * Updates the subscription of All Domain Backbone Routers Multicast Address.

@@ -3125,9 +3125,9 @@ template <> otError Interpreter::Process<Cmd("ipaddr")>(Arg aArgs[])
      * @endcode
      * @code
      * ipaddr -v
-     * fd5e:18fa:f4a5:b8:0:ff:fe00:fc00 origin:thread plen:64 preferred:0 valid:1
-     * fd5e:18fa:f4a5:b8:0:ff:fe00:dc00 origin:thread plen:64 preferred:0 valid:1
-     * fd5e:18fa:f4a5:b8:f8e:5d95:87a0:e82c origin:thread plen:64 preferred:0 valid:1
+     * fd5e:18fa:f4a5:b8:0:ff:fe00:fc00 origin:thread plen:64 preferred:0 valid:1 ml:1
+     * fd5e:18fa:f4a5:b8:0:ff:fe00:dc00 origin:thread plen:64 preferred:0 valid:1 ml:1
+     * fd5e:18fa:f4a5:b8:f8e:5d95:87a0:e82c origin:thread plen:64 preferred:0 valid:1 ml:1
      * fe80:0:0:0:4891:b191:e277:8826 origin:thread plen:64 preferred:1 valid:1
      * Done
      * @endcode
@@ -3137,6 +3137,7 @@ template <> otError Interpreter::Process<Cmd("ipaddr")>(Arg aArgs[])
      * - `plen`: prefix length
      * - `preferred`: preferred flag (boolean)
      * - `valid`: valid flag (boolean)
+     * - `ml`: mesh-local flag (boolean)
      * @par api_copy
      * #otIp6GetUnicastAddresses
      */
@@ -3150,8 +3151,9 @@ template <> otError Interpreter::Process<Cmd("ipaddr")>(Arg aArgs[])
 
             if (verbose)
             {
-                OutputFormat(" origin:%s plen:%u preferred:%u valid:%u", AddressOriginToString(addr->mAddressOrigin),
-                             addr->mPrefixLength, addr->mPreferred, addr->mValid);
+                OutputFormat(" origin:%s plen:%u preferred:%u valid:%u ml:%u",
+                             AddressOriginToString(addr->mAddressOrigin), addr->mPrefixLength, addr->mPreferred,
+                             addr->mValid, addr->mMeshLocal);
             }
 
             OutputNewLine();
