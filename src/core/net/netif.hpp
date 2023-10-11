@@ -215,6 +215,22 @@ public:
          */
         AddressOrigin GetOrigin(void) const { return static_cast<AddressOrigin>(mAddressOrigin); }
 
+        /**
+         * Returns the next unicast address.
+         *
+         * @returns A pointer to the next unicast address.
+         *
+         */
+        const UnicastAddress *GetNext(void) const { return static_cast<const UnicastAddress *>(mNext); }
+
+        /**
+         * Returns the next unicast address.
+         *
+         * @returns A pointer to the next unicast address.
+         *
+         */
+        UnicastAddress *GetNext(void) { return static_cast<UnicastAddress *>(AsNonConst(mNext)); }
+
     private:
         bool Matches(const Address &aAddress) const { return GetAddress() == aAddress; }
     };
