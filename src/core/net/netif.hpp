@@ -102,49 +102,12 @@ public:
     };
 
     /**
-     * Implements an IPv6 network interface unicast address.
+     * Represents an IPv6 network interface unicast address.
      *
      */
-    class UnicastAddress : public otNetifAddress,
-                           public LinkedListEntry<UnicastAddress>,
-                           public Clearable<UnicastAddress>
+    class NetifAddress : public otNetifAddress
     {
-        friend class LinkedList<UnicastAddress>;
-
     public:
-        /**
-         * Clears and initializes the unicast address as a preferred, valid, thread-origin address with
-         * 64-bit prefix length.
-         *
-         * @param[in]   aPreferred  Whether to initialize as a preferred address.
-         *
-         */
-        void InitAsThreadOrigin(bool aPreferred = false);
-
-        /**
-         * Clears and initializes the unicast address as a valid (but not preferred), thread-origin,
-         * realm-local scope (overridden) address with 64-bit prefix length.
-         *
-         */
-        void InitAsThreadOriginRealmLocalScope(void);
-
-        /**
-         * Clears and initializes the unicast address as a valid (but not preferred), thread-origin, global
-         * scope address.
-         *
-         */
-        void InitAsThreadOriginGlobalScope(void);
-
-        /**
-         * Clears and initializes the unicast address as a valid, SLAAC-origin address with a given
-         * preferred flag and a given prefix length.
-         *
-         * @param[in] aPrefixLength    The prefix length (in bits).
-         * @param[in] aPreferred       The preferred flag.
-         *
-         */
-        void InitAsSlaacOrigin(uint8_t aPrefixLength, bool aPreferred);
-
         /**
          * Returns the unicast address.
          *
@@ -214,9 +177,64 @@ public:
          *
          */
         AddressOrigin GetOrigin(void) const { return static_cast<AddressOrigin>(mAddressOrigin); }
+    };
+
+    /**
+     * Implements an IPv6 network interface unicast address.
+     *
+     */
+    class UnicastAddress : public NetifAddress, public LinkedListEntry<UnicastAddress>, public Clearable<UnicastAddress>
+    {
+        friend class LinkedList<UnicastAddress>;
+        friend class Netif;
+
+    public:
+        /**
+         * Clears and initializes the unicast address as a preferred, valid, thread-origin address with
+         * 64-bit prefix length.
+         *
+         * @param[in]   aPreferred  Whether to initialize as a preferred address.
+         *
+         */
+        void InitAsThreadOrigin(bool aPreferred = false);
+
+        /**
+         * Clears and initializes the unicast address as a valid (but not preferred), thread-origin,
+         * realm-local scope (overridden) address with 64-bit prefix length.
+         *
+         */
+        void InitAsThreadOriginRealmLocalScope(void);
+
+        /**
+         * Clears and initializes the unicast address as a valid (but not preferred), thread-origin, global
+         * scope address.
+         *
+         */
+        void InitAsThreadOriginGlobalScope(void);
+
+        /**
+         * Clears and initializes the unicast address as a valid, SLAAC-origin address with a given
+         * preferred flag and a given prefix length.
+         *
+         * @param[in] aPrefixLength    The prefix length (in bits).
+         * @param[in] aPreferred       The preferred flag.
+         *
+         */
+        void InitAsSlaacOrigin(uint8_t aPrefixLength, bool aPreferred);
+
+        /**
+         * Indicates whether the unicast address is an external or internal address.
+         *
+         * @retval TRUE   The address is an external address.
+         * @retval FALSE  The address is not an external address (it is an OpenThread internal address).
+         *
+         */
+        bool IsExternal(void) const { return mIsExternal; }
 
     private:
         bool Matches(const Address &aAddress) const { return GetAddress() == aAddress; }
+
+        bool mIsExternal : 1;
     };
 
     /**
@@ -430,31 +448,20 @@ public:
     bool HasUnicastAddress(const UnicastAddress &aAddress) const { return mUnicastAddresses.Contains(aAddress); }
 
     /**
-     * Indicates whether a unicast address is an external or internal address.
-     *
-     * @param[in] aAddress  A reference to the unicast address.
-     *
-     * @retval TRUE   The address is an external address.
-     * @retval FALSE  The address is not an external address (it is an OpenThread internal address).
-     *
-     */
-    bool IsUnicastAddressExternal(const UnicastAddress &aAddress) const;
-
-    /**
      * Adds an external (to OpenThread) unicast address to the network interface.
      *
      * For external address, the @p aAddress instance is not directly used (i.e., it can be temporary). It is copied
      * into a local entry (allocated from an internal pool) before being added in the unicast address linked list.
      * The maximum number of external addresses is specified by `OPENTHREAD_CONFIG_IP6_MAX_EXT_UCAST_ADDRS`.
      *
-     * @param[in]  aAddress  A reference to the unicast address.
+     * @param[in]  aNetifAddress  A reference to the unicast address.
      *
      * @retval kErrorNone         Successfully added (or updated) the unicast address.
      * @retval kErrorInvalidArgs  The address indicated by @p aAddress is an internal address.
      * @retval kErrorNoBufs       The maximum number of allowed external addresses are already added.
      *
      */
-    Error AddExternalUnicastAddress(const UnicastAddress &aAddress);
+    Error AddExternalUnicastAddress(const NetifAddress &aNetifAddress);
 
     /**
      * Removes a external (to OpenThread) unicast address from the network interface.
@@ -681,7 +688,7 @@ private:
 
 } // namespace Ip6
 
-DefineCoreType(otNetifAddress, Ip6::Netif::UnicastAddress);
+DefineCoreType(otNetifAddress, Ip6::Netif::NetifAddress);
 DefineCoreType(otNetifMulticastAddress, Ip6::Netif::MulticastAddress);
 
 } // namespace ot

@@ -178,6 +178,7 @@ enum
  */
 typedef struct otNetifAddress
 {
+    struct otNetifAddress *mNext;                   ///< A pointer to the next network interface address.
     otIp6Address           mAddress;                ///< The IPv6 unicast address.
     uint8_t                mPrefixLength;           ///< The Prefix length (in bits).
     uint8_t                mAddressOrigin;          ///< The IPv6 address origin.
@@ -186,7 +187,6 @@ typedef struct otNetifAddress
     bool                   mScopeOverrideValid : 1; ///< TRUE if the mScopeOverride value is valid, FALSE otherwise.
     unsigned int           mScopeOverride : 4;      ///< The IPv6 scope of this address.
     bool                   mRloc : 1;               ///< TRUE if the address is an RLOC, FALSE otherwise.
-    struct otNetifAddress *mNext;                   ///< A pointer to the next network interface address.
 } otNetifAddress;
 
 /**

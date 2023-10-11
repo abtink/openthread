@@ -400,7 +400,7 @@ void Netif::SignalUnicastAddressChange(AddressEvent aEvent, const UnicastAddress
     Get<Utils::HistoryTracker>().RecordAddressEvent(aEvent, aAddress);
 #endif
 
-    if (!IsUnicastAddressExternal(aAddress) && mAddressCallback.IsSet())
+    if (!aAddress.IsExternal() && mAddressCallback.IsSet())
     {
         AddressInfo info;
 
@@ -413,33 +413,36 @@ void Netif::SignalUnicastAddressChange(AddressEvent aEvent, const UnicastAddress
     }
 }
 
-Error Netif::AddExternalUnicastAddress(const UnicastAddress &aAddress)
+Error Netif::AddExternalUnicastAddress(const NetifAddress &aNetifAddress)
 {
     Error           error = kErrorNone;
     UnicastAddress *entry;
 
-    VerifyOrExit(!aAddress.GetAddress().IsMulticast(), error = kErrorInvalidArgs);
+    VerifyOrExit(!aNetifAddress.GetAddress().IsMulticast(), error = kErrorInvalidArgs);
+    VerifyOrExit(!aNetifAddress.GetAddress().IsLinkLocal(), error = kErrorInvalidArgs);
 
-    entry = mUnicastAddresses.FindMatching(aAddress.GetAddress());
+    entry = mUnicastAddresses.FindMatching(aNetifAddress.GetAddress());
 
     if (entry != nullptr)
     {
-        VerifyOrExit(IsUnicastAddressExternal(*entry), error = kErrorAlready);
+        VerifyOrExit(entry->IsExternal(), error = kErrorInvalidArgs);
 
-        entry->mPrefixLength  = aAddress.mPrefixLength;
-        entry->mAddressOrigin = aAddress.mAddressOrigin;
-        entry->mPreferred     = aAddress.mPreferred;
-        entry->mValid         = aAddress.mValid;
+        entry->mPrefixLength  = aNetifAddress.mPrefixLength;
+        entry->mAddressOrigin = aNetifAddress.mAddressOrigin;
+        entry->mPreferred     = aNetifAddress.mPreferred;
+        entry->mValid         = aNetifAddress.mValid;
         ExitNow();
     }
-
-    VerifyOrExit(!aAddress.GetAddress().IsLinkLocal(), error = kErrorInvalidArgs);
 
     entry = mExtUnicastAddressPool.Allocate();
     VerifyOrExit(entry != nullptr, error = kErrorNoBufs);
 
-    *entry       = aAddress;
-    entry->mRloc = false;
+    entry->Clear();
+
+    *static_cast<NetifAddress *>(entry) = aNetifAddress;
+    entry->mRloc                        = false;
+    entry->mIsExternal                  = true;
+
     mUnicastAddresses.Push(*entry);
     SignalUnicastAddressChange(kAddressAdded, *entry);
 
@@ -456,7 +459,7 @@ Error Netif::RemoveExternalUnicastAddress(const Address &aAddress)
     entry = mUnicastAddresses.FindMatching(aAddress, prev);
     VerifyOrExit(entry != nullptr, error = kErrorNotFound);
 
-    VerifyOrExit(IsUnicastAddressExternal(*entry), error = kErrorRejected);
+    VerifyOrExit(entry->IsExternal(), error = kErrorRejected);
 
     mUnicastAddresses.PopAfter(prev);
 
@@ -476,7 +479,7 @@ void Netif::RemoveAllExternalUnicastAddresses(void)
     {
         next = entry->GetNext();
 
-        if (IsUnicastAddressExternal(*entry))
+        if (entry->IsExternal())
         {
             IgnoreError(RemoveExternalUnicastAddress(entry->GetAddress()));
         }
@@ -484,11 +487,6 @@ void Netif::RemoveAllExternalUnicastAddresses(void)
 }
 
 bool Netif::HasUnicastAddress(const Address &aAddress) const { return mUnicastAddresses.ContainsMatching(aAddress); }
-
-bool Netif::IsUnicastAddressExternal(const UnicastAddress &aAddress) const
-{
-    return mExtUnicastAddressPool.IsPoolEntry(aAddress);
-}
 
 //---------------------------------------------------------------------------------------------------------------------
 // Netif::UnicastAddress
