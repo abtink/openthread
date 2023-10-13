@@ -35,6 +35,7 @@
 #ifndef OPENTHREAD_NETDATA_H_
 #define OPENTHREAD_NETDATA_H_
 
+#include <openthread/commissioner.h>
 #include <openthread/ip6.h>
 
 #ifdef __cplusplus
@@ -241,6 +242,19 @@ otError otNetDataGetNextService(otInstance *aInstance, otNetworkDataIterator *aI
 otError otNetDataGetNextLowpanContextInfo(otInstance            *aInstance,
                                           otNetworkDataIterator *aIterator,
                                           otLowpanContextInfo   *aContextInfo);
+
+/**
+ * Get the Commissioning Dataset in the partition's Network Data.
+ *
+ * @param[in]    aInstance     A pointer to an OpenThread instance.
+ * @param[out]   aDataset      A pointer to a Commissioning Dataset structure to populate.
+ *
+ * @retval OT_ERROR_NONE        Successfully parsed and retrieve the Commissioning Dataset.
+ * @retval OT_ERROR_NOT_FOUND   Could not find any Commissioning Data TLV in the Network Data.
+ * @retval OT_ERROR_PARSE       Failed to parse the sub-TLVs in Commissioning Data TLV.
+ *
+ */
+otError otNetworkDataGetCommissioningDataset(otInstance *aInstance, otCommissioningDataset *aDataset);
 
 /**
  * Get the Network Data Version.

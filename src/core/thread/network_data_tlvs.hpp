@@ -42,6 +42,8 @@
 #include "common/debug.hpp"
 #include "common/encoding.hpp"
 #include "common/equatable.hpp"
+#include "meshcop/meshcop.hpp"
+#include "meshcop/meshcop_tlvs.hpp"
 #include "net/ip6_address.hpp"
 #include "thread/network_data_types.hpp"
 
@@ -1291,6 +1293,28 @@ public:
         SetType(kTypeCommissioningData);
         SetLength(0);
     }
+
+    /**
+     * Finds a sub-TLV of given type in Commissioning Data TLV.
+     *
+     * @param[in] aType   The sub-TLV type to search for.
+     *
+     * @returns A pointer to start of the sub-TLV or `nullptr` if could not find any.
+     *
+     */
+    const MeshCoP::Tlv *FindSubTlv(MeshCoP::Tlv::Type aType) const;
+
+    /**
+     * Parses the sub-TLVs and populate the Commissioning Dataset.
+     *
+     * @param[out] aDataset    A reference to a Commissioning Dataset to populate.
+     *
+     * @retval kErrorNone    Successfully parsed the sub-TLVs and updated @p aDataset.
+     * @retval kErrorParse   Failed to parse sub-TLVs (not valid format).
+     *
+     */
+    Error ParseDataset(MeshCoP::CommissioningDataset &aDataset) const;
+
 } OT_TOOL_PACKED_END;
 
 /**

@@ -45,6 +45,7 @@
 #include "common/equatable.hpp"
 #include "common/locator.hpp"
 #include "common/timer.hpp"
+#include "meshcop/meshcop.hpp"
 #include "net/udp6.hpp"
 #include "thread/lowpan.hpp"
 #include "thread/mle_router.hpp"
@@ -397,6 +398,18 @@ public:
      */
     bool ContainsBorderRouterWithRloc(uint16_t aRloc16) const;
 
+    /**
+     * Get the Commissioning Dataset in Network Data.
+     *
+     * @param[out]   aDataset      A reference to a `CommissioningDataset` to populate.
+     *
+     * @retval kErrorNone       Successfully parsed and retrieve the Commissioning Dataset.
+     * @retval kErrorNotFound   Could not find any Commissioning Data TLV in the Network Data.
+     * @retval kErrorParse      Could not parse the Commissioning Data TLV.
+     *
+     */
+    Error GetCommissioningDataset(MeshCoP::CommissioningDataset &aDataset) const;
+
 protected:
     /**
      * Defines Service Data match mode.
@@ -499,6 +512,14 @@ protected:
     const ServiceTlv *FindNextThreadService(const ServiceTlv  *aPrevServiceTlv,
                                             const ServiceData &aServiceData,
                                             ServiceMatchMode   aServiceMatchMode) const;
+
+    /**
+     * Returns a pointer to the Commissioning Data TLV if found.
+     *
+     * @returns A pointer to Commissioning Data TLV in Network Data, or `nullptr` if cannot be found.
+     *
+     */
+    const CommissioningDataTlv *FindCommissioningData(void) const;
 
 private:
     class NetworkDataIterator
@@ -706,6 +727,19 @@ protected:
                             ServiceMatchMode   aServiceMatchMode)
     {
         return AsNonConst(AsConst(this)->FindService(aEnterpriseNumber, aServiceData, aServiceMatchMode));
+    }
+
+    using NetworkData::FindCommissioningData;
+
+    /**
+     * Returns a pointer to the Commissioning Data TLV if found.
+     *
+     * @returns A pointer to Commissioning Data TLV in Network Data, or `nullptr` if cannot be found.
+     *
+     */
+    CommissioningDataTlv *FindCommissioningData(void)
+    {
+        return AsNonConst(AsConst(this)->FindCommissioningData());
     }
 
     /**

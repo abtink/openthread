@@ -115,6 +115,73 @@ void ServiceTlv::Init(uint8_t aServiceId, uint32_t aEnterpriseNumber, const Serv
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+// CommissioningDataTlv
+
+const MeshCoP::Tlv *CommissioningDataTlv::FindSubTlv(MeshCoP::Tlv::Type aType) const
+{
+    return MeshCoP::Tlv::FindTlv(GetValue(), GetLength(), aType);
+}
+
+Error CommissioningDataTlv::ParseDataset(MeshCoP::CommissioningDataset &aDataset) const
+{
+    Error               error = kErrorNone;
+    const MeshCoP::Tlv *cur   = reinterpret_cast<const MeshCoP::Tlv *>(GetValue());
+    const MeshCoP::Tlv *end   = reinterpret_cast<const MeshCoP::Tlv *>(GetValue() + GetLength());
+
+    aDataset.Clear();
+
+    for (; cur < end; cur = cur->GetNext())
+    {
+        VerifyOrExit(((cur + 1) <= end) && !cur->IsExtended() && (cur->GetNext() <= end), error = kErrorParse);
+
+        switch (cur->GetType())
+        {
+        case MeshCoP::Tlv::kCommissionerSessionId:
+        {
+            const MeshCoP::CommissionerSessionIdTlv *sessionIdTlv = As<const MeshCoP::CommissionerSessionIdTlv>(cur);
+
+            VerifyOrExit(sessionIdTlv->IsValid(), error = kErrorParse);
+            aDataset.SetSessionId(sessionIdTlv->GetCommissionerSessionId());
+            break;
+        }
+
+        case MeshCoP::Tlv::kBorderAgentLocator:
+        {
+            const MeshCoP::BorderAgentLocatorTlv *locatorTlv = As<const MeshCoP::BorderAgentLocatorTlv>(cur);
+
+            VerifyOrExit(locatorTlv->IsValid(), error = kErrorParse);
+            aDataset.SetLocator(locatorTlv->GetBorderAgentLocator());
+            break;
+        }
+
+        case MeshCoP::Tlv::kJoinerUdpPort:
+        {
+            const MeshCoP::JoinerUdpPortTlv *joinerUdpTlv = As<const MeshCoP::JoinerUdpPortTlv>(cur);
+
+            VerifyOrExit(joinerUdpTlv->IsValid(), error = kErrorParse);
+            aDataset.SetJoinerUdpPort(joinerUdpTlv->GetUdpPort());
+            break;
+        }
+
+        case MeshCoP::Tlv::kSteeringData:
+        {
+            const MeshCoP::SteeringDataTlv *steeringDataTlv = As<const MeshCoP::SteeringDataTlv>(cur);
+
+            VerifyOrExit(steeringDataTlv->IsValid(), error = kErrorParse);
+            steeringDataTlv->CopyTo(aDataset.UpdateSteeringData());
+            break;
+        }
+
+        default:
+            break;
+        }
+    }
+
+exit:
+    return error;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 // TlvIterator
 
 const NetworkDataTlv *TlvIterator::Iterate(NetworkDataTlv::Type aType)

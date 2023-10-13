@@ -848,5 +848,23 @@ exit:
     return contains;
 }
 
+Error NetworkData::GetCommissioningDataset(MeshCoP::CommissioningDataset &aDataset) const
+{
+    Error                       error;
+    const CommissioningDataTlv *commissioningDataTlv = FindCommissioningData();
+
+    VerifyOrExit(commissioningDataTlv != nullptr, error = kErrorNotFound);
+
+    error = commissioningDataTlv->ParseDataset(aDataset);
+
+exit:
+    return error;
+}
+
+const CommissioningDataTlv *NetworkData::FindCommissioningData(void) const
+{
+    return NetworkDataTlv::Find<CommissioningDataTlv>(GetTlvsStart(), GetTlvsEnd());
+}
+
 } // namespace NetworkData
 } // namespace ot
