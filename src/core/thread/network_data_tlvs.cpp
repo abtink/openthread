@@ -115,6 +115,17 @@ void ServiceTlv::Init(uint8_t aServiceId, uint32_t aEnterpriseNumber, const Serv
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+// CommissioningDataTlv
+
+Data<kWithUint16Length> CommissioningDataTlv::GetData(void) const
+{
+    Data<kWithUint16Length> data;
+
+    data.Init(GetValue(), GetLength());
+    return data;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 // TlvIterator
 
 const NetworkDataTlv *TlvIterator::Iterate(NetworkDataTlv::Type aType)

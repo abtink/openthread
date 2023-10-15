@@ -460,13 +460,13 @@ const CommissioningDataTlv *LeaderBase::GetCommissioningData(void) const
 
 const MeshCoP::Tlv *LeaderBase::GetCommissioningDataSubTlv(MeshCoP::Tlv::Type aType) const
 {
-    const MeshCoP::Tlv   *rval = nullptr;
-    const NetworkDataTlv *commissioningDataTlv;
+    const MeshCoP::Tlv         *rval = nullptr;
+    const CommissioningDataTlv *commissioningDataTlv;
 
     commissioningDataTlv = GetCommissioningData();
     VerifyOrExit(commissioningDataTlv != nullptr);
 
-    rval = MeshCoP::Tlv::FindTlv(commissioningDataTlv->GetValue(), commissioningDataTlv->GetLength(), aType);
+    rval = As<MeshCoP::Tlv>(Tlv::FindTlv(commissioningDataTlv->GetData(), aType));
 
 exit:
     return rval;

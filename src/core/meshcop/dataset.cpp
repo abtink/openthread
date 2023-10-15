@@ -179,7 +179,14 @@ exit:
     return rval;
 }
 
-const Tlv *Dataset::GetTlv(Tlv::Type aType) const { return Tlv::FindTlv(mTlvs, mLength, aType); }
+const Tlv *Dataset::GetTlv(Tlv::Type aType) const
+{
+    Tlv::TlvSequence tlvSequence;
+
+    tlvSequence.Init(mTlvs, mLength);
+
+    return As<Tlv>(Tlv::FindTlv(tlvSequence, aType));
+}
 
 void Dataset::ConvertTo(Info &aDatasetInfo) const
 {

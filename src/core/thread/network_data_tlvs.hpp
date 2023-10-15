@@ -1291,6 +1291,15 @@ public:
         SetType(kTypeCommissioningData);
         SetLength(0);
     }
+
+    /**
+     * Returns the commissioning Data.
+     *
+     * @returns The commissioning Data.
+     *
+     */
+    Data<kWithUint16Length> GetData(void) const;
+
 } OT_TOOL_PACKED_END;
 
 /**

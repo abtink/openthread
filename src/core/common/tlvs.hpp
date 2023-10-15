@@ -39,6 +39,8 @@
 #include <openthread/thread.h>
 #include <openthread/platform/toolchain.h>
 
+#include "common/const_cast.hpp"
+#include "common/data.hpp"
 #include "common/encoding.hpp"
 #include "common/error.hpp"
 #include "common/type_traits.hpp"
@@ -173,6 +175,9 @@ public:
      *
      */
     Error AppendTo(Message &aMessage) const;
+
+    //------------------------------------------------------------------------------------------------------------------
+    // Static methods for reading/finding/appending TLVs in a `Message`.
 
     /**
      * Reads a TLV's value in a message at a given offset expecting a minimum length for the value.
@@ -538,6 +543,66 @@ public:
         return AppendStringTlv(aMessage, StringTlvType::kType, StringTlvType::kMaxStringLength, aValue);
     }
 
+    //------------------------------------------------------------------------------------------------------------------
+    // Static methods for finding TLVs within a sequence of TLVs.
+
+    typedef Data<kWithUint16Length> TlvSequence;
+
+    /**
+     * Searches in a given sequence of TLVs to find the first TLV of a given type.
+     *
+     * @param[in] aTlvSequence The TLV sequence to search in.
+     * @param[in] aType        The TLV type to search for.
+     *
+     * @returns A pointer to the TLV within the TLV sequence if found, or `nullptr` if not found.
+     *
+     */
+    static const Tlv *FindTlv(const TlvSequence &aTlvSequence, uint8_t aType);
+
+    /**
+     * Searches in a given sequence of TLVs to find the first TLV of a given type.
+     *
+     * @param[in] aTlvSequence The TLV sequence to search in.
+     * @param[in] aType        The TLV type to search for.
+     *
+     * @returns A pointer to the TLV within the TLV sequence if found, or `nullptr` if not found.
+     *
+     */
+    static Tlv *FindTlv(TlvSequence &aTlvSequence, uint8_t aType)
+    {
+        return AsNonConst(FindTlv(AsConst(aTlvSequence), aType));
+    }
+
+    /**
+     * Searches in a given sequence of TLVs to find the first TLV with a give template `TlvType`.
+     *
+     * @tparam kTlvType        The TLV Type.
+     *
+     * @param[in] aTlvSequence The TLV sequence to search in.
+     *
+     * @returns A pointer to the TLV if found, or `nullptr` if not found.
+     *
+     */
+    template <typename TlvType> static TlvType *Find(TlvSequence &aTlvSequence)
+    {
+        return static_cast<TlvType *>(FindTlv(aTlvSequence, TlvType::kType));
+    }
+
+    /**
+     * Searches in a given sequence of TLVs to find the first TLV with a give template `TlvType`.
+     *
+     * @tparam kTlvType        The TLV Type.
+     *
+     * @param[in] aTlvSequence The TLV sequence to search in.
+     *
+     * @returns A pointer to the TLV if found, or `nullptr` if not found.
+     *
+     */
+    template <typename TlvType> static const TlvType *Find(const TlvSequence &aTlvSequence)
+    {
+        return static_cast<const TlvType *>(FindTlv(aTlvSequence, TlvType::kType));
+    }
+
 protected:
     static const uint8_t kExtendedLength = 255; // Extended Length value.
 
@@ -554,7 +619,7 @@ private:
         uint16_t mSize;
     };
 
-    static Error FindTlv(const Message &aMessage, uint8_t aType, void *aValue, uint8_t aLength);
+    static Error FindTlv(const Message &aMessage, uint8_t aType, void *aValue, uint16_t aLength);
     static Error AppendTlv(Message &aMessage, uint8_t aType, const void *aValue, uint8_t aLength);
     static Error ReadStringTlv(const Message &aMessage, uint16_t aOffset, uint8_t aMaxStringLength, char *aValue);
     static Error FindStringTlv(const Message &aMessage, uint8_t aType, uint8_t aMaxStringLength, char *aValue);
