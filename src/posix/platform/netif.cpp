@@ -291,6 +291,44 @@ static bool sIsSyncingState = false;
 
 #define OPENTHREAD_POSIX_LOG_TUN_PACKETS 0
 
+static const char kModuleName[] = "Netif";
+
+static void LogWarn(const char *aFormat, ...)
+{
+    va_list args;
+
+    va_start(args, aFormat);
+    otLogPlatArgs(OT_LOG_LEVEL_WARN, kModuleName, aFormat, args);
+    va_end(args);
+}
+
+static void LogNote(const char *aFormat, ...)
+{
+    va_list args;
+
+    va_start(args, aFormat);
+    otLogPlatArgs(OT_LOG_LEVEL_NOTE, kModuleName, aFormat, args);
+    va_end(args);
+}
+
+static void LogInfo(const char *aFormat, ...)
+{
+    va_list args;
+
+    va_start(args, aFormat);
+    otLogPlatArgs(OT_LOG_LEVEL_INFO, kModuleName, aFormat, args);
+    va_end(args);
+}
+
+static void LogDebg(const char *aFormat, ...)
+{
+    va_list args;
+
+    va_start(args, aFormat);
+    otLogPlatArgs(OT_LOG_LEVEL_DEBG, kModuleName, aFormat, args);
+    va_end(args);
+}
+
 #if defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__)
 static const uint8_t allOnes[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
                                   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
@@ -419,13 +457,13 @@ static void UpdateUnicastLinux(otInstance *aInstance, const otIp6AddressInfo &aA
 
     if (send(sNetlinkFd, &req, req.nh.nlmsg_len, 0) != -1)
     {
-        otLogInfoPlat("[netif] Sent request#%u to %s %s/%u", sNetlinkSequence, (aIsAdded ? "add" : "remove"),
-                      Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
+        LogInfo("Sent request#%u to %s %s/%u", sNetlinkSequence, (aIsAdded ? "add" : "remove"),
+                Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
     }
     else
     {
-        otLogWarnPlat("[netif] Failed to send request#%u to %s %s/%u", sNetlinkSequence, (aIsAdded ? "add" : "remove"),
-                      Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
+        LogWarn("Failed to send request#%u to %s %s/%u", sNetlinkSequence, (aIsAdded ? "add" : "remove"),
+                Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
     }
 }
 
@@ -465,14 +503,13 @@ static void UpdateUnicast(otInstance *aInstance, const otIp6AddressInfo &aAddres
         rval = ioctl(sIpFd, aIsAdded ? SIOCAIFADDR_IN6 : SIOCDIFADDR_IN6, &ifr6);
         if (rval == 0)
         {
-            otLogInfoPlat("[netif] %s %s/%u", (aIsAdded ? "Added" : "Removed"),
-                          Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength);
+            LogInfo("%s %s/%u", (aIsAdded ? "Added" : "Removed"), Ip6AddressString(aAddressInfo.mAddress).AsCString(),
+                    aAddressInfo.mPrefixLength);
         }
         else if (errno != EALREADY)
         {
-            otLogWarnPlat("[netif] Failed to %s %s/%u: %s", (aIsAdded ? "add" : "remove"),
-                          Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength,
-                          strerror(errno));
+            LogWarn("Failed to %s %s/%u: %s", (aIsAdded ? "add" : "remove"),
+                    Ip6AddressString(aAddressInfo.mAddress).AsCString(), aAddressInfo.mPrefixLength, strerror(errno));
         }
     }
 #endif
@@ -504,21 +541,20 @@ static void UpdateMulticast(otInstance *aInstance, const otIp6Address &aAddress,
         char addressString[INET6_ADDRSTRLEN + 1];
 
         inet_ntop(AF_INET6, mreq.ipv6mr_multiaddr.s6_addr, addressString, sizeof(addressString));
-        otLogWarnPlat("[netif] Ignoring %s failure (EINVAL) for MC LINKLOCAL address (%s)",
-                      aIsAdded ? "IPV6_JOIN_GROUP" : "IPV6_LEAVE_GROUP", addressString);
+        LogWarn("Ignoring %s failure (EINVAL) for MC LINKLOCAL address (%s)",
+                aIsAdded ? "IPV6_JOIN_GROUP" : "IPV6_LEAVE_GROUP", addressString);
         err = 0;
     }
 #endif
 
     if (err != 0)
     {
-        otLogWarnPlat("[netif] %s failure (%d)", aIsAdded ? "IPV6_JOIN_GROUP" : "IPV6_LEAVE_GROUP", errno);
+        LogWarn("%s failure (%d)", aIsAdded ? "IPV6_JOIN_GROUP" : "IPV6_LEAVE_GROUP", errno);
         error = OT_ERROR_FAILED;
         ExitNow();
     }
 
-    otLogInfoPlat("[netif] %s multicast address %s", aIsAdded ? "Added" : "Removed",
-                  Ip6AddressString(&aAddress).AsCString());
+    LogInfo("%s multicast address %s", aIsAdded ? "Added" : "Removed", Ip6AddressString(&aAddress).AsCString());
 
 exit:
     SuccessOrDie(error);
@@ -541,8 +577,8 @@ static void SetLinkState(otInstance *aInstance, bool aState)
 
     ifState = ((ifr.ifr_flags & IFF_UP) == IFF_UP) ? true : false;
 
-    otLogNotePlat("[netif] Changing interface state to %s%s.", aState ? "up" : "down",
-                  (ifState == aState) ? " (already done, ignoring)" : "");
+    LogNote("Changing interface state to %s%s.", aState ? "up" : "down",
+            (ifState == aState) ? " (already done, ignoring)" : "");
 
     if (ifState != aState)
     {
@@ -557,7 +593,7 @@ static void SetLinkState(otInstance *aInstance, bool aState)
 exit:
     if (error != OT_ERROR_NONE)
     {
-        otLogWarnPlat("[netif] Failed to update state %s", otThreadErrorToString(error));
+        LogWarn("Failed to update state %s", otThreadErrorToString(error));
     }
 }
 
@@ -720,15 +756,14 @@ static void UpdateOmrRoutes(otInstance *aInstance)
         otIp6PrefixToString(&sAddedOmrRoutes[i], prefixString, sizeof(prefixString));
         if ((error = DeleteRoute(sAddedOmrRoutes[i])) != OT_ERROR_NONE)
         {
-            otLogWarnPlat("[netif] Failed to delete an OMR route %s in kernel: %s", prefixString,
-                          otThreadErrorToString(error));
+            LogWarn("Failed to delete an OMR route %s in kernel: %s", prefixString, otThreadErrorToString(error));
         }
         else
         {
             sAddedOmrRoutes[i] = sAddedOmrRoutes[sAddedOmrRoutesNum - 1];
             --sAddedOmrRoutesNum;
             --i;
-            otLogInfoPlat("[netif] Successfully deleted an OMR route %s in kernel", prefixString);
+            LogInfo("Successfully deleted an OMR route %s in kernel", prefixString);
         }
     }
 
@@ -743,13 +778,12 @@ static void UpdateOmrRoutes(otInstance *aInstance)
         otIp6PrefixToString(&config.mPrefix, prefixString, sizeof(prefixString));
         if ((error = AddOmrRoute(config.mPrefix)) != OT_ERROR_NONE)
         {
-            otLogWarnPlat("[netif] Failed to add an OMR route %s in kernel: %s", prefixString,
-                          otThreadErrorToString(error));
+            LogWarn("Failed to add an OMR route %s in kernel: %s", prefixString, otThreadErrorToString(error));
         }
         else
         {
             sAddedOmrRoutes[sAddedOmrRoutesNum++] = config.mPrefix;
-            otLogInfoPlat("[netif] Successfully added an OMR route %s in kernel", prefixString);
+            LogInfo("Successfully added an OMR route %s in kernel", prefixString);
         }
     }
 }
@@ -816,15 +850,14 @@ static void UpdateExternalRoutes(otInstance *aInstance)
         otIp6PrefixToString(&sAddedExternalRoutes[i], prefixString, sizeof(prefixString));
         if ((error = DeleteRoute(sAddedExternalRoutes[i])) != OT_ERROR_NONE)
         {
-            otLogWarnPlat("[netif] Failed to delete an external route %s in kernel: %s", prefixString,
-                          otThreadErrorToString(error));
+            LogWarn("Failed to delete an external route %s in kernel: %s", prefixString, otThreadErrorToString(error));
         }
         else
         {
             sAddedExternalRoutes[i] = sAddedExternalRoutes[sAddedExternalRoutesNum - 1];
             --sAddedExternalRoutesNum;
             --i;
-            otLogWarnPlat("[netif] Successfully deleted an external route %s in kernel", prefixString);
+            LogWarn("Successfully deleted an external route %s in kernel", prefixString);
         }
     }
 
@@ -835,18 +868,17 @@ static void UpdateExternalRoutes(otInstance *aInstance)
             continue;
         }
         VerifyOrExit(sAddedExternalRoutesNum < kMaxExternalRoutesNum,
-                     otLogWarnPlat("[netif] No buffer to add more external routes in kernel"));
+                     LogWarn("No buffer to add more external routes in kernel"));
 
         otIp6PrefixToString(&config.mPrefix, prefixString, sizeof(prefixString));
         if ((error = AddExternalRoute(config.mPrefix)) != OT_ERROR_NONE)
         {
-            otLogWarnPlat("[netif] Failed to add an external route %s in kernel: %s", prefixString,
-                          otThreadErrorToString(error));
+            LogWarn("Failed to add an external route %s in kernel: %s", prefixString, otThreadErrorToString(error));
         }
         else
         {
             sAddedExternalRoutes[sAddedExternalRoutesNum++] = config.mPrefix;
-            otLogWarnPlat("[netif] Successfully added an external route %s in kernel", prefixString);
+            LogWarn("Successfully added an external route %s in kernel", prefixString);
         }
     }
 exit:
@@ -913,18 +945,18 @@ static void processNat64StateChange(void)
         sActiveNat64Cidr = translatorCidr;
 
         otIp4CidrToString(&translatorCidr, cidrString, sizeof(cidrString));
-        otLogInfoPlat("[netif] NAT64 CIDR updated to %s.", cidrString);
+        LogInfo("NAT64 CIDR updated to %s.", cidrString);
     }
 
     if (otNat64GetTranslatorState(gInstance) == OT_NAT64_STATE_ACTIVE)
     {
         AddIp4Route(sActiveNat64Cidr, kNat64RoutePriority);
-        otLogInfoPlat("[netif] Adding route for NAT64");
+        LogInfo("Adding route for NAT64");
     }
     else if (sActiveNat64Cidr.mLength > 0) // Translator is not active.
     {
         DeleteIp4Route(sActiveNat64Cidr);
-        otLogInfoPlat("[netif] Deleting route for NAT64");
+        LogInfo("Deleting route for NAT64");
     }
 
 exit:
@@ -980,7 +1012,7 @@ static void processReceive(otMessage *aMessage, void *aContext)
     VerifyOrExit(otMessageRead(aMessage, 0, &packet[offset], maxLength) == length, error = OT_ERROR_NO_BUFS);
 
 #if OPENTHREAD_POSIX_LOG_TUN_PACKETS
-    otLogInfoPlat("[netif] Packet from NCP (%u bytes)", static_cast<uint16_t>(length));
+    LogInfo("Packet from NCP (%u bytes)", static_cast<uint16_t>(length));
     otDumpInfoPlat("", &packet[offset], length);
 #endif
 
@@ -999,7 +1031,7 @@ exit:
 
     if (error != OT_ERROR_NONE)
     {
-        otLogWarnPlat("[netif] Failed to receive, error:%s", otThreadErrorToString(error));
+        LogWarn("Failed to receive, error:%s", otThreadErrorToString(error));
     }
 }
 
@@ -1056,7 +1088,7 @@ static otError tryProcessIcmp6RaMessage(otInstance *aInstance, const uint8_t *da
     VerifyOrExit(ra != nullptr, error = OT_ERROR_INVALID_ARGS);
 
 #if OPENTHREAD_POSIX_LOG_TUN_PACKETS
-    otLogInfoPlat("[netif] RA to BorderRouting (%hu bytes)", static_cast<uint16_t>(length));
+    LogInfo("RA to BorderRouting (%hu bytes)", static_cast<uint16_t>(length));
     otDumpInfoPlat("", data, static_cast<size_t>(length));
 #endif
 
@@ -1117,7 +1149,7 @@ static void processTransmit(otInstance *aInstance)
     }
 
 #if OPENTHREAD_POSIX_LOG_TUN_PACKETS
-    otLogInfoPlat("[netif] Packet to NCP (%hu bytes)", static_cast<uint16_t>(rval));
+    LogInfo("Packet to NCP (%hu bytes)", static_cast<uint16_t>(rval));
     otDumpInfoPlat("", &packet[offset], static_cast<size_t>(rval));
 #endif
 
@@ -1140,11 +1172,11 @@ exit:
     {
         if (error == OT_ERROR_DROP)
         {
-            otLogInfoPlat("[netif] Message dropped by Thread");
+            LogInfo("Message dropped by Thread");
         }
         else
         {
-            otLogWarnPlat("[netif] Failed to transmit, error:%s", otThreadErrorToString(error));
+            LogWarn("Failed to transmit, error:%s", otThreadErrorToString(error));
         }
     }
 }
@@ -1156,17 +1188,17 @@ static void logAddrEvent(bool isAdd, const ot::Ip6::Address &aAddress, otError e
     if ((error == OT_ERROR_NONE) || ((isAdd) && (error == OT_ERROR_ALREADY || error == OT_ERROR_REJECTED)) ||
         ((!isAdd) && (error == OT_ERROR_NOT_FOUND || error == OT_ERROR_REJECTED)))
     {
-        otLogInfoPlat("[netif] %s [%s] %s%s", isAdd ? "ADD" : "DEL", aAddress.IsMulticast() ? "M" : "U",
-                      aAddress.ToString().AsCString(),
-                      error == OT_ERROR_ALREADY     ? " (already subscribed, ignored)"
-                      : error == OT_ERROR_REJECTED  ? " (rejected)"
-                      : error == OT_ERROR_NOT_FOUND ? " (not found, ignored)"
-                                                    : "");
+        LogInfo("%s [%s] %s%s", isAdd ? "ADD" : "DEL", aAddress.IsMulticast() ? "M" : "U",
+                aAddress.ToString().AsCString(),
+                error == OT_ERROR_ALREADY     ? " (already subscribed, ignored)"
+                : error == OT_ERROR_REJECTED  ? " (rejected)"
+                : error == OT_ERROR_NOT_FOUND ? " (not found, ignored)"
+                                              : "");
     }
     else
     {
-        otLogWarnPlat("[netif] %s [%s] %s failed (%s)", isAdd ? "ADD" : "DEL", aAddress.IsMulticast() ? "M" : "U",
-                      aAddress.ToString().AsCString(), otThreadErrorToString(error));
+        LogWarn("%s [%s] %s failed (%s)", isAdd ? "ADD" : "DEL", aAddress.IsMulticast() ? "M" : "U",
+                aAddress.ToString().AsCString(), otThreadErrorToString(error));
     }
 }
 
@@ -1256,7 +1288,7 @@ static void processNetifAddrEvent(otInstance *aInstance, struct nlmsghdr *aNetli
         }
 
         default:
-            otLogDebgPlat("[netif] Unexpected address type (%d).", (int)rta->rta_type);
+            LogDebg("Unexpected address type (%d).", (int)rta->rta_type);
             break;
         }
     }
@@ -1264,7 +1296,7 @@ static void processNetifAddrEvent(otInstance *aInstance, struct nlmsghdr *aNetli
 exit:
     if (error != OT_ERROR_NONE)
     {
-        otLogWarnPlat("[netif] Failed to process event, error:%s", otThreadErrorToString(error));
+        LogWarn("Failed to process event, error:%s", otThreadErrorToString(error));
     }
 }
 
@@ -1278,13 +1310,13 @@ static void processNetifLinkEvent(otInstance *aInstance, struct nlmsghdr *aNetli
 
     isUp = ((ifinfo->ifi_flags & IFF_UP) != 0);
 
-    otLogInfoPlat("[netif] Host netif is %s", isUp ? "up" : "down");
+    LogInfo("Host netif is %s", isUp ? "up" : "down");
 
 #if defined(RTM_NEWLINK) && defined(RTM_DELLINK)
     if (sIsSyncingState)
     {
         VerifyOrExit(isUp == otIp6IsEnabled(aInstance),
-                     otLogWarnPlat("[netif] Host netif state notification is unexpected (ignore)"));
+                     LogWarn("Host netif state notification is unexpected (ignore)"));
         sIsSyncingState = false;
     }
     else
@@ -1292,7 +1324,7 @@ static void processNetifLinkEvent(otInstance *aInstance, struct nlmsghdr *aNetli
         if (isUp != otIp6IsEnabled(aInstance))
     {
         SuccessOrExit(error = otIp6SetEnabled(aInstance, isUp));
-        otLogInfoPlat("[netif] Succeeded to sync netif state with host");
+        LogInfo("Succeeded to sync netif state with host");
     }
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE && OPENTHREAD_CONFIG_NAT64_TRANSLATOR_ENABLE
@@ -1306,7 +1338,7 @@ static void processNetifLinkEvent(otInstance *aInstance, struct nlmsghdr *aNetli
 exit:
     if (error != OT_ERROR_NONE)
     {
-        otLogWarnPlat("[netif] Failed to sync netif state with host: %s", otThreadErrorToString(error));
+        LogWarn("Failed to sync netif state with host: %s", otThreadErrorToString(error));
     }
 }
 #endif // defined(__linux__)
@@ -1455,16 +1487,14 @@ static void processNetifAddrEvent(otInstance *aInstance, struct rt_msghdr *rtm)
                         err = ioctl(sIpFd, SIOCDIFADDR_IN6, &ifr6);
                         if (err != 0)
                         {
-                            otLogWarnPlat(
-                                "[netif] Error (%d) removing stack-addded link-local address %s", errno,
-                                inet_ntop(AF_INET6, addr6.sin6_addr.s6_addr, addressString, sizeof(addressString)));
+                            LogWarn("Error (%d) removing stack-addded link-local address %s", errno,
+                                    inet_ntop(AF_INET6, addr6.sin6_addr.s6_addr, addressString, sizeof(addressString)));
                             error = OT_ERROR_FAILED;
                         }
                         else
                         {
-                            otLogNotePlat(
-                                "[netif]        %s (removed stack-added link-local)",
-                                inet_ntop(AF_INET6, addr6.sin6_addr.s6_addr, addressString, sizeof(addressString)));
+                            LogNote("       %s (removed stack-added link-local)",
+                                    inet_ntop(AF_INET6, addr6.sin6_addr.s6_addr, addressString, sizeof(addressString)));
                             error = OT_ERROR_NONE;
                         }
                     }
@@ -1537,7 +1567,7 @@ static void processNetifInfoEvent(otInstance *aInstance, struct rt_msghdr *rtm)
 exit:
     if (error != OT_ERROR_NONE)
     {
-        otLogWarnPlat("[netif] Failed to process info event: %s", otThreadErrorToString(error));
+        LogWarn("Failed to process info event: %s", otThreadErrorToString(error));
     }
 }
 
@@ -1572,7 +1602,7 @@ static void HandleNetlinkResponse(struct nlmsghdr *msg)
 
     if (msg->nlmsg_len < NLMSG_LENGTH(sizeof(struct nlmsgerr)))
     {
-        otLogWarnPlat("[netif] Truncated netlink reply of request#%u", requestSeq);
+        LogWarn("Truncated netlink reply of request#%u", requestSeq);
         ExitNow();
     }
 
@@ -1581,7 +1611,7 @@ static void HandleNetlinkResponse(struct nlmsghdr *msg)
 
     if (err->error == 0)
     {
-        otLogInfoPlat("[netif] Succeeded to process request#%u", requestSeq);
+        LogInfo("Succeeded to process request#%u", requestSeq);
         ExitNow();
     }
 
@@ -1607,11 +1637,11 @@ static void HandleNetlinkResponse(struct nlmsghdr *msg)
         }
         else
         {
-            otLogDebgPlat("[netif] Ignoring netlink response attribute %d (request#%u)", rta->rta_type, requestSeq);
+            LogDebg("Ignoring netlink response attribute %d (request#%u)", rta->rta_type, requestSeq);
         }
     }
 
-    otLogWarnPlat("[netif] Failed to process request#%u: %s", requestSeq, errorMsg);
+    LogWarn("Failed to process request#%u: %s", requestSeq, errorMsg);
 
 exit:
     return;
@@ -1686,7 +1716,7 @@ static void processNetlinkEvent(otInstance *aInstance)
 
 #if defined(ROUTE_FILTER) || defined(RO_MSGFILTER) || defined(__linux__)
         default:
-            otLogWarnPlat("[netif] Unhandled/Unexpected netlink/route message (%d).", (int)msg->nlmsg_type);
+            LogWarn("Unhandled/Unexpected netlink/route message (%d).", (int)msg->nlmsg_type);
             break;
 #else
             // this platform doesn't support filtering, so we expect messages of other types...we just ignore them
@@ -1831,11 +1861,11 @@ static void SetAddrGenModeToNone(void)
 
     if (send(sNetlinkFd, &req, req.nh.nlmsg_len, 0) != -1)
     {
-        otLogInfoPlat("[netif] Sent request#%u to set addr_gen_mode to %d", sNetlinkSequence, mode);
+        LogInfo("Sent request#%u to set addr_gen_mode to %d", sNetlinkSequence, mode);
     }
     else
     {
-        otLogWarnPlat("[netif] Failed to send request#%u to set addr_gen_mode to %d", sNetlinkSequence, mode);
+        LogWarn("Failed to send request#%u to set addr_gen_mode to %d", sNetlinkSequence, mode);
     }
 }
 
@@ -1916,7 +1946,7 @@ static void platformConfigureTunDevice(otPlatformConfig *aPlatformConfig)
     err        = getsockopt(sTunFd, SYSPROTO_CONTROL, UTUN_OPT_IFNAME, gNetifName, &devNameLen);
     VerifyOrDie(err == 0, OT_EXIT_ERROR_ERRNO);
 
-    otLogInfoPlat("[netif] Tunnel device name = '%s'", gNetifName);
+    LogInfo("Tunnel device name = '%s'", gNetifName);
 }
 #endif
 
@@ -1988,13 +2018,13 @@ static void platformConfigureNetLink(void)
 #if defined(NETLINK_EXT_ACK)
         if (setsockopt(sNetlinkFd, SOL_NETLINK, NETLINK_EXT_ACK, &enable, sizeof(enable)) != 0)
         {
-            otLogWarnPlat("[netif] Failed to enable NETLINK_EXT_ACK: %s", strerror(errno));
+            LogWarn("Failed to enable NETLINK_EXT_ACK: %s", strerror(errno));
         }
 #endif
 #if defined(NETLINK_CAP_ACK)
         if (setsockopt(sNetlinkFd, SOL_NETLINK, NETLINK_CAP_ACK, &enable, sizeof(enable)) != 0)
         {
-            otLogWarnPlat("[netif] Failed to enable NETLINK_CAP_ACK: %s", strerror(errno));
+            LogWarn("Failed to enable NETLINK_CAP_ACK: %s", strerror(errno));
         }
 #endif
     }
@@ -2068,7 +2098,7 @@ void nat64Init(void)
     }
     else
     {
-        otLogInfoPlat("[netif] No default NAT64 CIDR provided.");
+        LogInfo("No default NAT64 CIDR provided.");
     }
 }
 #endif
