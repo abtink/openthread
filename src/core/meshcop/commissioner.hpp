@@ -540,6 +540,10 @@ private:
     Error RemoveJoiner(const Mac::ExtAddress *aEui64, const JoinerDiscerner *aDiscerner, uint32_t aDelay);
     void  RemoveJoiner(Joiner &aJoiner, uint32_t aDelay);
 
+    Error SendMessage(OwnedPtr<Coap::Message> aMessage,
+                      const Ip6::MessageInfo &    aMessageInfo,
+                      Coap::ResponseHandler aHandler = nullptr);
+
     void HandleTimer(void);
     void HandleJoinerExpirationTimer(void);
 
