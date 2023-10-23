@@ -42,18 +42,18 @@ namespace Tmf {
 //----------------------------------------------------------------------------------------------------------------------
 // MessageInfo
 
-void MessageInfo::SetSockAddrToRloc(void) { SetSockAddr(Get<Mle::MleRouter>().GetMeshLocal16()); }
+void MessageInfo::SetSockAddrToRloc(void) { SetSockAddr(Get<Mle::Mle>().GetMeshLocal16()); }
 
 Error MessageInfo::SetSockAddrToRlocPeerAddrToLeaderAloc(void)
 {
     SetSockAddrToRloc();
-    return Get<Mle::MleRouter>().GetLeaderAloc(GetPeerAddr());
+    return Get<Mle::Mle>().GetLeaderAloc(GetPeerAddr());
 }
 
 Error MessageInfo::SetSockAddrToRlocPeerAddrToLeaderRloc(void)
 {
     SetSockAddrToRloc();
-    return Get<Mle::MleRouter>().GetLeaderAddress(GetPeerAddr());
+    return Get<Mle::Mle>().GetLeaderAddress(GetPeerAddr());
 }
 
 void MessageInfo::SetSockAddrToRlocPeerAddrToRealmLocalAllRoutersMulticast(void)
@@ -65,7 +65,7 @@ void MessageInfo::SetSockAddrToRlocPeerAddrToRealmLocalAllRoutersMulticast(void)
 void MessageInfo::SetSockAddrToRlocPeerAddrTo(uint16_t aRloc16)
 {
     SetSockAddrToRloc();
-    SetPeerAddr(Get<Mle::MleRouter>().GetMeshLocal16());
+    SetPeerAddr(Get<Mle::Mle>().GetMeshLocal16());
     GetPeerAddr().GetIid().SetLocator(aRloc16);
 }
 
@@ -129,8 +129,8 @@ bool Agent::HandleResource(const char *aUriPath, Message &aMessage, const Ip6::M
 #if OPENTHREAD_FTD
         Case(kUriAddressQuery, AddressResolver);
         Case(kUriAddressNotify, AddressResolver);
-        Case(kUriAddressSolicit, Mle::MleRouter);
-        Case(kUriAddressRelease, Mle::MleRouter);
+        Case(kUriAddressSolicit, Mle::Mle);
+        Case(kUriAddressRelease, Mle::Mle);
         Case(kUriActiveSet, MeshCoP::ActiveDatasetManager);
         Case(kUriPendingSet, MeshCoP::PendingDatasetManager);
         Case(kUriLeaderPetition, MeshCoP::Leader);

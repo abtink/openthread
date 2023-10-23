@@ -184,7 +184,7 @@ exit:
 
 void DatasetManager::HandleDatasetUpdated(void)
 {
-    switch (Get<Mle::MleRouter>().GetRole())
+    switch (Get<Mle::Mle>().GetRole())
     {
     case Mle::kRoleDisabled:
         IgnoreError(Restore());
@@ -248,7 +248,7 @@ void DatasetManager::SendSet(void)
     Dataset          dataset;
 
     VerifyOrExit(!mMgmtPending, error = kErrorBusy);
-    VerifyOrExit(Get<Mle::MleRouter>().IsChild() || Get<Mle::MleRouter>().IsRouter(), error = kErrorInvalidState);
+    VerifyOrExit(Get<Mle::Mle>().IsChild() || Get<Mle::Mle>().IsRouter(), error = kErrorInvalidState);
 
     VerifyOrExit(Timestamp::Compare(GetTimestamp(), mLocal.GetTimestamp()) < 0, error = kErrorAlready);
 

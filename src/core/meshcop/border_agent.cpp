@@ -200,7 +200,7 @@ void BorderAgent::HandleCoapResponse(const ForwardContext &aForwardContext,
 
             SuccessOrExit(error = Tlv::Find<CommissionerSessionIdTlv>(*aResponse, sessionId));
 
-            IgnoreError(Get<Mle::MleRouter>().GetCommissionerAloc(mCommissionerAloc.GetAddress(), sessionId));
+            IgnoreError(Get<Mle::Mle>().GetCommissionerAloc(mCommissionerAloc.GetAddress(), sessionId));
             Get<ThreadNetif>().AddUnicastAddress(mCommissionerAloc);
             IgnoreError(Get<Ip6::Udp>().AddReceiver(mUdpReceiver));
 
@@ -291,7 +291,7 @@ void BorderAgent::HandleNotifierEvents(Events aEvents)
     VerifyOrExit(Get<Commissioner>().IsDisabled());
 #endif
 
-    if (Get<Mle::MleRouter>().IsAttached())
+    if (Get<Mle::Mle>().IsAttached())
     {
         Start();
     }

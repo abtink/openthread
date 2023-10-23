@@ -41,7 +41,7 @@
 #include "common/timer.hpp"
 #include "crypto/hkdf_sha256.hpp"
 #include "crypto/storage.hpp"
-#include "thread/mle_router.hpp"
+#include "thread/mle.hpp"
 #include "thread/thread_netif.hpp"
 
 namespace ot {
@@ -230,7 +230,7 @@ void KeyManager::ResetFrameCounters(void)
     Router *parent;
 
     // reset parent frame counters
-    parent = &Get<Mle::MleRouter>().GetParent();
+    parent = &Get<Mle::Mle>().GetParent();
     parent->SetKeySequence(0);
     parent->GetLinkFrameCounters().Reset();
     parent->SetLinkAckFrameCounter(0);
@@ -436,7 +436,7 @@ void KeyManager::MacFrameCounterUsed(uint32_t aMacFrameCounter)
 
     if (mMacFrameCounters.Get154() >= mStoredMacFrameCounter)
     {
-        IgnoreError(Get<Mle::MleRouter>().Store());
+        IgnoreError(Get<Mle::Mle>().Store());
     }
 
 exit:
@@ -453,7 +453,7 @@ void KeyManager::IncrementTrelMacFrameCounter(void)
 
     if (mMacFrameCounters.GetTrel() >= mStoredMacFrameCounter)
     {
-        IgnoreError(Get<Mle::MleRouter>().Store());
+        IgnoreError(Get<Mle::Mle>().Store());
     }
 }
 #endif
@@ -464,7 +464,7 @@ void KeyManager::IncrementMleFrameCounter(void)
 
     if (mMleFrameCounter >= mStoredMleFrameCounter)
     {
-        IgnoreError(Get<Mle::MleRouter>().Store());
+        IgnoreError(Get<Mle::Mle>().Store());
     }
 }
 

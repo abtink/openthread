@@ -42,7 +42,7 @@
 #include "common/const_cast.hpp"
 #include "common/timer.hpp"
 #include "net/ip6_address.hpp"
-#include "thread/mle_router.hpp"
+#include "thread/mle.hpp"
 #include "thread/network_data.hpp"
 
 namespace ot {

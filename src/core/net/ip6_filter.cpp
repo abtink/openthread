@@ -69,7 +69,7 @@ bool Filter::Accept(Message &aMessage) const
                  headers.GetDestinationAddress().IsLinkLocalMulticast());
 
     // Allow all link-local IPv6 datagrams when Thread is not enabled
-    if (Get<Mle::MleRouter>().GetRole() == Mle::kRoleDisabled)
+    if (Get<Mle::Mle>().GetRole() == Mle::kRoleDisabled)
     {
         ExitNow(rval = true);
     }

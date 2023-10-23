@@ -44,7 +44,7 @@
 #include "common/time.hpp"
 #include "mac/mac_types.hpp"
 #include "thread/mesh_forwarder.hpp"
-#include "thread/mle_router.hpp"
+#include "thread/mle.hpp"
 #include "thread/thread_netif.hpp"
 #include "thread/uri_paths.hpp"
 
@@ -136,7 +136,7 @@ Error AddressResolver::GetNextCacheEntry(EntryInfo &aInfo, Iterator &aIterator) 
         VerifyOrExit(entry->IsLastTransactionTimeValid());
 
         aInfo.mLastTransTime = entry->GetLastTransactionTime();
-        AsCoreType(&aInfo.mMeshLocalEid).SetPrefix(Get<Mle::MleRouter>().GetMeshLocalPrefix());
+        AsCoreType(&aInfo.mMeshLocalEid).SetPrefix(Get<Mle::Mle>().GetMeshLocalPrefix());
         AsCoreType(&aInfo.mMeshLocalEid).SetIid(entry->GetMeshLocalIid());
 
         ExitNow();
@@ -385,7 +385,7 @@ void AddressResolver::UpdateSnoopedCacheEntry(const Ip6::Address &aEid,
     CacheEntry       *entry;
     Mac::ShortAddress macAddress;
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsFullThreadDevice());
+    VerifyOrExit(Get<Mle::Mle>().IsFullThreadDevice());
 
 #if OPENTHREAD_CONFIG_TMF_ALLOW_ADDRESS_RESOLUTION_USING_NET_DATA_SERVICES
     VerifyOrExit(ResolveUsingNetDataServices(aEid, macAddress) != kErrorNone);
@@ -397,12 +397,12 @@ void AddressResolver::UpdateSnoopedCacheEntry(const Ip6::Address &aEid,
     // is this device or an MTD (minimal) child of the device itself.
 
     macAddress = Get<Mac::Mac>().GetShortAddress();
-    VerifyOrExit((aRloc16 != macAddress) && !Get<Mle::MleRouter>().IsMinimalChild(aRloc16));
+    VerifyOrExit((aRloc16 != macAddress) && !Get<Mle::Mle>().IsMinimalChild(aRloc16));
 
     // Ensure that the destination of the snooped message is this device
     // or a minimal child of this device.
 
-    VerifyOrExit((aDest == macAddress) || Get<Mle::MleRouter>().IsMinimalChild(aDest));
+    VerifyOrExit((aDest == macAddress) || Get<Mle::Mle>().IsMinimalChild(aDest));
 
     entry = NewCacheEntry(/* aSnoopedEntry */ true);
     VerifyOrExit(entry != nullptr);
@@ -638,7 +638,7 @@ exit:
 #if OPENTHREAD_CONFIG_BACKBONE_ROUTER_DUA_NDPROXYING_ENABLE
     if (Get<BackboneRouter::Local>().IsPrimary() && Get<BackboneRouter::Leader>().IsDomainUnicast(aEid))
     {
-        uint16_t selfRloc16 = Get<Mle::MleRouter>().GetRloc16();
+        uint16_t selfRloc16 = Get<Mle::Mle>().GetRloc16();
 
         LogInfo("Extending %s to %s for target %s, rloc16=%04x(self)", UriToString<kUriAddressQuery>(),
                 UriToString<kUriBackboneQuery>(), aEid.ToString().AsCString(), selfRloc16);
@@ -787,7 +787,7 @@ void AddressResolver::HandleTmf<kUriAddressError>(Coap::Message &aMessage, const
 
     for (const Ip6::Netif::UnicastAddress &address : Get<ThreadNetif>().GetUnicastAddresses())
     {
-        if (address.GetAddress() == target && Get<Mle::MleRouter>().GetMeshLocal64().GetIid() != meshLocalIid)
+        if (address.GetAddress() == target && Get<Mle::Mle>().GetMeshLocal64().GetIid() != meshLocalIid)
         {
             // Target EID matches address and Mesh Local EID differs
 #if OPENTHREAD_CONFIG_DUA_ENABLE
@@ -856,7 +856,7 @@ void AddressResolver::HandleTmf<kUriAddressQuery>(Coap::Message &aMessage, const
 
     if (Get<ThreadNetif>().HasUnicastAddress(target))
     {
-        SendAddressQueryResponse(target, Get<Mle::MleRouter>().GetMeshLocal64().GetIid(), nullptr,
+        SendAddressQueryResponse(target, Get<Mle::Mle>().GetMeshLocal64().GetIid(), nullptr,
                                  aMessageInfo.GetPeerAddr());
         ExitNow();
     }
@@ -905,7 +905,7 @@ void AddressResolver::SendAddressQueryResponse(const Ip6::Address             &a
 
     SuccessOrExit(error = Tlv::Append<ThreadTargetTlv>(*message, aTarget));
     SuccessOrExit(error = Tlv::Append<ThreadMeshLocalEidTlv>(*message, aMeshLocalIid));
-    SuccessOrExit(error = Tlv::Append<ThreadRloc16Tlv>(*message, Get<Mle::MleRouter>().GetRloc16()));
+    SuccessOrExit(error = Tlv::Append<ThreadRloc16Tlv>(*message, Get<Mle::Mle>().GetRloc16()));
 
     if (aLastTransactionTime != nullptr)
     {

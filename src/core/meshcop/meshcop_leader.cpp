@@ -73,9 +73,9 @@ template <> void Leader::HandleTmf<kUriLeaderPetition>(Coap::Message &aMessage, 
 
     LogInfo("Received %s", UriToString<kUriLeaderPetition>());
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsLeader());
+    VerifyOrExit(Get<Mle::Mle>().IsLeader());
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsRoutingLocator(aMessageInfo.GetPeerAddr()));
+    VerifyOrExit(Get<Mle::Mle>().IsRoutingLocator(aMessageInfo.GetPeerAddr()));
 
     SuccessOrExit(Tlv::Find<CommissionerIdTlv>(aMessage, commissionerId));
 
@@ -137,7 +137,7 @@ template <> void Leader::HandleTmf<kUriLeaderKeepAlive>(Coap::Message &aMessage,
 
     LogInfo("Received %s", UriToString<kUriLeaderKeepAlive>());
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsLeader());
+    VerifyOrExit(Get<Mle::Mle>().IsLeader());
 
     SuccessOrExit(Tlv::Find<StateTlv>(aMessage, state));
 
@@ -230,7 +230,7 @@ uint32_t Leader::GetDelayTimerMinimal(void) const { return mDelayTimerMinimal; }
 
 void Leader::HandleTimer(void)
 {
-    VerifyOrExit(Get<Mle::MleRouter>().IsLeader());
+    VerifyOrExit(Get<Mle::Mle>().IsLeader());
 
     ResignCommissioner();
 

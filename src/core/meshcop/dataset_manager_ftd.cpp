@@ -88,7 +88,7 @@ Error DatasetManager::HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo 
     NetworkKey         networkKey;
     uint16_t           panId;
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsLeader());
+    VerifyOrExit(Get<Mle::Mle>().IsLeader());
 
     // verify that TLV data size is less than maximum TLV value size
     while (offset < aMessage.GetLength())
@@ -135,7 +135,7 @@ Error DatasetManager::HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo 
 
     // check mesh local prefix
     if (Tlv::Find<MeshLocalPrefixTlv>(aMessage, meshLocalPrefix) == kErrorNone &&
-        meshLocalPrefix != Get<Mle::MleRouter>().GetMeshLocalPrefix())
+        meshLocalPrefix != Get<Mle::Mle>().GetMeshLocalPrefix())
     {
         doesAffectConnectivity = true;
     }
@@ -242,13 +242,13 @@ Error DatasetManager::HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo 
         Ip6::Address destination;
 
         SuccessOrExit(Get<NetworkData::Leader>().FindCommissioningSessionId(localSessionId));
-        SuccessOrExit(Get<Mle::MleRouter>().GetCommissionerAloc(destination, localSessionId));
+        SuccessOrExit(Get<Mle::Mle>().GetCommissionerAloc(destination, localSessionId));
         Get<Leader>().SendDatasetChanged(destination);
     }
 
 exit:
 
-    if (Get<Mle::MleRouter>().IsLeader())
+    if (Get<Mle::Mle>().IsLeader())
     {
         SendSetResponse(aMessage, aMessageInfo, state);
     }
@@ -295,7 +295,7 @@ Error ActiveDatasetManager::GenerateLocal(void)
     Error   error = kErrorNone;
     Dataset dataset;
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsAttached(), error = kErrorInvalidState);
+    VerifyOrExit(Get<Mle::Mle>().IsAttached(), error = kErrorInvalidState);
     VerifyOrExit(!mLocal.IsTimestampPresent(), error = kErrorAlready);
 
     IgnoreError(Read(dataset));
@@ -331,7 +331,7 @@ Error ActiveDatasetManager::GenerateLocal(void)
 
     if (dataset.GetTlv<MeshLocalPrefixTlv>() == nullptr)
     {
-        IgnoreError(dataset.SetTlv(Tlv::kMeshLocalPrefix, Get<Mle::MleRouter>().GetMeshLocalPrefix()));
+        IgnoreError(dataset.SetTlv(Tlv::kMeshLocalPrefix, Get<Mle::Mle>().GetMeshLocalPrefix()));
     }
 
     if (dataset.GetTlv<NetworkKeyTlv>() == nullptr)
@@ -422,7 +422,7 @@ void PendingDatasetManager::ApplyActiveDataset(const Timestamp &aTimestamp, Coap
     uint16_t offset = aMessage.GetOffset();
     Dataset  dataset;
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsAttached());
+    VerifyOrExit(Get<Mle::Mle>().IsAttached());
 
     while (offset < aMessage.GetLength())
     {

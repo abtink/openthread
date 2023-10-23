@@ -38,7 +38,7 @@
 #include "common/as_core_type.hpp"
 #include "common/locator_getters.hpp"
 #include "thread/lowpan.hpp"
-#include "thread/mle_router.hpp"
+#include "thread/mle.hpp"
 #include "thread/network_data_leader.hpp"
 #include "thread/thread_netif.hpp"
 
@@ -48,7 +48,7 @@ namespace NeighborDiscovery {
 void Agent::UpdateService(void)
 {
     Error                           error;
-    uint16_t                        rloc16 = Get<Mle::MleRouter>().GetRloc16();
+    uint16_t                        rloc16 = Get<Mle::Mle>().GetRloc16();
     NetworkData::Iterator           iterator;
     NetworkData::OnMeshPrefixConfig config;
     Lowpan::Context                 lowpanContext;
@@ -104,7 +104,7 @@ void Agent::UpdateService(void)
             uint16_t rloc = Mle::kAloc16NeighborDiscoveryAgentStart + lowpanContext.mContextId - 1;
 
             mAloc.InitAsThreadOrigin();
-            mAloc.GetAddress().SetToAnycastLocator(Get<Mle::MleRouter>().GetMeshLocalPrefix(), rloc);
+            mAloc.GetAddress().SetToAnycastLocator(Get<Mle::Mle>().GetMeshLocalPrefix(), rloc);
             mAloc.mMeshLocal = true;
             Get<ThreadNetif>().AddUnicastAddress(mAloc);
             ExitNow();

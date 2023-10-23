@@ -145,7 +145,7 @@ Error Child::GetMeshLocalIp6Address(Ip6::Address &aAddress) const
 
     VerifyOrExit(!mMeshLocalIid.IsUnspecified(), error = kErrorNotFound);
 
-    aAddress.SetPrefix(Get<Mle::MleRouter>().GetMeshLocalPrefix());
+    aAddress.SetPrefix(Get<Mle::Mle>().GetMeshLocalPrefix());
     aAddress.SetIid(mMeshLocalIid);
 
 exit:
@@ -158,7 +158,7 @@ Error Child::AddIp6Address(const Ip6::Address &aAddress)
 
     VerifyOrExit(!aAddress.IsUnspecified(), error = kErrorInvalidArgs);
 
-    if (Get<Mle::MleRouter>().IsMeshLocalAddress(aAddress))
+    if (Get<Mle::Mle>().IsMeshLocalAddress(aAddress))
     {
         VerifyOrExit(mMeshLocalIid.IsUnspecified(), error = kErrorAlready);
         mMeshLocalIid = aAddress.GetIid();
@@ -189,7 +189,7 @@ Error Child::RemoveIp6Address(const Ip6::Address &aAddress)
 
     VerifyOrExit(!aAddress.IsUnspecified(), error = kErrorInvalidArgs);
 
-    if (Get<Mle::MleRouter>().IsMeshLocalAddress(aAddress))
+    if (Get<Mle::Mle>().IsMeshLocalAddress(aAddress))
     {
         if (aAddress.GetIid() == mMeshLocalIid)
         {
@@ -230,7 +230,7 @@ bool Child::HasIp6Address(const Ip6::Address &aAddress) const
 
     VerifyOrExit(!aAddress.IsUnspecified());
 
-    if (Get<Mle::MleRouter>().IsMeshLocalAddress(aAddress))
+    if (Get<Mle::Mle>().IsMeshLocalAddress(aAddress))
     {
         retval = (aAddress.GetIid() == mMeshLocalIid);
         ExitNow();

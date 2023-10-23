@@ -81,7 +81,7 @@ void Notifier::SynchronizeServerData(void)
 {
     Error error = kErrorNotFound;
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsAttached() && !mWaitingForResponse);
+    VerifyOrExit(Get<Mle::Mle>().IsAttached() && !mWaitingForResponse);
 
     VerifyOrExit((mNextDelay == 0) || !mTimer.IsRunning());
 
@@ -108,7 +108,7 @@ exit:
         break;
 #if OPENTHREAD_FTD
     case kErrorInvalidState:
-        mTimer.Start(Time::SecToMsec(Get<Mle::MleRouter>().GetRouterRoleTransitionTimeout() + 1));
+        mTimer.Start(Time::SecToMsec(Get<Mle::Mle>().GetRouterRoleTransitionTimeout() + 1));
         break;
 #endif
     case kErrorNotFound:
@@ -133,11 +133,11 @@ Error Notifier::RemoveStaleChildEntries(void)
     Iterator iterator = kIteratorInit;
     uint16_t rloc16;
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsRouterOrLeader());
+    VerifyOrExit(Get<Mle::Mle>().IsRouterOrLeader());
 
     while (Get<Leader>().GetNextServer(iterator, rloc16) == kErrorNone)
     {
-        if (!Mle::IsActiveRouter(rloc16) && Mle::RouterIdMatch(Get<Mle::MleRouter>().GetRloc16(), rloc16) &&
+        if (!Mle::IsActiveRouter(rloc16) && Mle::RouterIdMatch(Get<Mle::Mle>().GetRloc16(), rloc16) &&
             Get<ChildTable>().FindChild(rloc16, Child::kInStateValid) == nullptr)
         {
             error = SendServerDataNotification(rloc16);
@@ -154,13 +154,13 @@ exit:
 Error Notifier::UpdateInconsistentData(void)
 {
     Error    error      = kErrorNone;
-    uint16_t deviceRloc = Get<Mle::MleRouter>().GetRloc16();
+    uint16_t deviceRloc = Get<Mle::Mle>().GetRloc16();
 
 #if OPENTHREAD_FTD
     // Don't send this Server Data Notification if the device is going
     // to upgrade to Router.
 
-    if (Get<Mle::MleRouter>().IsExpectedToBecomeRouterSoon())
+    if (Get<Mle::Mle>().IsExpectedToBecomeRouterSoon())
     {
         ExitNow(error = kErrorInvalidState);
     }
@@ -297,12 +297,12 @@ bool Notifier::IsEligibleForRouterRoleUpgradeAsBorderRouter(void) const
     uint16_t rloc16     = Get<Mle::Mle>().GetRloc16();
     uint8_t  activeRouterCount;
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsRouterEligible());
+    VerifyOrExit(Get<Mle::Mle>().IsRouterEligible());
 
     // RouterUpgradeThreshold can be explicitly set to zero in some of
     // cert tests to disallow device to become router.
 
-    VerifyOrExit(Get<Mle::MleRouter>().GetRouterUpgradeThreshold() != 0);
+    VerifyOrExit(Get<Mle::Mle>().GetRouterUpgradeThreshold() != 0);
 
     // Check that we are a border router providing IP connectivity and already
     // in the leader's network data and therefore eligible to request router
@@ -312,7 +312,7 @@ bool Notifier::IsEligibleForRouterRoleUpgradeAsBorderRouter(void) const
                  Get<Leader>().ContainsBorderRouterWithRloc(rloc16));
 
     activeRouterCount = Get<RouterTable>().GetActiveRouterCount();
-    VerifyOrExit((activeRouterCount >= Get<Mle::MleRouter>().GetRouterUpgradeThreshold()) &&
+    VerifyOrExit((activeRouterCount >= Get<Mle::Mle>().GetRouterUpgradeThreshold()) &&
                  (activeRouterCount < Mle::kMaxRouters));
 
     VerifyOrExit(Get<Leader>().CountBorderRouters(kRouterRoleOnly) < Mle::kRouterUpgradeBorderRouterRequestThreshold);
@@ -336,7 +336,7 @@ void Notifier::ScheduleRouterRoleUpgradeIfEligible(void)
 
     VerifyOrExit(!mDidRequestRouterRoleUpgrade);
 
-    VerifyOrExit(Get<Mle::MleRouter>().IsChild());
+    VerifyOrExit(Get<Mle::Mle>().IsChild());
     VerifyOrExit(IsEligibleForRouterRoleUpgradeAsBorderRouter() && (mRouterRoleUpgradeTimeout == 0));
 
     mRouterRoleUpgradeTimeout = Random::NonCrypto::GetUint8InRange(1, kRouterRoleUpgradeMaxTimeout + 1);
@@ -360,11 +360,11 @@ void Notifier::HandleTimeTick(void)
         // upgrade (note that state can change since the last time we
         // checked and registered to receive time ticks).
 
-        if (Get<Mle::MleRouter>().IsChild() && IsEligibleForRouterRoleUpgradeAsBorderRouter())
+        if (Get<Mle::Mle>().IsChild() && IsEligibleForRouterRoleUpgradeAsBorderRouter())
         {
             LogInfo("Requesting router role as BR");
             mDidRequestRouterRoleUpgrade = true;
-            IgnoreError(Get<Mle::MleRouter>().BecomeRouter(ThreadStatusTlv::kBorderRouterRequest));
+            IgnoreError(Get<Mle::Mle>().BecomeRouter(ThreadStatusTlv::kBorderRouterRequest));
         }
     }
 exit:

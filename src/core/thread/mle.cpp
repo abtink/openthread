@@ -54,7 +54,7 @@
 #include "thread/address_resolver.hpp"
 #include "thread/key_manager.hpp"
 #include "thread/link_metrics.hpp"
-#include "thread/mle_router.hpp"
+#include "thread/mle.hpp"
 #include "thread/thread_netif.hpp"
 #include "thread/time_sync_service.hpp"
 #include "thread/version.hpp"
@@ -112,6 +112,33 @@ Mle::Mle(Instance &aInstance)
     , mDelayedResponseTimer(aInstance)
     , mMessageTransmissionTimer(aInstance)
     , mDetachGracefullyTimer(aInstance)
+#if OPENTHREAD_FTD
+    , mAdvertiseTrickleTimer(aInstance, HandleAdvertiseTrickleTimer)
+    , mChildTable(aInstance)
+    , mRouterTable(aInstance)
+    , mChallengeTimeout(0)
+    , mNextChildId(kMaxChildId)
+    , mNetworkIdTimeout(kNetworkIdTimeout)
+    , mRouterUpgradeThreshold(kRouterUpgradeThreshold)
+    , mRouterDowngradeThreshold(kRouterDowngradeThreshold)
+#if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
+    , mPreferredLeaderPartitionId(0)
+    , mCcmEnabled(false)
+    , mThreadVersionCheckEnabled(true)
+#endif
+    , mRouterEligible(true)
+    , mAddressSolicitPending(false)
+    , mAddressSolicitRejected(false)
+    , mPreviousPartitionIdRouter(0)
+    , mPreviousPartitionId(0)
+    , mPreviousPartitionRouterIdSequence(0)
+    , mPreviousPartitionIdTimeout(0)
+    , mChildRouterLinks(kChildRouterLinks)
+    , mParentPriority(kParentPriorityUnspecified)
+#if OPENTHREAD_CONFIG_REFERENCE_DEVICE_ENABLE
+    , mMaxChildIpAddresses(0)
+#endif
+#endif // OPENTHREAD_FTD
 {
     mParent.Init(aInstance);
     mParentCandidate.Init(aInstance);
@@ -141,6 +168,25 @@ Mle::Mle(Instance &aInstance)
 
     mMeshLocalPrefix.Clear();
     SetMeshLocalPrefix(AsCoreType(&kMeshLocalPrefixInit));
+
+#if OPENTHREAD_FTD
+    mDeviceMode.Set(mDeviceMode.Get() | DeviceMode::kModeFullThreadDevice | DeviceMode::kModeFullNetworkData);
+
+#if OPENTHREAD_CONFIG_MLE_DEVICE_PROPERTY_LEADER_WEIGHT_ENABLE
+    mLeaderWeight = mDeviceProperties.CalculateLeaderWeight();
+#else
+    mLeaderWeight = kDefaultLeaderWeight;
+#endif
+
+    mLeaderAloc.InitAsThreadOriginMeshLocal();
+
+    SetRouterId(kInvalidRouterId);
+
+#if OPENTHREAD_CONFIG_MLE_STEERING_DATA_SET_OOB_ENABLE
+    mSteeringData.Clear();
+#endif
+
+#endif // OPENTHREAD_FTD
 }
 
 Error Mle::Enable(void)
@@ -214,7 +260,7 @@ Error Mle::Start(StartMode aMode)
 #if OPENTHREAD_FTD
     else if (IsActiveRouter(GetRloc16()))
     {
-        if (Get<MleRouter>().BecomeRouter(ThreadStatusTlv::kTooFewRouters) != kErrorNone)
+        if (BecomeRouter(ThreadStatusTlv::kTooFewRouters) != kErrorNone)
         {
             Attach(kAnyPartition);
         }
@@ -444,9 +490,9 @@ void Mle::Restore(void)
 #if OPENTHREAD_FTD
     else
     {
-        Get<MleRouter>().SetRouterId(RouterIdFromRloc16(GetRloc16()));
-        Get<MleRouter>().SetPreviousPartitionId(networkInfo.GetPreviousPartitionId());
-        Get<ChildTable>().Restore();
+        SetRouterId(RouterIdFromRloc16(GetRloc16()));
+        SetPreviousPartitionId(networkInfo.GetPreviousPartitionId());
+        mChildTable.Restore();
     }
 
     mWasLeader = networkInfo.GetRole() == kRoleLeader;
@@ -604,7 +650,7 @@ void Mle::Attach(AttachMode aMode)
 #if OPENTHREAD_FTD
         if (IsFullThreadDevice())
         {
-            Get<MleRouter>().StopAdvertiseTrickleTimer();
+            StopAdvertiseTrickleTimer();
         }
 #endif
     }
@@ -696,7 +742,7 @@ void Mle::SetStateDetached(void)
 #if OPENTHREAD_FTD
     if (IsLeader())
     {
-        Get<ThreadNetif>().RemoveUnicastAddress(Get<MleRouter>().mLeaderAloc);
+        Get<ThreadNetif>().RemoveUnicastAddress(mLeaderAloc);
     }
 #endif
 
@@ -712,7 +758,7 @@ void Mle::SetStateDetached(void)
     Get<MeshForwarder>().SetRxOnWhenIdle(true);
     Get<Mac::Mac>().SetBeaconEnabled(false);
 #if OPENTHREAD_FTD
-    Get<MleRouter>().HandleDetachStart();
+    HandleDetachStart();
 #endif
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
     Get<Mac::Mac>().UpdateCsl();
@@ -724,7 +770,7 @@ void Mle::SetStateChild(uint16_t aRloc16)
 #if OPENTHREAD_FTD
     if (IsLeader())
     {
-        Get<ThreadNetif>().RemoveUnicastAddress(Get<MleRouter>().mLeaderAloc);
+        Get<ThreadNetif>().RemoveUnicastAddress(mLeaderAloc);
     }
 #endif
 
@@ -741,7 +787,7 @@ void Mle::SetStateChild(uint16_t aRloc16)
 #if OPENTHREAD_FTD
     if (IsFullThreadDevice())
     {
-        Get<MleRouter>().HandleChildStart(mAttachMode);
+        HandleChildStart(mAttachMode);
     }
 #endif
 
@@ -774,7 +820,7 @@ void Mle::InformPreviousChannel(void)
     VerifyOrExit(IsChild() || IsRouter());
 
 #if OPENTHREAD_FTD
-    VerifyOrExit(!IsFullThreadDevice() || IsRouter() || !Get<MleRouter>().IsRouterRoleTransitionPending());
+    VerifyOrExit(!IsFullThreadDevice() || IsRouter() || !IsRouterRoleTransitionPending());
 #endif
 
     mAlternatePanId = Mac::kPanIdBroadcast;
@@ -981,7 +1027,7 @@ void Mle::SetLeaderData(uint32_t aPartitionId, uint8_t aWeighting, uint8_t aLead
     if (mLeaderData.GetPartitionId() != aPartitionId)
     {
 #if OPENTHREAD_FTD
-        Get<MleRouter>().HandlePartitionChange();
+        HandlePartitionChange();
 #endif
         Get<Notifier>().Signal(kEventThreadPartitionIdChanged);
         mCounters.mPartitionIdChanges++;
@@ -1153,7 +1199,7 @@ void Mle::HandleNotifierEvents(Events aEvents)
 #if OPENTHREAD_FTD
         if (IsFullThreadDevice())
         {
-            Get<MleRouter>().HandleNetworkDataUpdateRouter();
+            HandleNetworkDataUpdateRouter();
         }
         else
 #endif
@@ -1198,7 +1244,7 @@ void Mle::HandleNotifierEvents(Events aEvents)
 #if OPENTHREAD_FTD
     if (aEvents.Contains(kEventSecurityPolicyChanged))
     {
-        Get<MleRouter>().HandleSecurityPolicyChanged();
+        HandleSecurityPolicyChanged();
     }
 #endif
 
@@ -1563,7 +1609,7 @@ uint32_t Mle::Reattach(void)
                 IgnoreError(BecomeDetached());
             }
 #if OPENTHREAD_FTD
-            else if (IsFullThreadDevice() && Get<MleRouter>().BecomeLeader() == kErrorNone)
+            else if (IsFullThreadDevice() && BecomeLeader() == kErrorNone)
             {
                 // do nothing
             }
@@ -1976,7 +2022,7 @@ void Mle::HandleMessageTransmissionTimer(void)
     // and maximum transmission limit has not been reached.
     if (mRole == kRoleDetached && mLinkRequestAttempts > 0)
     {
-        IgnoreError(Get<MleRouter>().SendLinkRequest(nullptr));
+        IgnoreError(SendLinkRequest(nullptr));
         mLinkRequestAttempts--;
         ScheduleMessageTransmissionTimer();
         ExitNow();
@@ -2448,7 +2494,7 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
         {
 #if OPENTHREAD_FTD
         case kCommandDiscoveryRequest:
-            Get<MleRouter>().HandleDiscoveryRequest(rxInfo);
+            HandleDiscoveryRequest(rxInfo);
             break;
 #endif
         case kCommandDiscoveryResponse:
@@ -2593,61 +2639,41 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
         break;
 
     case kCommandChildUpdateRequest:
-#if OPENTHREAD_FTD
-        if (IsRouterOrLeader())
-        {
-            Get<MleRouter>().HandleChildUpdateRequest(rxInfo);
-        }
-        else
-#endif
-        {
-            HandleChildUpdateRequest(rxInfo);
-        }
-
+        HandleChildUpdateRequest(rxInfo);
         break;
 
     case kCommandChildUpdateResponse:
-#if OPENTHREAD_FTD
-        if (IsRouterOrLeader())
-        {
-            Get<MleRouter>().HandleChildUpdateResponse(rxInfo);
-        }
-        else
-#endif
-        {
-            HandleChildUpdateResponse(rxInfo);
-        }
-
+        HandleChildUpdateResponse(rxInfo);
         break;
 
 #if OPENTHREAD_FTD
     case kCommandLinkRequest:
-        Get<MleRouter>().HandleLinkRequest(rxInfo);
+        HandleLinkRequest(rxInfo);
         break;
 
     case kCommandLinkAccept:
-        Get<MleRouter>().HandleLinkAccept(rxInfo);
+        HandleLinkAccept(rxInfo);
         break;
 
     case kCommandLinkAcceptAndRequest:
-        Get<MleRouter>().HandleLinkAcceptAndRequest(rxInfo);
+        HandleLinkAcceptAndRequest(rxInfo);
         break;
 
     case kCommandDataRequest:
-        Get<MleRouter>().HandleDataRequest(rxInfo);
+        HandleDataRequest(rxInfo);
         break;
 
     case kCommandParentRequest:
-        Get<MleRouter>().HandleParentRequest(rxInfo);
+        HandleParentRequest(rxInfo);
         break;
 
     case kCommandChildIdRequest:
-        Get<MleRouter>().HandleChildIdRequest(rxInfo);
+        HandleChildIdRequest(rxInfo);
         break;
 
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
     case kCommandTimeSync:
-        Get<MleRouter>().HandleTimeSync(rxInfo);
+        HandleTimeSync(rxInfo);
         break;
 #endif
 #endif // OPENTHREAD_FTD
@@ -2769,14 +2795,14 @@ void Mle::ReestablishLinkWithNeighbor(Neighbor &aNeighbor)
 
     if (IsActiveRouter(aNeighbor.GetRloc16()))
     {
-        IgnoreError(Get<MleRouter>().SendLinkRequest(&aNeighbor));
+        IgnoreError(SendLinkRequest(&aNeighbor));
     }
-    else if (Get<ChildTable>().Contains(aNeighbor))
+    else if (mChildTable.Contains(aNeighbor))
     {
         Child &child = static_cast<Child &>(aNeighbor);
 
         child.SetState(Child::kStateChildUpdateRequest);
-        IgnoreError(Get<MleRouter>().SendChildUpdateRequest(child));
+        IgnoreError(SendChildUpdateRequest(child));
     }
 #endif
 
@@ -2802,7 +2828,7 @@ void Mle::HandleAdvertisement(RxInfo &aRxInfo)
 #if OPENTHREAD_FTD
     if (IsFullThreadDevice())
     {
-        SuccessOrExit(error = Get<MleRouter>().HandleAdvertisement(aRxInfo, sourceAddress, leaderData));
+        SuccessOrExit(error = HandleAdvertisement(aRxInfo, sourceAddress, leaderData));
     }
 #endif
 
@@ -2823,7 +2849,7 @@ void Mle::HandleAdvertisement(RxInfo &aRxInfo)
             SetLeaderData(leaderData.GetPartitionId(), leaderData.GetWeighting(), leaderData.GetLeaderRouterId());
 
 #if OPENTHREAD_FTD
-            SuccessOrExit(error = Get<MleRouter>().ReadAndProcessRouteTlvOnFed(aRxInfo, mParent.GetRouterId()));
+            SuccessOrExit(error = ReadAndProcessRouteTlvOnFed(aRxInfo, mParent.GetRouterId()));
 #endif
 
             mRetrieveNewNetworkData = true;
@@ -2870,7 +2896,7 @@ void Mle::HandleDataResponse(RxInfo &aRxInfo)
 #endif
 
 #if OPENTHREAD_FTD
-    SuccessOrExit(error = Get<MleRouter>().ReadAndProcessRouteTlvOnFed(aRxInfo, mParent.GetRouterId()));
+    SuccessOrExit(error = ReadAndProcessRouteTlvOnFed(aRxInfo, mParent.GetRouterId()));
 #endif
 
     error = HandleLeaderData(aRxInfo);
@@ -3245,8 +3271,8 @@ void Mle::HandleParentResponse(RxInfo &aRxInfo)
         case kBetterPartition:
             VerifyOrExit(!isPartitionIdSame);
 
-            VerifyOrExit(MleRouter::ComparePartitions(connectivityTlv.GetActiveRouters() <= 1, leaderData,
-                                                      Get<MleRouter>().IsSingleton(), mLeaderData) > 0);
+            VerifyOrExit(
+                ComparePartitions(connectivityTlv.GetActiveRouters() <= 1, leaderData, IsSingleton(), mLeaderData) > 0);
             break;
         }
     }
@@ -3264,8 +3290,8 @@ void Mle::HandleParentResponse(RxInfo &aRxInfo)
 #if OPENTHREAD_FTD
         if (IsFullThreadDevice())
         {
-            compare = MleRouter::ComparePartitions(connectivityTlv.GetActiveRouters() <= 1, leaderData,
-                                                   mParentCandidate.mIsSingleton, mParentCandidate.mLeaderData);
+            compare = ComparePartitions(connectivityTlv.GetActiveRouters() <= 1, leaderData,
+                                        mParentCandidate.mIsSingleton, mParentCandidate.mLeaderData);
         }
 
         // only consider partitions that are the same or better
@@ -3427,7 +3453,7 @@ void Mle::HandleChildIdResponse(RxInfo &aRxInfo)
     SetLeaderData(leaderData.GetPartitionId(), leaderData.GetWeighting(), leaderData.GetLeaderRouterId());
 
 #if OPENTHREAD_FTD
-    SuccessOrExit(error = Get<MleRouter>().ReadAndProcessRouteTlvOnFed(aRxInfo, RouterIdFromRloc16(sourceAddress)));
+    SuccessOrExit(error = ReadAndProcessRouteTlvOnFed(aRxInfo, RouterIdFromRloc16(sourceAddress)));
 #endif
 
     mParentCandidate.CopyTo(mParent);
@@ -3462,6 +3488,20 @@ exit:
 }
 
 void Mle::HandleChildUpdateRequest(RxInfo &aRxInfo)
+{
+#if OPENTHREAD_FTD
+    if (IsRouterOrLeader())
+    {
+        HandleChildUpdateRequestOnRouter(aRxInfo);
+    }
+    else
+#endif
+    {
+        HandleChildUpdateRequestOnChild(aRxInfo);
+    }
+}
+
+void Mle::HandleChildUpdateRequestOnChild(RxInfo &aRxInfo)
 {
     Error       error = kErrorNone;
     uint16_t    sourceAddress;
@@ -3560,6 +3600,20 @@ exit:
 }
 
 void Mle::HandleChildUpdateResponse(RxInfo &aRxInfo)
+{
+#if OPENTHREAD_FTD
+    if (IsRouterOrLeader())
+    {
+        HandleChildUpdateResponseOnRouter(aRxInfo);
+    }
+    else
+#endif
+    {
+        HandleChildUpdateResponseOnChild(aRxInfo);
+    }
+}
+
+void Mle::HandleChildUpdateResponseOnChild(RxInfo &aRxInfo)
 {
     Error       error = kErrorNone;
     uint8_t     status;
@@ -3885,8 +3939,31 @@ void Mle::ProcessAnnounce(void)
 
 uint16_t Mle::GetNextHop(uint16_t aDestination) const
 {
+    uint16_t nextHop;
+
+#if OPENTHREAD_MTD
     OT_UNUSED_VARIABLE(aDestination);
-    return (mParent.IsStateValid()) ? mParent.GetRloc16() : static_cast<uint16_t>(Mac::kShortAddrInvalid);
+    nextHop = (mParent.IsStateValid()) ? mParent.GetRloc16() : static_cast<uint16_t>(Mac::kShortAddrInvalid);
+#else
+    nextHop = mRouterTable.GetNextHop(aDestination);
+#endif
+
+    return nextHop;
+}
+
+void Mle::RemoveRouterLink(Router &aRouter)
+{
+#if OPENTHREAD_FTD
+    if (IsRouterOrLeader())
+    {
+        mRouterTable.RemoveRouterLink(aRouter);
+    }
+    else if (IsChild() && (&aRouter == &mParent))
+#endif
+    {
+        OT_UNUSED_VARIABLE(aRouter);
+        IgnoreError(BecomeDetached());
+    }
 }
 
 Error Mle::GetParentInfo(Router::Info &aParentInfo) const
@@ -3923,15 +4000,23 @@ Error Mle::CheckReachability(uint16_t aMeshDest, const Ip6::Header &aIp6Header)
 {
     Error error;
 
+#if OPENTHREAD_FTD
+    if (IsRouterOrLeader())
+    {
+        ExitNow(error = CheckReachabilityOnRouter(aMeshDest, aIp6Header));
+    }
+#endif
+
     if ((aMeshDest != GetRloc16()) || Get<ThreadNetif>().HasUnicastAddress(aIp6Header.GetDestination()))
     {
         error = kErrorNone;
     }
     else
     {
-        error = kErrorNoRoute;
+        ExitNow(error = kErrorNoRoute);
     }
 
+exit:
     return error;
 }
 
@@ -4390,7 +4475,7 @@ Error Mle::DetachGracefully(otDetachGracefullyCallback aCallback, void *aContext
 
     case kRoleRouter:
 #if OPENTHREAD_FTD
-        Get<MleRouter>().SendAddressRelease();
+        SendAddressRelease();
 #endif
         break;
 
@@ -4905,7 +4990,7 @@ Error Mle::TxMessage::AppendConnectivityTlv(void)
     ConnectivityTlv tlv;
 
     tlv.Init();
-    Get<MleRouter>().FillConnectivityTlv(tlv);
+    Get<Mle>().FillConnectivityTlv(tlv);
 
     return tlv.AppendTo(*this);
 }
@@ -4969,9 +5054,9 @@ Error Mle::TxMessage::AppendSteeringDataTlv(void)
     MeshCoP::SteeringData steeringData;
 
 #if OPENTHREAD_CONFIG_MLE_STEERING_DATA_SET_OOB_ENABLE
-    if (!Get<MleRouter>().mSteeringData.IsEmpty())
+    if (!Get<Mle>().mSteeringData.IsEmpty())
     {
-        steeringData = Get<MleRouter>().mSteeringData;
+        steeringData = Get<Mle>().mSteeringData;
     }
     else
 #endif

@@ -38,7 +38,7 @@
 #include "common/instance.hpp"
 #include "common/locator_getters.hpp"
 #include "common/random.hpp"
-#include "thread/mle_router.hpp"
+#include "thread/mle.hpp"
 
 namespace ot {
 
@@ -79,9 +79,9 @@ void TimeTicker::HandleTimer(void)
     }
 
 #if OPENTHREAD_FTD
-    if (mReceivers & Mask(kMleRouter))
+    if (mReceivers & Mask(kMle))
     {
-        Get<Mle::MleRouter>().HandleTimeTick();
+        Get<Mle::Mle>().HandleTimeTick();
     }
 
     if (mReceivers & Mask(kAddressResolver))

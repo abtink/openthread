@@ -302,7 +302,7 @@ void DuaManager::UpdateCheckDelay(uint8_t aDelay)
 
 void DuaManager::HandleNotifierEvents(Events aEvents)
 {
-    Mle::MleRouter &mle = Get<Mle::MleRouter>();
+    Mle::Mle &mle = Get<Mle::Mle>();
 
 #if OPENTHREAD_CONFIG_DUA_ENABLE
     if (aEvents.Contains(kEventThreadNetdataChanged))
@@ -431,7 +431,7 @@ void DuaManager::UpdateTimeTickerRegistration(void)
 void DuaManager::PerformNextRegistration(void)
 {
     Error            error   = kErrorNone;
-    Mle::MleRouter  &mle     = Get<Mle::MleRouter>();
+    Mle::Mle        &mle     = Get<Mle::Mle>();
     Coap::Message   *message = nullptr;
     Tmf::MessageInfo messageInfo(GetInstance());
     Ip6::Address     dua;
