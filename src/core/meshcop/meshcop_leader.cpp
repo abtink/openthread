@@ -130,10 +130,10 @@ exit:
 
 template <> void Leader::HandleTmf<kUriLeaderKeepAlive>(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
-    uint8_t                state;
-    uint16_t               sessionId;
-    BorderAgentLocatorTlv *borderAgentLocator;
-    StateTlv::State        responseState;
+    uint8_t         state;
+    uint16_t        sessionId;
+    uint16_t        borderAgentRloc;
+    StateTlv::State responseState;
 
     LogInfo("Received %s", UriToString<kUriLeaderKeepAlive>());
 
@@ -143,9 +143,7 @@ template <> void Leader::HandleTmf<kUriLeaderKeepAlive>(Coap::Message &aMessage,
 
     SuccessOrExit(Tlv::Find<CommissionerSessionIdTlv>(aMessage, sessionId));
 
-    borderAgentLocator = Get<NetworkData::Leader>().FindInCommissioningData<BorderAgentLocatorTlv>();
-
-    if ((borderAgentLocator == nullptr) || (sessionId != mSessionId))
+    if ((Get<NetworkData::Leader>().FindBorderAgentRloc(borderAgentRloc) != kErrorNone) || (sessionId != mSessionId))
     {
         responseState = StateTlv::kReject;
     }
@@ -156,14 +154,8 @@ template <> void Leader::HandleTmf<kUriLeaderKeepAlive>(Coap::Message &aMessage,
     }
     else
     {
-        uint16_t rloc = aMessageInfo.GetPeerAddr().GetIid().GetLocator();
-
-        if (borderAgentLocator->GetBorderAgentLocator() != rloc)
-        {
-            borderAgentLocator->SetBorderAgentLocator(rloc);
-            Get<NetworkData::Leader>().IncrementVersion();
-        }
-
+        borderAgentRloc = aMessageInfo.GetPeerAddr().GetIid().GetLocator();
+        Get<NetworkData::Leader>().UpdateBorderAgentRloc(borderAgentRloc);
         responseState = StateTlv::kAccept;
         mTimer.Start(Time::SecToMsec(kTimeoutLeaderPetition));
     }

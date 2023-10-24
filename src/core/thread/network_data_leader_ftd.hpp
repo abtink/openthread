@@ -163,6 +163,15 @@ public:
     Error SetCommissioningData(const void *aData, uint8_t aDataLength);
 
     /**
+     * Updates the Border Agent RLOC in Commissioning Data if it is already present in Network Data and different from
+     * the new value @p aRloc16.
+     *
+     * @param[in] aRloc16  The new Border Agent RLOC16 to include in Thread Network Data Commissioning Data.
+     *
+     */
+    void UpdateBorderAgentRloc(uint16_t aRloc16);
+
+    /**
      * Synchronizes internal 6LoWPAN Context ID Set with recently obtained Thread Network Data.
      *
      * Note that this method should be called only by the Leader once after reset.

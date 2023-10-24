@@ -1370,6 +1370,20 @@ exit:
     return error;
 }
 
+void Leader::UpdateBorderAgentRloc(uint16_t aRloc16)
+{
+    MeshCoP::BorderAgentLocatorTlv *locatorTlv = FindInCommissioningData<MeshCoP::BorderAgentLocatorTlv>();
+
+    VerifyOrExit(locatorTlv != nullptr);
+
+    VerifyOrExit(locatorTlv->GetBorderAgentLocator() != aRloc16);
+    locatorTlv->SetBorderAgentLocator(aRloc16);
+    IncrementVersion();
+
+exit:
+    return;
+}
+
 void Leader::HandleTimer(void)
 {
     if (mWaitingForNetDataSync)
