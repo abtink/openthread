@@ -565,6 +565,7 @@ private:
 
     UserCommandsEntry mUserCommands[kMaxUserCommandEntries];
     bool              mCommandIsPending;
+    bool              mInternalDebugCommand;
 
     TimerMilliContext mTimer;
 
