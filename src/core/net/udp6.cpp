@@ -37,12 +37,7 @@
 
 #include <openthread/platform/udp.h>
 
-#include "common/code_utils.hpp"
-#include "common/encoding.hpp"
-#include "common/locator_getters.hpp"
 #include "instance/instance.hpp"
-#include "net/checksum.hpp"
-#include "net/ip6.hpp"
 
 namespace ot {
 namespace Ip6 {

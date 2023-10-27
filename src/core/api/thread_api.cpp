@@ -37,11 +37,7 @@
 
 #include <openthread/thread.h>
 
-#include "common/as_core_type.hpp"
-#include "common/debug.hpp"
-#include "common/locator_getters.hpp"
-#include "common/uptime.hpp"
-#include "thread/version.hpp"
+#include "instance/instance.hpp"
 
 using namespace ot;
 

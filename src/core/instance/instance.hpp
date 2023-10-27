@@ -38,6 +38,7 @@
 
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdio.h>
 
 #include <openthread/heap.h>
 #if OPENTHREAD_CONFIG_HEAP_EXTERNAL_ENABLE
@@ -46,11 +47,15 @@
 
 #include "common/array.hpp"
 #include "common/as_core_type.hpp"
+#include "common/debug.hpp"
 #include "common/error.hpp"
 #include "common/log.hpp"
 #include "common/message.hpp"
 #include "common/non_copyable.hpp"
+#include "common/num_utils.hpp"
+#include "common/numeric_limits.hpp"
 #include "common/random.hpp"
+#include "common/string.hpp"
 #include "common/tasklet.hpp"
 #include "common/time_ticker.hpp"
 #include "common/timer.hpp"
@@ -70,8 +75,14 @@
 #include "border_router/routing_manager.hpp"
 #include "coap/coap_secure.hpp"
 #include "common/code_utils.hpp"
+#include "common/crc16.hpp"
 #include "common/notifier.hpp"
 #include "common/settings.hpp"
+#include "crypto/aes_ccm.hpp"
+#include "crypto/aes_ecb.hpp"
+#include "crypto/ecdsa.hpp"
+#include "crypto/hkdf_sha256.hpp"
+#include "crypto/hmac_sha256.hpp"
 #include "crypto/mbedtls.hpp"
 #include "mac/mac.hpp"
 #include "meshcop/border_agent.hpp"
@@ -83,6 +94,7 @@
 #include "meshcop/joiner_router.hpp"
 #include "meshcop/meshcop_leader.hpp"
 #include "meshcop/network_name.hpp"
+#include "net/checksum.hpp"
 #include "net/dhcp6.hpp"
 #include "net/dhcp6_client.hpp"
 #include "net/dhcp6_server.hpp"
@@ -122,6 +134,8 @@
 #include "thread/thread_netif.hpp"
 #include "thread/time_sync_service.hpp"
 #include "thread/tmf.hpp"
+#include "thread/uri_paths.hpp"
+#include "thread/version.hpp"
 #include "utils/channel_manager.hpp"
 #include "utils/channel_monitor.hpp"
 #include "utils/heap.hpp"
@@ -1025,5 +1039,7 @@ template <> inline Utils::PowerCalibration &Instance::Get(void) { return mPowerC
  */
 
 } // namespace ot
+
+#include "common/locator_getters.hpp"
 
 #endif // INSTANCE_HPP_

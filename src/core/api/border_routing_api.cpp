@@ -38,7 +38,6 @@
 #include <openthread/border_routing.h>
 #include <openthread/platform/border_routing.h>
 
-#include "border_router/routing_manager.hpp"
 #include "instance/instance.hpp"
 
 using namespace ot;

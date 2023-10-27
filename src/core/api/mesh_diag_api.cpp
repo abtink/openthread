@@ -37,9 +37,7 @@
 
 #include <openthread/mesh_diag.h>
 
-#include "common/as_core_type.hpp"
-#include "common/locator_getters.hpp"
-#include "utils/mesh_diag.hpp"
+#include "instance/instance.hpp"
 
 using namespace ot;
 

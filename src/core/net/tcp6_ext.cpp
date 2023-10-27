@@ -37,10 +37,7 @@
 
 #include "tcp6_ext.hpp"
 
-#include "common/code_utils.hpp"
-#include "common/error.hpp"
-#include "common/locator_getters.hpp"
-#include "common/log.hpp"
+#include "instance/instance.hpp"
 
 namespace ot {
 namespace Ip6 {

@@ -33,10 +33,7 @@
 
 #include "trickle_timer.hpp"
 
-#include "common/code_utils.hpp"
-#include "common/debug.hpp"
-#include "common/num_utils.hpp"
-#include "common/random.hpp"
+#include "instance/instance.hpp"
 
 namespace ot {
 

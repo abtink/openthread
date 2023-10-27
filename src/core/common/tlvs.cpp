@@ -33,9 +33,7 @@
 
 #include "tlvs.hpp"
 
-#include "common/code_utils.hpp"
-#include "common/debug.hpp"
-#include "common/message.hpp"
+#include "instance/instance.hpp"
 
 namespace ot {
 

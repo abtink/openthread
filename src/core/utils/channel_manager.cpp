@@ -36,14 +36,7 @@
 
 #if OPENTHREAD_CONFIG_CHANNEL_MANAGER_ENABLE && OPENTHREAD_FTD
 
-#include "common/code_utils.hpp"
-#include "common/locator_getters.hpp"
-#include "common/log.hpp"
-#include "common/random.hpp"
-#include "common/string.hpp"
 #include "instance/instance.hpp"
-#include "meshcop/dataset_updater.hpp"
-#include "radio/radio.hpp"
 
 namespace ot {
 namespace Utils {

@@ -33,14 +33,7 @@
 
 #include "checksum.hpp"
 
-#include "common/code_utils.hpp"
-#include "common/log.hpp"
-#include "common/message.hpp"
-#include "net/icmp6.hpp"
-#include "net/ip4_types.hpp"
-#include "net/ip6.hpp"
-#include "net/tcp6.hpp"
-#include "net/udp6.hpp"
+#include "instance/instance.hpp"
 
 namespace ot {
 

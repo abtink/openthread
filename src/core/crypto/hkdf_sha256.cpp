@@ -35,10 +35,11 @@
 
 #include <string.h>
 
+#include "openthread/platform/crypto.h"
+
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
 #include "common/error.hpp"
-#include "openthread/platform/crypto.h"
 
 namespace ot {
 namespace Crypto {

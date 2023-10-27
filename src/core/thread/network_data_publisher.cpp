@@ -36,15 +36,7 @@
 
 #if OPENTHREAD_CONFIG_NETDATA_PUBLISHER_ENABLE
 
-#include "common/array.hpp"
-#include "common/code_utils.hpp"
-#include "common/const_cast.hpp"
-#include "common/locator_getters.hpp"
-#include "common/log.hpp"
-#include "common/random.hpp"
 #include "instance/instance.hpp"
-#include "thread/network_data_local.hpp"
-#include "thread/network_data_service.hpp"
 
 namespace ot {
 namespace NetworkData {

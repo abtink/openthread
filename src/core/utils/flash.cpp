@@ -34,7 +34,6 @@
 
 #include <openthread/platform/flash.h>
 
-#include "common/code_utils.hpp"
 #include "instance/instance.hpp"
 
 namespace ot {

@@ -40,6 +40,8 @@
 
 #include <stdarg.h>
 
+#include <openthread/channel_manager.h>
+#include <openthread/channel_monitor.h>
 #include <openthread/cli.h>
 #include <openthread/dataset.h>
 #include <openthread/dns_client.h>
@@ -51,9 +53,7 @@
 #include <openthread/netdata.h>
 #include <openthread/ping_sender.h>
 #include <openthread/sntp.h>
-#if OPENTHREAD_CONFIG_TCP_ENABLE && OPENTHREAD_CONFIG_CLI_TCP_ENABLE
 #include <openthread/tcp.h>
-#endif
 #include <openthread/thread.h>
 #include <openthread/thread_ftd.h>
 #include <openthread/udp.h>
