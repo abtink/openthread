@@ -92,11 +92,13 @@ void VerifyLinkedListContent(const LinkedList<Entry> *aList, ...)
     Entry       *argPrev = nullptr;
     const Entry *prev;
     uint16_t     unusedId = 100;
+    uint16_t     count    = 0;
 
     va_start(args, aList);
 
     for (const Entry &entry : *aList)
     {
+        count++;
         argEntry = va_arg(args, Entry *);
         VerifyOrQuit(argEntry != nullptr, "List contains more entries than expected");
         VerifyOrQuit(argEntry == &entry, "List does not contain the same entry");
@@ -128,6 +130,8 @@ void VerifyLinkedListContent(const LinkedList<Entry> *aList, ...)
 
     VerifyOrQuit(aList->FindMatching("none", prev) == nullptr, "succeeded for a missing entry");
     VerifyOrQuit(aList->FindMatching(unusedId, prev) == nullptr, "succeeded for a missing entry");
+
+    VerifyOrQuit(aList->CountEntries() == count);
 }
 
 void TestLinkedList(void)

@@ -1836,6 +1836,25 @@ exit:
     return error;
 }
 
+Error RoutingManager::DiscoveredPrefixTable::GetNextRouter(PrefixTableIterator &aIterator, RouterEntry &aEntry) const
+{
+    Error     error    = kErrorNone;
+    Iterator &iterator = static_cast<Iterator &>(aIterator);
+
+    VerifyOrExit(iterator.GetRouter() != nullptr, error = kErrorNotFound);
+
+    aEntry.mAddress                  = iterator.GetRouter()->mAddress;
+    aEntry.mNumberOfPrefixEntries    = iterator.GetRouter()->mEntries.CountEntries();
+    aEntry.mManagedAddressConfigFlag = iterator.GetRouter()->mManagedAddressConfigFlag;
+    aEntry.mOtherConfigFlag          = iterator.GetRouter()->mOtherConfigFlag;
+    aEntry.mStubRouterFlag           = iterator.GetRouter()->mStubRouterFlag;
+
+    iterator.SetRouter(iterator.GetRouter()->GetNext());
+
+exit:
+    return error;
+}
+
 //---------------------------------------------------------------------------------------------------------------------
 // DiscoveredPrefixTable::Entry
 

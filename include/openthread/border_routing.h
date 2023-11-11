@@ -107,6 +107,19 @@ typedef struct otBorderRoutingPrefixTableEntry
 } otBorderRoutingPrefixTableEntry;
 
 /**
+ * Represents a discovered router on infrastructure link.
+ *
+ */
+typedef struct otBorderRoutingRouterEntry
+{
+    otIp6Address mAddress;                      ///< IPv6 address of the router.
+    uint16_t     mNumberOfPrefixEntries;        ///< Number of prefix entries discovered from this router.
+    bool         mManagedAddressConfigFlag : 1; ///< The Managed Address Config flag (`M` flag).
+    bool         mOtherConfigFlag : 1;          ///< The Other Config falg (`O` flag).
+    bool         mStubRouterFlag : 1;           ///< The Stub Router flag (whether the router is a stub router).
+} otBorderRoutingRouterEntry;
+
+/**
  * Represents the state of Border Routing Manager.
  *
  */
@@ -382,6 +395,10 @@ otError otBorderRoutingGetFavoredNat64Prefix(otInstance        *aInstance,
  * When iterating over entries in the table, to ensure the update times `mMsecSinceLastUpdate` of entries are
  * consistent, they are given relative to the time the iterator was initialized.
  *
+ * An iterator MUST be used exclusively with either `otBorderRoutingGetNextPrefixTableEntry()` to iterate over prefix
+ * table entries or with `otBorderRoutingGetNextPrefixTableEntry()`to iterate over discovered routers. The same
+ * iterator instance cannot be shared between the two functions unless it is re-initialized.
+ *
  * @param[in]  aInstance  The OpenThread instance.
  * @param[out] aIterator  A pointer to the iterator to initialize.
  *
@@ -402,6 +419,21 @@ void otBorderRoutingPrefixTableInitIterator(otInstance *aInstance, otBorderRouti
 otError otBorderRoutingGetNextPrefixTableEntry(otInstance                         *aInstance,
                                                otBorderRoutingPrefixTableIterator *aIterator,
                                                otBorderRoutingPrefixTableEntry    *aEntry);
+
+/**
+ * Iterates over the discovered routers on infrastructure link.
+ *
+ * @param[in]     aInstance    The OpenThread instance.
+ * @param[in,out] aIterator    A pointer to the iterator.
+ * @param[out]    aEntry       A pointer to the entry to populate.
+ *
+ * @retval OT_ERROR_NONE        Iterated to the next router entry, @p aEntry and @p aIterator are updated.
+ * @retval OT_ERROR_NOT_FOUND   No more router entries.
+ *
+ */
+otError otBorderRoutingGetNextRouterEntry(otInstance                         *aInstance,
+                                          otBorderRoutingPrefixTableIterator *aIterator,
+                                          otBorderRoutingRouterEntry         *aEntry);
 
 /**
  * Enables / Disables DHCPv6 Prefix Delegation.

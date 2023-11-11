@@ -87,6 +87,7 @@ public:
     typedef NetworkData::RoutePreference       RoutePreference;     ///< Route preference (high, medium, low).
     typedef otBorderRoutingPrefixTableIterator PrefixTableIterator; ///< Prefix Table Iterator.
     typedef otBorderRoutingPrefixTableEntry    PrefixTableEntry;    ///< Prefix Table Entry.
+    typedef otBorderRoutingRouterEntry         RouterEntry;         ///< Router Entry.
 
     /**
      * This constant specifies the maximum number of route prefixes that may be published by `RoutingManager`
@@ -466,6 +467,21 @@ public:
         return mDiscoveredPrefixTable.GetNextEntry(aIterator, aEntry);
     }
 
+    /**
+     * Iterates over discovered routers on infrastructure link.
+     *
+     * @param[in,out] aIterator  An iterator.
+     * @param[out]    aEntry     A reference to the entry to populate.
+     *
+     * @retval kErrorNone        Got the next router entry, @p aEntry is updated and @p aIterator is advanced.
+     * @retval kErrorNotFound    No more router.
+     *
+     */
+    Error GetNextRouterEntry(PrefixTableIterator &aIterator, RouterEntry &aEntry) const
+    {
+        return mDiscoveredPrefixTable.GetNextRouter(aIterator, aEntry);
+    }
+
 #if OPENTHREAD_CONFIG_SRP_SERVER_ENABLE
     /**
      * Determines whether to enable/disable SRP server when the auto-enable mode is changed on SRP server.
@@ -621,6 +637,7 @@ private:
 
         void  InitIterator(PrefixTableIterator &aIterator) const;
         Error GetNextEntry(PrefixTableIterator &aIterator, PrefixTableEntry &aEntry) const;
+        Error GetNextRouter(PrefixTableIterator &aIterator, RouterEntry &aEntry) const;
 
         void HandleEntryTimer(void);
         void HandleRouterTimer(void);
