@@ -1642,6 +1642,11 @@ static void processNetlinkEvent(otInstance *aInstance)
     for (struct nlmsghdr *msg = &msgBuffer.nlMsg; NLMSG_OK(msg, static_cast<size_t>(length));
          msg                  = NLMSG_NEXT(msg, length))
     {
+        if (msg->nlmsg_type == NLMSG_DONE)
+        {
+            break;
+        }
+
 #else
     {
         // BSD sends one message per read to routing socket (see route.c, monitor command)
