@@ -556,51 +556,10 @@ private:
 } OT_TOOL_PACKED_END;
 
 /**
- * Implements Network Key Sequence TLV generation and parsing.
+ * Defines Network Key Sequence TLV constants and types.
  *
  */
-OT_TOOL_PACKED_BEGIN
-class NetworkKeySequenceTlv : public Tlv, public UintTlvInfo<Tlv::kNetworkKeySequence, uint32_t>
-{
-public:
-    /**
-     * Initializes the TLV.
-     *
-     */
-    void Init(void)
-    {
-        SetType(kNetworkKeySequence);
-        SetLength(sizeof(*this) - sizeof(Tlv));
-    }
-
-    /**
-     * Indicates whether or not the TLV appears to be well-formed.
-     *
-     * @retval TRUE   If the TLV appears to be well-formed.
-     * @retval FALSE  If the TLV does not appear to be well-formed.
-     *
-     */
-    bool IsValid(void) const { return GetLength() >= sizeof(*this) - sizeof(Tlv); }
-
-    /**
-     * Returns the Network Key Sequence value.
-     *
-     * @returns The Network Key Sequence value.
-     *
-     */
-    uint32_t GetNetworkKeySequence(void) const { return HostSwap32(mNetworkKeySequence); }
-
-    /**
-     * Sets the Network Key Sequence value.
-     *
-     * @param[in]  aNetworkKeySequence  The Network Key Sequence value.
-     *
-     */
-    void SetNetworkKeySequence(uint32_t aNetworkKeySequence) { mNetworkKeySequence = HostSwap32(aNetworkKeySequence); }
-
-private:
-    uint32_t mNetworkKeySequence;
-} OT_TOOL_PACKED_END;
+typedef UintTlvInfo<Tlv::kNetworkKeySequence, uint32_t> NetworkKeySequenceTlv;
 
 /**
  * Implements Mesh Local Prefix TLV generation and parsing.

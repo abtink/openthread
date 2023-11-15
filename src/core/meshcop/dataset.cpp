@@ -214,7 +214,7 @@ void Dataset::ConvertTo(Info &aDatasetInfo) const
             break;
 
         case Tlv::kExtendedPanId:
-            aDatasetInfo.SetExtendedPanId(As<ExtendedPanIdTlv>(cur)->GetExtendedPanId());
+            aDatasetInfo.SetExtendedPanId(cur->GetValueAs<ExtendedPanIdTlv>());
             break;
 
         case Tlv::kMeshLocalPrefix:
@@ -222,7 +222,7 @@ void Dataset::ConvertTo(Info &aDatasetInfo) const
             break;
 
         case Tlv::kNetworkKey:
-            aDatasetInfo.SetNetworkKey(As<NetworkKeyTlv>(cur)->GetNetworkKey());
+            aDatasetInfo.SetNetworkKey(cur->GetValueAs<NetworkKeyTlv>());
             break;
 
         case Tlv::kNetworkName:
@@ -549,7 +549,7 @@ Error Dataset::ApplyConfiguration(Instance &aInstance, bool *aIsNetworkKeyUpdate
             break;
 
         case Tlv::kExtendedPanId:
-            aInstance.Get<ExtendedPanIdManager>().SetExtPanId(As<ExtendedPanIdTlv>(cur)->GetExtendedPanId());
+            aInstance.Get<ExtendedPanIdManager>().SetExtPanId(cur->GetValueAs<ExtendedPanIdTlv>());
             break;
 
         case Tlv::kNetworkName:

@@ -139,6 +139,16 @@ public:
      */
     const uint8_t *GetValue(void) const;
 
+    template <typename SimpleTlvType> typename SimpleTlvType::ValueType &GetValueAs(void)
+    {
+        return *reinterpret_cast<typename SimpleTlvType::ValueType *>(GetValue());
+    }
+
+    template <typename SimpleTlvType> const typename SimpleTlvType::ValueType &GetValueAs(void) const
+    {
+        return *reinterpret_cast<const typename SimpleTlvType::ValueType *>(GetValue());
+    }
+
     /**
      * Returns a pointer to the next TLV.
      *
