@@ -173,6 +173,27 @@ public:
      */
     Error AppendTo(Message &aMessage) const;
 
+    // ONLY WORKS WITH normal TLV (not extended TLV).
+    template <typename SimpleTlvType> const typename SimpleTlvType::ValueType &ReadValueAs(void) const
+    {
+        return *reinterpret_cast<const typename SimpleTlvType::ValueType *>(this + 1);
+    }
+
+    template <typename UintTlvType> typename UintTlvType::UintValueType ReadValueAs(void) const
+    {
+        return BigEndian::Read<typename UintTlvType::UintValueType>(reinterpret_cast<const uint8_t *>(this + 1));
+    }
+
+    template <typename SimpleTlvType> void WriteValueAs(const typename SimpleTlvType::ValueType &aValue)
+    {
+        memcpy(this + 1, &aValue, sizeof(aValue));
+    }
+
+    template <typename UintTlvType> void WriteValueAs(typename UintTlvType::UintValueType aValue)
+    {
+        return BigEndian::Write<typename UintTlvType::UintValueType>(aValue, reinterpret_cast<uint8_t *>(this + 1));
+    }
+
     //------------------------------------------------------------------------------------------------------------------
     // Static methods for reading/finding/appending TLVs in a `Message`.
 
