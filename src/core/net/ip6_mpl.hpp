@@ -140,7 +140,7 @@ public:
      * @returns The MPL Seed Id value.
      *
      */
-    uint16_t GetSeedId(void) const { return HostSwap16(mSeedId); }
+    uint16_t GetSeedId(void) const { return HostSwap(mSeedId); }
 
     /**
      * Sets the MPL Seed Id value.
@@ -148,7 +148,7 @@ public:
      * @param[in]  aSeedId  The MPL Seed Id value.
      *
      */
-    void SetSeedId(uint16_t aSeedId) { mSeedId = HostSwap16(aSeedId); }
+    void SetSeedId(uint16_t aSeedId) { mSeedId = HostSwap(aSeedId); }
 
 private:
     static constexpr uint8_t kSeedIdLengthMask = 3 << 6;

@@ -50,7 +50,7 @@
 namespace ot {
 namespace LinkMetrics {
 
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap;
 
 /**
  * Defines constants related to Link Metrics Sub-TLVs.
@@ -141,7 +141,7 @@ public:
      * @returns The metric value.
      *
      */
-    uint32_t GetMetricsValue32(void) const { return HostSwap32(mMetricsValue.m32); }
+    uint32_t GetMetricsValue32(void) const { return HostSwap(mMetricsValue.m32); }
 
     /**
      * Sets the metric value (8 bits).
@@ -163,7 +163,7 @@ public:
      */
     void SetMetricsValue32(uint32_t aMetricsValue)
     {
-        mMetricsValue.m32 = HostSwap32(aMetricsValue);
+        mMetricsValue.m32 = HostSwap(aMetricsValue);
         SetLength(sizeof(*this) - sizeof(Tlv));
     }
 

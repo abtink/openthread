@@ -59,7 +59,7 @@
 #include "thread/time_sync_service.hpp"
 #include "thread/version.hpp"
 
-using ot::Encoding::BigEndian::HostSwap16;
+using ot::Encoding::BigEndian::HostSwap;
 
 namespace ot {
 namespace Mle {
@@ -132,12 +132,12 @@ Mle::Mle(Instance &aInstance)
     mMeshLocal16.mRloc = true;
 
     mLinkLocalAllThreadNodes.Clear();
-    mLinkLocalAllThreadNodes.GetAddress().mFields.m16[0] = HostSwap16(0xff32);
-    mLinkLocalAllThreadNodes.GetAddress().mFields.m16[7] = HostSwap16(0x0001);
+    mLinkLocalAllThreadNodes.GetAddress().mFields.m16[0] = HostSwap<uint16_t>(0xff32);
+    mLinkLocalAllThreadNodes.GetAddress().mFields.m16[7] = HostSwap<uint16_t>(0x0001);
 
     mRealmLocalAllThreadNodes.Clear();
-    mRealmLocalAllThreadNodes.GetAddress().mFields.m16[0] = HostSwap16(0xff33);
-    mRealmLocalAllThreadNodes.GetAddress().mFields.m16[7] = HostSwap16(0x0001);
+    mRealmLocalAllThreadNodes.GetAddress().mFields.m16[0] = HostSwap<uint16_t>(0xff33);
+    mRealmLocalAllThreadNodes.GetAddress().mFields.m16[7] = HostSwap<uint16_t>(0x0001);
 
     mMeshLocalPrefix.Clear();
     SetMeshLocalPrefix(AsCoreType(&kMeshLocalPrefixInit));

@@ -592,7 +592,7 @@ Error Option::Iterator::ReadExtendedOptionField(uint16_t &aValue)
         uint16_t value16;
 
         SuccessOrExit(error = Read(sizeof(uint16_t), &value16));
-        value16 = Encoding::BigEndian::HostSwap16(value16);
+        value16 = Encoding::BigEndian::HostSwap(value16);
         aValue  = value16 + Message::kOption2ByteExtensionOffset;
     }
     else

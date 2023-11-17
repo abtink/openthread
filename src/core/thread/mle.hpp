@@ -1120,13 +1120,13 @@ private:
         void InitSecurityControl(void) { mSecurityControl = kKeyIdMode2Mic32; }
         bool IsSecurityControlValid(void) const { return (mSecurityControl == kKeyIdMode2Mic32); }
 
-        uint32_t GetFrameCounter(void) const { return Encoding::LittleEndian::HostSwap32(mFrameCounter); }
-        void     SetFrameCounter(uint32_t aCounter) { mFrameCounter = Encoding::LittleEndian::HostSwap32(aCounter); }
+        uint32_t GetFrameCounter(void) const { return Encoding::LittleEndian::HostSwap(mFrameCounter); }
+        void     SetFrameCounter(uint32_t aCounter) { mFrameCounter = Encoding::LittleEndian::HostSwap(aCounter); }
 
-        uint32_t GetKeyId(void) const { return Encoding::BigEndian::HostSwap32(mKeySource); }
+        uint32_t GetKeyId(void) const { return Encoding::BigEndian::HostSwap(mKeySource); }
         void     SetKeyId(uint32_t aKeySequence)
         {
-            mKeySource = Encoding::BigEndian::HostSwap32(aKeySequence);
+            mKeySource = Encoding::BigEndian::HostSwap(aKeySequence);
             mKeyIndex  = (aKeySequence & 0x7f) + 1;
         }
 

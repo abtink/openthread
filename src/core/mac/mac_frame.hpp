@@ -48,8 +48,7 @@
 namespace ot {
 namespace Mac {
 
-using ot::Encoding::LittleEndian::HostSwap16;
-using ot::Encoding::LittleEndian::HostSwap64;
+using ot::Encoding::LittleEndian::HostSwap;
 using ot::Encoding::LittleEndian::ReadUint24;
 using ot::Encoding::LittleEndian::WriteUint24;
 
@@ -89,7 +88,7 @@ public:
      * @returns the IE Element Id.
      *
      */
-    uint16_t GetId(void) const { return (HostSwap16(mFields.m16) & kIdMask) >> kIdOffset; }
+    uint16_t GetId(void) const { return (HostSwap(mFields.m16) & kIdMask) >> kIdOffset; }
 
     /**
      * Sets the IE Element Id.
@@ -99,7 +98,7 @@ public:
      */
     void SetId(uint16_t aId)
     {
-        mFields.m16 = HostSwap16((HostSwap16(mFields.m16) & ~kIdMask) | ((aId << kIdOffset) & kIdMask));
+        mFields.m16 = HostSwap<uint16_t>((HostSwap(mFields.m16) & ~kIdMask) | ((aId << kIdOffset) & kIdMask));
     }
 
     /**
@@ -238,7 +237,7 @@ public:
      * @returns the network time, in microseconds.
      *
      */
-    uint64_t GetTime(void) const { return HostSwap64(mTime); }
+    uint64_t GetTime(void) const { return HostSwap(mTime); }
 
     /**
      * Sets the network time.
@@ -246,7 +245,7 @@ public:
      * @param[in]  aTime  The network time.
      *
      */
-    void SetTime(uint64_t aTime) { mTime = HostSwap64(aTime); }
+    void SetTime(uint64_t aTime) { mTime = HostSwap(aTime); }
 
 private:
     uint8_t  mSequence;
@@ -1559,7 +1558,7 @@ public:
      */
     void Init(void)
     {
-        mSuperframeSpec     = HostSwap16(kSuperFrameSpec);
+        mSuperframeSpec     = HostSwap(kSuperFrameSpec);
         mGtsSpec            = 0;
         mPendingAddressSpec = 0;
     }
@@ -1573,7 +1572,7 @@ public:
      */
     bool IsValid(void) const
     {
-        return (mSuperframeSpec == HostSwap16(kSuperFrameSpec)) && (mGtsSpec == 0) && (mPendingAddressSpec == 0);
+        return (mSuperframeSpec == HostSwap(kSuperFrameSpec)) && (mGtsSpec == 0) && (mPendingAddressSpec == 0);
     }
 
     /**
@@ -1754,7 +1753,7 @@ public:
      * @returns the CSL Period.
      *
      */
-    uint16_t GetPeriod(void) const { return HostSwap16(mPeriod); }
+    uint16_t GetPeriod(void) const { return HostSwap(mPeriod); }
 
     /**
      * Sets the CSL Period.
@@ -1762,7 +1761,7 @@ public:
      * @param[in]  aPeriod  The CSL Period.
      *
      */
-    void SetPeriod(uint16_t aPeriod) { mPeriod = HostSwap16(aPeriod); }
+    void SetPeriod(uint16_t aPeriod) { mPeriod = HostSwap(aPeriod); }
 
     /**
      * Returns the CSL Phase.
@@ -1770,7 +1769,7 @@ public:
      * @returns the CSL Phase.
      *
      */
-    uint16_t GetPhase(void) const { return HostSwap16(mPhase); }
+    uint16_t GetPhase(void) const { return HostSwap(mPhase); }
 
     /**
      * Sets the CSL Phase.
@@ -1778,7 +1777,7 @@ public:
      * @param[in]  aPhase  The CSL Phase.
      *
      */
-    void SetPhase(uint16_t aPhase) { mPhase = HostSwap16(aPhase); }
+    void SetPhase(uint16_t aPhase) { mPhase = HostSwap(aPhase); }
 
 private:
     uint16_t mPhase;

@@ -826,7 +826,7 @@ void TestIp4Ip6Translation(void)
 
 void TestIp4Cidr(void)
 {
-    using ot::Encoding::BigEndian::HostSwap32;
+    using ot::Encoding::BigEndian::HostSwap;
     struct TestCase
     {
         const char    *mNetwork;

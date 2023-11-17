@@ -47,7 +47,7 @@
 #include "common/string.hpp"
 #include "mac/mac_types.hpp"
 
-using ot::Encoding::BigEndian::HostSwap16;
+using ot::Encoding::BigEndian::HostSwap;
 
 namespace ot {
 
@@ -121,7 +121,7 @@ public:
      * @returns The 16-bit subnet ID.
      *
      */
-    uint16_t GetSubnetId(void) const { return HostSwap16(mPrefix.mFields.m16[3]); }
+    uint16_t GetSubnetId(void) const { return HostSwap(mPrefix.mFields.m16[3]); }
 
     /**
      * Gets the prefix length (in bits).
@@ -162,7 +162,7 @@ public:
      * @param[in] aSubnetId  A 16-bit subnet ID.
      *
      */
-    void SetSubnetId(uint16_t aSubnetId) { mPrefix.mFields.m16[3] = HostSwap16(aSubnetId); }
+    void SetSubnetId(uint16_t aSubnetId) { mPrefix.mFields.m16[3] = HostSwap(aSubnetId); }
 
     /**
      * Set the prefix length.
@@ -529,7 +529,7 @@ public:
      * @returns The RLOC16 or ALOC16.
      *
      */
-    uint16_t GetLocator(void) const { return HostSwap16(mFields.m16[3]); }
+    uint16_t GetLocator(void) const { return HostSwap(mFields.m16[3]); }
 
     /**
      * Sets the Interface Identifier (IID) address locator field.
@@ -540,7 +540,7 @@ public:
      * @param[in]  aLocator   RLOC16 or ALOC16.
      *
      */
-    void SetLocator(uint16_t aLocator) { mFields.m16[3] = HostSwap16(aLocator); }
+    void SetLocator(uint16_t aLocator) { mFields.m16[3] = HostSwap(aLocator); }
 
     /**
      * Applies a prefix to IID.

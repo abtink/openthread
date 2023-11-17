@@ -54,8 +54,7 @@
 namespace ot {
 namespace NetworkDiagnostic {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap;
 
 /**
  * Implements Network Diagnostic TLV generation and parsing.
@@ -362,7 +361,7 @@ public:
      * @returns The IfInUnknownProtos counter
      *
      */
-    uint32_t GetIfInUnknownProtos(void) const { return HostSwap32(mIfInUnknownProtos); }
+    uint32_t GetIfInUnknownProtos(void) const { return HostSwap(mIfInUnknownProtos); }
 
     /**
      * Sets the IfInUnknownProtos counter.
@@ -370,10 +369,7 @@ public:
      * @param[in]  aIfInUnknownProtos The IfInUnknownProtos counter
      *
      */
-    void SetIfInUnknownProtos(const uint32_t aIfInUnknownProtos)
-    {
-        mIfInUnknownProtos = HostSwap32(aIfInUnknownProtos);
-    }
+    void SetIfInUnknownProtos(const uint32_t aIfInUnknownProtos) { mIfInUnknownProtos = HostSwap(aIfInUnknownProtos); }
 
     /**
      * Returns the IfInErrors counter.
@@ -381,7 +377,7 @@ public:
      * @returns The IfInErrors counter
      *
      */
-    uint32_t GetIfInErrors(void) const { return HostSwap32(mIfInErrors); }
+    uint32_t GetIfInErrors(void) const { return HostSwap(mIfInErrors); }
 
     /**
      * Sets the IfInErrors counter.
@@ -389,7 +385,7 @@ public:
      * @param[in]  aIfInErrors The IfInErrors counter
      *
      */
-    void SetIfInErrors(const uint32_t aIfInErrors) { mIfInErrors = HostSwap32(aIfInErrors); }
+    void SetIfInErrors(const uint32_t aIfInErrors) { mIfInErrors = HostSwap(aIfInErrors); }
 
     /**
      * Returns the IfOutErrors counter.
@@ -397,7 +393,7 @@ public:
      * @returns The IfOutErrors counter
      *
      */
-    uint32_t GetIfOutErrors(void) const { return HostSwap32(mIfOutErrors); }
+    uint32_t GetIfOutErrors(void) const { return HostSwap(mIfOutErrors); }
 
     /**
      * Sets the IfOutErrors counter.
@@ -405,7 +401,7 @@ public:
      * @param[in]  aIfOutErrors The IfOutErrors counter.
      *
      */
-    void SetIfOutErrors(const uint32_t aIfOutErrors) { mIfOutErrors = HostSwap32(aIfOutErrors); }
+    void SetIfOutErrors(const uint32_t aIfOutErrors) { mIfOutErrors = HostSwap(aIfOutErrors); }
 
     /**
      * Returns the IfInUcastPkts counter.
@@ -413,7 +409,7 @@ public:
      * @returns The IfInUcastPkts counter
      *
      */
-    uint32_t GetIfInUcastPkts(void) const { return HostSwap32(mIfInUcastPkts); }
+    uint32_t GetIfInUcastPkts(void) const { return HostSwap(mIfInUcastPkts); }
 
     /**
      * Sets the IfInUcastPkts counter.
@@ -421,14 +417,14 @@ public:
      * @param[in]  aIfInUcastPkts The IfInUcastPkts counter.
      *
      */
-    void SetIfInUcastPkts(const uint32_t aIfInUcastPkts) { mIfInUcastPkts = HostSwap32(aIfInUcastPkts); }
+    void SetIfInUcastPkts(const uint32_t aIfInUcastPkts) { mIfInUcastPkts = HostSwap(aIfInUcastPkts); }
     /**
      * Returns the IfInBroadcastPkts counter.
      *
      * @returns The IfInBroadcastPkts counter
      *
      */
-    uint32_t GetIfInBroadcastPkts(void) const { return HostSwap32(mIfInBroadcastPkts); }
+    uint32_t GetIfInBroadcastPkts(void) const { return HostSwap(mIfInBroadcastPkts); }
 
     /**
      * Sets the IfInBroadcastPkts counter.
@@ -436,10 +432,7 @@ public:
      * @param[in]  aIfInBroadcastPkts The IfInBroadcastPkts counter.
      *
      */
-    void SetIfInBroadcastPkts(const uint32_t aIfInBroadcastPkts)
-    {
-        mIfInBroadcastPkts = HostSwap32(aIfInBroadcastPkts);
-    }
+    void SetIfInBroadcastPkts(const uint32_t aIfInBroadcastPkts) { mIfInBroadcastPkts = HostSwap(aIfInBroadcastPkts); }
 
     /**
      * Returns the IfInDiscards counter.
@@ -447,7 +440,7 @@ public:
      * @returns The IfInDiscards counter
      *
      */
-    uint32_t GetIfInDiscards(void) const { return HostSwap32(mIfInDiscards); }
+    uint32_t GetIfInDiscards(void) const { return HostSwap(mIfInDiscards); }
 
     /**
      * Sets the IfInDiscards counter.
@@ -455,7 +448,7 @@ public:
      * @param[in]  aIfInDiscards The IfInDiscards counter.
      *
      */
-    void SetIfInDiscards(const uint32_t aIfInDiscards) { mIfInDiscards = HostSwap32(aIfInDiscards); }
+    void SetIfInDiscards(const uint32_t aIfInDiscards) { mIfInDiscards = HostSwap(aIfInDiscards); }
 
     /**
      * Returns the IfOutUcastPkts counter.
@@ -463,7 +456,7 @@ public:
      * @returns The IfOutUcastPkts counter
      *
      */
-    uint32_t GetIfOutUcastPkts(void) const { return HostSwap32(mIfOutUcastPkts); }
+    uint32_t GetIfOutUcastPkts(void) const { return HostSwap(mIfOutUcastPkts); }
 
     /**
      * Sets the IfOutUcastPkts counter.
@@ -471,7 +464,7 @@ public:
      * @param[in]  aIfOutUcastPkts The IfOutUcastPkts counter.
      *
      */
-    void SetIfOutUcastPkts(const uint32_t aIfOutUcastPkts) { mIfOutUcastPkts = HostSwap32(aIfOutUcastPkts); }
+    void SetIfOutUcastPkts(const uint32_t aIfOutUcastPkts) { mIfOutUcastPkts = HostSwap(aIfOutUcastPkts); }
 
     /**
      * Returns the IfOutBroadcastPkts counter.
@@ -479,7 +472,7 @@ public:
      * @returns The IfOutBroadcastPkts counter
      *
      */
-    uint32_t GetIfOutBroadcastPkts(void) const { return HostSwap32(mIfOutBroadcastPkts); }
+    uint32_t GetIfOutBroadcastPkts(void) const { return HostSwap(mIfOutBroadcastPkts); }
 
     /**
      * Sets the IfOutBroadcastPkts counter.
@@ -489,7 +482,7 @@ public:
      */
     void SetIfOutBroadcastPkts(const uint32_t aIfOutBroadcastPkts)
     {
-        mIfOutBroadcastPkts = HostSwap32(aIfOutBroadcastPkts);
+        mIfOutBroadcastPkts = HostSwap(aIfOutBroadcastPkts);
     }
 
     /**
@@ -498,7 +491,7 @@ public:
      * @returns The IfOutDiscards counter
      *
      */
-    uint32_t GetIfOutDiscards(void) const { return HostSwap32(mIfOutDiscards); }
+    uint32_t GetIfOutDiscards(void) const { return HostSwap(mIfOutDiscards); }
 
     /**
      * Sets the IfOutDiscards counter.
@@ -506,7 +499,7 @@ public:
      * @param[in]  aIfOutDiscards The IfOutDiscards counter.
      *
      */
-    void SetIfOutDiscards(const uint32_t aIfOutDiscards) { mIfOutDiscards = HostSwap32(aIfOutDiscards); }
+    void SetIfOutDiscards(const uint32_t aIfOutDiscards) { mIfOutDiscards = HostSwap(aIfOutDiscards); }
 
 private:
     uint32_t mIfInUnknownProtos;
@@ -618,8 +611,8 @@ private:
     static constexpr uint16_t kLqiMask       = 0x3 << kLqiOffset;
     static constexpr uint16_t kChildIdMask   = 0x1ff << kChildIdOffset;
 
-    uint16_t GetTimeoutChildId(void) const { return HostSwap16(mTimeoutChildId); }
-    void     SetTimeoutChildId(uint16_t aTimeoutChildIf) { mTimeoutChildId = HostSwap16(aTimeoutChildIf); }
+    uint16_t GetTimeoutChildId(void) const { return HostSwap(mTimeoutChildId); }
+    void     SetTimeoutChildId(uint16_t aTimeoutChildIf) { mTimeoutChildId = HostSwap(aTimeoutChildIf); }
 
     uint16_t mTimeoutChildId;
     uint8_t  mMode;
@@ -735,7 +728,7 @@ public:
      * @returns The RLOC16 of the child.
      *
      */
-    uint16_t GetRloc16(void) const { return HostSwap16(mRloc16); }
+    uint16_t GetRloc16(void) const { return HostSwap(mRloc16); }
 
     /**
      * Returns the Extended Address.
@@ -751,7 +744,7 @@ public:
      * @returns The Version of the child.
      *
      */
-    uint16_t GetVersion(void) const { return HostSwap16(mVersion); }
+    uint16_t GetVersion(void) const { return HostSwap(mVersion); }
 
     /**
      * Returns the Timeout field
@@ -759,7 +752,7 @@ public:
      * @returns The Timeout value in seconds.
      *
      */
-    uint32_t GetTimeout(void) const { return HostSwap32(mTimeout); }
+    uint32_t GetTimeout(void) const { return HostSwap(mTimeout); }
 
     /**
      * Returns the Age field.
@@ -767,7 +760,7 @@ public:
      * @returns The Age field (seconds since last heard from the child).
      *
      */
-    uint32_t GetAge(void) const { return HostSwap32(mAge); }
+    uint32_t GetAge(void) const { return HostSwap(mAge); }
 
     /**
      * Returns the Connection Time field.
@@ -775,7 +768,7 @@ public:
      * @returns The Connection Time field (seconds since attach).
      *
      */
-    uint32_t GetConnectionTime(void) const { return HostSwap32(mConnectionTime); }
+    uint32_t GetConnectionTime(void) const { return HostSwap(mConnectionTime); }
 
     /**
      * Returns the Supervision Interval field
@@ -783,7 +776,7 @@ public:
      * @returns The Supervision Interval in seconds. Zero indicates not used.
      *
      */
-    uint16_t GetSupervisionInterval(void) const { return HostSwap16(mSupervisionInterval); }
+    uint16_t GetSupervisionInterval(void) const { return HostSwap(mSupervisionInterval); }
 
     /**
      * Returns the Link Margin field.
@@ -818,7 +811,7 @@ public:
      * @returns The Frame Error Rate (0x0000->0%, 0xffff->100%).
      *
      */
-    uint16_t GetFrameErrorRate(void) const { return HostSwap16(mFrameErrorRate); }
+    uint16_t GetFrameErrorRate(void) const { return HostSwap(mFrameErrorRate); }
 
     /**
      * Returns the Message Error Rate field.
@@ -829,7 +822,7 @@ public:
      * @returns The Message Error Rate (0x0000->0%, 0xffff->100%).
      *
      */
-    uint16_t GetMessageErrorRate(void) const { return HostSwap16(mMessageErrorRate); }
+    uint16_t GetMessageErrorRate(void) const { return HostSwap(mMessageErrorRate); }
 
     /**
      * Returns the Queued Message Count field.
@@ -837,7 +830,7 @@ public:
      * @returns The Queued Message Count (number of queued messages for indirect tx to child).
      *
      */
-    uint16_t GetQueuedMessageCount(void) const { return HostSwap16(mQueuedMessageCount); }
+    uint16_t GetQueuedMessageCount(void) const { return HostSwap(mQueuedMessageCount); }
 
     /**
      * Returns the CSL Period in unit of 10 symbols.
@@ -845,7 +838,7 @@ public:
      * @returns The CSL Period in unit of 10-symbols-time. Zero if CSL is not supported.
      *
      */
-    uint16_t GetCslPeriod(void) const { return HostSwap16(mCslPeriod); }
+    uint16_t GetCslPeriod(void) const { return HostSwap(mCslPeriod); }
 
     /**
      * Returns the CSL Timeout in seconds.
@@ -853,7 +846,7 @@ public:
      * @returns The CSL Timeout in seconds. Zero if unknown on parent of if CSL Is not supported.
      *
      */
-    uint32_t GetCslTimeout(void) const { return HostSwap32(mCslTimeout); }
+    uint32_t GetCslTimeout(void) const { return HostSwap(mCslTimeout); }
 
     /**
      * Returns the CSL Channel.
@@ -899,7 +892,7 @@ public:
      * @returns The RLOC16 of the child.
      *
      */
-    uint16_t GetRloc16(void) const { return HostSwap16(mRloc16); }
+    uint16_t GetRloc16(void) const { return HostSwap(mRloc16); }
 
     /**
      * Sets the RLOC16.
@@ -907,7 +900,7 @@ public:
      * @param[in] aRloc16   The RLOC16 value.
      *
      */
-    void SetRloc16(uint16_t aRloc16) { mRloc16 = HostSwap16(aRloc16); }
+    void SetRloc16(uint16_t aRloc16) { mRloc16 = HostSwap(aRloc16); }
 
 private:
     uint16_t mRloc16;
@@ -957,7 +950,7 @@ public:
      * @returns The RLOC16 of the router.
      *
      */
-    uint16_t GetRloc16(void) const { return HostSwap16(mRloc16); }
+    uint16_t GetRloc16(void) const { return HostSwap(mRloc16); }
 
     /**
      * Returns the Extended Address.
@@ -973,7 +966,7 @@ public:
      * @returns The Version of the router.
      *
      */
-    uint16_t GetVersion(void) const { return HostSwap16(mVersion); }
+    uint16_t GetVersion(void) const { return HostSwap(mVersion); }
 
     /**
      * Returns the Connection Time field.
@@ -981,7 +974,7 @@ public:
      * @returns The Connection Time field (seconds since link establishment).
      *
      */
-    uint32_t GetConnectionTime(void) const { return HostSwap32(mConnectionTime); }
+    uint32_t GetConnectionTime(void) const { return HostSwap(mConnectionTime); }
 
     /**
      * Returns the Link Margin field.
@@ -1016,7 +1009,7 @@ public:
      * @returns The Frame Error Rate (0x0000->0%, 0xffff->100%).
      *
      */
-    uint16_t GetFrameErrorRate(void) const { return HostSwap16(mFrameErrorRate); }
+    uint16_t GetFrameErrorRate(void) const { return HostSwap(mFrameErrorRate); }
 
     /**
      * Returns the Message Error Rate field.
@@ -1027,7 +1020,7 @@ public:
      * @returns The Message Error Rate (0x0000->0%, 0xffff->100%).
      *
      */
-    uint16_t GetMessageErrorRate(void) const { return HostSwap16(mMessageErrorRate); }
+    uint16_t GetMessageErrorRate(void) const { return HostSwap(mMessageErrorRate); }
 
 private:
     uint8_t         mFlags;            // Flags (`kFlags*` constants).
@@ -1082,8 +1075,8 @@ private:
     static constexpr uint16_t kIsLastFlag = 1 << 15;
     static constexpr uint16_t kIndexMask  = 0x7f;
 
-    uint16_t GetFlagsIndex(void) const { return HostSwap16(mFlagsIndex); }
-    void     SetFlagsIndex(uint16_t aFlagsIndex) { mFlagsIndex = HostSwap16(aFlagsIndex); }
+    uint16_t GetFlagsIndex(void) const { return HostSwap(mFlagsIndex); }
+    void     SetFlagsIndex(uint16_t aFlagsIndex) { mFlagsIndex = HostSwap(aFlagsIndex); }
 
     uint16_t mFlagsIndex;
 } OT_TOOL_PACKED_END;

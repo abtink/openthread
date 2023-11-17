@@ -43,7 +43,7 @@
 #include "thread/network_data_leader.hpp"
 #include "thread/thread_netif.hpp"
 
-using ot::Encoding::BigEndian::HostSwap16;
+using ot::Encoding::BigEndian::HostSwap;
 using ot::Encoding::BigEndian::ReadUint16;
 
 namespace ot {
@@ -422,7 +422,7 @@ exit:
 
     if (error == kErrorNone)
     {
-        aFrameBuilder.Write<uint16_t>(hcCtlOffset, HostSwap16(hcCtl));
+        aFrameBuilder.Write<uint16_t>(hcCtlOffset, HostSwap(hcCtl));
     }
     else
     {
@@ -722,7 +722,7 @@ Error Lowpan::DecompressBaseHeader(Ip6::Header          &aIp6Header,
     {
         if ((hcCtl & kHcSrcAddrContext) == 0)
         {
-            aIp6Header.GetSource().mFields.m16[0] = HostSwap16(0xfe80);
+            aIp6Header.GetSource().mFields.m16[0] = HostSwap<uint16_t>(0xfe80);
         }
         else
         {
@@ -761,7 +761,7 @@ Error Lowpan::DecompressBaseHeader(Ip6::Header          &aIp6Header,
         {
             if ((hcCtl & kHcDstAddrModeMask) != 0)
             {
-                aIp6Header.GetDestination().mFields.m16[0] = HostSwap16(0xfe80);
+                aIp6Header.GetDestination().mFields.m16[0] = HostSwap<uint16_t>(0xfe80);
             }
         }
         else
@@ -1021,12 +1021,12 @@ Error Lowpan::Decompress(Message              &aMessage,
 
     if (aDatagramLength)
     {
-        ip6PayloadLength = HostSwap16(aDatagramLength - currentOffset - sizeof(Ip6::Header));
+        ip6PayloadLength = HostSwap<uint16_t>(aDatagramLength - currentOffset - sizeof(Ip6::Header));
     }
     else
     {
         ip6PayloadLength =
-            HostSwap16(aMessage.GetOffset() - currentOffset - sizeof(Ip6::Header) + aFrameData.GetLength());
+            HostSwap<uint16_t>(aMessage.GetOffset() - currentOffset - sizeof(Ip6::Header) + aFrameData.GetLength());
     }
 
     aMessage.Write(currentOffset + Ip6::Header::kPayloadLengthFieldOffset, ip6PayloadLength);
@@ -1044,7 +1044,7 @@ Ip6::Ecn Lowpan::DecompressEcn(const Message &aMessage, uint16_t aOffset) const
     uint8_t  byte;
 
     SuccessOrExit(aMessage.Read(aOffset, hcCtl));
-    hcCtl = HostSwap16(hcCtl);
+    hcCtl = HostSwap(hcCtl);
 
     VerifyOrExit((hcCtl & kHcDispatchMask) == kHcDispatch);
     aOffset += sizeof(uint16_t);

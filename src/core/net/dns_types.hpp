@@ -59,8 +59,7 @@ namespace ot {
  */
 namespace Dns {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap;
 
 /**
  * @addtogroup core-dns
@@ -92,7 +91,7 @@ public:
      * @returns The Message ID value.
      *
      */
-    uint16_t GetMessageId(void) const { return HostSwap16(mMessageId); }
+    uint16_t GetMessageId(void) const { return HostSwap(mMessageId); }
 
     /**
      * Sets the Message ID.
@@ -100,7 +99,7 @@ public:
      * @param[in]  aMessageId The Message ID value.
      *
      */
-    void SetMessageId(uint16_t aMessageId) { mMessageId = HostSwap16(aMessageId); }
+    void SetMessageId(uint16_t aMessageId) { mMessageId = HostSwap(aMessageId); }
 
     /**
      * Sets the Message ID to a crypto-secure randomly generated number.
@@ -331,7 +330,7 @@ public:
      * @returns The number of entries in question section.
      *
      */
-    uint16_t GetQuestionCount(void) const { return HostSwap16(mQdCount); }
+    uint16_t GetQuestionCount(void) const { return HostSwap(mQdCount); }
 
     /**
      * Sets the number of entries in question section.
@@ -339,7 +338,7 @@ public:
      * @param[in]  aCount The number of entries in question section.
      *
      */
-    void SetQuestionCount(uint16_t aCount) { mQdCount = HostSwap16(aCount); }
+    void SetQuestionCount(uint16_t aCount) { mQdCount = HostSwap(aCount); }
 
     /**
      * Returns the number of entries in answer section.
@@ -347,7 +346,7 @@ public:
      * @returns The number of entries in answer section.
      *
      */
-    uint16_t GetAnswerCount(void) const { return HostSwap16(mAnCount); }
+    uint16_t GetAnswerCount(void) const { return HostSwap(mAnCount); }
 
     /**
      * Sets the number of entries in answer section.
@@ -355,7 +354,7 @@ public:
      * @param[in]  aCount The number of entries in answer section.
      *
      */
-    void SetAnswerCount(uint16_t aCount) { mAnCount = HostSwap16(aCount); }
+    void SetAnswerCount(uint16_t aCount) { mAnCount = HostSwap(aCount); }
 
     /**
      * Returns the number of entries in authority records section.
@@ -363,7 +362,7 @@ public:
      * @returns The number of entries in authority records section.
      *
      */
-    uint16_t GetAuthorityRecordCount(void) const { return HostSwap16(mNsCount); }
+    uint16_t GetAuthorityRecordCount(void) const { return HostSwap(mNsCount); }
 
     /**
      * Sets the number of entries in authority records section.
@@ -371,7 +370,7 @@ public:
      * @param[in]  aCount The number of entries in authority records section.
      *
      */
-    void SetAuthorityRecordCount(uint16_t aCount) { mNsCount = HostSwap16(aCount); }
+    void SetAuthorityRecordCount(uint16_t aCount) { mNsCount = HostSwap(aCount); }
 
     /**
      * Returns the number of entries in additional records section.
@@ -379,7 +378,7 @@ public:
      * @returns The number of entries in additional records section.
      *
      */
-    uint16_t GetAdditionalRecordCount(void) const { return HostSwap16(mArCount); }
+    uint16_t GetAdditionalRecordCount(void) const { return HostSwap(mArCount); }
 
     /**
      * Sets the number of entries in additional records section.
@@ -387,7 +386,7 @@ public:
      * @param[in]  aCount The number of entries in additional records section.
      *
      */
-    void SetAdditionalRecordCount(uint16_t aCount) { mArCount = HostSwap16(aCount); }
+    void SetAdditionalRecordCount(uint16_t aCount) { mArCount = HostSwap(aCount); }
 
 private:
     // Protocol Constants (RFC 1035).
@@ -1245,7 +1244,7 @@ public:
      */
     bool Matches(uint16_t aType, uint16_t aClass = kClassInternet) const
     {
-        return (mType == HostSwap16(aType)) && (mClass == HostSwap16(aClass));
+        return (mType == HostSwap(aType)) && (mClass == HostSwap(aClass));
     }
 
     /**
@@ -1254,7 +1253,7 @@ public:
      * @returns The type of the resource record.
      *
      */
-    uint16_t GetType(void) const { return HostSwap16(mType); }
+    uint16_t GetType(void) const { return HostSwap(mType); }
 
     /**
      * Sets the type of the resource record.
@@ -1262,7 +1261,7 @@ public:
      * @param[in]  aType The type of the resource record.
      *
      */
-    void SetType(uint16_t aType) { mType = HostSwap16(aType); }
+    void SetType(uint16_t aType) { mType = HostSwap(aType); }
 
     /**
      * Returns the class of the resource record.
@@ -1270,7 +1269,7 @@ public:
      * @returns The class of the resource record.
      *
      */
-    uint16_t GetClass(void) const { return HostSwap16(mClass); }
+    uint16_t GetClass(void) const { return HostSwap(mClass); }
 
     /**
      * Sets the class of the resource record.
@@ -1278,7 +1277,7 @@ public:
      * @param[in]  aClass The class of the resource record.
      *
      */
-    void SetClass(uint16_t aClass) { mClass = HostSwap16(aClass); }
+    void SetClass(uint16_t aClass) { mClass = HostSwap(aClass); }
 
     /**
      * Returns the time to live field of the resource record.
@@ -1286,7 +1285,7 @@ public:
      * @returns The time to live field of the resource record.
      *
      */
-    uint32_t GetTtl(void) const { return HostSwap32(mTtl); }
+    uint32_t GetTtl(void) const { return HostSwap(mTtl); }
 
     /**
      * Sets the time to live field of the resource record.
@@ -1294,7 +1293,7 @@ public:
      * @param[in]  aTtl The time to live field of the resource record.
      *
      */
-    void SetTtl(uint32_t aTtl) { mTtl = HostSwap32(aTtl); }
+    void SetTtl(uint32_t aTtl) { mTtl = HostSwap(aTtl); }
 
     /**
      * Returns the length of the resource record data.
@@ -1302,7 +1301,7 @@ public:
      * @returns The length of the resource record data.
      *
      */
-    uint16_t GetLength(void) const { return HostSwap16(mLength); }
+    uint16_t GetLength(void) const { return HostSwap(mLength); }
 
     /**
      * Sets the length of the resource record data.
@@ -1310,7 +1309,7 @@ public:
      * @param[in]  aLength The length of the resource record data.
      *
      */
-    void SetLength(uint16_t aLength) { mLength = HostSwap16(aLength); }
+    void SetLength(uint16_t aLength) { mLength = HostSwap(aLength); }
 
     /**
      * Returns the size of (number of bytes) in resource record and its data RDATA section (excluding the
@@ -1791,7 +1790,7 @@ public:
      * @returns The priority value.
      *
      */
-    uint16_t GetPriority(void) const { return HostSwap16(mPriority); }
+    uint16_t GetPriority(void) const { return HostSwap(mPriority); }
 
     /**
      * Sets the SRV record's priority value.
@@ -1799,7 +1798,7 @@ public:
      * @param[in]  aPriority  The priority value.
      *
      */
-    void SetPriority(uint16_t aPriority) { mPriority = HostSwap16(aPriority); }
+    void SetPriority(uint16_t aPriority) { mPriority = HostSwap(aPriority); }
 
     /**
      * Returns the SRV record's weight value.
@@ -1807,7 +1806,7 @@ public:
      * @returns The weight value.
      *
      */
-    uint16_t GetWeight(void) const { return HostSwap16(mWeight); }
+    uint16_t GetWeight(void) const { return HostSwap(mWeight); }
 
     /**
      * Sets the SRV record's weight value.
@@ -1815,7 +1814,7 @@ public:
      * @param[in]  aWeight  The weight value.
      *
      */
-    void SetWeight(uint16_t aWeight) { mWeight = HostSwap16(aWeight); }
+    void SetWeight(uint16_t aWeight) { mWeight = HostSwap(aWeight); }
 
     /**
      * Returns the SRV record's port number on the target host for this service.
@@ -1823,7 +1822,7 @@ public:
      * @returns The port number.
      *
      */
-    uint16_t GetPort(void) const { return HostSwap16(mPort); }
+    uint16_t GetPort(void) const { return HostSwap(mPort); }
 
     /**
      * Sets the SRV record's port number on the target host for this service.
@@ -1831,7 +1830,7 @@ public:
      * @param[in]  aPort  The port number.
      *
      */
-    void SetPort(uint16_t aPort) { mPort = HostSwap16(aPort); }
+    void SetPort(uint16_t aPort) { mPort = HostSwap(aPort); }
 
     /**
      * Parses and reads the SRV target host name from a message.
@@ -2123,7 +2122,7 @@ public:
      * @returns The type-covered value.
      *
      */
-    uint16_t GetTypeCovered(void) const { return HostSwap16(mTypeCovered); }
+    uint16_t GetTypeCovered(void) const { return HostSwap(mTypeCovered); }
 
     /**
      * Sets the SIG record's type-covered value.
@@ -2131,7 +2130,7 @@ public:
      * @param[in]  aTypeCovered  The type-covered value.
      *
      */
-    void SetTypeCovered(uint8_t aTypeCovered) { mTypeCovered = HostSwap16(aTypeCovered); }
+    void SetTypeCovered(uint8_t aTypeCovered) { mTypeCovered = HostSwap(aTypeCovered); }
 
     /**
      * Returns the SIG record's algorithm value.
@@ -2173,7 +2172,7 @@ public:
      * @returns The original TTL value.
      *
      */
-    uint32_t GetOriginalTtl(void) const { return HostSwap32(mOriginalTtl); }
+    uint32_t GetOriginalTtl(void) const { return HostSwap(mOriginalTtl); }
 
     /**
      * Sets the SIG record's original TTL value.
@@ -2181,7 +2180,7 @@ public:
      * @param[in]  aOriginalTtl  The original TTL value.
      *
      */
-    void SetOriginalTtl(uint32_t aOriginalTtl) { mOriginalTtl = HostSwap32(aOriginalTtl); }
+    void SetOriginalTtl(uint32_t aOriginalTtl) { mOriginalTtl = HostSwap(aOriginalTtl); }
 
     /**
      * Returns the SIG record's expiration time value.
@@ -2189,7 +2188,7 @@ public:
      * @returns The expiration time value (seconds since Jan 1, 1970).
      *
      */
-    uint32_t GetExpiration(void) const { return HostSwap32(mExpiration); }
+    uint32_t GetExpiration(void) const { return HostSwap(mExpiration); }
 
     /**
      * Sets the SIG record's expiration time value.
@@ -2197,7 +2196,7 @@ public:
      * @param[in]  aExpiration  The expiration time value (seconds since Jan 1, 1970).
      *
      */
-    void SetExpiration(uint32_t aExpiration) { mExpiration = HostSwap32(aExpiration); }
+    void SetExpiration(uint32_t aExpiration) { mExpiration = HostSwap(aExpiration); }
 
     /**
      * Returns the SIG record's inception time value.
@@ -2205,7 +2204,7 @@ public:
      * @returns The inception time value (seconds since Jan 1, 1970).
      *
      */
-    uint32_t GetInception(void) const { return HostSwap32(mInception); }
+    uint32_t GetInception(void) const { return HostSwap(mInception); }
 
     /**
      * Sets the SIG record's inception time value.
@@ -2213,7 +2212,7 @@ public:
      * @param[in]  aInception  The inception time value (seconds since Jan 1, 1970).
      *
      */
-    void SetInception(uint32_t aInception) { mInception = HostSwap32(aInception); }
+    void SetInception(uint32_t aInception) { mInception = HostSwap(aInception); }
 
     /**
      * Returns the SIG record's key tag value.
@@ -2221,7 +2220,7 @@ public:
      * @returns The key tag value.
      *
      */
-    uint16_t GetKeyTag(void) const { return HostSwap16(mKeyTag); }
+    uint16_t GetKeyTag(void) const { return HostSwap(mKeyTag); }
 
     /**
      * Sets the SIG record's key tag value.
@@ -2229,7 +2228,7 @@ public:
      * @param[in]  aKeyTag  The key tag value.
      *
      */
-    void SetKeyTag(uint16_t aKeyTag) { mKeyTag = HostSwap16(aKeyTag); }
+    void SetKeyTag(uint16_t aKeyTag) { mKeyTag = HostSwap(aKeyTag); }
 
     /**
      * Returns a pointer to the start of the record data fields.
@@ -2414,7 +2413,7 @@ public:
      * @returns The option code value.
      *
      */
-    uint16_t GetOptionCode(void) const { return HostSwap16(mOptionCode); }
+    uint16_t GetOptionCode(void) const { return HostSwap(mOptionCode); }
 
     /**
      * Sets the option code value.
@@ -2422,7 +2421,7 @@ public:
      * @param[in]  aOptionCode  The option code value.
      *
      */
-    void SetOptionCode(uint16_t aOptionCode) { mOptionCode = HostSwap16(aOptionCode); }
+    void SetOptionCode(uint16_t aOptionCode) { mOptionCode = HostSwap(aOptionCode); }
 
     /**
      * Returns the option length value.
@@ -2430,7 +2429,7 @@ public:
      * @returns The option length (size of option data in bytes).
      *
      */
-    uint16_t GetOptionLength(void) const { return HostSwap16(mOptionLength); }
+    uint16_t GetOptionLength(void) const { return HostSwap(mOptionLength); }
 
     /**
      * Sets the option length value.
@@ -2438,7 +2437,7 @@ public:
      * @param[in]  aOptionLength  The option length (size of option data in bytes).
      *
      */
-    void SetOptionLength(uint16_t aOptionLength) { mOptionLength = HostSwap16(aOptionLength); }
+    void SetOptionLength(uint16_t aOptionLength) { mOptionLength = HostSwap(aOptionLength); }
 
     /**
      * Returns the size of (number of bytes) in the Option and its data.
@@ -2511,7 +2510,7 @@ public:
      * @returns The lease interval value (in seconds).
      *
      */
-    uint32_t GetLeaseInterval(void) const { return HostSwap32(mLeaseInterval); }
+    uint32_t GetLeaseInterval(void) const { return HostSwap(mLeaseInterval); }
 
     /**
      * Returns the Update Lease OPT record's key lease interval value.
@@ -2523,7 +2522,7 @@ public:
      */
     uint32_t GetKeyLeaseInterval(void) const
     {
-        return IsShortVariant() ? GetLeaseInterval() : HostSwap32(mKeyLeaseInterval);
+        return IsShortVariant() ? GetLeaseInterval() : HostSwap(mKeyLeaseInterval);
     }
 
     /**
@@ -2547,8 +2546,8 @@ private:
     static constexpr uint16_t kShortLength = sizeof(uint32_t);                    // lease only.
     static constexpr uint16_t kLongLength  = sizeof(uint32_t) + sizeof(uint32_t); // lease and key lease values
 
-    void SetLeaseInterval(uint32_t aLeaseInterval) { mLeaseInterval = HostSwap32(aLeaseInterval); }
-    void SetKeyLeaseInterval(uint32_t aKeyLeaseInterval) { mKeyLeaseInterval = HostSwap32(aKeyLeaseInterval); }
+    void SetLeaseInterval(uint32_t aLeaseInterval) { mLeaseInterval = HostSwap(aLeaseInterval); }
+    void SetKeyLeaseInterval(uint32_t aKeyLeaseInterval) { mKeyLeaseInterval = HostSwap(aKeyLeaseInterval); }
 
     uint32_t mLeaseInterval;
     uint32_t mKeyLeaseInterval;
@@ -2584,7 +2583,7 @@ public:
      * @returns The type of the question.
      *
      */
-    uint16_t GetType(void) const { return HostSwap16(mType); }
+    uint16_t GetType(void) const { return HostSwap(mType); }
 
     /**
      * Sets the type of the question.
@@ -2592,7 +2591,7 @@ public:
      * @param[in]  aType The type of the question.
      *
      */
-    void SetType(uint16_t aType) { mType = HostSwap16(aType); }
+    void SetType(uint16_t aType) { mType = HostSwap(aType); }
 
     /**
      * Returns the class of the question.
@@ -2600,7 +2599,7 @@ public:
      * @returns The class of the question.
      *
      */
-    uint16_t GetClass(void) const { return HostSwap16(mClass); }
+    uint16_t GetClass(void) const { return HostSwap(mClass); }
 
     /**
      * Sets the class of the question.
@@ -2608,7 +2607,7 @@ public:
      * @param[in]  aClass The class of the question.
      *
      */
-    void SetClass(uint16_t aClass) { mClass = HostSwap16(aClass); }
+    void SetClass(uint16_t aClass) { mClass = HostSwap(aClass); }
 
 private:
     uint16_t mType;  // The type of the data in question section.

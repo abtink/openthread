@@ -59,7 +59,7 @@ namespace ot {
  */
 namespace Coap {
 
-using ot::Encoding::BigEndian::HostSwap16;
+using ot::Encoding::BigEndian::HostSwap;
 
 /**
  * @addtogroup core-coap
@@ -315,7 +315,7 @@ public:
      * @returns The Message ID value.
      *
      */
-    uint16_t GetMessageId(void) const { return HostSwap16(GetHelpData().mHeader.mMessageId); }
+    uint16_t GetMessageId(void) const { return HostSwap(GetHelpData().mHeader.mMessageId); }
 
     /**
      * Sets the Message ID value.
@@ -323,7 +323,7 @@ public:
      * @param[in]  aMessageId  The Message ID value.
      *
      */
-    void SetMessageId(uint16_t aMessageId) { GetHelpData().mHeader.mMessageId = HostSwap16(aMessageId); }
+    void SetMessageId(uint16_t aMessageId) { GetHelpData().mHeader.mMessageId = HostSwap(aMessageId); }
 
     /**
      * Returns the Token length.

@@ -1788,7 +1788,7 @@ void Client::HandleTcpReceiveAvailable(otTcpEndpoint *aEndpoint,
         SuccessOrExit(ReadFromLinkBuffer(data, offset, *message, sizeof(uint16_t)));
 
         IgnoreError(message->Read(/* aOffset */ 0, length));
-        length = HostSwap16(length);
+        length = HostSwap(length);
 
         // Try to read `length` bytes.
         IgnoreError(message->SetLength(0));

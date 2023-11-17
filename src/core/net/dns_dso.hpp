@@ -60,8 +60,7 @@ struct otPlatDsoConnection
 namespace ot {
 namespace Dns {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap;
 
 extern "C" otPlatDsoConnection *otPlatDsoAccept(otInstance *aInstance, const otSockAddr *aPeerSockAddr);
 
@@ -149,8 +148,8 @@ public:
          */
         void Init(Type aType, uint16_t aLength)
         {
-            mType   = HostSwap16(aType);
-            mLength = HostSwap16(aLength);
+            mType   = HostSwap(aType);
+            mLength = HostSwap(aLength);
         }
 
         /**
@@ -159,7 +158,7 @@ public:
          * @returns The TLV type.
          *
          */
-        Type GetType(void) const { return HostSwap16(mType); }
+        Type GetType(void) const { return HostSwap(mType); }
 
         /**
          * Gets the TLV length.
@@ -167,7 +166,7 @@ public:
          * @returns The TLV length (in bytes).
          *
          */
-        uint16_t GetLength(void) const { return HostSwap16(mLength); }
+        uint16_t GetLength(void) const { return HostSwap(mLength); }
 
         /**
          * Returns the total size of the TLV (including the type and length fields).
@@ -911,11 +910,11 @@ private:
 
         bool IsValid(void) const { return GetSize() >= sizeof(*this); }
 
-        uint32_t GetInactivityTimeout(void) const { return HostSwap32(mInactivityTimeout); }
-        void     SetInactivityTimeout(uint32_t aTimeout) { mInactivityTimeout = HostSwap32(aTimeout); }
+        uint32_t GetInactivityTimeout(void) const { return HostSwap(mInactivityTimeout); }
+        void     SetInactivityTimeout(uint32_t aTimeout) { mInactivityTimeout = HostSwap(aTimeout); }
 
-        uint32_t GetKeepAliveInterval(void) const { return HostSwap32(mKeepAliveInterval); }
-        void     SetKeepAliveInterval(uint32_t aInterval) { mKeepAliveInterval = HostSwap32(aInterval); }
+        uint32_t GetKeepAliveInterval(void) const { return HostSwap(mKeepAliveInterval); }
+        void     SetKeepAliveInterval(uint32_t aInterval) { mKeepAliveInterval = HostSwap(aInterval); }
 
     private:
         uint32_t mInactivityTimeout; // In msec
@@ -932,8 +931,8 @@ private:
 
         bool IsValid(void) const { return GetSize() >= sizeof(*this); }
 
-        uint32_t GetRetryDelay(void) const { return HostSwap32(mRetryDelay); }
-        void     SetRetryDelay(uint32_t aDelay) { mRetryDelay = HostSwap32(aDelay); }
+        uint32_t GetRetryDelay(void) const { return HostSwap(mRetryDelay); }
+        void     SetRetryDelay(uint32_t aDelay) { mRetryDelay = HostSwap(aDelay); }
 
     private:
         uint32_t mRetryDelay;

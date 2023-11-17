@@ -50,8 +50,7 @@ namespace ot {
 namespace NetworkData {
 namespace Service {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap;
 
 const uint32_t kThreadEnterpriseNumber = ServiceTlv::kThreadEnterpriseNumber; ///< Thread enterprise number.
 
@@ -111,7 +110,7 @@ public:
          * @returns The BBR Registration Delay (in seconds) of Backbone Router.
          *
          */
-        uint16_t GetReregistrationDelay(void) const { return HostSwap16(mReregistrationDelay); }
+        uint16_t GetReregistrationDelay(void) const { return HostSwap(mReregistrationDelay); }
 
         /**
          * Sets the Registration Delay (in seconds) of Backbone Router.
@@ -121,7 +120,7 @@ public:
          */
         void SetReregistrationDelay(uint16_t aReregistrationDelay)
         {
-            mReregistrationDelay = HostSwap16(aReregistrationDelay);
+            mReregistrationDelay = HostSwap(aReregistrationDelay);
         }
 
         /**
@@ -130,7 +129,7 @@ public:
          * @returns The multicast listener report timeout (in seconds) of Backbone Router.
          *
          */
-        uint32_t GetMlrTimeout(void) const { return HostSwap32(mMlrTimeout); }
+        uint32_t GetMlrTimeout(void) const { return HostSwap(mMlrTimeout); }
 
         /**
          * Sets multicast listener report timeout (in seconds) of Backbone Router.
@@ -138,7 +137,7 @@ public:
          * @param[in]  aMlrTimeout  The multicast listener report timeout (in seconds) of Backbone Router.
          *
          */
-        void SetMlrTimeout(uint32_t aMlrTimeout) { mMlrTimeout = HostSwap32(aMlrTimeout); }
+        void SetMlrTimeout(uint32_t aMlrTimeout) { mMlrTimeout = HostSwap(aMlrTimeout); }
 
     private:
         uint8_t  mSequenceNumber;
@@ -279,7 +278,7 @@ public:
         explicit ServiceData(const Ip6::Address &aAddress, uint16_t aPort)
             : mServiceNumber(kServiceNumber)
             , mAddress(aAddress)
-            , mPort(HostSwap16(aPort))
+            , mPort(HostSwap(aPort))
         {
             OT_UNUSED_VARIABLE(mServiceNumber);
         }
@@ -306,7 +305,7 @@ public:
          * @returns The port number.
          *
          */
-        uint16_t GetPort(void) const { return HostSwap16(mPort); }
+        uint16_t GetPort(void) const { return HostSwap(mPort); }
 
     private:
         uint8_t      mServiceNumber;
@@ -331,7 +330,7 @@ public:
          */
         ServerData(const Ip6::Address &aAddress, uint16_t aPort)
             : mAddress(aAddress)
-            , mPort(HostSwap16(aPort))
+            , mPort(HostSwap(aPort))
         {
         }
 
@@ -357,7 +356,7 @@ public:
          * @returns The port number.
          *
          */
-        uint16_t GetPort(void) const { return HostSwap16(mPort); }
+        uint16_t GetPort(void) const { return HostSwap(mPort); }
 
     private:
         Ip6::Address mAddress;

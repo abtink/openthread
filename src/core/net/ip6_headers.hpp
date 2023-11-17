@@ -57,8 +57,7 @@ namespace ot {
  */
 namespace Ip6 {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap;
 
 /**
  * @addtogroup core-ipv6
@@ -133,7 +132,7 @@ public:
      * @returns The Version, Traffic Class, and Flow fields as a 32-bit value.
      *
      */
-    uint32_t GetVerionTrafficClassFlow(void) const { return HostSwap32(mVerTcFlow.m32); }
+    uint32_t GetVerionTrafficClassFlow(void) const { return HostSwap(mVerTcFlow.m32); }
 
     /**
      * Sets the combination of Version, Traffic Class, and Flow fields as a 32-bit value.
@@ -141,7 +140,7 @@ public:
      * @param[in] aVerTcFlow   The Version, Traffic Class, and Flow fields as a 32-bit value.
      *
      */
-    void SetVerionTrafficClassFlow(uint32_t aVerTcFlow) { mVerTcFlow.m32 = HostSwap32(aVerTcFlow); }
+    void SetVerionTrafficClassFlow(uint32_t aVerTcFlow) { mVerTcFlow.m32 = HostSwap(aVerTcFlow); }
 
     /**
      * Gets the Traffic Class field.
@@ -151,7 +150,7 @@ public:
      */
     uint8_t GetTrafficClass(void) const
     {
-        return static_cast<uint8_t>((HostSwap16(mVerTcFlow.m16[0]) & kTrafficClassMask) >> kTrafficClassOffset);
+        return static_cast<uint8_t>((HostSwap(mVerTcFlow.m16[0]) & kTrafficClassMask) >> kTrafficClassOffset);
     }
 
     /**
@@ -162,8 +161,9 @@ public:
      */
     void SetTrafficClass(uint8_t aTc)
     {
-        mVerTcFlow.m16[0] = HostSwap16((HostSwap16(mVerTcFlow.m16[0]) & ~kTrafficClassMask) |
-                                       ((static_cast<uint16_t>(aTc) << kTrafficClassOffset) & kTrafficClassMask));
+        mVerTcFlow.m16[0] =
+            HostSwap<uint16_t>((HostSwap(mVerTcFlow.m16[0]) & ~kTrafficClassMask) |
+                               ((static_cast<uint16_t>(aTc) << kTrafficClassOffset) & kTrafficClassMask));
     }
 
     /**
@@ -174,7 +174,7 @@ public:
      */
     uint8_t GetDscp(void) const
     {
-        return static_cast<uint8_t>((HostSwap16(mVerTcFlow.m16[0]) & kDscpMask) >> kDscpOffset);
+        return static_cast<uint8_t>((HostSwap(mVerTcFlow.m16[0]) & kDscpMask) >> kDscpOffset);
     }
 
     /**
@@ -185,8 +185,8 @@ public:
      */
     void SetDscp(uint8_t aDscp)
     {
-        mVerTcFlow.m16[0] = HostSwap16((HostSwap16(mVerTcFlow.m16[0]) & ~kDscpMask) |
-                                       ((static_cast<uint16_t>(aDscp) << kDscpOffset) & kDscpMask));
+        mVerTcFlow.m16[0] = HostSwap<uint16_t>((HostSwap(mVerTcFlow.m16[0]) & ~kDscpMask) |
+                                               ((static_cast<uint16_t>(aDscp) << kDscpOffset) & kDscpMask));
     }
 
     /**
@@ -211,7 +211,7 @@ public:
      * @returns  The Flow value.
      *
      */
-    uint32_t GetFlow(void) const { return HostSwap32(mVerTcFlow.m32) & kFlowMask; }
+    uint32_t GetFlow(void) const { return HostSwap(mVerTcFlow.m32) & kFlowMask; }
 
     /**
      * Sets the 20-bit Flow field in IPv6 header.
@@ -221,7 +221,7 @@ public:
      */
     void SetFlow(uint32_t aFlow)
     {
-        mVerTcFlow.m32 = HostSwap32((HostSwap32(mVerTcFlow.m32) & ~kFlowMask) | (aFlow & kFlowMask));
+        mVerTcFlow.m32 = HostSwap<uint16_t>((HostSwap(mVerTcFlow.m32) & ~kFlowMask) | (aFlow & kFlowMask));
     }
 
     /**
@@ -230,7 +230,7 @@ public:
      * @returns The IPv6 Payload Length value.
      *
      */
-    uint16_t GetPayloadLength(void) const { return HostSwap16(mPayloadLength); }
+    uint16_t GetPayloadLength(void) const { return HostSwap(mPayloadLength); }
 
     /**
      * Sets the IPv6 Payload Length value.
@@ -238,7 +238,7 @@ public:
      * @param[in]  aLength  The IPv6 Payload Length value.
      *
      */
-    void SetPayloadLength(uint16_t aLength) { mPayloadLength = HostSwap16(aLength); }
+    void SetPayloadLength(uint16_t aLength) { mPayloadLength = HostSwap(aLength); }
 
     /**
      * Returns the IPv6 Next Header value.
@@ -639,7 +639,7 @@ public:
      * @returns The Fragment Offset value.
      *
      */
-    uint16_t GetOffset(void) const { return (HostSwap16(mOffsetMore) & kOffsetMask) >> kOffsetOffset; }
+    uint16_t GetOffset(void) const { return (HostSwap(mOffsetMore) & kOffsetMask) >> kOffsetOffset; }
 
     /**
      * Sets the Fragment Offset value.
@@ -648,9 +648,9 @@ public:
      */
     void SetOffset(uint16_t aOffset)
     {
-        uint16_t tmp = HostSwap16(mOffsetMore);
+        uint16_t tmp = HostSwap(mOffsetMore);
         tmp          = (tmp & ~kOffsetMask) | ((aOffset << kOffsetOffset) & kOffsetMask);
-        mOffsetMore  = HostSwap16(tmp);
+        mOffsetMore  = HostSwap(tmp);
     }
 
     /**
@@ -659,19 +659,19 @@ public:
      * @returns The M flag value.
      *
      */
-    bool IsMoreFlagSet(void) const { return HostSwap16(mOffsetMore) & kMoreFlag; }
+    bool IsMoreFlagSet(void) const { return HostSwap(mOffsetMore) & kMoreFlag; }
 
     /**
      * Clears the M flag value.
      *
      */
-    void ClearMoreFlag(void) { mOffsetMore = HostSwap16(HostSwap16(mOffsetMore) & ~kMoreFlag); }
+    void ClearMoreFlag(void) { mOffsetMore = HostSwap<uint16_t>(HostSwap(mOffsetMore) & ~kMoreFlag); }
 
     /**
      * Sets the M flag value.
      *
      */
-    void SetMoreFlag(void) { mOffsetMore = HostSwap16(HostSwap16(mOffsetMore) | kMoreFlag); }
+    void SetMoreFlag(void) { mOffsetMore = HostSwap<uint16_t>(HostSwap(mOffsetMore) | kMoreFlag); }
 
     /**
      * Returns the frame identification.

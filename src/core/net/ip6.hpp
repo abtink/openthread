@@ -73,8 +73,7 @@ namespace ot {
  */
 namespace Ip6 {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap;
 
 /**
  * @addtogroup core-ipv6

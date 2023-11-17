@@ -49,8 +49,7 @@ namespace ot {
 
 namespace Mle {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap;
 
 /**
  * @addtogroup core-mle-tlvs
@@ -670,7 +669,7 @@ public:
      */
     void Get(LeaderData &aLeaderData) const
     {
-        aLeaderData.SetPartitionId(HostSwap32(mPartitionId));
+        aLeaderData.SetPartitionId(HostSwap(mPartitionId));
         aLeaderData.SetWeighting(mWeighting);
         aLeaderData.SetDataVersion(mDataVersion);
         aLeaderData.SetStableDataVersion(mStableDataVersion);
@@ -685,7 +684,7 @@ public:
      */
     void Set(const LeaderData &aLeaderData)
     {
-        mPartitionId       = HostSwap32(aLeaderData.GetPartitionId());
+        mPartitionId       = HostSwap(aLeaderData.GetPartitionId());
         mWeighting         = aLeaderData.GetWeighting();
         mDataVersion       = aLeaderData.GetDataVersion(NetworkData::kFullSet);
         mStableDataVersion = aLeaderData.GetDataVersion(NetworkData::kStableSubset);
@@ -906,7 +905,7 @@ public:
 
         if (IsSedBufferingIncluded())
         {
-            buffersize = HostSwap16(mSedBufferSize);
+            buffersize = HostSwap(mSedBufferSize);
         }
         return buffersize;
     }
@@ -917,7 +916,7 @@ public:
      * @param[in]  aSedBufferSize  The SED Buffer Size value.
      *
      */
-    void SetSedBufferSize(uint16_t aSedBufferSize) { mSedBufferSize = HostSwap16(aSedBufferSize); }
+    void SetSedBufferSize(uint16_t aSedBufferSize) { mSedBufferSize = HostSwap(aSedBufferSize); }
 
     /**
      * Returns the SED Datagram Count value.
@@ -1052,7 +1051,7 @@ public:
      */
     ChannelTlvValue(uint8_t aChannelPage, uint16_t aChannel)
         : mChannelPage(aChannelPage)
-        , mChannel(HostSwap16(aChannel))
+        , mChannel(HostSwap(aChannel))
     {
     }
 
@@ -1089,7 +1088,7 @@ public:
      * @returns The Channel value.
      *
      */
-    uint16_t GetChannel(void) const { return HostSwap16(mChannel); }
+    uint16_t GetChannel(void) const { return HostSwap(mChannel); }
 
     /**
      * Sets the Channel value.
@@ -1097,7 +1096,7 @@ public:
      * @param[in]  aChannel  The Channel value.
      *
      */
-    void SetChannel(uint16_t aChannel) { mChannel = HostSwap16(aChannel); }
+    void SetChannel(uint16_t aChannel) { mChannel = HostSwap(aChannel); }
 
 private:
     uint8_t  mChannelPage;
@@ -1156,7 +1155,7 @@ public:
      * @returns The time sync period.
      *
      */
-    uint16_t GetTimeSyncPeriod(void) const { return HostSwap16(mTimeSyncPeriod); }
+    uint16_t GetTimeSyncPeriod(void) const { return HostSwap(mTimeSyncPeriod); }
 
     /**
      * Sets the time sync period.
@@ -1164,7 +1163,7 @@ public:
      * @param[in]  aTimeSyncPeriod  The time sync period.
      *
      */
-    void SetTimeSyncPeriod(uint16_t aTimeSyncPeriod) { mTimeSyncPeriod = HostSwap16(aTimeSyncPeriod); }
+    void SetTimeSyncPeriod(uint16_t aTimeSyncPeriod) { mTimeSyncPeriod = HostSwap(aTimeSyncPeriod); }
 
     /**
      * Returns the XTAL accuracy threshold.
@@ -1172,7 +1171,7 @@ public:
      * @returns The XTAL accuracy threshold.
      *
      */
-    uint16_t GetXtalThreshold(void) const { return HostSwap16(mXtalThreshold); }
+    uint16_t GetXtalThreshold(void) const { return HostSwap(mXtalThreshold); }
 
     /**
      * Sets the XTAL accuracy threshold.
@@ -1180,7 +1179,7 @@ public:
      * @param[in]  aXTALThreshold  The XTAL accuracy threshold.
      *
      */
-    void SetXtalThreshold(uint16_t aXtalThreshold) { mXtalThreshold = HostSwap16(aXtalThreshold); }
+    void SetXtalThreshold(uint16_t aXtalThreshold) { mXtalThreshold = HostSwap(aXtalThreshold); }
 
 private:
     uint16_t mTimeSyncPeriod;

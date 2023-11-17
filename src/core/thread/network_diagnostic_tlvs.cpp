@@ -38,9 +38,7 @@
 namespace ot {
 namespace NetworkDiagnostic {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
-using ot::Encoding::BigEndian::HostSwap64;
+using ot::Encoding::BigEndian::HostSwap;
 
 #if OPENTHREAD_FTD
 
@@ -56,24 +54,24 @@ void ChildTlv::InitFrom(const Child &aChild)
     mFlags |= (aChild.GetNetworkDataType() == NetworkData::kFullSet) ? kFlagsFullNetdta : 0;
     mFlags |= kFlagsTrackErrRate;
 
-    mRloc16              = HostSwap16(aChild.GetRloc16());
+    mRloc16              = HostSwap(aChild.GetRloc16());
     mExtAddress          = aChild.GetExtAddress();
-    mVersion             = HostSwap16(aChild.GetVersion());
-    mTimeout             = HostSwap32(aChild.GetTimeout());
-    mAge                 = HostSwap32(Time::MsecToSec(TimerMilli::GetNow() - aChild.GetLastHeard()));
-    mConnectionTime      = HostSwap32(aChild.GetConnectionTime());
-    mSupervisionInterval = HostSwap16(aChild.GetSupervisionInterval());
+    mVersion             = HostSwap(aChild.GetVersion());
+    mTimeout             = HostSwap(aChild.GetTimeout());
+    mAge                 = HostSwap(Time::MsecToSec(TimerMilli::GetNow() - aChild.GetLastHeard()));
+    mConnectionTime      = HostSwap(aChild.GetConnectionTime());
+    mSupervisionInterval = HostSwap(aChild.GetSupervisionInterval());
     mLinkMargin          = aChild.GetLinkInfo().GetLinkMargin();
     mAverageRssi         = aChild.GetLinkInfo().GetAverageRss();
     mLastRssi            = aChild.GetLinkInfo().GetLastRss();
-    mFrameErrorRate      = HostSwap16(aChild.GetLinkInfo().GetFrameErrorRate());
-    mMessageErrorRate    = HostSwap16(aChild.GetLinkInfo().GetMessageErrorRate());
-    mQueuedMessageCount  = HostSwap16(aChild.GetIndirectMessageCount());
+    mFrameErrorRate      = HostSwap(aChild.GetLinkInfo().GetFrameErrorRate());
+    mMessageErrorRate    = HostSwap(aChild.GetLinkInfo().GetMessageErrorRate());
+    mQueuedMessageCount  = HostSwap(aChild.GetIndirectMessageCount());
 
 #if OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
     mFlags |= aChild.IsCslSynchronized() ? kFlagsCslSync : 0;
-    mCslPeriod  = HostSwap16(aChild.GetCslPeriod());
-    mCslTimeout = HostSwap32(aChild.GetCslTimeout());
+    mCslPeriod  = HostSwap(aChild.GetCslPeriod());
+    mCslTimeout = HostSwap(aChild.GetCslTimeout());
     mCslChannel = aChild.GetCslChannel();
 #endif
 }
@@ -86,15 +84,15 @@ void RouterNeighborTlv::InitFrom(const Router &aRouter)
     SetLength(sizeof(*this) - sizeof(Tlv));
 
     mFlags |= kFlagsTrackErrRate;
-    mRloc16           = HostSwap16(aRouter.GetRloc16());
+    mRloc16           = HostSwap(aRouter.GetRloc16());
     mExtAddress       = aRouter.GetExtAddress();
-    mVersion          = HostSwap16(aRouter.GetVersion());
-    mConnectionTime   = HostSwap32(aRouter.GetConnectionTime());
+    mVersion          = HostSwap(aRouter.GetVersion());
+    mConnectionTime   = HostSwap(aRouter.GetConnectionTime());
     mLinkMargin       = aRouter.GetLinkInfo().GetLinkMargin();
     mAverageRssi      = aRouter.GetLinkInfo().GetAverageRss();
     mLastRssi         = aRouter.GetLinkInfo().GetLastRss();
-    mFrameErrorRate   = HostSwap16(aRouter.GetLinkInfo().GetFrameErrorRate());
-    mMessageErrorRate = HostSwap16(aRouter.GetLinkInfo().GetMessageErrorRate());
+    mFrameErrorRate   = HostSwap(aRouter.GetLinkInfo().GetFrameErrorRate());
+    mMessageErrorRate = HostSwap(aRouter.GetLinkInfo().GetMessageErrorRate());
 }
 
 #endif // OPENTHREAD_FTD
@@ -112,40 +110,40 @@ void MleCountersTlv::Init(const Mle::Counters &aMleCounters)
     SetType(kMleCounters);
     SetLength(sizeof(*this) - sizeof(Tlv));
 
-    mDisabledRole                  = HostSwap16(aMleCounters.mDisabledRole);
-    mDetachedRole                  = HostSwap16(aMleCounters.mDetachedRole);
-    mChildRole                     = HostSwap16(aMleCounters.mChildRole);
-    mRouterRole                    = HostSwap16(aMleCounters.mRouterRole);
-    mLeaderRole                    = HostSwap16(aMleCounters.mLeaderRole);
-    mAttachAttempts                = HostSwap16(aMleCounters.mAttachAttempts);
-    mPartitionIdChanges            = HostSwap16(aMleCounters.mPartitionIdChanges);
-    mBetterPartitionAttachAttempts = HostSwap16(aMleCounters.mBetterPartitionAttachAttempts);
-    mParentChanges                 = HostSwap16(aMleCounters.mParentChanges);
-    mTrackedTime                   = HostSwap64(aMleCounters.mTrackedTime);
-    mDisabledTime                  = HostSwap64(aMleCounters.mDisabledTime);
-    mDetachedTime                  = HostSwap64(aMleCounters.mDetachedTime);
-    mChildTime                     = HostSwap64(aMleCounters.mChildTime);
-    mRouterTime                    = HostSwap64(aMleCounters.mRouterTime);
-    mLeaderTime                    = HostSwap64(aMleCounters.mLeaderTime);
+    mDisabledRole                  = HostSwap(aMleCounters.mDisabledRole);
+    mDetachedRole                  = HostSwap(aMleCounters.mDetachedRole);
+    mChildRole                     = HostSwap(aMleCounters.mChildRole);
+    mRouterRole                    = HostSwap(aMleCounters.mRouterRole);
+    mLeaderRole                    = HostSwap(aMleCounters.mLeaderRole);
+    mAttachAttempts                = HostSwap(aMleCounters.mAttachAttempts);
+    mPartitionIdChanges            = HostSwap(aMleCounters.mPartitionIdChanges);
+    mBetterPartitionAttachAttempts = HostSwap(aMleCounters.mBetterPartitionAttachAttempts);
+    mParentChanges                 = HostSwap(aMleCounters.mParentChanges);
+    mTrackedTime                   = HostSwap(aMleCounters.mTrackedTime);
+    mDisabledTime                  = HostSwap(aMleCounters.mDisabledTime);
+    mDetachedTime                  = HostSwap(aMleCounters.mDetachedTime);
+    mChildTime                     = HostSwap(aMleCounters.mChildTime);
+    mRouterTime                    = HostSwap(aMleCounters.mRouterTime);
+    mLeaderTime                    = HostSwap(aMleCounters.mLeaderTime);
 }
 
 void MleCountersTlv::Read(MleCounters &aDiagMleCounters) const
 {
-    aDiagMleCounters.mDisabledRole                  = HostSwap16(mDisabledRole);
-    aDiagMleCounters.mDetachedRole                  = HostSwap16(mDetachedRole);
-    aDiagMleCounters.mChildRole                     = HostSwap16(mChildRole);
-    aDiagMleCounters.mRouterRole                    = HostSwap16(mRouterRole);
-    aDiagMleCounters.mLeaderRole                    = HostSwap16(mLeaderRole);
-    aDiagMleCounters.mAttachAttempts                = HostSwap16(mAttachAttempts);
-    aDiagMleCounters.mPartitionIdChanges            = HostSwap16(mPartitionIdChanges);
-    aDiagMleCounters.mBetterPartitionAttachAttempts = HostSwap16(mBetterPartitionAttachAttempts);
-    aDiagMleCounters.mParentChanges                 = HostSwap16(mParentChanges);
-    aDiagMleCounters.mTrackedTime                   = HostSwap64(mTrackedTime);
-    aDiagMleCounters.mDisabledTime                  = HostSwap64(mDisabledTime);
-    aDiagMleCounters.mDetachedTime                  = HostSwap64(mDetachedTime);
-    aDiagMleCounters.mChildTime                     = HostSwap64(mChildTime);
-    aDiagMleCounters.mRouterTime                    = HostSwap64(mRouterTime);
-    aDiagMleCounters.mLeaderTime                    = HostSwap64(mLeaderTime);
+    aDiagMleCounters.mDisabledRole                  = HostSwap(mDisabledRole);
+    aDiagMleCounters.mDetachedRole                  = HostSwap(mDetachedRole);
+    aDiagMleCounters.mChildRole                     = HostSwap(mChildRole);
+    aDiagMleCounters.mRouterRole                    = HostSwap(mRouterRole);
+    aDiagMleCounters.mLeaderRole                    = HostSwap(mLeaderRole);
+    aDiagMleCounters.mAttachAttempts                = HostSwap(mAttachAttempts);
+    aDiagMleCounters.mPartitionIdChanges            = HostSwap(mPartitionIdChanges);
+    aDiagMleCounters.mBetterPartitionAttachAttempts = HostSwap(mBetterPartitionAttachAttempts);
+    aDiagMleCounters.mParentChanges                 = HostSwap(mParentChanges);
+    aDiagMleCounters.mTrackedTime                   = HostSwap(mTrackedTime);
+    aDiagMleCounters.mDisabledTime                  = HostSwap(mDisabledTime);
+    aDiagMleCounters.mDetachedTime                  = HostSwap(mDetachedTime);
+    aDiagMleCounters.mChildTime                     = HostSwap(mChildTime);
+    aDiagMleCounters.mRouterTime                    = HostSwap(mRouterTime);
+    aDiagMleCounters.mLeaderTime                    = HostSwap(mLeaderTime);
 }
 
 } // namespace NetworkDiagnostic

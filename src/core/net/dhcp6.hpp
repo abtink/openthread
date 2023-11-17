@@ -48,8 +48,7 @@
 namespace ot {
 namespace Dhcp6 {
 
-using ot::Encoding::BigEndian::HostSwap16;
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap;
 
 /**
  * @addtogroup core-dhcp6
@@ -217,7 +216,7 @@ public:
      * @returns The DHCPv6 option code.
      *
      */
-    Code GetCode(void) const { return static_cast<Code>(HostSwap16(mCode)); }
+    Code GetCode(void) const { return static_cast<Code>(HostSwap(mCode)); }
 
     /**
      * Sets the DHCPv6 option code.
@@ -225,7 +224,7 @@ public:
      * @param[in]  aCode  The DHCPv6 option code.
      *
      */
-    void SetCode(Code aCode) { mCode = HostSwap16(static_cast<uint16_t>(aCode)); }
+    void SetCode(Code aCode) { mCode = HostSwap(static_cast<uint16_t>(aCode)); }
 
     /**
      * Returns the length of DHCPv6 option.
@@ -233,7 +232,7 @@ public:
      * @returns The length of DHCPv6 option.
      *
      */
-    uint16_t GetLength(void) const { return HostSwap16(mLength); }
+    uint16_t GetLength(void) const { return HostSwap(mLength); }
 
     /**
      * Sets the length of DHCPv6 option.
@@ -241,7 +240,7 @@ public:
      * @param[in]  aLength  The length of DHCPv6 option.
      *
      */
-    void SetLength(uint16_t aLength) { mLength = HostSwap16(aLength); }
+    void SetLength(uint16_t aLength) { mLength = HostSwap(aLength); }
 
 private:
     uint16_t mCode;
@@ -279,7 +278,7 @@ public:
      * @returns The client DUID Type.
      *
      */
-    DuidType GetDuidType(void) const { return static_cast<DuidType>(HostSwap16(mDuidType)); }
+    DuidType GetDuidType(void) const { return static_cast<DuidType>(HostSwap(mDuidType)); }
 
     /**
      * Sets the client DUID Type.
@@ -287,7 +286,7 @@ public:
      * @param[in]  aDuidType  The client DUID Type.
      *
      */
-    void SetDuidType(DuidType aDuidType) { mDuidType = HostSwap16(static_cast<uint16_t>(aDuidType)); }
+    void SetDuidType(DuidType aDuidType) { mDuidType = HostSwap(static_cast<uint16_t>(aDuidType)); }
 
     /**
      * Returns the client Duid HardwareType.
@@ -295,7 +294,7 @@ public:
      * @returns The client Duid HardwareType.
      *
      */
-    uint16_t GetDuidHardwareType(void) const { return HostSwap16(mDuidHardwareType); }
+    uint16_t GetDuidHardwareType(void) const { return HostSwap(mDuidHardwareType); }
 
     /**
      * Sets the client Duid HardwareType.
@@ -303,7 +302,7 @@ public:
      * @param[in]  aDuidHardwareType  The client Duid HardwareType.
      *
      */
-    void SetDuidHardwareType(uint16_t aDuidHardwareType) { mDuidHardwareType = HostSwap16(aDuidHardwareType); }
+    void SetDuidHardwareType(uint16_t aDuidHardwareType) { mDuidHardwareType = HostSwap(aDuidHardwareType); }
 
     /**
      * Returns the client LinkLayerAddress.
@@ -350,7 +349,7 @@ public:
      * @returns The server DUID Type.
      *
      */
-    DuidType GetDuidType(void) const { return static_cast<DuidType>(HostSwap16(mDuidType)); }
+    DuidType GetDuidType(void) const { return static_cast<DuidType>(HostSwap(mDuidType)); }
 
     /**
      * Sets the server DUID Type.
@@ -358,7 +357,7 @@ public:
      * @param[in]  aDuidType  The server DUID Type.
      *
      */
-    void SetDuidType(DuidType aDuidType) { mDuidType = HostSwap16(static_cast<uint16_t>(aDuidType)); }
+    void SetDuidType(DuidType aDuidType) { mDuidType = HostSwap(static_cast<uint16_t>(aDuidType)); }
 
     /**
      * Returns the server DUID HardwareType.
@@ -366,7 +365,7 @@ public:
      * @returns The server DUID HardwareType.
      *
      */
-    uint16_t GetDuidHardwareType(void) const { return HostSwap16(mDuidHardwareType); }
+    uint16_t GetDuidHardwareType(void) const { return HostSwap(mDuidHardwareType); }
 
     /**
      * Sets the server DUID HardwareType.
@@ -374,7 +373,7 @@ public:
      * @param[in]  aDuidHardwareType  The server DUID HardwareType.
      *
      */
-    void SetDuidHardwareType(uint16_t aDuidHardwareType) { mDuidHardwareType = HostSwap16(aDuidHardwareType); }
+    void SetDuidHardwareType(uint16_t aDuidHardwareType) { mDuidHardwareType = HostSwap(aDuidHardwareType); }
 
     /**
      * Returns the server LinkLayerAddress.
@@ -428,7 +427,7 @@ public:
      * @returns The client IAID.
      *
      */
-    uint32_t GetIaid(void) const { return HostSwap32(mIaid); }
+    uint32_t GetIaid(void) const { return HostSwap(mIaid); }
 
     /**
      * Sets the client IAID.
@@ -436,7 +435,7 @@ public:
      * @param[in]  aIaid  The client IAID.
      *
      */
-    void SetIaid(uint32_t aIaid) { mIaid = HostSwap32(aIaid); }
+    void SetIaid(uint32_t aIaid) { mIaid = HostSwap(aIaid); }
 
     /**
      * Returns T1.
@@ -444,7 +443,7 @@ public:
      * @returns The value of T1.
      *
      */
-    uint32_t GetT1(void) const { return HostSwap32(mT1); }
+    uint32_t GetT1(void) const { return HostSwap(mT1); }
 
     /**
      * Sets the value of T1.
@@ -452,7 +451,7 @@ public:
      * @param[in]  aT1  The value of T1.
      *
      */
-    void SetT1(uint32_t aT1) { mT1 = HostSwap32(aT1); }
+    void SetT1(uint32_t aT1) { mT1 = HostSwap(aT1); }
 
     /**
      * Returns T2.
@@ -460,7 +459,7 @@ public:
      * @returns The value of T2.
      *
      */
-    uint32_t GetT2(void) const { return HostSwap32(mT2); }
+    uint32_t GetT2(void) const { return HostSwap(mT2); }
 
     /**
      * Sets the value of T2.
@@ -468,7 +467,7 @@ public:
      * @param[in]  aT2  The value of T2.
      *
      */
-    void SetT2(uint32_t aT2) { mT2 = HostSwap32(aT2); }
+    void SetT2(uint32_t aT2) { mT2 = HostSwap(aT2); }
 
 private:
     uint32_t mIaid;
@@ -527,7 +526,7 @@ public:
      * @returns The preferred lifetime of the IPv6 address.
      *
      */
-    uint32_t GetPreferredLifetime(void) const { return HostSwap32(mPreferredLifetime); }
+    uint32_t GetPreferredLifetime(void) const { return HostSwap(mPreferredLifetime); }
 
     /**
      * Sets the preferred lifetime of the IPv6 address.
@@ -535,7 +534,7 @@ public:
      * @param[in]  aPreferredLifetime  The preferred lifetime of the IPv6 address.
      *
      */
-    void SetPreferredLifetime(uint32_t aPreferredLifetime) { mPreferredLifetime = HostSwap32(aPreferredLifetime); }
+    void SetPreferredLifetime(uint32_t aPreferredLifetime) { mPreferredLifetime = HostSwap(aPreferredLifetime); }
 
     /**
      * Returns the valid lifetime of the IPv6 address.
@@ -543,7 +542,7 @@ public:
      * @returns The valid lifetime of the IPv6 address.
      *
      */
-    uint32_t GetValidLifetime(void) const { return HostSwap32(mValidLifetime); }
+    uint32_t GetValidLifetime(void) const { return HostSwap(mValidLifetime); }
 
     /**
      * Sets the valid lifetime of the IPv6 address.
@@ -551,7 +550,7 @@ public:
      * @param[in]  aValidLifetime  The valid lifetime of the IPv6 address.
      *
      */
-    void SetValidLifetime(uint32_t aValidLifetime) { mValidLifetime = HostSwap32(aValidLifetime); }
+    void SetValidLifetime(uint32_t aValidLifetime) { mValidLifetime = HostSwap(aValidLifetime); }
 
 private:
     Ip6::Address mAddress;
@@ -583,7 +582,7 @@ public:
      * @returns The elapsed time since solicit starts.
      *
      */
-    uint16_t GetElapsedTime(void) const { return HostSwap16(mElapsedTime); }
+    uint16_t GetElapsedTime(void) const { return HostSwap(mElapsedTime); }
 
     /**
      * Sets the elapsed time since solicit starts.
@@ -591,7 +590,7 @@ public:
      * @param[in] aElapsedTime The elapsed time since solicit starts.
      *
      */
-    void SetElapsedTime(uint16_t aElapsedTime) { mElapsedTime = HostSwap16(aElapsedTime); }
+    void SetElapsedTime(uint16_t aElapsedTime) { mElapsedTime = HostSwap(aElapsedTime); }
 
 private:
     uint16_t mElapsedTime;
@@ -639,7 +638,7 @@ public:
      * @returns The status code.
      *
      */
-    Status GetStatusCode(void) const { return static_cast<Status>(HostSwap16(mStatus)); }
+    Status GetStatusCode(void) const { return static_cast<Status>(HostSwap(mStatus)); }
 
     /**
      * Sets the status code.
@@ -647,7 +646,7 @@ public:
      * @param[in] aStatus The status code.
      *
      */
-    void SetStatusCode(Status aStatus) { mStatus = HostSwap16(static_cast<uint16_t>(aStatus)); }
+    void SetStatusCode(Status aStatus) { mStatus = HostSwap(static_cast<uint16_t>(aStatus)); }
 
 private:
     uint16_t mStatus;

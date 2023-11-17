@@ -373,7 +373,7 @@ public:
          * @returns The UDP Source Port.
          *
          */
-        uint16_t GetSourcePort(void) const { return HostSwap16(mSourcePort); }
+        uint16_t GetSourcePort(void) const { return HostSwap(mSourcePort); }
 
         /**
          * Sets the UDP Source Port.
@@ -381,7 +381,7 @@ public:
          * @param[in]  aPort  The UDP Source Port.
          *
          */
-        void SetSourcePort(uint16_t aPort) { mSourcePort = HostSwap16(aPort); }
+        void SetSourcePort(uint16_t aPort) { mSourcePort = HostSwap(aPort); }
 
         /**
          * Returns the UDP Destination Port.
@@ -389,7 +389,7 @@ public:
          * @returns The UDP Destination Port.
          *
          */
-        uint16_t GetDestinationPort(void) const { return HostSwap16(mDestinationPort); }
+        uint16_t GetDestinationPort(void) const { return HostSwap(mDestinationPort); }
 
         /**
          * Sets the UDP Destination Port.
@@ -397,7 +397,7 @@ public:
          * @param[in]  aPort  The UDP Destination Port.
          *
          */
-        void SetDestinationPort(uint16_t aPort) { mDestinationPort = HostSwap16(aPort); }
+        void SetDestinationPort(uint16_t aPort) { mDestinationPort = HostSwap(aPort); }
 
         /**
          * Returns the UDP Length.
@@ -405,7 +405,7 @@ public:
          * @returns The UDP Length.
          *
          */
-        uint16_t GetLength(void) const { return HostSwap16(mLength); }
+        uint16_t GetLength(void) const { return HostSwap(mLength); }
 
         /**
          * Sets the UDP Length.
@@ -413,7 +413,7 @@ public:
          * @param[in]  aLength  The UDP Length.
          *
          */
-        void SetLength(uint16_t aLength) { mLength = HostSwap16(aLength); }
+        void SetLength(uint16_t aLength) { mLength = HostSwap(aLength); }
 
         /**
          * Returns the UDP Checksum.
@@ -421,7 +421,7 @@ public:
          * @returns The UDP Checksum.
          *
          */
-        uint16_t GetChecksum(void) const { return HostSwap16(mChecksum); }
+        uint16_t GetChecksum(void) const { return HostSwap(mChecksum); }
 
         /**
          * Sets the UDP Checksum.
@@ -429,7 +429,7 @@ public:
          * @param[in]  aChecksum  The UDP Checksum.
          *
          */
-        void SetChecksum(uint16_t aChecksum) { mChecksum = HostSwap16(aChecksum); }
+        void SetChecksum(uint16_t aChecksum) { mChecksum = HostSwap(aChecksum); }
 
     private:
         uint16_t mSourcePort;

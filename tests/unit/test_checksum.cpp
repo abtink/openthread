@@ -101,8 +101,8 @@ uint16_t CalculateChecksum(const Ip6::Address &aSource,
 
     data.mPseudoHeader.mSource        = aSource;
     data.mPseudoHeader.mDestination   = aDestination;
-    data.mPseudoHeader.mProtocol      = Encoding::BigEndian::HostSwap32(aIpProto);
-    data.mPseudoHeader.mPayloadLength = Encoding::BigEndian::HostSwap32(payloadLength);
+    data.mPseudoHeader.mProtocol      = Encoding::BigEndian::HostSwap(aIpProto);
+    data.mPseudoHeader.mPayloadLength = Encoding::BigEndian::HostSwap(payloadLength);
 
     SuccessOrQuit(aMessage.Read(aMessage.GetOffset(), data.mPayload, payloadLength));
 
@@ -140,8 +140,8 @@ uint16_t CalculateChecksum(const Ip4::Address &aSource,
 
     data.mPseudoHeader.mSource        = aSource;
     data.mPseudoHeader.mDestination   = aDestination;
-    data.mPseudoHeader.mProtocol      = Encoding::BigEndian::HostSwap16(aIpProto);
-    data.mPseudoHeader.mPayloadLength = Encoding::BigEndian::HostSwap16(payloadLength);
+    data.mPseudoHeader.mProtocol      = Encoding::BigEndian::HostSwap(aIpProto);
+    data.mPseudoHeader.mPayloadLength = Encoding::BigEndian::HostSwap(payloadLength);
 
     SuccessOrQuit(aMessage.Read(aMessage.GetOffset(), data.mPayload, payloadLength));
 

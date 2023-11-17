@@ -36,6 +36,8 @@
 
 #include "openthread-core-config.h"
 
+#include "common/type_traits.hpp"
+
 #ifndef BYTE_ORDER_BIG_ENDIAN
 #if defined(WORDS_BIGENDIAN) || \
     defined(__BYTE_ORDER__) && defined(__ORDER_BIG_ENDIAN__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
@@ -51,24 +53,33 @@
 namespace ot {
 namespace Encoding {
 
-inline uint16_t Swap16(uint16_t v) { return (((v & 0x00ffU) << 8) & 0xff00) | (((v & 0xff00U) >> 8) & 0x00ff); }
+template <typename UintType> UintType Swap(UintType aValue);
 
-inline uint32_t Swap32(uint32_t v)
+template <> inline uint8_t Swap(uint8_t aValue) { return aValue; }
+
+template <> inline uint16_t Swap(uint16_t aValue)
 {
-    return ((v & static_cast<uint32_t>(0x000000ffUL)) << 24) | ((v & static_cast<uint32_t>(0x0000ff00UL)) << 8) |
-           ((v & static_cast<uint32_t>(0x00ff0000UL)) >> 8) | ((v & static_cast<uint32_t>(0xff000000UL)) >> 24);
+    return (((aValue & 0x00ffU) << 8) & 0xff00) | (((aValue & 0xff00U) >> 8) & 0x00ff);
 }
 
-inline uint64_t Swap64(uint64_t v)
+template <> inline uint32_t Swap(uint32_t aValue)
 {
-    return ((v & static_cast<uint64_t>(0x00000000000000ffULL)) << 56) |
-           ((v & static_cast<uint64_t>(0x000000000000ff00ULL)) << 40) |
-           ((v & static_cast<uint64_t>(0x0000000000ff0000ULL)) << 24) |
-           ((v & static_cast<uint64_t>(0x00000000ff000000ULL)) << 8) |
-           ((v & static_cast<uint64_t>(0x000000ff00000000ULL)) >> 8) |
-           ((v & static_cast<uint64_t>(0x0000ff0000000000ULL)) >> 24) |
-           ((v & static_cast<uint64_t>(0x00ff000000000000ULL)) >> 40) |
-           ((v & static_cast<uint64_t>(0xff00000000000000ULL)) >> 56);
+    return ((aValue & static_cast<uint32_t>(0x000000ffUL)) << 24) |
+           ((aValue & static_cast<uint32_t>(0x0000ff00UL)) << 8) |
+           ((aValue & static_cast<uint32_t>(0x00ff0000UL)) >> 8) |
+           ((aValue & static_cast<uint32_t>(0xff000000UL)) >> 24);
+}
+
+template <> inline uint64_t Swap(uint64_t aValue)
+{
+    return ((aValue & static_cast<uint64_t>(0x00000000000000ffULL)) << 56) |
+           ((aValue & static_cast<uint64_t>(0x000000000000ff00ULL)) << 40) |
+           ((aValue & static_cast<uint64_t>(0x0000000000ff0000ULL)) << 24) |
+           ((aValue & static_cast<uint64_t>(0x00000000ff000000ULL)) << 8) |
+           ((aValue & static_cast<uint64_t>(0x000000ff00000000ULL)) >> 8) |
+           ((aValue & static_cast<uint64_t>(0x0000ff0000000000ULL)) >> 24) |
+           ((aValue & static_cast<uint64_t>(0x00ff000000000000ULL)) >> 40) |
+           ((aValue & static_cast<uint64_t>(0xff00000000000000ULL)) >> 56);
 }
 
 inline uint32_t Reverse32(uint32_t v)
@@ -86,20 +97,6 @@ inline uint32_t Reverse32(uint32_t v)
 
 namespace BigEndian {
 
-#if BYTE_ORDER_BIG_ENDIAN
-
-inline uint16_t HostSwap16(uint16_t v) { return v; }
-inline uint32_t HostSwap32(uint32_t v) { return v; }
-inline uint64_t HostSwap64(uint64_t v) { return v; }
-
-#else /* BYTE_ORDER_LITTLE_ENDIAN */
-
-inline uint16_t HostSwap16(uint16_t v) { return Swap16(v); }
-inline uint32_t HostSwap32(uint32_t v) { return Swap32(v); }
-inline uint64_t HostSwap64(uint64_t v) { return Swap64(v); }
-
-#endif // LITTLE_ENDIAN
-
 /**
  * This template function performs host swap on a given unsigned integer value assuming big-endian encoding.
  *
@@ -110,12 +107,19 @@ inline uint64_t HostSwap64(uint64_t v) { return Swap64(v); }
  * @returns The host swapped value.
  *
  */
-template <typename UintType> UintType HostSwap(UintType aValue);
+template <typename UintType> inline UintType HostSwap(UintType aValue)
+{
+    static_assert(TypeTraits::IsSame<UintType, uint8_t>::kValue || TypeTraits::IsSame<UintType, uint16_t>::kValue ||
+                      TypeTraits::IsSame<UintType, uint32_t>::kValue || TypeTraits::IsSame<UintType, uint64_t>::kValue,
+                  "UintType MUST be uint8_t, uint16_t, uint32_t, or uint64_t");
 
-template <> inline uint8_t  HostSwap(uint8_t aValue) { return aValue; }
-template <> inline uint16_t HostSwap(uint16_t aValue) { return HostSwap16(aValue); }
-template <> inline uint32_t HostSwap(uint32_t aValue) { return HostSwap32(aValue); }
-template <> inline uint64_t HostSwap(uint64_t aValue) { return HostSwap64(aValue); }
+    return
+#if BYTE_ORDER_BIG_ENDIAN
+        aValue;
+#else
+        Swap<UintType>(aValue);
+#endif
+}
 
 /**
  * Reads a `uint16_t` value from a given buffer assuming big-endian encoding.
@@ -236,20 +240,6 @@ inline void WriteUint64(uint64_t aValue, uint8_t *aBuffer)
 
 namespace LittleEndian {
 
-#if BYTE_ORDER_BIG_ENDIAN
-
-inline uint16_t HostSwap16(uint16_t v) { return Swap16(v); }
-inline uint32_t HostSwap32(uint32_t v) { return Swap32(v); }
-inline uint64_t HostSwap64(uint64_t v) { return Swap64(v); }
-
-#else /* BYTE_ORDER_LITTLE_ENDIAN */
-
-inline uint16_t HostSwap16(uint16_t v) { return v; }
-inline uint32_t HostSwap32(uint32_t v) { return v; }
-inline uint64_t HostSwap64(uint64_t v) { return v; }
-
-#endif
-
 /**
  * This template function performs host swap on a given unsigned integer value assuming little-endian encoding.
  *
@@ -260,12 +250,19 @@ inline uint64_t HostSwap64(uint64_t v) { return v; }
  * @returns The host swapped value.
  *
  */
-template <typename UintType> UintType HostSwap(UintType aValue);
+template <typename UintType> inline UintType HostSwap(UintType aValue)
+{
+    static_assert(TypeTraits::IsSame<UintType, uint8_t>::kValue || TypeTraits::IsSame<UintType, uint16_t>::kValue ||
+                      TypeTraits::IsSame<UintType, uint32_t>::kValue || TypeTraits::IsSame<UintType, uint64_t>::kValue,
+                  "UintType MUST be uint8_t, uint16_t, uint32_t, or uint64_t");
 
-template <> inline uint8_t  HostSwap(uint8_t aValue) { return aValue; }
-template <> inline uint16_t HostSwap(uint16_t aValue) { return HostSwap16(aValue); }
-template <> inline uint32_t HostSwap(uint32_t aValue) { return HostSwap32(aValue); }
-template <> inline uint64_t HostSwap(uint64_t aValue) { return HostSwap64(aValue); }
+    return
+#if BYTE_ORDER_BIG_ENDIAN
+        Swap<UintType>(aValue);
+#else
+        aValue;
+#endif
+}
 
 /**
  * Reads a `uint16_t` value from a given buffer assuming little-endian encoding.

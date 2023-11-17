@@ -46,7 +46,7 @@
 #include "net/ip4_types.hpp"
 #include "net/netif.hpp"
 
-using ot::Encoding::BigEndian::HostSwap32;
+using ot::Encoding::BigEndian::HostSwap;
 
 namespace ot {
 namespace Ip6 {
@@ -72,7 +72,7 @@ void Prefix::Set(const uint8_t *aPrefix, uint8_t aLength)
 
 bool Prefix::IsLinkLocal(void) const
 {
-    return (mLength >= 10) && ((mPrefix.mFields.m16[0] & HostSwap16(0xffc0)) == HostSwap16(0xfe80));
+    return (mLength >= 10) && ((mPrefix.mFields.m16[0] & HostSwap<uint16_t>(0xffc0)) == HostSwap<uint16_t>(0xfe80));
 }
 
 bool Prefix::IsMulticast(void) const { return (mLength >= 8) && (mPrefix.mFields.m8[0] == 0xff); }
@@ -251,8 +251,8 @@ bool InterfaceIdentifier::IsReservedSubnetAnycast(void) const
     // | 1111110111...111 | anycast ID |
     // +------------------+------------+
 
-    return (mFields.m32[0] == HostSwap32(0xfdffffff) && mFields.m16[2] == HostSwap16(0xffff) && mFields.m8[6] == 0xff &&
-            mFields.m8[7] >= 0x80);
+    return (mFields.m32[0] == HostSwap<uint32_t>(0xfdffffff) && mFields.m16[2] == HostSwap<uint16_t>(0xffff) &&
+            mFields.m8[6] == 0xff && mFields.m8[7] >= 0x80);
 }
 
 void InterfaceIdentifier::GenerateRandom(void) { SuccessOrAssert(Random::Crypto::Fill(*this)); }
@@ -283,15 +283,15 @@ void InterfaceIdentifier::ConvertToMacAddress(Mac::Address &aMacAddress) const
 void InterfaceIdentifier::SetToLocator(uint16_t aLocator)
 {
     // Locator IID pattern `0000:00ff:fe00:xxxx`
-    mFields.m32[0] = HostSwap32(0x000000ff);
-    mFields.m16[2] = HostSwap16(0xfe00);
-    mFields.m16[3] = HostSwap16(aLocator);
+    mFields.m32[0] = HostSwap<uint32_t>(0x000000ff);
+    mFields.m16[2] = HostSwap<uint16_t>(0xfe00);
+    mFields.m16[3] = HostSwap(aLocator);
 }
 
 bool InterfaceIdentifier::IsLocator(void) const
 {
     // Locator IID pattern 0000:00ff:fe00:xxxx
-    return (mFields.m32[0] == HostSwap32(0x000000ff) && mFields.m16[2] == HostSwap16(0xfe00));
+    return (mFields.m32[0] == HostSwap<uint32_t>(0x000000ff) && mFields.m16[2] == HostSwap<uint16_t>(0xfe00));
 }
 
 bool InterfaceIdentifier::IsRoutingLocator(void) const
@@ -340,21 +340,25 @@ bool Address::IsUnspecified(void) const
 
 bool Address::IsLoopback(void) const
 {
-    return (mFields.m32[0] == 0 && mFields.m32[1] == 0 && mFields.m32[2] == 0 && mFields.m32[3] == HostSwap32(1));
+    return (mFields.m32[0] == 0 && mFields.m32[1] == 0 && mFields.m32[2] == 0 &&
+            mFields.m32[3] == HostSwap<uint32_t>(1));
 }
 
-bool Address::IsLinkLocal(void) const { return (mFields.m16[0] & HostSwap16(0xffc0)) == HostSwap16(0xfe80); }
+bool Address::IsLinkLocal(void) const
+{
+    return (mFields.m16[0] & HostSwap<uint16_t>(0xffc0)) == HostSwap<uint16_t>(0xfe80);
+}
 
 void Address::SetToLinkLocalAddress(const Mac::ExtAddress &aExtAddress)
 {
-    mFields.m32[0] = HostSwap32(0xfe800000);
+    mFields.m32[0] = HostSwap<uint32_t>(0xfe800000);
     mFields.m32[1] = 0;
     GetIid().SetFromExtAddress(aExtAddress);
 }
 
 void Address::SetToLinkLocalAddress(const InterfaceIdentifier &aIid)
 {
-    mFields.m32[0] = HostSwap32(0xfe800000);
+    mFields.m32[0] = HostSwap<uint32_t>(0xfe800000);
     mFields.m32[1] = 0;
     SetIid(aIid);
 }
@@ -612,7 +616,7 @@ Error Address::ParseFrom(const char *aString, char aTerminatorChar)
         VerifyOrExit((*aString == kColonChar) || (*aString == aTerminatorChar));
 
         VerifyOrExit(index < endIndex);
-        mFields.m16[index++] = HostSwap16(static_cast<uint16_t>(value));
+        mFields.m16[index++] = HostSwap(static_cast<uint16_t>(value));
 
         if (*aString == kColonChar)
         {
@@ -685,7 +689,7 @@ void Address::AppendHexWords(StringWriter &aWriter, uint8_t aLength) const
             aWriter.Append(":");
         }
 
-        aWriter.Append("%x", HostSwap16(mFields.m16[index]));
+        aWriter.Append("%x", HostSwap(mFields.m16[index]));
     }
 }
 
