@@ -180,7 +180,8 @@ KeyManager::KeyManager(Instance &aInstance)
 
 #if OPENTHREAD_CONFIG_PLATFORM_KEY_REFERENCES_ENABLE
     {
-        NetworkKey networkKey;
+        NetworkKey networkKey; xxx;
+        xxx;
 
         mNetworkKeyRef = Crypto::Storage::kInvalidKeyRef;
         mPskcRef       = Crypto::Storage::kInvalidKeyRef;
