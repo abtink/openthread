@@ -83,6 +83,8 @@ SecureTransport::SecureTransport(Instance &aInstance, bool aLayerTwoSecurity, bo
     , mTimerSet(false)
     , mLayerTwoSecurity(aLayerTwoSecurity)
     , mDatagramTransport(aDatagramTransport)
+    , mApplyMaxConnectionAttempts(false)
+    , mRemainingConnectionAttempts(0)
     , mReceiveMessage(nullptr)
     , mSocket(aInstance)
     , mMessageSubType(Message::kSubTypeNone)
@@ -159,10 +161,24 @@ Error SecureTransport::Open(ReceiveHandler aReceiveHandler, ConnectedHandler aCo
 
     mConnectedCallback.Set(aConnectedHandler, aContext);
     mReceiveCallback.Set(aReceiveHandler, aContext);
+    mApplyMaxConnectionAttempts = false;
+
     SetState(kStateOpen);
 
 exit:
     return error;
+}
+
+void SecureTransport::SetMaxConnectionAttempts(uint16_t aMaxAttempts, AutoCloseCallback aCallback, void *aContext)
+{
+    VerifyOrExit(mState != kStateClosed);
+
+    mApplyMaxConnectionAttempts  = true;
+    mRemainingConnectionAttempts = aMaxAttempts;
+    mAutoCloseCallback.Set(aCallback, aContext);
+
+exit:
+    return;
 }
 
 Error SecureTransport::Connect(const Ip6::SockAddr &aSockAddr)
@@ -170,6 +186,11 @@ Error SecureTransport::Connect(const Ip6::SockAddr &aSockAddr)
     Error error;
 
     VerifyOrExit(IsStateOpen(), error = kErrorInvalidState);
+
+    if (mApplyMaxConnectionAttempts && (mRemainingConnectionAttempts > 0))
+    {
+        mRemainingConnectionAttempts--;
+    }
 
     mMessageInfo.SetPeerAddr(aSockAddr.GetAddress());
     mMessageInfo.SetPeerPort(aSockAddr.mPort);
@@ -191,6 +212,11 @@ void SecureTransport::HandleReceive(Message &aMessage, const Ip6::MessageInfo &a
 
     if (IsStateOpen())
     {
+        if (mApplyMaxConnectionAttempts && (mRemainingConnectionAttempts > 0))
+        {
+            mRemainingConnectionAttempts--;
+        }
+
         IgnoreError(mSocket.Connect(Ip6::SockAddr(aMessageInfo.GetPeerAddr(), aMessageInfo.GetPeerPort())));
 
         mMessageInfo.SetPeerAddr(aMessageInfo.GetPeerAddr());
@@ -388,8 +414,17 @@ Error SecureTransport::Setup(bool aClient)
 exit:
     if (IsStateInitializing() && (rval != 0))
     {
-        SetState(kStateOpen);
-        FreeMbedtls();
+        if (mApplyMaxConnectionAttempts && (mRemainingConnectionAttempts == 0))
+        {
+            mApplyMaxConnectionAttempts = false;
+            Close();
+            mAutoCloseCallback.InvokeIfSet();
+        }
+        else
+        {
+            SetState(kStateOpen);
+            FreeMbedtls();
+        }
     }
 
     return Crypto::MbedTls::MapError(rval);

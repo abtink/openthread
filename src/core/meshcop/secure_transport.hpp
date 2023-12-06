@@ -129,6 +129,15 @@ public:
     typedef Error (*TransportCallback)(void *aContext, ot::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 
     /**
+     * Callback to notify when the socket is automatically closed due to reaching the maximum number of connection
+     * attempts (set from `SetMaxConnectionAttempts()`).
+     *
+     * @param[in] aContext    A pointer to arbitrary context information.
+     *
+     */
+    typedef void (*AutoCloseCallback)(void *aContext);
+
+    /**
      * Opens the socket.
      *
      * @param[in]  aReceiveHandler      A pointer to a function that is called to receive payload.
@@ -140,6 +149,19 @@ public:
      *
      */
     Error Open(ReceiveHandler aReceiveHandler, ConnectedHandler aConnectedHandler, void *aContext);
+
+    /**
+     * Sets the maximum number of allowed connection requests before socket is automatically closed.
+     *
+     * This method MUST be called after a successful call to `Open()`. Calling `Open()` clears any previously set
+     * maximum attempts values. If not set explicitly, no limit is applied (any number of attempts are allowed).
+     *
+     * @param[in] aMaxAttempts    Maximum number of allowed connection attempts.
+     * @param[in] aCallback       Callback to notify if max number of attempts has reached and socket is closed.
+     * @param[in] aContext        A pointer to arbitrary context to use with `AutoCloseCallback`.
+     *
+     */
+    void SetMaxConnectionAttempts(uint16_t aMaxAttempts, AutoCloseCallback aCallback, void *aContext);
 
     /**
      * Binds this DTLS to a UDP port.
@@ -615,6 +637,10 @@ private:
 
     bool mLayerTwoSecurity : 1;
     bool mDatagramTransport : 1;
+
+    bool                        mApplyMaxConnectionAttempts : 1;
+    uint16_t                    mRemainingConnectionAttempts;
+    Callback<AutoCloseCallback> mAutoCloseCallback;
 
     Message *mReceiveMessage;
 

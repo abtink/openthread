@@ -61,8 +61,21 @@ Error CoapSecure::Start(uint16_t aPort)
 
     mConnectedCallback.Clear();
 
-    SuccessOrExit(error = mDtls.Open(&CoapSecure::HandleDtlsReceive, &CoapSecure::HandleDtlsConnected, this));
+    SuccessOrExit(error = mDtls.Open(HandleDtlsReceive, HandleDtlsConnected, this));
     SuccessOrExit(error = mDtls.Bind(aPort));
+
+exit:
+    return error;
+}
+
+Error CoapSecure::Start(uint16_t aPort, uint16_t aMaxAttempts, AutoStopCallback aCallback, void *aContext)
+{
+    Error error;
+
+    SuccessOrExit(error = Start(aPort));
+
+    mAutoStopCallback.Set(aCallback, aContext);
+    mDtls.SetMaxConnectionAttempts(aMaxAttempts, HandleDtlsAutoClose, this);
 
 exit:
     return error;
@@ -74,7 +87,7 @@ Error CoapSecure::Start(MeshCoP::SecureTransport::TransportCallback aCallback, v
 
     mConnectedCallback.Clear();
 
-    SuccessOrExit(error = mDtls.Open(&CoapSecure::HandleDtlsReceive, &CoapSecure::HandleDtlsConnected, this));
+    SuccessOrExit(error = mDtls.Open(HandleDtlsReceive, HandleDtlsConnected, this));
     SuccessOrExit(error = mDtls.Bind(aCallback, aContext));
 
 exit:
@@ -171,6 +184,17 @@ void CoapSecure::HandleDtlsConnected(void *aContext, bool aConnected)
 }
 
 void CoapSecure::HandleDtlsConnected(bool aConnected) { mConnectedCallback.InvokeIfSet(aConnected); }
+
+void CoapSecure::HandleDtlsAutoClose(void *aContext)
+{
+    return static_cast<CoapSecure *>(aContext)->HandleDtlsAutoClose();
+}
+
+void CoapSecure::HandleDtlsAutoClose(void)
+{
+    Stop();
+    mAutoStopCallback.InvokeIfSet();
+}
 
 void CoapSecure::HandleDtlsReceive(void *aContext, uint8_t *aBuf, uint16_t aLength)
 {
