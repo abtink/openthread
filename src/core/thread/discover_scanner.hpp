@@ -171,6 +171,8 @@ private:
     // Methods used from `Mle`
     void HandleDiscoveryResponse(Mle::RxInfo &aRxInfo) const;
 
+    static Error AllowNotFound(Error aError);
+
     void HandleDiscoverComplete(void);
     void HandleScanDoneTask(void);
     void HandleTimer(void);
