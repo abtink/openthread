@@ -158,7 +158,7 @@ public:
      * @returns  UDP port number.
      *
      */
-    uint16_t GetUdpPort(void) const;
+    uint16_t GetUdpPort(void) const { return mSocket.GetSockName().GetPort(); }
 
     /**
      * Binds with a transport callback.
@@ -448,19 +448,25 @@ private:
         kStateCloseNotify,  // The service is closing a connection.
     };
 
+    enum SetupMode : uint8_t
+    {
+        kAsClient,
+        kAsServer,
+    };
+
     static constexpr uint32_t kGuardTimeNewConnectionMilli = 2000;
 
 #if !OPENTHREAD_CONFIG_TLS_API_ENABLE
     static constexpr uint16_t kApplicationDataMaxLength = 1152;
 #else
-    static constexpr uint16_t         kApplicationDataMaxLength = OPENTHREAD_CONFIG_DTLS_APPLICATION_DATA_MAX_LENGTH;
+    static constexpr uint16_t kApplicationDataMaxLength = OPENTHREAD_CONFIG_DTLS_APPLICATION_DATA_MAX_LENGTH;
 #endif
 
     static constexpr size_t kSecureTransportKeyBlockSize     = 40;
     static constexpr size_t kSecureTransportRandomBufferSize = 32;
 
     void  FreeMbedtls(void);
-    Error Setup(bool aClient);
+    Error Setup(SetupMode aMode);
 
 #if OPENTHREAD_CONFIG_TLS_API_ENABLE
     /**
@@ -512,17 +518,17 @@ private:
 
 #else
 
-    static int       HandleMbedtlsExportKeys(void                *aContext,
-                                             const unsigned char *aMasterSecret,
-                                             const unsigned char *aKeyBlock,
-                                             size_t               aMacLength,
-                                             size_t               aKeyLength,
-                                             size_t               aIvLength);
-    int              HandleMbedtlsExportKeys(const unsigned char *aMasterSecret,
-                                             const unsigned char *aKeyBlock,
-                                             size_t               aMacLength,
-                                             size_t               aKeyLength,
-                                             size_t               aIvLength);
+    static int HandleMbedtlsExportKeys(void                *aContext,
+                                       const unsigned char *aMasterSecret,
+                                       const unsigned char *aKeyBlock,
+                                       size_t               aMacLength,
+                                       size_t               aKeyLength,
+                                       size_t               aIvLength);
+    int        HandleMbedtlsExportKeys(const unsigned char *aMasterSecret,
+                                       const unsigned char *aKeyBlock,
+                                       size_t               aMacLength,
+                                       size_t               aKeyLength,
+                                       size_t               aIvLength);
 
 #endif // (MBEDTLS_VERSION_NUMBER >= 0x03000000)
 #endif // MBEDTLS_SSL_EXPORT_KEYS
@@ -542,20 +548,6 @@ private:
     int     mCipherSuites[2];
     uint8_t mPsk[kPskMaxLength];
     uint8_t mPskLength;
-
-#if (MBEDTLS_VERSION_NUMBER >= 0x03010000)
-    static const uint16_t sGroups[];
-#else
-    static const mbedtls_ecp_group_id sCurves[];
-#endif
-
-#if defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED) || defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-#if (MBEDTLS_VERSION_NUMBER >= 0x03020000)
-    static const uint16_t sSignatures[];
-#else
-    static const int sHashes[];
-#endif
-#endif
 
 #if OPENTHREAD_CONFIG_TLS_API_ENABLE
 #ifdef MBEDTLS_KEY_EXCHANGE_ECDHE_ECDSA_ENABLED
@@ -598,13 +590,11 @@ private:
 
     Callback<ConnectedHandler> mConnectedCallback;
     Callback<ReceiveHandler>   mReceiveCallback;
-    void                      *mContext;
 
     Ip6::MessageInfo mMessageInfo;
     Ip6::Udp::Socket mSocket;
 
     Callback<TransportCallback> mTransportCallback;
-    void                       *mTransportContext;
 
     Message::SubType mMessageSubType;
     Message::SubType mMessageDefaultSubType;

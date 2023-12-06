@@ -59,20 +59,6 @@ namespace MeshCoP {
 
 RegisterLogModule("SecTransport");
 
-#if (MBEDTLS_VERSION_NUMBER >= 0x03010000)
-const uint16_t SecureTransport::sGroups[] = {MBEDTLS_SSL_IANA_TLS_GROUP_SECP256R1, MBEDTLS_SSL_IANA_TLS_GROUP_NONE};
-#else
-const mbedtls_ecp_group_id SecureTransport::sCurves[] = {MBEDTLS_ECP_DP_SECP256R1, MBEDTLS_ECP_DP_NONE};
-#endif
-
-#if defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED) || defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
-#if (MBEDTLS_VERSION_NUMBER >= 0x03020000)
-const uint16_t SecureTransport::sSignatures[] = {MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256, MBEDTLS_TLS1_3_SIG_NONE};
-#else
-const int SecureTransport::sHashes[] = {MBEDTLS_MD_SHA256, MBEDTLS_MD_NONE};
-#endif
-#endif
-
 SecureTransport::SecureTransport(Instance &aInstance, bool aLayerTwoSecurity, bool aDatagramTransport)
     : InstanceLocator(aInstance)
     , mState(kStateClosed)
@@ -163,7 +149,7 @@ Error SecureTransport::Connect(const Ip6::SockAddr &aSockAddr)
     mMessageInfo.SetPeerAddr(aSockAddr.GetAddress());
     mMessageInfo.SetPeerPort(aSockAddr.mPort);
 
-    error = Setup(true);
+    error = Setup(kAsClient);
 
 exit:
     return error;
@@ -195,7 +181,7 @@ void SecureTransport::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo
 
         mMessageInfo.SetSockPort(aMessageInfo.GetSockPort());
 
-        SuccessOrExit(Setup(false));
+        SuccessOrExit(Setup(kAsServer));
         break;
 
     default:
@@ -217,8 +203,6 @@ void SecureTransport::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo
 exit:
     return;
 }
-
-uint16_t SecureTransport::GetUdpPort(void) const { return mSocket.GetSockName().GetPort(); }
 
 Error SecureTransport::Bind(uint16_t aPort)
 {
@@ -247,7 +231,7 @@ exit:
     return error;
 }
 
-Error SecureTransport::Setup(bool aClient)
+Error SecureTransport::Setup(SetupMode aMode)
 {
     int rval;
 
@@ -273,7 +257,7 @@ Error SecureTransport::Setup(bool aClient)
 #endif
 
     rval = mbedtls_ssl_config_defaults(
-        &mConf, aClient ? MBEDTLS_SSL_IS_CLIENT : MBEDTLS_SSL_IS_SERVER,
+        &mConf, (aMode == kAsClient) ? MBEDTLS_SSL_IS_CLIENT : MBEDTLS_SSL_IS_SERVER,
         mDatagramTransport ? MBEDTLS_SSL_TRANSPORT_DATAGRAM : MBEDTLS_SSL_TRANSPORT_STREAM, MBEDTLS_SSL_PRESET_DEFAULT);
     VerifyOrExit(rval == 0);
 
@@ -302,18 +286,36 @@ Error SecureTransport::Setup(bool aClient)
 
     OT_ASSERT(mCipherSuites[1] == 0);
     mbedtls_ssl_conf_ciphersuites(&mConf, mCipherSuites);
+
     if (mCipherSuites[0] == MBEDTLS_TLS_ECJPAKE_WITH_AES_128_CCM_8)
     {
 #if (MBEDTLS_VERSION_NUMBER >= 0x03010000)
-        mbedtls_ssl_conf_groups(&mConf, sGroups);
+        {
+            static const uint16_t kGroups[] = {MBEDTLS_SSL_IANA_TLS_GROUP_SECP256R1, MBEDTLS_SSL_IANA_TLS_GROUP_NONE};
+
+            mbedtls_ssl_conf_groups(&mConf, kGroups);
+        }
 #else
-        mbedtls_ssl_conf_curves(&mConf, sCurves);
+        {
+            static const mbedtls_ecp_group_id kCurves[] = {MBEDTLS_ECP_DP_SECP256R1, MBEDTLS_ECP_DP_NONE};
+
+            mbedtls_ssl_conf_curves(&mConf, kCurves);
+        }
 #endif
+
 #if defined(MBEDTLS_KEY_EXCHANGE__WITH_CERT__ENABLED) || defined(MBEDTLS_KEY_EXCHANGE_WITH_CERT_ENABLED)
 #if (MBEDTLS_VERSION_NUMBER >= 0x03020000)
-        mbedtls_ssl_conf_sig_algs(&mConf, sSignatures);
+        {
+            static const uint16_t kSignatures[] = {MBEDTLS_TLS1_3_SIG_ECDSA_SECP256R1_SHA256, MBEDTLS_TLS1_3_SIG_NONE};
+
+            mbedtls_ssl_conf_sig_algs(&mConf, kSignatures);
+        }
 #else
-        mbedtls_ssl_conf_sig_hashes(&mConf, sHashes);
+        {
+            static const int kHashes[] = {MBEDTLS_MD_SHA256, MBEDTLS_MD_NONE};
+
+            mbedtls_ssl_conf_sig_hashes(&mConf, kHashes);
+        }
 #endif
 #endif
     }
@@ -328,7 +330,7 @@ Error SecureTransport::Setup(bool aClient)
     mbedtls_ssl_conf_dbg(&mConf, HandleMbedtlsDebug, this);
 
 #if defined(MBEDTLS_SSL_SRV_C) && defined(MBEDTLS_SSL_COOKIE_C)
-    if (!aClient && mDatagramTransport)
+    if ((aMode == kAsServer) && mDatagramTransport)
     {
         rval = mbedtls_ssl_cookie_setup(&mCookieCtx, Crypto::MbedTls::CryptoSecurePrng, nullptr);
         VerifyOrExit(rval == 0);
@@ -958,14 +960,14 @@ exit:
     return;
 }
 
-#else
+#else //  (MBEDTLS_VERSION_NUMBER >= 0x03000000)
 
-int SecureTransport::HandleMbedtlsExportKeys(void                *aContext,
+int SecureTransport::HandleMbedtlsExportKeys(void *aContext,
                                              const unsigned char *aMasterSecret,
                                              const unsigned char *aKeyBlock,
-                                             size_t               aMacLength,
-                                             size_t               aKeyLength,
-                                             size_t               aIvLength)
+                                             size_t aMacLength,
+                                             size_t aKeyLength,
+                                             size_t aIvLength)
 {
     return static_cast<SecureTransport *>(aContext)->HandleMbedtlsExportKeys(aMasterSecret, aKeyBlock, aMacLength,
                                                                              aKeyLength, aIvLength);
@@ -973,14 +975,14 @@ int SecureTransport::HandleMbedtlsExportKeys(void                *aContext,
 
 int SecureTransport::HandleMbedtlsExportKeys(const unsigned char *aMasterSecret,
                                              const unsigned char *aKeyBlock,
-                                             size_t               aMacLength,
-                                             size_t               aKeyLength,
-                                             size_t               aIvLength)
+                                             size_t aMacLength,
+                                             size_t aKeyLength,
+                                             size_t aIvLength)
 {
     OT_UNUSED_VARIABLE(aMasterSecret);
 
     Crypto::Sha256::Hash kek;
-    Crypto::Sha256       sha256;
+    Crypto::Sha256 sha256;
 
     VerifyOrExit(mCipherSuites[0] == MBEDTLS_TLS_ECJPAKE_WITH_AES_128_CCM_8);
 
