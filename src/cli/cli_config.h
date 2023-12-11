@@ -206,4 +206,16 @@
 #define OPENTHREAD_CONFIG_CLI_BLE_SECURE_ENABLE 0
 #endif
 
+/**
+ * @def OPENTHREAD_CONFIG_CLI_MDNS_ENABLE
+ *
+ * Define to 1 to enable CLI commands for Multicast DNS (mDNS).
+ *
+ * This is applicable when `OPENTHREAD_CONFIG_MULTICAST_DNS_ENABLE` is enabled.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_CLI_MDNS_ENABLE
+#define OPENTHREAD_CONFIG_CLI_MDNS_ENABLE 0
+#endif
+
 #endif // CONFIG_CLI_H_

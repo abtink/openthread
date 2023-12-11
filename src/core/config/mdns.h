@@ -1,5 +1,5 @@
 /*
- *  Copyright (c) 2020, The OpenThread Authors.
+ *  Copyright (c) 2024, The OpenThread Authors.
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -26,46 +26,35 @@
  *  POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef OPENTHREAD_CORE_TORANJ_CONFIG_SIMULATION_H_
-#define OPENTHREAD_CORE_TORANJ_CONFIG_SIMULATION_H_
-
 /**
- * This header file defines the OpenThread core configuration for toranj with simulation platform.
+ * @file
+ *   This file includes compile-time configurations for the Multicast DNS (mDNS).
  *
  */
 
-// Include the common configuration for all platforms.
-#include "openthread-core-toranj-config.h"
+#ifndef CONFIG_MULTICAST_DNS_H_
+#define CONFIG_MULTICAST_DNS_H_
 
-#if OPENTHREAD_RADIO
-
-#define OPENTHREAD_CONFIG_PLATFORM_INFO "SIMULATION-RCP-toranj"
-#else
-#define OPENTHREAD_CONFIG_PLATFORM_INFO "SIMULATION-toranj"
+/**
+ * @def OPENTHREAD_CONFIG_MULTICAST_DNS_ENABLE
+ *
+ * Define to 1 to enable Multicast DNS (mDNS) support.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_MULTICAST_DNS_ENABLE
+#define OPENTHREAD_CONFIG_MULTICAST_DNS_ENABLE 0
 #endif
 
-#define OPENTHREAD_CONFIG_MULTICAST_DNS_ENABLE 1
+/**
+ * @def OPENTHREAD_CONFIG_MULTICAST_DNS_DEFAULT_QUESTION_UNICAST_ALLOWED
+ *
+ * Specified the default value for `otMdnsIsQuestionUnicastAllowed()` which indicates whether mDNS core is allowed to
+ * send "QU" questions (questions requesting unicast response). When allowed, the first probe will be sent as "QU"
+ * question. The `otMdnsSetQuestionUnicastAllowed()` can be used to change the default value at run-time.
+ *
+ */
+#ifndef OPENTHREAD_CONFIG_MULTICAST_DNS_DEFAULT_QUESTION_UNICAST_ALLOWED
+#define OPENTHREAD_CONFIG_MULTICAST_DNS_DEFAULT_QUESTION_UNICAST_ALLOWED 1
+#endif
 
-#define OPENTHREAD_CONFIG_CLI_MDNS_ENABLE 1
-
-#define OPENTHREAD_SIMULATION_MDNS_SCOKET_IMPLEMENT_POSIX 1
-
-#define OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE 0
-
-#define OPENTHREAD_CONFIG_PLATFORM_FLASH_API_ENABLE 1
-
-#define OPENTHREAD_CONFIG_LOG_OUTPUT OPENTHREAD_CONFIG_LOG_OUTPUT_PLATFORM_DEFINED
-
-#define OPENTHREAD_CONFIG_CLI_LOG_INPUT_OUTPUT_ENABLE 1
-
-#define OPENTHREAD_CONFIG_CLI_LOG_INPUT_OUTPUT_LEVEL OT_LOG_LEVEL_INFO
-
-#define OPENTHREAD_CONFIG_DNS_DSO_ENABLE 1
-
-#define OPENTHREAD_CONFIG_HEAP_EXTERNAL_ENABLE 1
-
-#define OPENTHREAD_CONFIG_BORDER_ROUTING_USE_HEAP_ENABLE 1
-
-#define OPENTHREAD_CONFIG_RADIO_STATS_ENABLE 0
-
-#endif /* OPENTHREAD_CORE_TORANJ_CONFIG_SIMULATION_H_ */
+#endif // CONFIG_MULTICAST_DNS_H_
