@@ -1051,6 +1051,7 @@ static void SendResponseWithEmptyKey(const char *aName, Section aSection)
     SuccessOrQuit(Name::AppendName(aName, *message));
 
     record.Init(ResourceRecord::kTypeKey);
+    record.SetTtl(5000);
     record.SetLength(0);
     SuccessOrQuit(message->Append(record));
 
