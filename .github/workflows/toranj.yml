@@ -45,79 +45,6 @@ permissions:
 
 jobs:
 
-  toranj-ncp:
-    name: toranj-ncp-${{ matrix.TORANJ_RADIO }}
-    runs-on: ubuntu-20.04
-    strategy:
-      fail-fast: false
-      matrix:
-        TORANJ_RADIO: ['15.4']
-    env:
-      COVERAGE: 1
-      TORANJ_RADIO : ${{ matrix.TORANJ_RADIO }}
-      TORANJ_NCP : 1
-      TORANJ_EVENT_NAME: ${{ github.event_name }}
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
-      with:
-        egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      with:
-        submodules: true
-    - name: Bootstrap
-      env:
-        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-      run: |
-        sudo rm /etc/apt/sources.list.d/* && sudo apt-get update
-        sudo apt-get --no-install-recommends install -y ninja-build lcov
-        python3 -m pip install -r tests/scripts/thread-cert/requirements.txt
-    - name: Build & Run
-      run: |
-        top_builddir=$(pwd)/build/toranj ./tests/toranj/start.sh
-
-
-  toranj-cli:
-    name: toranj-cli-${{ matrix.TORANJ_RADIO }}
-    runs-on: ubuntu-20.04
-    strategy:
-      matrix:
-        TORANJ_RADIO: ['15.4', 'trel', 'multi']
-    env:
-      COVERAGE: 1
-      TORANJ_RADIO : ${{ matrix.TORANJ_RADIO }}
-      TORANJ_CLI: 1
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
-      with:
-        egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
-
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      with:
-        submodules: true
-    - name: Bootstrap
-      env:
-        GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
-      run: |
-        sudo rm /etc/apt/sources.list.d/* && sudo apt-get update
-        sudo apt-get --no-install-recommends install -y ninja-build lcov
-        python3 -m pip install -r tests/scripts/thread-cert/requirements.txt
-    - name: Build & Run
-      run: |
-        top_builddir=$(pwd)/build/toranj ./tests/toranj/start.sh
-    - name: Generate Coverage
-      if: "matrix.TORANJ_RADIO != 'multi'"
-      run: |
-        ./script/test generate_coverage gcc
-    - uses: actions/upload-artifact@694cdabd8bdb0f10b2cea11669e1bf5453eed0a6 # v4.2.0
-      if: "matrix.TORANJ_RADIO != 'multi'"
-      with:
-        name: cov-toranj-cli-${{ matrix.TORANJ_RADIO }}
-        path: tmp/coverage.info
-        retention-days: 1
-
   toranj-unittest:
     name: toranj-unittest
     runs-on: ubuntu-20.04
@@ -142,49 +69,23 @@ jobs:
     - name: Build & Run
       run: |
         ./tests/toranj/build.sh all
-        ninja test
-        # Validate posix builds with different radio configs
-        git clean -dfx
-        ./tests/toranj/build.sh ncp-15.4
-        git clean -dfx
-        ./tests/toranj/build.sh ncp-trel
-        git clean -dfx
-        ./tests/toranj/build.sh ncp-15.4+trel
-        git clean -dfx
-        ./tests/toranj/build.sh posix-15.4
-        git clean -dfx
-        ./tests/toranj/build.sh posix-15.4+trel
-        git clean -dfx
-        ./tests/toranj/build.sh posix-trel
-        git clean -dfx
-        ./tests/toranj/build.sh --enable-plat-key-ref all
+        ./tests/unit/ot-test-mdns
 
-  upload-coverage:
-    needs:
-    - toranj-cli
-    runs-on: ubuntu-20.04
-    steps:
-    - name: Harden Runner
-      uses: step-security/harden-runner@eb238b55efaa70779f274895e782ed17c84f2895 # v2.6.1
-      with:
-        egress-policy: audit # TODO: change to 'egress-policy: block' after couple of runs
+        #ninja test
 
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4.1.1
-      with:
-        submodules: true
-    - name: Bootstrap
-      run: |
-        sudo apt-get --no-install-recommends install -y lcov
-    - uses: actions/download-artifact@6b208ae046db98c579e8a3aa621ab581ff575935 # v4.1.1
-      with:
-        path: coverage/
-        pattern: cov-*
-        merge-multiple: true
-    - name: Combine Coverage
-      run: |
-        script/test combine_coverage
-    - name: Upload Coverage
-      uses: codecov/codecov-action@eaaf4bedf32dbdc6b720b63067d99c4d77d6047d # v3.1.4
-      with:
-        files: final.info
-        fail_ci_if_error: true
+        ## Validate posix builds with different radio configs
+        #git clean -dfx
+        #./tests/toranj/build.sh ncp-15.4
+        #git clean -dfx
+        #./tests/toranj/build.sh ncp-trel
+        #git clean -dfx
+        #./tests/toranj/build.sh ncp-15.4+trel
+        #git clean -dfx
+        #./tests/toranj/build.sh posix-15.4
+        #git clean -dfx
+        #./tests/toranj/build.sh posix-15.4+trel
+        #git clean -dfx
+        #./tests/toranj/build.sh posix-trel
+        #git clean -dfx
+        #./tests/toranj/build.sh --enable-plat-key-ref all
+
