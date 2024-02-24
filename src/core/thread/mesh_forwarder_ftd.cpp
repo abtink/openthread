@@ -706,7 +706,7 @@ void MeshForwarder::HandleMesh(FrameData &aFrameData, const Mac::Address &aMacSo
         SuccessOrExit(error = meshHeader.AppendTo(*messagePtr));
         SuccessOrExit(error = messagePtr->AppendData(aFrameData));
 
-        messagePtr->SetLinkInfo(aLinkInfo);
+        messagePtr->UpdateLinkInfoFrom(aLinkInfo);
 
 #if OPENTHREAD_CONFIG_MULTI_RADIO
         // We set the received radio type on the message in order for it

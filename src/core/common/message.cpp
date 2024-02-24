@@ -770,12 +770,18 @@ Message *Message::Clone(uint16_t aLength) const
     SuccessOrExit(error = messageCopy->AppendBytesFromMessage(*this, 0, aLength));
 
     // Copy selected message information.
+
     offset = Min(GetOffset(), aLength);
     messageCopy->SetOffset(offset);
 
     messageCopy->SetSubType(GetSubType());
     messageCopy->SetLoopbackToHostAllowed(IsLoopbackToHostAllowed());
     messageCopy->SetOrigin(GetOrigin());
+    messageCopy->SetTimestamp(GetTimestamp());
+    messageCopy->SetMeshDest(GetMeshDest());
+    messageCopy->SetPanId(GetPanId());
+    messageCopy->SetChannel(GetChannel());
+    messageCopy->SetRssAverager(GetRssAverager());
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
     messageCopy->SetTimeSync(IsTimeSync());
 #endif
@@ -795,11 +801,12 @@ void Message::SetChildMask(uint16_t aChildIndex) { GetMetadata().mChildMask.Set(
 bool Message::IsChildPending(void) const { return GetMetadata().mChildMask.HasAny(); }
 #endif
 
-void Message::SetLinkInfo(const ThreadLinkInfo &aLinkInfo)
+void Message::UpdateLinkInfoFrom(const ThreadLinkInfo &aLinkInfo)
 {
     SetLinkSecurityEnabled(aLinkInfo.mLinkSecurity);
     SetPanId(aLinkInfo.mPanId);
     AddRss(aLinkInfo.mRss);
+    GetMetadata().mIsDstPanIdBroadcast = aLinkInfo.IsDstPanIdBroadcast();
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_SUBJECT_ENABLE
     AddLqi(aLinkInfo.mLqi);
 #endif

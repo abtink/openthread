@@ -666,7 +666,7 @@ private:
                                      const Ip6::MessageInfo &aMessageInfo);
     void  SendAddressRelease(void);
     void  SendAdvertisement(void);
-    Error SendLinkAccept(const Ip6::MessageInfo &aMessageInfo,
+    Error SendLinkAccept(const RxInfo &aRxInfo,
                          Neighbor               *aNeighbor,
                          const TlvList          &aRequestedTlvList,
                          const RxChallenge      &aChallenge);

@@ -218,7 +218,9 @@ protected:
         bool    mMulticastLoop : 1;       // Whether this multicast message may be looped back.
         bool    mResolvingAddress : 1;    // Whether the message is pending an address query resolution.
         bool    mAllowLookbackToHost : 1; // Whether the message is allowed to be looped back to host.
-        uint8_t mOrigin : 2;              // The origin of the message.
+        bool    mIsDstPanIdBroadcast : 1; // IWhether the dest PAN ID is broadcast.
+        uint8_t mOrigin : 2;
+                     // The origin of the message.
 #if OPENTHREAD_CONFIG_MULTI_RADIO
         uint8_t mRadioType : 2;      // The radio link type the message was received on, or should be sent on.
         bool    mIsRadioTypeSet : 1; // Whether the radio type is set.
@@ -1015,11 +1017,15 @@ public:
     void SetMeshDest(uint16_t aMeshDest) { GetMetadata().mMeshDest = aMeshDest; }
 
     /**
-     * Returns the IEEE 802.15.4 Destination PAN ID.
+     * Returns the IEEE 802.15.4 Source or Destination PAN ID.
      *
-     * @note Only use this when sending MLE Discover Request or Response messages.
+     * On a message received over the Thread radio, specifies the Source PAN ID when present in MAC header, otherwise
+     * Destination PAN ID.
      *
-     * @returns The IEEE 802.15.4 Destination PAN ID.
+     * For a message to be sent over the Thread radio, this is set and used for MLE Discover Request or Response
+     * messages.
+     *
+     * @returns The IEEE 802.15.4 PAN ID.
      *
      */
     uint16_t GetPanId(void) const { return GetMetadata().mPanId; }
@@ -1033,6 +1039,17 @@ public:
      *
      */
     void SetPanId(uint16_t aPanId) { GetMetadata().mPanId = aPanId; }
+
+    /**
+     * Indicates whether the Destination PAN ID is broadcast.
+     *
+     * This is appliable for messages receievd over Thread radio.
+     *
+     * @retval TRUE   The Destination PAN ID is broadcast.
+     * @retval FALSE  The Destination PAN ID is not broadcast.
+     *
+     */
+    bool IsDstPanIdBroadcast(void) const { return GetMetadata().mIsDstPanIdBroadcast; }
 
     /**
      * Returns the IEEE 802.15.4 Channel to use for transmission.
@@ -1290,7 +1307,7 @@ public:
      * @param[in] aLinkInfo   The `ThreadLinkInfo` instance from which to set message's related properties.
      *
      */
-    void SetLinkInfo(const ThreadLinkInfo &aLinkInfo);
+    void UpdateLinkInfoFrom(const ThreadLinkInfo &aLinkInfo);
 
     /**
      * Returns a pointer to the message queue (if any) where this message is queued.
@@ -1488,6 +1505,8 @@ private:
     bool IsInAQueue(void) const { return (GetMetadata().mQueue != nullptr); }
     void SetMessageQueue(MessageQueue *aMessageQueue);
     void SetPriorityQueue(PriorityQueue *aPriorityQueue);
+
+    void SetRssAverager(const RssAverager &aRssAverager) { GetMetadata().mRssAverager = aRssAverager; }
 
     Message       *&Next(void) { return GetMetadata().mNext; }
     Message *const &Next(void) const { return GetMetadata().mNext; }
