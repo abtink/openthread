@@ -331,4 +331,33 @@ void NeighborTable::Signal(Event aEvent, const Neighbor &aNeighbor)
     }
 }
 
+uint16_t NeighborTable::DetermineRloc16For(const Mac::Address &aMacAddress)
+{
+    const Neighbor *neighbor;
+    uint16_t        rloc16 = Mle::kInvalidRloc16;
+
+    if (aMacAddress.IsShort())
+    {
+        rloc16 = aMacAddress.GetShort();
+        ExitNow();
+    }
+
+    if (aMacAddress.IsExtended())
+    {
+        if (aMacAddress.GetExtended() == Get<Mac::Mac>().GetExtAddress())
+        {
+            rloc16 = Get<Mac::Mac>().GetShortAddress();
+            ExitNow();
+        }
+
+        neighbor = FindNeighbor(aMacAddress.GetExtended(), Neighbor::kInStateValid);
+
+        VerifyOrExit(neighbor != nullptr);
+        rloc16 = neighbor->GetRloc16();
+    }
+
+exit:
+    return rloc16;
+}
+
 } // namespace ot

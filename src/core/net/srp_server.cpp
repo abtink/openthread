@@ -811,6 +811,13 @@ void Server::ProcessDnsUpdate(Message &aMessage, MessageMetadata &aMetadata)
     // Parse lease time and validate signature.
     SuccessOrExit(error = ProcessAdditionalSection(host, aMessage, aMetadata));
 
+#if OPENTHREAD_FTD
+    if (aMetadata.IsDirectRxFromClient())
+    {
+        UpdateAddrResolverCacheTable(aMessage, *host);
+    }
+#endif
+
     HandleUpdate(*host, aMetadata);
 
 exit:
@@ -1788,6 +1795,29 @@ void Server::UpdateResponseCounters(Dns::UpdateHeader::Response aResponseCode)
         break;
     }
 }
+
+#if OPENTHREAD_FTD
+void Server::UpdateAddrResolverCacheTable(const Message &aMessage, const Host &aHost)
+{
+    // If message is from a client on mesh, we add all registered
+    // addresses as snooped entries in the address resolver cache
+    // table.
+
+    VerifyOrExit(aMessage.IsOriginThreadNetif());
+    VerifyOrExit(aMessage.GetMeshSource() != Mle::kInvalidRloc16);
+    VerifyOrExit(aMessage.GetMeshDest() != Mle::kInvalidRloc16);
+    VerifyOrExit(aHost.GetLease() != 0);
+    VerifyOrExit(aHost.GetTtl() > 0);
+
+    for (const Ip6::Address &address : aHost.mAddresses)
+    {
+        Get<AddressResolver>().UpdateSnoopedCacheEntry(address, aMessage.GetMeshSource(), aMessage.GetMeshDest());
+    }
+
+exit:
+    return;
+}
+#endif
 
 //---------------------------------------------------------------------------------------------------------------------
 // Server::Service

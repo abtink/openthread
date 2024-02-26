@@ -1477,7 +1477,7 @@ void MeshForwarder::HandleFragment(FrameData            &aFrameData,
 
         message->SetDatagramTag(fragmentHeader.GetDatagramTag());
         message->SetTimestampToNow();
-        message->UpdateLinkInfoFrom(aLinkInfo);
+        message->UpdateLinkInfoFrom(aLinkInfo, aMacAddrs);
 
         VerifyOrExit(Get<Ip6::Filter>().Accept(*message), error = kErrorDrop);
 
@@ -1641,7 +1641,7 @@ void MeshForwarder::HandleLowpanHC(const FrameData      &aFrameData,
 
     SuccessOrExit(error = FrameToMessage(aFrameData, 0, aMacAddrs, message));
 
-    message->UpdateLinkInfoFrom(aLinkInfo);
+    message->UpdateLinkInfoFrom(aLinkInfo, aMacAddrs);
 
     VerifyOrExit(Get<Ip6::Filter>().Accept(*message), error = kErrorDrop);
 

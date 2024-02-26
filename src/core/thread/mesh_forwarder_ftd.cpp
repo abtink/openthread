@@ -706,7 +706,7 @@ void MeshForwarder::HandleMesh(FrameData &aFrameData, const Mac::Address &aMacSo
         SuccessOrExit(error = meshHeader.AppendTo(*messagePtr));
         SuccessOrExit(error = messagePtr->AppendData(aFrameData));
 
-        messagePtr->UpdateLinkInfoFrom(aLinkInfo);
+        messagePtr->UpdateLinkInfoFrom(aLinkInfo, meshAddrs);
 
         LogMessage(kMessageReceive, *messagePtr, kErrorNone, &aMacSource);
 

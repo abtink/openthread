@@ -196,6 +196,7 @@ protected:
         uint16_t     mReserved;    // Number of reserved bytes (for header).
         uint16_t     mLength;      // Current message length (number of bytes).
         uint16_t     mOffset;      // A byte offset within the message.
+        uint16_t     mMeshSource;  // Mesh source address (for received message).
         uint16_t     mMeshDest;    // Used for unicast non-link-local messages.
         uint16_t     mPanId;       // PAN ID (used for MLE Discover Request and Response).
         uint8_t      mChannel;     // The message channel (used for MLE Announce).
@@ -995,11 +996,34 @@ public:
 #endif // OPENTHREAD_FTD
 
     /**
+     * Returns the RLOC16 of the mesh source.
+     *
+     * This is used for a message received over Thread radio (origin `kOriginThreadNetif`).
+     *
+     * For messages originating from routers, REED and FED children, or FED/SED children of this device, the mesh
+     * source is RLCO16 of the sender.
+     *
+     * For sleepy children of other routers, the mesh source is set to the RLOC16 of the parent and not the SED child.
+     * This aligns well with how the address cache table would be associated with SED addresses using the parent
+     * RLOC16).
+     *
+     * @returns The RLCO16 of mesh source of the message.
+     *
+     */
+    uint16_t GetMeshSource(void) const { return GetMetadata().mMeshSource; }
+
+    /**
+     * Sets the RLOC16 of the mesh source.
+     *
+     * @param[in]  aMeshSource  The mesh source RLOC16.
+     *
+     */
+    void SetMeshSource(uint16_t aMeshSource) { GetMetadata().mMeshSource = aMeshSource; }
+
+    /**
      * Returns the RLOC16 of the mesh destination.
      *
-     * @note Only use this for non-link-local unicast messages.
-     *
-     * @returns The IEEE 802.15.4 Destination PAN ID.
+     * @returns The RLCO16 of mesh destination of the message.
      *
      */
     uint16_t GetMeshDest(void) const { return GetMetadata().mMeshDest; }
@@ -1007,9 +1031,7 @@ public:
     /**
      * Sets the RLOC16 of the mesh destination.
      *
-     * @note Only use this when sending non-link-local unicast messages.
-     *
-     * @param[in]  aMeshDest  The IEEE 802.15.4 Destination PAN ID.
+     * @param[in]  aMeshDest  The mesh destination RLOC16.
      *
      */
     void SetMeshDest(uint16_t aMeshDest) { GetMetadata().mMeshDest = aMeshDest; }
@@ -1317,12 +1339,14 @@ public:
     Error GetLinkInfo(ThreadLinkInfo &aLinkInfo) const;
 
     /**
-     * Sets the message's link info properties (PAN ID, link security, RSS) from a given `ThreadLinkInfo`.
+     * Updates the message's link info properties (PAN ID, link security, RSS, mesh source/dest RLOC16) from a given
+     * `ThreadLinkInfo`.
      *
      * @param[in] aLinkInfo   The `ThreadLinkInfo` instance from which to set message's related properties.
+     * @param[in] aMacAddrs   The MAC addresses (source/destination).
      *
      */
-    void UpdateLinkInfoFrom(const ThreadLinkInfo &aLinkInfo);
+    void UpdateLinkInfoFrom(const ThreadLinkInfo &aLinkInfo, const Mac::Addresses &aMacAddrs);
 
     /**
      * Returns a pointer to the message queue (if any) where this message is queued.

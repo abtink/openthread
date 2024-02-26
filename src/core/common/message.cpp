@@ -778,6 +778,7 @@ Message *Message::Clone(uint16_t aLength) const
     messageCopy->SetLoopbackToHostAllowed(IsLoopbackToHostAllowed());
     messageCopy->SetOrigin(GetOrigin());
     messageCopy->SetTimestamp(GetTimestamp());
+    messageCopy->SetMeshSource(GetMeshSource());
     messageCopy->SetMeshDest(GetMeshDest());
     messageCopy->SetPanId(GetPanId());
     messageCopy->SetChannel(GetChannel());
@@ -830,7 +831,7 @@ exit:
     return error;
 }
 
-void Message::UpdateLinkInfoFrom(const ThreadLinkInfo &aLinkInfo)
+void Message::UpdateLinkInfoFrom(const ThreadLinkInfo &aLinkInfo, const Mac::Addresses &aMacAddrs)
 {
     SetPanId(aLinkInfo.mPanId);
     SetChannel(aLinkInfo.mChannel);
@@ -847,6 +848,9 @@ void Message::UpdateLinkInfoFrom(const ThreadLinkInfo &aLinkInfo)
 #if OPENTHREAD_CONFIG_MULTI_RADIO
     SetRadioType(static_cast<Mac::RadioType>(aLinkInfo.mRadioType));
 #endif
+
+    SetMeshSource(Get<NeighborTable>().DetermineRloc16For(aMacAddrs.mSource));
+    SetMeshDest(Get<NeighborTable>().DetermineRloc16For(aMacAddrs.mDestination));
 }
 
 bool Message::IsTimeSync(void) const

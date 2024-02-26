@@ -237,6 +237,21 @@ public:
      */
     void Signal(Event aEvent, const Neighbor &aNeighbor);
 
+    /**
+     * Determines the RLOC16 for a given MAC address.
+     *
+     * If the @p aAddress is a short address, the short address itself will be returned.
+     *
+     * If the @p aAddress is an extended MAC address, searches in the neighbor table to find the `Neighbor`
+     * corresponding to this address (among neighbors in valid state) and returns the RLOC16 of the neighbor.
+     *
+     * @param[in] aAddress   A MAC address.
+     *
+     * @returns The RLOC16 corresponding to @p aAddress if found, otherwise `Mle::kInvalidRloc16`.
+     *
+     */
+    uint16_t DetermineRloc16For(const Mac::Address &aAddress);
+
 private:
     Neighbor *FindParent(const Neighbor::AddressMatcher &aMatcher);
     Neighbor *FindNeighbor(const Neighbor::AddressMatcher &aMatcher);
