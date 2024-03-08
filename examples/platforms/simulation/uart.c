@@ -40,7 +40,6 @@
 
 #include <openthread/platform/debug_uart.h>
 
-#include "simul_utils.h"
 #include "utils/code_utils.h"
 #include "utils/uart.h"
 
@@ -173,13 +172,34 @@ exit:
 
 void platformUartUpdateFdSet(fd_set *aReadFdSet, fd_set *aWriteFdSet, fd_set *aErrorFdSet, int *aMaxFd)
 {
-    utilsAddFdToFdSet(s_in_fd, aReadFdSet, aMaxFd);
-    utilsAddFdToFdSet(s_in_fd, aErrorFdSet, aMaxFd);
-
-    if ((s_write_length > 0))
+    if (aReadFdSet != NULL)
     {
-        utilsAddFdToFdSet(s_out_fd, aWriteFdSet, aMaxFd);
-        utilsAddFdToFdSet(s_out_fd, aErrorFdSet, aMaxFd);
+        FD_SET(s_in_fd, aReadFdSet);
+
+        if (aErrorFdSet != NULL)
+        {
+            FD_SET(s_in_fd, aErrorFdSet);
+        }
+
+        if (aMaxFd != NULL && *aMaxFd < s_in_fd)
+        {
+            *aMaxFd = s_in_fd;
+        }
+    }
+
+    if ((aWriteFdSet != NULL) && (s_write_length > 0))
+    {
+        FD_SET(s_out_fd, aWriteFdSet);
+
+        if (aErrorFdSet != NULL)
+        {
+            FD_SET(s_out_fd, aErrorFdSet);
+        }
+
+        if (aMaxFd != NULL && *aMaxFd < s_out_fd)
+        {
+            *aMaxFd = s_out_fd;
+        }
     }
 }
 
