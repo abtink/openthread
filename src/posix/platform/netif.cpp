@@ -71,12 +71,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <ifaddrs.h>
-#ifdef __linux__
-#include <linux/if_link.h>
-#include <linux/if_tun.h>
-#include <linux/netlink.h>
-#include <linux/rtnetlink.h>
-#endif // __linux__
 #include <math.h>
 #include <net/if.h>
 #include <net/if_arp.h>
@@ -89,14 +83,26 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifdef __linux__
+#include <linux/if_link.h>
+#include <linux/if_tun.h>
+#include <linux/netlink.h>
+#include <linux/rtnetlink.h>
+#endif
+
 #if defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__)
+
 #include <netinet/in.h>
+
 #if defined(__APPLE__) || defined(__FreeBSD__)
 #include <net/if_var.h>
-#endif // defined(__APPLE__) || defined(__FreeBSD__)
+#endif
+
 #include <net/route.h>
 #include <netinet6/in6_var.h>
+
 #if defined(__APPLE__) || defined(__FreeBSD__)
+
 // the prf_ra structure is defined inside another structure (in6_prflags), and C++
 //   treats that as out of scope if another structure tries to use it -- this (slightly gross)
 //   workaround makes us dependent on our definition remaining in sync (at least the size of it),
@@ -108,17 +114,19 @@ struct prf_ra
     u_char onlink : 1;
     u_char autonomous : 1;
     u_char reserved : 6;
-} prf_ra;
-// object that contains the SDK's version of the structure:
+};
+
 struct in6_prflags compile_time_check_prflags;
-// compile time check to make sure they're the same size:
-extern int
-    compile_time_check_struct_prf_ra[(sizeof(struct prf_ra) == sizeof(compile_time_check_prflags.prf_ra)) ? 1 : -1];
-#endif
+
+static_assert(sizeof(prf_ra) == sizeof(compile_time_check_prflags.prf_ra), "prf_ra does not match in6_prflags");
+
+#endif // defined(__APPLE__) || defined(__FreeBSD__)
+
 #include <net/if_dl.h>    // struct sockaddr_dl
 #include <netinet6/nd6.h> // ND6_INFINITE_LIFETIME
 
 #ifdef __APPLE__
+
 #if OPENTHREAD_POSIX_CONFIG_MACOS_TUN_OPTION == OT_POSIX_CONFIG_MACOS_UTUN
 #include <net/if_utun.h>
 #endif
@@ -131,11 +139,12 @@ extern int
 #endif
 
 #include <sys/kern_control.h>
+
 #endif // defined(__APPLE__)
 
 #if defined(__NetBSD__) || defined(__FreeBSD__)
 #include <net/if_tun.h>
-#endif // defined(__NetBSD__) || defined(__FreeBSD__)
+#endif
 
 #endif // defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__)
 
@@ -154,25 +163,23 @@ extern int
 #include "common/debug.hpp"
 #include "net/ip6_address.hpp"
 
+#include "firewall.hpp"
+#include "ip6_utils.hpp"
 #include "resolver.hpp"
 
 unsigned int gNetifIndex = 0;
 char         gNetifName[IFNAMSIZ];
-#if OPENTHREAD_CONFIG_NAT64_TRANSLATOR_ENABLE
-static otIp4Cidr sActiveNat64Cidr;
-#endif
 
-const char *otSysGetThreadNetifName(void) { return gNetifName; }
-
+const char  *otSysGetThreadNetifName(void) { return gNetifName; }
 unsigned int otSysGetThreadNetifIndex(void) { return gNetifIndex; }
 
 #if OPENTHREAD_CONFIG_PLATFORM_NETIF_ENABLE
-#if OPENTHREAD_POSIX_CONFIG_FIREWALL_ENABLE
-#include "firewall.hpp"
-#endif
-#include "posix/platform/ip6_utils.hpp"
 
 using namespace ot::Posix::Ip6Utils;
+
+#if OPENTHREAD_CONFIG_NAT64_TRANSLATOR_ENABLE
+static otIp4Cidr sActiveNat64Cidr;
+#endif
 
 #ifndef OPENTHREAD_POSIX_TUN_DEVICE
 
@@ -194,7 +201,11 @@ using namespace ot::Posix::Ip6Utils;
 #endif // OPENTHREAD_TUN_DEVICE
 
 #ifdef __linux__
-static uint32_t sNetlinkSequence = 0; ///< Netlink message sequence.
+static uint32_t sNetlinkSequence = 0; // Netlink message sequence.
+#endif
+
+#if OPENTHREAD_CONFIG_DNS_UPSTREAM_QUERY_ENABLE
+ot::Posix::Resolver gResolver;
 #endif
 
 #if OPENTHREAD_POSIX_CONFIG_INSTALL_OMR_ROUTES_ENABLE && defined(__linux__)
@@ -215,10 +226,6 @@ static otIp6Prefix        sAddedExternalRoutes[kMaxExternalRoutesNum];
 static constexpr uint32_t kNat64RoutePriority = 100; ///< Priority for route to NAT64 CIDR, 100 means a high priority.
 #endif
 
-#if OPENTHREAD_CONFIG_DNS_UPSTREAM_QUERY_ENABLE
-ot::Posix::Resolver gResolver;
-#endif
-
 #if defined(RTM_NEWMADDR) || defined(__NetBSD__)
 // on some BSDs (mac OS, FreeBSD), we get RTM_NEWMADDR/RTM_DELMADDR messages, so we don't need to monitor using MLD
 // on NetBSD, MLD monitoring simply doesn't work
@@ -229,7 +236,7 @@ ot::Posix::Resolver gResolver;
 // MLDv2 messages to know when mulicast memberships change
 // 		https://stackoverflow.com/questions/37346289/using-netlink-is-it-possible-to-listen-whenever-multicast-group-membership-is-ch
 #define OPENTHREAD_POSIX_USE_MLD_MONITOR 1
-#endif // defined(RTM_NEWMADDR) || defined(__NetBSD__)
+#endif
 
 // some platforms (like NetBSD) do not have RTM_NEWMADDR/RTM_DELMADDR messages, and they ALSO lack
 // working MLDv2 support.  for those platforms, we must tell the OpenThread interface to
@@ -246,15 +253,14 @@ ot::Posix::Resolver gResolver;
 static otError destroyTunnel(void);
 #endif
 
-static int sTunFd     = -1; ///< Used to exchange IPv6 packets.
-static int sIpFd      = -1; ///< Used to manage IPv6 stack on Thread interface.
-static int sNetlinkFd = -1; ///< Used to receive netlink events.
+static int sTunFd     = -1; // Used to exchange IPv6 packets.
+static int sIpFd      = -1; // Used to manage IPv6 stack on Thread interface.
+static int sNetlinkFd = -1; // Used to receive netlink events.
+
 #if OPENTHREAD_POSIX_USE_MLD_MONITOR
-static int sMLDMonitorFd = -1; ///< Used to receive MLD events.
-#endif
-#if OPENTHREAD_POSIX_USE_MLD_MONITOR
-// ff02::16
-static const otIp6Address kMLDv2MulticastAddress = {
+
+static int                sMLDMonitorFd          = -1; // Used to receive MLD events.
+static const otIp6Address kMLDv2MulticastAddress = {   // ff02::16
     {{0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16}}};
 
 OT_TOOL_PACKED_BEGIN
@@ -282,9 +288,11 @@ enum
     kICMPv6MLDv2RecordChangeToExcludeType = 3,
     kICMPv6MLDv2RecordChangeToIncludeType = 4,
 };
-#endif
+
+#endif // OPENTHREAD_POSIX_USE_MLD_MONITOR
 
 static constexpr size_t kMaxIp6Size = OPENTHREAD_CONFIG_IP6_MAX_DATAGRAM_LENGTH;
+
 #if defined(RTM_NEWLINK) && defined(RTM_DELLINK)
 static bool sIsSyncingState = false;
 #endif
@@ -292,8 +300,9 @@ static bool sIsSyncingState = false;
 #define OPENTHREAD_POSIX_LOG_TUN_PACKETS 0
 
 #if defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__)
-static const uint8_t allOnes[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-                                  0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+static const uint8_t kAllOnes[] = {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+                                   0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
 #define BITS_PER_BYTE 8
 #define MAX_PREFIX_LENGTH (OT_IP6_ADDRESS_SIZE * BITS_PER_BYTE)
@@ -308,18 +317,20 @@ static void InitNetaskWithPrefixLength(struct in6_addr *address, uint8_t prefixL
     }
 
     addr.Clear();
-    addr.SetPrefix(allOnes, prefixLen);
+    addr.SetPrefix(kAllOnes, prefixLen);
     memcpy(address, addr.mFields.m8, sizeof(addr.mFields.m8));
 }
 
 static uint8_t NetmaskToPrefixLength(const struct sockaddr_in6 *netmask)
 {
     return otIp6PrefixMatch(reinterpret_cast<const otIp6Address *>(netmask->sin6_addr.s6_addr),
-                            reinterpret_cast<const otIp6Address *>(allOnes));
+                            reinterpret_cast<const otIp6Address *>(kAllOnes));
 }
-#endif
+
+#endif // #if defined(__APPLE__) || defined(__NetBSD__) || defined(__FreeBSD__)
 
 #ifdef __linux__
+
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wcast-align"
 
@@ -432,6 +443,7 @@ static void UpdateUnicastLinux(otInstance *aInstance, const otIp6AddressInfo &aA
 }
 
 #pragma GCC diagnostic pop
+
 #endif // __linux__
 
 static void UpdateUnicast(otInstance *aInstance, const otIp6AddressInfo &aAddressInfo, bool aIsAdded)
@@ -571,6 +583,7 @@ static void UpdateLink(otInstance *aInstance)
 }
 
 #ifdef __linux__
+
 template <size_t N> otError AddRoute(const uint8_t (&aAddress)[N], uint8_t aPrefixLen, uint32_t aPriority)
 {
     constexpr unsigned int kBufSize = 128;
