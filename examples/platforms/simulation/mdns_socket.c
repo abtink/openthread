@@ -141,6 +141,17 @@ static void OpenIp4Socket(uint32_t aInfraIfIndex)
 
     SetReuseAddrPort(fd);
 
+    {
+        struct ip_mreqn mreq;
+
+        memset(&mreq, 0, sizeof(mreq));
+        mreq.imr_multiaddr.s_addr = inet_addr("224.0.0.251");
+        mreq.imr_ifindex = aInfraIfIndex;
+
+        ret = setsockopt(fd, IPPROTO_IP, IP_MULTICAST_IF, &mreq, sizeof(mreq));
+        VerifyOrDie(ret >= 0, "setsocketopt(IP_MULTICAST_IF) failed");
+    }
+
     memset(&addr, 0, sizeof(addr));
     addr.sin_family      = AF_INET;
     addr.sin_addr.s_addr = htonl(INADDR_ANY);
@@ -154,13 +165,12 @@ static void OpenIp4Socket(uint32_t aInfraIfIndex)
 
 static void JoinOrLeaveIp4MulticastGroup(bool aJoin, uint32_t aInfraIfIndex)
 {
-    OT_UNUSED_VARIABLE(aInfraIfIndex);
-
-    struct ip_mreq mreq;
+    struct ip_mreqn mreq;
     int            ret;
 
     memset(&mreq, 0, sizeof(mreq));
     mreq.imr_multiaddr.s_addr = inet_addr("224.0.0.251");
+    mreq.imr_ifindex = aInfraIfIndex;
 
     if (aJoin)
     {
