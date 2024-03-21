@@ -38,6 +38,7 @@
 
 #include <openthread/netdata.h>
 
+#include "common/array.hpp"
 #include "common/as_core_type.hpp"
 #include "common/clearable.hpp"
 #include "common/data.hpp"
@@ -96,8 +97,7 @@ static_assert(kRoutePreferenceMedium == Preference::kMedium, "kRoutePreferenceMe
 static_assert(kRoutePreferenceLow == Preference::kLow, "kRoutePreferenceLow is not valid");
 
 /**
- * Represents the border router RLOC role filter used when searching for border routers in the Network
- * Data.
+ * Represents the border router RLOC role filter used when searching for border routers in the Network Data.
  *
  */
 enum RoleFilter : uint8_t
@@ -106,6 +106,40 @@ enum RoleFilter : uint8_t
     kRouterRoleOnly, ///< Include devices that act as Thread router.
     kChildRoleOnly,  ///< Include devices that act as Thread child (end-device).
 };
+
+/**
+ * Represents the entry filter used when searching for RLOC16 of border routers or servers in the Network Data.
+ *
+ */
+enum BorderRouterFilter : uint8_t
+{
+    kAnyBrOrServer, ///< Include any border router or server entry.
+
+    /**
+     * Include border routers providing external IP connectivity where at least one the below conditions hold:
+     *
+     * - It has added at least one external route entry.
+     * - It has added at least one prefix entry with default-route and on-mesh flags set.
+     * - It has added at least one domain prefix (domain and on-mesh flags set).
+     *
+     */
+    kBrProvidingExternalIp,
+};
+
+/**
+ * Max length of `Rlocs` array containing RLOC16 of all Border Routers (and servers) in the Network Data.
+ *
+ * An over-estimate is used based on the facts that network data is limited to 254 bytes and an external route
+ * entry uses at minimum 3 bytes for RLOC16 and flag, so `ceil(254/3) = 85` is used.
+ *
+ */
+static constexpr uint8_t kMaxRlocs = 85;
+
+/**
+ * An array containing RLOC16 of all Border Routers and server in the Network Data.
+ *
+ */
+typedef Array<uint16_t, kMaxRlocs> Rlocs;
 
 /**
  * Indicates whether a given `int8_t` preference value is a valid route preference (i.e., one of the
