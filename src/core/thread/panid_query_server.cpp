@@ -123,8 +123,11 @@ void PanIdQueryServer::SendConflict(void)
     LogInfo("Sent %s", UriToString<kUriPanIdConflict>());
 
 exit:
-    FreeMessageOnError(message, error);
-    MeshCoP::LogError("send panid conflict", error);
+    if (error != kErrorNone)
+    {
+        FreeMessage(message);
+        LogWarn("Failed to send panid conflict: %s", ErrorToString(error));
+    }
 }
 
 void PanIdQueryServer::HandleTimer(void)

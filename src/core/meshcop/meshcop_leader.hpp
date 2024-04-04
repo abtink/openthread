@@ -136,6 +136,12 @@ private:
 
     void ResignCommissioner(void);
 
+#if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_WARN)
+    void LogError(const char *aActionText, Error aError);
+#else
+    void LogError(const char *, Error) {}
+#endif
+
     using LeaderTimer = TimerMilliIn<Leader, &Leader::HandleTimer>;
 
     LeaderTimer mTimer;

@@ -119,6 +119,12 @@ private:
     Error          SendJoinerEntrust(const Ip6::MessageInfo &aMessageInfo);
     Coap::Message *PrepareJoinerEntrustMessage(void);
 
+#if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_WARN)
+    void LogError(const char *aActionText, Error aError);
+#else
+    void LogError(const char *, Error) {}
+#endif
+
     using JoinerRouterTimer = TimerMilliIn<JoinerRouter, &JoinerRouter::HandleTimer>;
 
     Ip6::Udp::Socket mSocket;

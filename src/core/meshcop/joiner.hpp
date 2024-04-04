@@ -233,6 +233,12 @@ private:
     void LogCertMessage(const char *aText, const Coap::Message &aMessage) const;
 #endif
 
+#if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_WARN)
+    void LogError(const char *aActionText, Error aError);
+#else
+    void LogError(const char *, Error) {}
+#endif
+
     using JoinerTimer = TimerMilliIn<Joiner, &Joiner::HandleTimer>;
 
     Mac::ExtAddress mId;

@@ -292,7 +292,7 @@ exit:
         OT_FALL_THROUGH;
 
     default:
-        LogError("send Dataset set to leader", error);
+        LogWarn("Failed to send Dataset set to leader: %s", ErrorToString(error));
         FreeMessage(message);
         break;
     }

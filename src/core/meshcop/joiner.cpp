@@ -639,6 +639,16 @@ exit:
 }
 #endif
 
+#if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_WARN)
+void Joiner::LogError(const char *aActionText, Error aError)
+{
+    if (aError != kErrorNone && aError != kErrorAlready)
+    {
+        LogWarn("Failed to %s: %s", aActionText, ErrorToString(aError));
+    }
+}
+#endif
+
 // LCOV_EXCL_STOP
 
 } // namespace MeshCoP

@@ -197,8 +197,12 @@ void EnergyScanServer::SendReport(void)
     LogInfo("Sent %s", UriToString<kUriEnergyReport>());
 
 exit:
-    FreeMessageOnError(mReportMessage, error);
-    MeshCoP::LogError("send scan results", error);
+    if (error != kErrorNone)
+    {
+        FreeMessage(mReportMessage);
+        LogWarn("Failed to send scan results: %s", ErrorToString(error));
+    }
+
     mReportMessage = nullptr;
 }
 

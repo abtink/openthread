@@ -463,6 +463,11 @@ private:
     void SetState(State aState);
     void SignalJoinerEvent(JoinerEvent aEvent, const Joiner *aJoiner) const;
     void LogJoinerEntry(const char *aAction, const Joiner &aJoiner) const;
+#if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_WARN)
+    void LogError(const char *aActionText, Error aError);
+#else
+    void LogError(const char *, Error) {}
+#endif
 
     static const char *StateToString(State aState);
 
