@@ -451,16 +451,16 @@ void Dataset::RemoveTlv(Tlv::Type aType) { RemoveTlv(FindTlv(aType)); }
 
 Error Dataset::AppendMleDatasetTlv(Type aType, Message &aMessage) const
 {
-    Error          error = kErrorNone;
-    Mle::Tlv       tlv;
-    Mle::Tlv::Type type;
+    Error    error = kErrorNone;
+    Mle::Tlv tlv;
+    uint16_t offset;
+    uint16_t length;
 
     VerifyOrExit(mLength > 0);
 
-    type = (aType == kActive ? Mle::Tlv::kActiveDataset : Mle::Tlv::kPendingDataset);
+    tlv.SetType((aType == kActive) ? Mle::Tlv::kActiveDataset : Mle::Tlv::kPendingDataset);
 
-    tlv.SetType(type);
-    tlv.SetLength(static_cast<uint8_t>(mLength) - sizeof(Tlv) - sizeof(Timestamp));
+    offset = aMessage.GetLength();
     SuccessOrExit(error = aMessage.Append(tlv));
 
     for (const Tlv *cur = GetTlvsStart(); cur < GetTlvsEnd(); cur = cur->GetNext())
@@ -491,6 +491,13 @@ Error Dataset::AppendMleDatasetTlv(Type aType, Message &aMessage) const
             SuccessOrExit(error = cur->AppendTo(aMessage));
         }
     }
+
+    // Update the MLE TLV length in `aMessage` based on the number of
+    // appended bytes.
+
+    length = aMessage.GetLength() - offset - sizeof(Mle::Tlv);
+    tlv.SetLength(static_cast<uint8_t>(length));
+    aMessage.Write(offset, tlv);
 
 exit:
     return error;
