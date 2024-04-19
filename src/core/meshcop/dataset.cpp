@@ -365,7 +365,7 @@ Error Dataset::SetFrom(const Info &aDatasetInfo)
     return error;
 }
 
-Error Dataset::GetTimestamp(Type aType, Timestamp &aTimestamp) const
+Error Dataset::ReadTimestamp(Type aType, Timestamp &aTimestamp) const
 {
     Error      error = kErrorNone;
     const Tlv *tlv;
@@ -385,18 +385,6 @@ Error Dataset::GetTimestamp(Type aType, Timestamp &aTimestamp) const
 
 exit:
     return error;
-}
-
-void Dataset::SetTimestamp(Type aType, const Timestamp &aTimestamp)
-{
-    if (aType == kActive)
-    {
-        IgnoreError(Write<ActiveTimestampTlv>(aTimestamp));
-    }
-    else
-    {
-        IgnoreError(Write<PendingTimestampTlv>(aTimestamp));
-    }
 }
 
 Error Dataset::WriteTlv(Tlv::Type aType, const void *aValue, uint8_t aLength)
