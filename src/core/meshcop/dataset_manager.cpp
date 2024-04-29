@@ -279,7 +279,7 @@ void DatasetManager::SendSet(void)
     SuccessOrExit(
         error = Get<Tmf::Agent>().SendMessage(*message, messageInfo, &DatasetManager::HandleMgmtSetResponse, this));
 
-    LogInfo("Sent %s set to leader", Dataset::TypeToString(GetType()));
+    Log(kMessageSend, kMgmtSetRequest, messageInfo);
 
 exit:
 
@@ -296,7 +296,7 @@ exit:
     default:
         if (error != kErrorAlready)
         {
-            LogWarnOnError(error, "send Dataset set to leader");
+            LogWarnOnError(error, "send MgmtSetRequest to leader");
         }
 
         FreeMessage(message);
@@ -321,6 +321,9 @@ void DatasetManager::HandleMgmtSetResponse(Coap::Message *aMessage, const Ip6::M
     uint8_t state = StateTlv::kPending;
 
     SuccessOrExit(error = aError);
+
+    Log(kMessageReceive, kMgmtSetResponse, *aMessageInfo);
+
     VerifyOrExit(Tlv::Find<StateTlv>(*aMessage, state) == kErrorNone && state != StateTlv::kPending,
                  error = kErrorParse);
 
@@ -330,7 +333,7 @@ void DatasetManager::HandleMgmtSetResponse(Coap::Message *aMessage, const Ip6::M
     }
 
 exit:
-    LogInfo("MGMT_SET finished: %s", error == kErrorNone ? "Accepted" : ErrorToString(error));
+    LogWarnOnError(error, "process MgmtSetResponse");
 
     mMgmtPending = false;
 
@@ -401,8 +404,7 @@ void DatasetManager::SendGetResponse(const Coap::Message    &aRequest,
 
     SuccessOrExit(error = Get<Tmf::Agent>().SendMessage(*message, aMessageInfo));
 
-    LogInfo("sent %s dataset get response to %s", IsActiveDataset() ? "active" : "pending",
-            aMessageInfo.GetPeerAddr().ToString().AsCString());
+    Log(kMessageSend, kMgmtGetResponse, aMessageInfo);
 
 exit:
     FreeMessageOnError(message, error);
@@ -455,7 +457,7 @@ Error DatasetManager::SendSetRequest(const Dataset::Info     &aDatasetInfo,
     mMgmtSetCallback.Set(aCallback, aContext);
     mMgmtPending = true;
 
-    LogInfo("sent dataset set request to leader");
+    Log(kMessageSend, kMgmtSetRequest, messageInfo);
 
 exit:
     FreeMessageOnError(message, error);
@@ -555,7 +557,7 @@ Error DatasetManager::SendGetRequest(const Dataset::Components &aDatasetComponen
 
     SuccessOrExit(error = Get<Tmf::Agent>().SendMessage(*message, messageInfo));
 
-    LogInfo("sent dataset get request");
+    Log(kMessageSend, kMgmtGetRequest, messageInfo);
 
 exit:
     FreeMessageOnError(message, error);
@@ -569,6 +571,42 @@ void DatasetManager::TlvList::Add(uint8_t aTlvType)
         IgnoreError(PushBack(aTlvType));
     }
 }
+
+#if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_INFO)
+
+void DatasetManager::Log(MessageAction aAction, MessageType aType, const Ip6::MessageInfo &aMessageInfo) const
+{
+    const Ip6::Address &peerAddr = aMessageInfo.GetPeerAddr();
+    Ip6::Address        leaderAloc;
+
+    if (Get<Mle::Mle>().GetLeaderAloc(leaderAloc) != kErrorNone)
+    {
+        leaderAloc.Clear();
+    }
+
+    LogInfo("%s Mgmt%s%s %s %s", (aAction == kMessageSend) ? "Send" : "Receive", Dataset::TypeToString(GetType()),
+            MessageTypeToString(aType), (aAction == kMessageSend) ? "to" : "from",
+            (peerAddr == leaderAloc) ? "leader" : peerAddr.ToString().AsCString());
+}
+
+const char *DatasetManager::MessageTypeToString(MessageType aType)
+{
+    static const char *kTypeStrings[] = {
+        "GetRequest",  // (0) kMgmtGetRequest
+        "GetResponse", // (1) kMgmtGetResponse
+        "SetRequest",  // (2) kMgmtSetRequest
+        "SetResponse", // (3) kMgmtSetResponse
+    };
+
+    static_assert(0 == kMgmtGetRequest, "kMgmtGetRequest value is incorrect");
+    static_assert(1 == kMgmtGetResponse, "kMgmtGetResponse value is incorrect");
+    static_assert(2 == kMgmtSetRequest, "kMgmtSetRequest value is incorrect");
+    static_assert(3 == kMgmtSetResponse, "kMgmtSetResponse value is incorrect");
+
+    return kTypeStrings[aType];
+}
+
+#endif // OT_SHOULD_LOG_AT(OT_LOG_LEVEL_INFO)
 
 //---------------------------------------------------------------------------------------------------------------------
 // ActiveDatasetManager
@@ -711,7 +749,7 @@ void PendingDatasetManager::StartDelayTimer(void)
     delay = Min(tlv->ReadValueAs<DelayTimerTlv>(), DelayTimerTlv::kMaxDelay);
 
     mDelayTimer.StartAt(dataset.GetUpdateTime(), delay);
-    LogInfo("delay timer started %lu", ToUlong(delay));
+    LogInfo("Delay timer started %lu", ToUlong(delay));
 
 exit:
     return;
@@ -722,7 +760,7 @@ void PendingDatasetManager::HandleDelayTimer(void)
     Dataset dataset;
 
     IgnoreError(Read(dataset));
-    LogInfo("pending delay timer expired");
+    LogInfo("Delay timer expired");
 
     dataset.ConvertToActive();
 

@@ -335,6 +335,20 @@ protected:
 private:
     static constexpr uint8_t kMaxGetTypes = 64; // Max number of types in MGMT_GET.req
 
+    enum MessageAction : uint8_t
+    {
+        kMessageSend,
+        kMessageReceive,
+    };
+
+    enum MessageType : uint8_t
+    {
+        kMgmtGetRequest,
+        kMgmtGetResponse,
+        kMgmtSetRequest,
+        kMgmtSetResponse,
+    };
+
     class TlvList : public Array<uint8_t, kMaxGetTypes>
     {
     public:
@@ -360,6 +374,14 @@ private:
 
 #if OPENTHREAD_FTD
     void SendSetResponse(const Coap::Message &aRequest, const Ip6::MessageInfo &aMessageInfo, StateTlv::State aState);
+#endif
+
+#if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_INFO)
+    static const char *MessageTypeToString(MessageType aType);
+
+    void Log(MessageAction aAction, MessageType aType, const Ip6::MessageInfo &aMessageInfo) const;
+#else
+    void Log(MessageAction, MessageType, const Ip6::MessageInfo &) const {}
 #endif
 
     static constexpr uint8_t  kMaxDatasetTlvs = 16;   // Maximum number of TLVs in a Dataset.

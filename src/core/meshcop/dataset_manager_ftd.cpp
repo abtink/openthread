@@ -94,6 +94,8 @@ Error DatasetManager::HandleSet(Coap::Message &aMessage, const Ip6::MessageInfo 
     NetworkKey         networkKey;
     uint16_t           panId;
 
+    Log(kMessageReceive, kMgmtSetRequest, aMessageInfo);
+
     // verify that TLV data size is less than maximum TLV value size
     while (offset < aMessage.GetLength())
     {
@@ -281,7 +283,7 @@ void DatasetManager::SendSetResponse(const Coap::Message    &aRequest,
 
     SuccessOrExit(error = Get<Tmf::Agent>().SendMessage(*message, aMessageInfo));
 
-    LogInfo("sent dataset set response");
+    Log(kMessageSend, kMgmtSetResponse, aMessageInfo);
 
 exit:
     FreeMessageOnError(message, error);
