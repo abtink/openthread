@@ -107,11 +107,11 @@ Error DatasetManager::ProcessSetOrReplaceRequest(MgmtCommand          aCommand,
         Timestamp pendingTimestamp;
 
         SuccessOrExit(dataset.Read<PendingTimestampTlv>(pendingTimestamp));
-        VerifyOrExit(Timestamp::Compare(&pendingTimestamp, mLocal.GetTimestamp()) > 0);
+        VerifyOrExit(pendingTimestamp > mLocal.GetTimestamp());
     }
     else
     {
-        VerifyOrExit(Timestamp::Compare(&activeTimestamp, mLocal.GetTimestamp()) > 0);
+        VerifyOrExit(activeTimestamp > mLocal.GetTimestamp());
     }
 
     // Determine whether the new Dataset affects connectivity

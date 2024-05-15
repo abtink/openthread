@@ -299,8 +299,7 @@ void DatasetManager::SyncLocalWithLeader(const Dataset &aDataset)
 
         IgnoreError(Get<PendingDatasetManager>().Read(pendingDataset));
 
-        if ((pendingDataset.Read<ActiveTimestampTlv>(timestamp) == kErrorNone) &&
-            (Timestamp::Compare(&timestamp, mLocal.GetTimestamp()) == 0))
+        if ((pendingDataset.Read<ActiveTimestampTlv>(timestamp) == kErrorNone) && (timestamp == mLocal.GetTimestamp()))
         {
             // Stop registration attempts during dataset transition
             ExitNow(error = kErrorInvalidState);

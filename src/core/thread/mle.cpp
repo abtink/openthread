@@ -2943,7 +2943,7 @@ Error Mle::HandleLeaderData(RxInfo &aRxInfo)
         // Send an MLE Data Request if the received timestamp
         // mismatches the local value and the message does not
         // include the dataset.
-        if (!IsLeader() && (MeshCoP::Timestamp::Compare(&activeTimestamp, timestamp) != 0) &&
+        if (!IsLeader() && (activeTimestamp != timestamp) &&
             (Tlv::FindTlvValueOffset(aRxInfo.mMessage, Tlv::kActiveDataset, activeDatasetOffset, activeDatasetLength) !=
              kErrorNone))
         {
@@ -2966,7 +2966,7 @@ Error Mle::HandleLeaderData(RxInfo &aRxInfo)
 
         timestamp = Get<MeshCoP::PendingDatasetManager>().GetTimestamp();
 
-        if (!IsLeader() && (MeshCoP::Timestamp::Compare(&pendingTimestamp, timestamp) != 0) &&
+        if (!IsLeader() && (pendingTimestamp != timestamp) &&
             (Tlv::FindTlvValueOffset(aRxInfo.mMessage, Tlv::kPendingDataset, pendingDatasetOffset,
                                      pendingDatasetLength) != kErrorNone))
         {

@@ -192,7 +192,7 @@ void DatasetUpdater::HandleNotifierEvents(Events aEvents)
 
             requestedDataset.Get<MeshCoP::Dataset::kActiveTimestamp>(requestedDatasetTimestamp);
             dataset.Get<MeshCoP::Dataset::kActiveTimestamp>(activeDatasetTimestamp);
-            if (Timestamp::Compare(requestedDatasetTimestamp, activeDatasetTimestamp) <= 0)
+            if (requestedDatasetTimestamp <= activeDatasetTimestamp)
             {
                 Finish(kErrorAlready);
             }

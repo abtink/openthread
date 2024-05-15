@@ -2026,7 +2026,7 @@ void MleRouter::HandleChildIdRequest(RxInfo &aRxInfo)
     switch (Tlv::Find<ActiveTimestampTlv>(aRxInfo.mMessage, timestamp))
     {
     case kErrorNone:
-        if (MeshCoP::Timestamp::Compare(&timestamp, Get<MeshCoP::ActiveDatasetManager>().GetTimestamp()) == 0)
+        if (timestamp == Get<MeshCoP::ActiveDatasetManager>().GetTimestamp())
         {
             break;
         }
@@ -2044,7 +2044,7 @@ void MleRouter::HandleChildIdRequest(RxInfo &aRxInfo)
     switch (Tlv::Find<PendingTimestampTlv>(aRxInfo.mMessage, timestamp))
     {
     case kErrorNone:
-        if (MeshCoP::Timestamp::Compare(&timestamp, Get<MeshCoP::PendingDatasetManager>().GetTimestamp()) == 0)
+        if (timestamp == Get<MeshCoP::PendingDatasetManager>().GetTimestamp())
         {
             break;
         }
@@ -2511,7 +2511,7 @@ void MleRouter::HandleDataRequest(RxInfo &aRxInfo)
     switch (Tlv::Find<ActiveTimestampTlv>(aRxInfo.mMessage, timestamp))
     {
     case kErrorNone:
-        if (MeshCoP::Timestamp::Compare(&timestamp, Get<MeshCoP::ActiveDatasetManager>().GetTimestamp()) == 0)
+        if (timestamp == Get<MeshCoP::ActiveDatasetManager>().GetTimestamp())
         {
             break;
         }
@@ -2529,7 +2529,7 @@ void MleRouter::HandleDataRequest(RxInfo &aRxInfo)
     switch (Tlv::Find<PendingTimestampTlv>(aRxInfo.mMessage, timestamp))
     {
     case kErrorNone:
-        if (MeshCoP::Timestamp::Compare(&timestamp, Get<MeshCoP::PendingDatasetManager>().GetTimestamp()) == 0)
+        if (timestamp == Get<MeshCoP::PendingDatasetManager>().GetTimestamp())
         {
             break;
         }

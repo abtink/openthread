@@ -147,6 +147,20 @@ public:
      */
     bool IsOrphanTimestamp(void) const { return GetSeconds() == 0 && GetTicks() == 0 && GetAuthoritative(); }
 
+    bool operator==(const Timestamp &aOther) const { return Compare(*this, aOther) == 0; }
+    bool operator!=(const Timestamp &aOther) const { return Compare(*this, aOther) != 0; }
+    bool operator>(const Timestamp &aOther) const { return Compare(*this, aOther) > 0; }
+    bool operator<(const Timestamp &aOther) const { return Compare(*this, aOther) < 0; }
+    bool operator>=(const Timestamp &aOther) const { return Compare(*this, aOther) >= 0; }
+    bool operator<=(const Timestamp &aOther) const { return Compare(*this, aOther) <= 0; }
+
+    bool operator==(const Timestamp *aOther) const { return Compare(this, aOther) == 0; }
+    bool operator!=(const Timestamp *aOther) const { return Compare(this, aOther) != 0; }
+    bool operator>(const Timestamp *aOther) const { return Compare(this, aOther) > 0; }
+    bool operator<(const Timestamp *aOther) const { return Compare(this, aOther) < 0; }
+    bool operator>=(const Timestamp *aOther) const { return Compare(this, aOther) >= 0; }
+    bool operator<=(const Timestamp *aOther) const { return Compare(this, aOther) <= 0; }
+
     /**
      * Compares two timestamps.
      *
