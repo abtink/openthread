@@ -3267,23 +3267,25 @@ void Mle::HandleParentResponse(RxInfo &aRxInfo)
     SuccessOrExit(error = aRxInfo.mMessage.ReadFrameCounterTlvs(linkFrameCounter, mleFrameCounter));
 
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
-
-    if (Tlv::FindTlv(aRxInfo.mMessage, timeParameterTlv) == kErrorNone)
     {
-        VerifyOrExit(timeParameterTlv.IsValid());
+        TimeParameterTlv timeParameterTlv;
 
-        Get<TimeSync>().SetTimeSyncPeriod(timeParameterTlv.GetTimeSyncPeriod());
-        Get<TimeSync>().SetXtalThreshold(timeParameterTlv.GetXtalThreshold());
-    }
+        if (Tlv::FindTlv(aRxInfo.mMessage, timeParameterTlv) == kErrorNone)
+        {
+            VerifyOrExit(timeParameterTlv.IsValid());
 
+            Get<TimeSync>().SetTimeSyncPeriod(timeParameterTlv.GetTimeSyncPeriod());
+            Get<TimeSync>().SetXtalThreshold(timeParameterTlv.GetXtalThreshold());
+        }
 #if OPENTHREAD_CONFIG_TIME_SYNC_REQUIRED
-    else
-    {
-        // If the time sync feature is required, don't choose the
-        // parent which doesn't support it.
-        ExitNow();
-    }
+        else
+        {
+            // If the time sync feature is required, don't choose the
+            // parent which doesn't support it.
+            ExitNow();
+        }
 #endif
+    }
 #endif // OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
 
     SuccessOrExit(error = aRxInfo.mMessage.ReadChallengeTlv(mParentCandidate.mRxChallenge));
