@@ -66,6 +66,26 @@ DatasetManager::DatasetManager(Instance &aInstance, Dataset::Type aType, Timer::
     mTimestamp.Clear();
 }
 
+ActiveDatasetManager &DatasetManager::AsActiveDatasetManager(void)
+{
+    return *static_cast<ActiveDatasetManager *>(this);
+}
+
+const ActiveDatasetManager &DatasetManager::AsActiveDatasetManager(void) const
+{
+    return *static_cast<const ActiveDatasetManager *>(this);
+}
+
+PendingDatasetManager &DatasetManager::AsPendingDatasetManager(void)
+{
+    return *static_cast<PendingDatasetManager *>(this);
+}
+
+const PendingDatasetManager &DatasetManager::AsPendingDatasetManager(void) const
+{
+    return *static_cast<const PendingDatasetManager *>(this);
+}
+
 const Timestamp *DatasetManager::GetTimestamp(void) const { return mTimestampValid ? &mTimestamp : nullptr; }
 
 Error DatasetManager::Restore(void)
@@ -139,6 +159,11 @@ void DatasetManager::Clear(void)
     mLocal.Clear();
     mTimer.Stop();
     SignalDatasetChange();
+
+    if (IsPendingDataset())
+    {
+        AsPendingDatasetManager().mDelayTimer.Stop();
+    }
 }
 
 void DatasetManager::HandleDetach(void) { IgnoreError(Restore()); }
@@ -164,7 +189,7 @@ Error DatasetManager::Save(const Timestamp &aTimestamp, const Message &aMessage,
 
     if (IsPendingDataset())
     {
-        Get<PendingDatasetManager>().StartDelayTimer(dataset);
+        AsPendingDatasetManager().StartDelayTimer(dataset);
     }
 
 exit:
@@ -235,7 +260,7 @@ void DatasetManager::SaveLocal(const Dataset &aDataset)
 
     if (IsPendingDataset())
     {
-        Get<PendingDatasetManager>().StartDelayTimer(aDataset);
+        AsPendingDatasetManager().StartDelayTimer(aDataset);
     }
 
     switch (Get<Mle::MleRouter>().GetRole())
@@ -649,12 +674,6 @@ PendingDatasetManager::PendingDatasetManager(Instance &aInstance)
     : DatasetManager(aInstance, Dataset::kPending, PendingDatasetManager::HandleTimer)
     , mDelayTimer(aInstance)
 {
-}
-
-void PendingDatasetManager::Clear(void)
-{
-    DatasetManager::Clear();
-    mDelayTimer.Stop();
 }
 
 void PendingDatasetManager::ClearNetwork(void)

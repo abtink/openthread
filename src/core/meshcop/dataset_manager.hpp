@@ -75,6 +75,12 @@ public:
     const Timestamp *GetTimestamp(void) const;
 
     /**
+     * Clears the Dataset.
+     *
+     */
+    void Clear(void);
+
+    /**
      * Restores the Operational Dataset from non-volatile memory.
      *
      * @retval kErrorNone      Successfully restore the dataset.
@@ -240,6 +246,12 @@ public:
                          const otIp6Address        *aAddress) const;
 #if OPENTHREAD_FTD
     /**
+     * Starts the Leader functions for maintaining the Active or Pending Operational Dataset.
+     *
+     */
+    void StartLeader(void);
+
+    /**
      * Appends the MLE Dataset TLV but excluding MeshCoP Sub Timestamp TLV.
      *
      * @param[in] aMessage       The message to append the TLV to.
@@ -282,10 +294,14 @@ private:
 
     DatasetManager(Instance &aInstance, Type aType, TimerMilli::Handler aTimerHandler);
 
+    ActiveDatasetManager &AsActiveDatasetManager(void);
+    const ActiveDatasetManager &AsActiveDatasetManager(void) const;
+    PendingDatasetManager &AsPendingDatasetManager(void);
+    const PendingDatasetManager &AsPendingDatasetManager(void) const;
+
     Type  GetType(void) const { return mLocal.GetType(); }
     bool  IsActiveDataset(void) const { return mLocal.GetType() == Dataset::kActive; }
     bool  IsPendingDataset(void) const { return mLocal.GetType() == Dataset::kPending; }
-    void  Clear(void);
     void  HandleGet(const Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo) const;
     void  HandleTimer(void);
     Error Save(const Dataset &aDataset, bool aAllowOlderTimestamp);
@@ -363,12 +379,6 @@ public:
      */
     bool IsCommissioned(void) const;
 
-    /**
-     * Clears the Active Operational Dataset.
-     *
-     */
-    void Clear(void) { DatasetManager::Clear(); }
-
 #if OPENTHREAD_FTD
 
     /**
@@ -381,12 +391,6 @@ public:
      *
      */
     Error CreateNewNetwork(Dataset::Info &aDatasetInfo) { return aDatasetInfo.GenerateRandom(GetInstance()); }
-
-    /**
-     * Starts the Leader functions for maintaining the Active Operational Dataset.
-     *
-     */
-    void StartLeader(void);
 
 #if OPENTHREAD_CONFIG_OPERATIONAL_DATASET_AUTO_INIT
     /**
@@ -431,28 +435,12 @@ public:
     explicit PendingDatasetManager(Instance &aInstance);
 
     /**
-     * Clears the Pending Operational Dataset.
-     *
-     * Also stops the Delay Timer if it was active.
-     *
-     */
-    void Clear(void);
-
-    /**
      * Clears the network Pending Operational Dataset.
      *
      * Also stops the Delay Timer if it was active.
      *
      */
     void ClearNetwork(void);
-
-#if OPENTHREAD_FTD
-    /**
-     * Starts the Leader functions for maintaining the Active Operational Dataset.
-     *
-     */
-    void StartLeader(void);
-#endif
 
 private:
 #if OPENTHREAD_FTD

@@ -65,6 +65,20 @@ RegisterLogModule("DatasetManager");
 //----------------------------------------------------------------------------------------------------------------------
 // DatasetManager
 
+void DatasetManager::StartLeader(void)
+{
+    if (IsActiveDataset())
+    {
+#if OPENTHREAD_CONFIG_OPERATIONAL_DATASET_AUTO_INIT
+        IgnoreError(AsActiveDatasetManager().GenerateLocal());
+#endif
+    }
+    else
+    {
+        AsPendingDatasetManager().StartDelayTimer();
+    }
+}
+
 Error DatasetManager::AppendMleDatasetTlv(Message &aMessage) const
 {
     Mle::Tlv::Type mleTlvType = IsActiveDataset() ? Mle::Tlv::kActiveDataset : Mle::Tlv::kPendingDataset;
@@ -391,9 +405,6 @@ exit:
     return error;
 }
 
-void ActiveDatasetManager::StartLeader(void) { IgnoreError(GenerateLocal()); }
-#else  // OPENTHREAD_CONFIG_OPERATIONAL_DATASET_AUTO_INIT
-void ActiveDatasetManager::StartLeader(void) {}
 #endif // OPENTHREAD_CONFIG_OPERATIONAL_DATASET_AUTO_INIT
 
 template <>
@@ -418,8 +429,6 @@ exit:
 
 //----------------------------------------------------------------------------------------------------------------------
 // PendingDatasetManager
-
-void PendingDatasetManager::StartLeader(void) { StartDelayTimer(); }
 
 template <>
 void PendingDatasetManager::HandleTmf<kUriPendingSet>(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
