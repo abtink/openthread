@@ -1287,12 +1287,7 @@ private:
     uint32_t   Reattach(void);
     bool       HasAcceptableParentCandidate(void) const;
     Error      DetermineParentRequestType(ParentRequestType &aType) const;
-    bool       IsBetterParent(uint16_t                aRloc16,
-                              LinkQuality             aLinkQuality,
-                              uint8_t                 aLinkMargin,
-                              const ConnectivityTlv  &aConnectivityTlv,
-                              uint16_t                aVersion,
-                              const Mac::CslAccuracy &aCslAccuracy);
+    bool       IsBetterParent(const ParentCandidate &aNewCandidate);
     bool       IsNetworkDataNewer(const LeaderData &aLeaderData);
     Error      ProcessMessageSecurity(Crypto::AesCcm::Mode    aMode,
                                       Message                &aMessage,

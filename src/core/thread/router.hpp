@@ -218,6 +218,14 @@ public:
     const Mac::CslAccuracy &GetCslAccuracy(void) const { return mCslAccuracy; }
 
     /**
+     * Gets the CSL accuracy (clock accuracy and uncertainty).
+     *
+     * @returns The CSL accuracy.
+     *
+     */
+    Mac::CslAccuracy &GetCslAccuracy(void) { return mCslAccuracy; }
+
+    /**
      * Sets CSL accuracy.
      *
      * @param[in] aCslAccuracy  The CSL accuracy.
