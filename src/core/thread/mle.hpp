@@ -1061,6 +1061,7 @@ private:
     {
     public:
         bool  ContainsTlv(Tlv::Type aTlvType) const;
+        Error ReadSourceAddressTlv(uint16_t &aSourceAddress) const;
         Error ReadChallengeTlv(RxChallenge &aChallenge) const;
         Error ReadResponseTlv(RxChallenge &aResponse) const;
         Error ReadFrameCounterTlvs(uint32_t &aLinkFrameCounter, uint32_t &aMleFrameCounter) const;

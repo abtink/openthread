@@ -700,7 +700,7 @@ void MleRouter::HandleLinkRequest(RxInfo &aRxInfo)
         ExitNow(error = kErrorParse);
     }
 
-    switch (Tlv::Find<SourceAddressTlv>(aRxInfo.mMessage, sourceAddress))
+    switch (aRxInfo.mMessage.ReadSourceAddressTlv(sourceAddress))
     {
     case kErrorNone:
         if (IsActiveRouter(sourceAddress))
@@ -888,7 +888,7 @@ Error MleRouter::HandleLinkAccept(RxInfo &aRxInfo, bool aRequest)
     uint8_t         linkMargin;
     bool            shouldUpdateRoutes = false;
 
-    SuccessOrExit(error = Tlv::Find<SourceAddressTlv>(aRxInfo.mMessage, sourceAddress));
+    SuccessOrExit(error = aRxInfo.mMessage.ReadSourceAddressTlv(sourceAddress));
 
     Log(kMessageReceive, aRequest ? kTypeLinkAcceptAndRequest : kTypeLinkAccept, aRxInfo.mMessageInfo.GetPeerAddr(),
         sourceAddress);
@@ -2395,7 +2395,7 @@ void MleRouter::HandleChildUpdateResponse(RxInfo &aRxInfo)
 
     Log(kMessageReceive, kTypeChildUpdateResponseOfChild, aRxInfo.mMessageInfo.GetPeerAddr(), child->GetRloc16());
 
-    switch (Tlv::Find<SourceAddressTlv>(aRxInfo.mMessage, sourceAddress))
+    switch (aRxInfo.mMessage.ReadSourceAddressTlv(sourceAddress))
     {
     case kErrorNone:
         if (child->GetRloc16() != sourceAddress)

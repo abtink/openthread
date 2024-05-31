@@ -2795,7 +2795,7 @@ void Mle::HandleAdvertisement(RxInfo &aRxInfo)
 
     VerifyOrExit(IsAttached());
 
-    SuccessOrExit(error = Tlv::Find<SourceAddressTlv>(aRxInfo.mMessage, sourceAddress));
+    SuccessOrExit(error = aRxInfo.mMessage.ReadSourceAddressTlv(sourceAddress));
 
     Log(kMessageReceive, kTypeAdvertisement, aRxInfo.mMessageInfo.GetPeerAddr(), sourceAddress);
 
@@ -3140,7 +3140,7 @@ void Mle::HandleParentResponse(RxInfo &aRxInfo)
     TimeParameterTlv timeParameterTlv;
 #endif
 
-    SuccessOrExit(error = Tlv::Find<SourceAddressTlv>(aRxInfo.mMessage, sourceAddress));
+    SuccessOrExit(error = aRxInfo.mMessage.ReadSourceAddressTlv(sourceAddress));
 
     Log(kMessageReceive, kTypeParentResponse, aRxInfo.mMessageInfo.GetPeerAddr(), sourceAddress);
 
@@ -3327,7 +3327,7 @@ void Mle::HandleChildIdResponse(RxInfo &aRxInfo)
     uint16_t           offset;
     uint16_t           length;
 
-    SuccessOrExit(error = Tlv::Find<SourceAddressTlv>(aRxInfo.mMessage, sourceAddress));
+    SuccessOrExit(error = aRxInfo.mMessage.ReadSourceAddressTlv(sourceAddress));
 
     Log(kMessageReceive, kTypeChildIdResponse, aRxInfo.mMessageInfo.GetPeerAddr(), sourceAddress);
 
@@ -3439,7 +3439,7 @@ void Mle::HandleChildUpdateRequest(RxInfo &aRxInfo)
     TlvList     requestedTlvList;
     TlvList     tlvList;
 
-    SuccessOrExit(error = Tlv::Find<SourceAddressTlv>(aRxInfo.mMessage, sourceAddress));
+    SuccessOrExit(error = aRxInfo.mMessage.ReadSourceAddressTlv(sourceAddress));
 
     Log(kMessageReceive, kTypeChildUpdateRequestAsChild, aRxInfo.mMessageInfo.GetPeerAddr(), sourceAddress);
 
@@ -3599,7 +3599,7 @@ void Mle::HandleChildUpdateResponse(RxInfo &aRxInfo)
         OT_FALL_THROUGH;
 
     case kRoleChild:
-        SuccessOrExit(error = Tlv::Find<SourceAddressTlv>(aRxInfo.mMessage, sourceAddress));
+        SuccessOrExit(error = aRxInfo.mMessage.ReadSourceAddressTlv(sourceAddress));
 
         if (RouterIdFromRloc16(sourceAddress) != RouterIdFromRloc16(GetRloc16()))
         {
@@ -4949,6 +4949,11 @@ bool Mle::RxMessage::ContainsTlv(Tlv::Type aTlvType) const
     uint16_t length;
 
     return Tlv::FindTlvValueOffset(*this, aTlvType, offset, length) == kErrorNone;
+}
+
+Error Mle::RxMessage::ReadSourceAddressTlv(uint16_t &aSourceAddress) const
+{
+    return Tlv::Find<SourceAddressTlv>(*this, aSourceAddress);
 }
 
 Error Mle::RxMessage::ReadChallengeOrResponse(uint8_t aTlvType, RxChallenge &aRxChallenge) const
