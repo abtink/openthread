@@ -221,13 +221,13 @@ typedef UintTlvInfo<Tlv::kPanId, uint16_t> PanIdTlv;
  * Defines Active Timestamp TLV constants and types.
  *
  */
-typedef SimpleTlvInfo<Tlv::kActiveTimestamp, MeshCoP::Timestamp> ActiveTimestampTlv;
+typedef SimpleTlvInfo<Tlv::kActiveTimestamp, MeshCoP::TimestampTlvValue> ActiveTimestampTlv;
 
 /**
  * Defines Pending Timestamp TLV constants and types.
  *
  */
-typedef SimpleTlvInfo<Tlv::kPendingTimestamp, MeshCoP::Timestamp> PendingTimestampTlv;
+typedef SimpleTlvInfo<Tlv::kPendingTimestamp, MeshCoP::TimestampTlvValue> PendingTimestampTlv;
 
 /**
  * Defines Timeout TLV constants and types.

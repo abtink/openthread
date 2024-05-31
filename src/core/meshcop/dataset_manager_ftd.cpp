@@ -103,18 +103,18 @@ Error DatasetManager::ProcessSetOrReplaceRequest(MgmtCommand          aCommand,
     // Verify that the request includes timestamps that are
     // ahead of the locally stored values.
 
-    SuccessOrExit(dataset.Read<ActiveTimestampTlv>(activeTimestamp));
+    SuccessOrExit(dataset.ReadActiveTimestamp(activeTimestamp));
 
     if (IsPendingDataset())
     {
         Timestamp pendingTimestamp;
 
-        SuccessOrExit(dataset.Read<PendingTimestampTlv>(pendingTimestamp));
-        VerifyOrExit(Timestamp::Compare(&pendingTimestamp, GetLocalTimestamp()) > 0);
+        SuccessOrExit(dataset.ReadPendingTimestamp(pendingTimestamp));
+        VerifyOrExit(Timestamp::Compare(pendingTimestamp, mLocalTimestamp) > 0);
     }
     else
     {
-        VerifyOrExit(Timestamp::Compare(&activeTimestamp, GetLocalTimestamp()) > 0);
+        VerifyOrExit(Timestamp::Compare(activeTimestamp, mLocalTimestamp) > 0);
     }
 
     // Determine whether the new Dataset affects connectivity
@@ -155,9 +155,7 @@ Error DatasetManager::ProcessSetOrReplaceRequest(MgmtCommand          aCommand,
 
     if (IsPendingDataset() && !aInfo.mAffectsNetworkKey)
     {
-        const Timestamp *localActiveTimestamp = Get<ActiveDatasetManager>().GetTimestamp();
-
-        VerifyOrExit(Timestamp::Compare(&activeTimestamp, localActiveTimestamp) > 0);
+        VerifyOrExit(Timestamp::Compare(activeTimestamp, Get<ActiveDatasetManager>().GetTimestamp()) > 0);
     }
 
     // Determine whether the request is from commissioner.
@@ -308,7 +306,7 @@ Error ActiveDatasetManager::GenerateLocal(void)
         Timestamp timestamp;
 
         timestamp.Clear();
-        IgnoreError(dataset.Write<ActiveTimestampTlv>(timestamp));
+        IgnoreError(dataset.WriteActiveTimestamp(timestamp));
     }
 
     if (!dataset.Contains<ChannelTlv>())
@@ -437,8 +435,8 @@ void PendingDatasetManager::ApplyActiveDataset(Dataset &aDataset)
 
     Timestamp activeTimestamp;
 
-    SuccessOrExit(aDataset.Read<ActiveTimestampTlv>(activeTimestamp));
-    SuccessOrExit(aDataset.Write<PendingTimestampTlv>(activeTimestamp));
+    SuccessOrExit(aDataset.ReadActiveTimestamp(activeTimestamp));
+    SuccessOrExit(aDataset.WritePendingTimestamp(activeTimestamp));
     SuccessOrExit(aDataset.Write<DelayTimerTlv>(Get<Leader>().GetDelayTimerMinimal()));
 
     IgnoreError(DatasetManager::Save(aDataset));

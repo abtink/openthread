@@ -71,7 +71,7 @@ Error DatasetUpdater::RequestUpdate(Dataset &aDataset, UpdaterCallback aCallback
     error = kErrorInvalidState;
     VerifyOrExit(!Get<Mle::Mle>().IsDisabled());
     SuccessOrExit(Get<ActiveDatasetManager>().Read(activeDataset));
-    SuccessOrExit(activeDataset.Read<ActiveTimestampTlv>(activeTimestamp));
+    SuccessOrExit(activeDataset.ReadActiveTimestamp(activeTimestamp));
 
     error = kErrorInvalidArgs;
     SuccessOrExit(aDataset.ValidateTlvs());
@@ -86,19 +86,12 @@ Error DatasetUpdater::RequestUpdate(Dataset &aDataset, UpdaterCallback aCallback
     // by advancing ticks on the current timestamp values.
 
     activeTimestamp.AdvanceRandomTicks();
-    SuccessOrExit(error = aDataset.Write<ActiveTimestampTlv>(activeTimestamp));
+    SuccessOrExit(error = aDataset.WriteActiveTimestamp(activeTimestamp));
 
-    if (Get<PendingDatasetManager>().GetTimestamp() != nullptr)
-    {
-        pendingTimestamp = *Get<PendingDatasetManager>().GetTimestamp();
-    }
-    else
-    {
-        pendingTimestamp.Clear();
-    }
-
+    pendingTimestamp = Get<PendingDatasetManager>().GetTimestamp();
     pendingTimestamp.AdvanceRandomTicks();
-    SuccessOrExit(error = aDataset.Write<PendingTimestampTlv>(pendingTimestamp));
+
+    SuccessOrExit(error = aDataset.WritePendingTimestamp(pendingTimestamp));
 
     if (!aDataset.ContainsTlv(Tlv::kDelayTimer))
     {

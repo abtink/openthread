@@ -39,6 +39,7 @@
 #include "common/numeric_limits.hpp"
 #include "common/string.hpp"
 #include "meshcop/meshcop.hpp"
+#include "meshcop/timestamp.hpp"
 
 namespace ot {
 namespace MeshCoP {

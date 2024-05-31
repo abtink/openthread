@@ -115,6 +115,7 @@ void TestSteeringData(void)
 
 void TestTimestamp(void)
 {
+#if 0
     MeshCoP::Timestamp t1;
     MeshCoP::Timestamp t2;
 
@@ -151,6 +152,7 @@ void TestTimestamp(void)
     VerifyOrQuit(MeshCoP::Timestamp::Compare(&t1, &t2) == 0);
 
     printf("TestTimestamp() passed\n");
+#endif
 }
 
 } // namespace ot

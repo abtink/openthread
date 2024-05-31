@@ -552,7 +552,7 @@ private:
  * Defines Active Timestamp TLV constants and types.
  *
  */
-typedef SimpleTlvInfo<Tlv::kActiveTimestamp, Timestamp> ActiveTimestampTlv;
+typedef SimpleTlvInfo<Tlv::kActiveTimestamp, TimestampTlvValue> ActiveTimestampTlv;
 
 /**
  * Implements State TLV generation and parsing.
@@ -595,7 +595,7 @@ typedef UintTlvInfo<Tlv::kJoinerUdpPort, uint16_t> JoinerUdpPortTlv;
  * Defines Pending Timestamp TLV constants and types.
  *
  */
-typedef SimpleTlvInfo<Tlv::kPendingTimestamp, Timestamp> PendingTimestampTlv;
+typedef SimpleTlvInfo<Tlv::kPendingTimestamp, TimestampTlvValue> PendingTimestampTlv;
 
 /**
  * Defines Delay Timer TLV constants and types.

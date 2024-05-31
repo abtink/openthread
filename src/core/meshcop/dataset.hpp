@@ -377,6 +377,9 @@ public:
      */
     Error ReadTimestamp(Type aType, Timestamp &aTimestamp) const;
 
+    Error ReadActiveTimestamp(Timestamp &aTimestamp) const { return ReadTimestamp(kActive, aTimestamp); }
+    Error ReadPendingTimestamp(Timestamp &aTimestamp) const { return ReadTimestamp(kPending, aTimestamp); }
+
     /**
      * Writes a TLV to the Dataset.
      *
@@ -442,6 +445,10 @@ public:
 
         return WriteTlv(static_cast<Tlv::Type>(UintTlvType::kType), &value, sizeof(value));
     }
+
+    Error WriteTimestamp(Type aType, const Timestamp &aTimestamp);
+    Error WriteActiveTimestamp(const Timestamp &aTimestamp);
+    Error WritePendingTimestamp(const Timestamp &aTimestamp);
 
     /**
      * Writes TLVs parsed from a given Dataset into this Dataset.
@@ -812,12 +819,12 @@ template <> inline const uint32_t &Dataset::Info::Get<Dataset::kChannelMask>(voi
 
 template <> inline void Dataset::Info::Get<Dataset::kActiveTimestamp>(Timestamp &aTimestamp) const
 {
-    aTimestamp.SetFromTimestamp(mActiveTimestamp);
+    aTimestamp.InitFrom(mActiveTimestamp);
 }
 
 template <> inline void Dataset::Info::Get<Dataset::kPendingTimestamp>(Timestamp &aTimestamp) const
 {
-    aTimestamp.SetFromTimestamp(mPendingTimestamp);
+    aTimestamp.InitFrom(mPendingTimestamp);
 }
 
 template <> inline void Dataset::Info::Set<Dataset::kActiveTimestamp>(const Timestamp &aTimestamp)

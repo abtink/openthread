@@ -39,74 +39,99 @@
 namespace ot {
 namespace MeshCoP {
 
+void Timestamp::InitFrom(const otTimestamp &aTimestamp)
+{
+    mSeconds       = aTimestamp.mSeconds;
+    mTicks         = Min(aTimestamp.mTicks, kMaxTicks);
+    mAuthoritative = aTimestamp.mAuthoritative;
+    mIsSet         = true;
+}
+
+void Timestamp::InitForOrphanAnnounce(void)
+{
+    Clear();
+    mAuthoritative = true;
+    mIsSet         = true;
+}
+
 void Timestamp::ConvertTo(otTimestamp &aTimestamp) const
 {
-    aTimestamp.mSeconds       = GetSeconds();
-    aTimestamp.mTicks         = GetTicks();
-    aTimestamp.mAuthoritative = GetAuthoritative();
-}
+    ClearAllBytes(aTimestamp);
+    VerifyOrExit(mIsSet);
 
-void Timestamp::SetFromTimestamp(const otTimestamp &aTimestamp)
-{
-    SetSeconds(aTimestamp.mSeconds);
-    SetTicks(aTimestamp.mTicks);
-    SetAuthoritative(aTimestamp.mAuthoritative);
-}
-
-int Timestamp::Compare(const Timestamp *aFirst, const Timestamp *aSecond)
-{
-    int rval;
-
-    if (aFirst == nullptr)
-    {
-        // When `aFirst` is null but `aSecond is not, we return -1,
-        // (indicate `aFirst (null) < aSecond (non-null)`).
-        ExitNow(rval = (aSecond == nullptr) ? 0 : -1);
-    }
-
-    if (aSecond == nullptr)
-    {
-        // When `aFirst` is not null, but `aSecond` is, we return +1,
-        // (indicate `aFirst (non-null) > aSecond (null)`).
-        ExitNow(rval = 1);
-    }
-
-    // Both are non-null.
-
-    rval = Compare(*aFirst, *aSecond);
+    aTimestamp.mSeconds       = mSeconds;
+    aTimestamp.mTicks         = mTicks;
+    aTimestamp.mAuthoritative = mAuthoritative;
 
 exit:
-    return rval;
+    return;
+}
+
+void Timestamp::AdvanceRandomTicks(void)
+{
+    if (!mIsSet)
+    {
+        Clear();
+        mIsSet   = true;
+        mSeconds = 1;
+    }
+
+    mTicks += Random::NonCrypto::GetUint32InRange(1, kMaxRandomTicks);
+
+    if (mTicks > kMaxTicks)
+    {
+        mSeconds++;
+        mTicks -= (kMaxTicks + 1);
+    }
 }
 
 int Timestamp::Compare(const Timestamp &aFirst, const Timestamp &aSecond)
 {
     int rval;
 
-    rval = ThreeWayCompare(aFirst.GetSeconds(), aSecond.GetSeconds());
+    rval = ThreeWayCompare(aFirst.mIsSet, aSecond.mIsSet);
     VerifyOrExit(rval == 0);
 
-    rval = ThreeWayCompare(aFirst.GetTicks(), aSecond.GetTicks());
+    rval = ThreeWayCompare(aFirst.mSeconds, aSecond.mSeconds);
     VerifyOrExit(rval == 0);
 
-    rval = ThreeWayCompare(aFirst.GetAuthoritative(), aSecond.GetAuthoritative());
+    rval = ThreeWayCompare(aFirst.mTicks, aSecond.mTicks);
+    VerifyOrExit(rval == 0);
+
+    rval = ThreeWayCompare(aFirst.mAuthoritative, aSecond.mAuthoritative);
 
 exit:
     return rval;
 }
 
-void Timestamp::AdvanceRandomTicks(void)
+//----------------------------------------------------------------------------------------------------------------------
+
+void TimestampTlvValue::InitFrom(const Timestamp &aTimestamp)
 {
-    uint16_t ticks = GetTicks();
+    uint16_t ticksAndFlags;
 
-    ticks += Random::NonCrypto::GetUint32InRange(1, kMaxRandomTicks);
+    mSeconds16 = BigEndian::HostSwap16(static_cast<uint16_t>(aTimestamp.mSeconds >> 32));
+    mSeconds32 = BigEndian::HostSwap32(static_cast<uint32_t>(aTimestamp.mSeconds & 0xffffffff));
 
-    if (ticks & (kTicksMask >> kTicksOffset))
+    ticksAndFlags = ((aTimestamp.mTicks << kTicksOffset) & kTicksMask);
+
+    if (aTimestamp.mAuthoritative)
     {
-        SetSeconds(GetSeconds() + 1);
+        ticksAndFlags |= kAuthoritativeBit;
     }
 
-    SetTicks(ticks);
+    mTicksAndFlags = BigEndian::HostSwap16(ticksAndFlags);
+}
+
+void TimestampTlvValue::ConvertTo(Timestamp &aTimestamp) const
+{
+    aTimestamp.Clear();
+    aTimestamp.mSeconds = (static_cast<uint64_t>(BigEndian::HostSwap16(mSeconds16)) << 32);
+    aTimestamp.mSeconds += BigEndian::HostSwap32(mSeconds32);
+
+    aTimestamp.mTicks         = (BigEndian::HostSwap16(mTicksAndFlags) >> kTicksOffset);
+    aTimestamp.mAuthoritative = (BigEndian::HostSwap16(mTicksAndFlags) & kAuthoritativeBit);
+    aTimestamp.mIsSet         = true;
 }
 
 } // namespace MeshCoP

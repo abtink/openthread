@@ -2227,9 +2227,8 @@ void Mle::SendAnnounce(uint8_t aChannel, const Ip6::Address &aDestination, Annou
     switch (aMode)
     {
     case kOrphanAnnounce:
-        activeTimestamp.Clear();
-        activeTimestamp.SetAuthoritative(true);
-        SuccessOrExit(error = Tlv::Append<ActiveTimestampTlv>(*message, activeTimestamp));
+        activeTimestamp.InitForOrphanAnnounce();
+        SuccessOrExit(error = message->AppendTimestampTlv(Tlv::kActiveTimestamp, activeTimestamp));
         break;
 
     case kNormalAnnounce:
@@ -2929,7 +2928,7 @@ Error Mle::HandleLeaderData(RxInfo &aRxInfo)
         VerifyOrExit(IsNetworkDataNewer(leaderData));
     }
 
-    switch (Tlv::Find<ActiveTimestampTlv>(aRxInfo.mMessage, activeTimestamp))
+    switch (aRxInfo.mMessage.ReadActiveTimestampTlv(activeTimestamp))
     {
     case kErrorNone:
 #if OPENTHREAD_FTD
@@ -2938,7 +2937,7 @@ Error Mle::HandleLeaderData(RxInfo &aRxInfo)
             break;
         }
 #endif
-        if (MeshCoP::Timestamp::Compare(&activeTimestamp, Get<MeshCoP::ActiveDatasetManager>().GetTimestamp()) != 0)
+        if (MeshCoP::Timestamp::Compare(activeTimestamp, Get<MeshCoP::ActiveDatasetManager>().GetTimestamp()) != 0)
         {
             // Send an MLE Data Request if the received timestamp
             // mismatches the local value and the message does not
@@ -2957,7 +2956,7 @@ Error Mle::HandleLeaderData(RxInfo &aRxInfo)
         ExitNow(error = kErrorParse);
     }
 
-    switch (Tlv::Find<PendingTimestampTlv>(aRxInfo.mMessage, pendingTimestamp))
+    switch (aRxInfo.mMessage.ReadPendingTimestampTlv(pendingTimestamp))
     {
     case kErrorNone:
 #if OPENTHREAD_FTD
@@ -2966,7 +2965,7 @@ Error Mle::HandleLeaderData(RxInfo &aRxInfo)
             break;
         }
 #endif
-        if (MeshCoP::Timestamp::Compare(&pendingTimestamp, Get<MeshCoP::PendingDatasetManager>().GetTimestamp()) != 0)
+        if (MeshCoP::Timestamp::Compare(pendingTimestamp, Get<MeshCoP::PendingDatasetManager>().GetTimestamp()) != 0)
         {
             VerifyOrExit(aRxInfo.mMessage.ContainsTlv(Tlv::kPendingDataset), dataRequest = true);
             savePendingDataset = true;
@@ -3340,7 +3339,7 @@ void Mle::HandleChildIdResponse(RxInfo &aRxInfo)
     SuccessOrExit(
         error = Tlv::FindTlvValueOffset(aRxInfo.mMessage, Tlv::kNetworkData, networkDataOffset, networkDataLength));
 
-    switch (Tlv::Find<ActiveTimestampTlv>(aRxInfo.mMessage, timestamp))
+    switch (aRxInfo.mMessage.ReadActiveTimestampTlv(timestamp))
     {
     case kErrorNone:
         if (Tlv::FindTlvValueOffset(aRxInfo.mMessage, Tlv::kActiveDataset, offset, length) == kErrorNone)
@@ -3363,7 +3362,7 @@ void Mle::HandleChildIdResponse(RxInfo &aRxInfo)
         Get<MeshCoP::PendingDatasetManager>().Clear();
     }
 
-    switch (Tlv::Find<PendingTimestampTlv>(aRxInfo.mMessage, timestamp))
+    switch (aRxInfo.mMessage.ReadPendingTimestampTlv(timestamp))
     {
     case kErrorNone:
         if (Tlv::FindTlvValueOffset(aRxInfo.mMessage, Tlv::kPendingDataset, offset, length) == kErrorNone)
@@ -3676,30 +3675,27 @@ exit:
 
 void Mle::HandleAnnounce(RxInfo &aRxInfo)
 {
-    Error                     error = kErrorNone;
-    ChannelTlvValue           channelTlvValue;
-    MeshCoP::Timestamp        timestamp;
-    const MeshCoP::Timestamp *localTimestamp;
-    uint8_t                   channel;
-    uint16_t                  panId;
-    bool                      isFromOrphan;
-    bool                      channelAndPanIdMatch;
-    int                       timestampCompare;
+    Error              error = kErrorNone;
+    ChannelTlvValue    channelTlvValue;
+    MeshCoP::Timestamp timestamp;
+    uint8_t            channel;
+    uint16_t           panId;
+    bool               isFromOrphan;
+    bool               channelAndPanIdMatch;
+    int                timestampCompare;
 
     Log(kMessageReceive, kTypeAnnounce, aRxInfo.mMessageInfo.GetPeerAddr());
 
     SuccessOrExit(error = Tlv::Find<ChannelTlv>(aRxInfo.mMessage, channelTlvValue));
     channel = static_cast<uint8_t>(channelTlvValue.GetChannel());
 
-    SuccessOrExit(error = Tlv::Find<ActiveTimestampTlv>(aRxInfo.mMessage, timestamp));
+    SuccessOrExit(error = aRxInfo.mMessage.ReadActiveTimestampTlv(timestamp));
     SuccessOrExit(error = Tlv::Find<PanIdTlv>(aRxInfo.mMessage, panId));
 
     aRxInfo.mClass = RxInfo::kPeerMessage;
 
-    localTimestamp = Get<MeshCoP::ActiveDatasetManager>().GetTimestamp();
-
     isFromOrphan         = timestamp.IsOrphanTimestamp();
-    timestampCompare     = MeshCoP::Timestamp::Compare(&timestamp, localTimestamp);
+    timestampCompare     = MeshCoP::Timestamp::Compare(timestamp, Get<MeshCoP::ActiveDatasetManager>().GetTimestamp());
     channelAndPanIdMatch = (channel == Get<Mac::Mac>().GetPanChannel()) && (panId == Get<Mac::Mac>().GetPanId());
 
     if (isFromOrphan || (timestampCompare < 0))
@@ -4735,23 +4731,23 @@ Error Mle::TxMessage::AppendXtalAccuracyTlv(void)
 
 Error Mle::TxMessage::AppendActiveTimestampTlv(void)
 {
-    Error                     error     = kErrorNone;
-    const MeshCoP::Timestamp *timestamp = Get<MeshCoP::ActiveDatasetManager>().GetTimestamp();
-
-    VerifyOrExit(timestamp != nullptr);
-    error = Tlv::Append<ActiveTimestampTlv>(*this, *timestamp);
-
-exit:
-    return error;
+    return AppendTimestampTlv(Tlv::kActiveTimestamp, Get<MeshCoP::ActiveDatasetManager>().GetTimestamp());
 }
 
 Error Mle::TxMessage::AppendPendingTimestampTlv(void)
 {
-    Error                     error     = kErrorNone;
-    const MeshCoP::Timestamp *timestamp = Get<MeshCoP::PendingDatasetManager>().GetTimestamp();
+    return AppendTimestampTlv(Tlv::kPendingTimestamp, Get<MeshCoP::PendingDatasetManager>().GetTimestamp());
+}
 
-    VerifyOrExit(timestamp != nullptr && timestamp->GetSeconds() != 0);
-    error = Tlv::Append<PendingTimestampTlv>(*this, *timestamp);
+Error Mle::TxMessage::AppendTimestampTlv(Tlv::Type aTlvType, const MeshCoP::Timestamp &aTimestamp)
+{
+    Error                      error = kErrorNone;
+    MeshCoP::TimestampTlvValue tlvValue;
+
+    VerifyOrExit(aTimestamp.IsSet());
+
+    tlvValue.InitFrom(aTimestamp);
+    error = Tlv::AppendTlv(*this, aTlvType, &tlvValue, sizeof(tlvValue));
 
 exit:
     return error;
@@ -5056,6 +5052,30 @@ Error Mle::RxMessage::ReadTlvRequestTlv(TlvList &aTlvList) const
 
     ReadBytes(offset, aTlvList.GetArrayBuffer(), length);
     aTlvList.SetLength(static_cast<uint8_t>(length));
+
+exit:
+    return error;
+}
+
+Error Mle::RxMessage::ReadActiveTimestampTlv(MeshCoP::Timestamp &aTimestamp) const
+{
+    Error                      error = kErrorNone;
+    MeshCoP::TimestampTlvValue tlvValue;
+
+    SuccessOrExit(error = Tlv::Find<ActiveTimestampTlv>(*this, tlvValue));
+    tlvValue.ConvertTo(aTimestamp);
+
+exit:
+    return error;
+}
+
+Error Mle::RxMessage::ReadPendingTimestampTlv(MeshCoP::Timestamp &aTimestamp) const
+{
+    Error                      error = kErrorNone;
+    MeshCoP::TimestampTlvValue tlvValue;
+
+    SuccessOrExit(error = Tlv::Find<PendingTimestampTlv>(*this, tlvValue));
+    tlvValue.ConvertTo(aTimestamp);
 
 exit:
     return error;

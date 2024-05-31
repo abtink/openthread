@@ -231,6 +231,8 @@ const Tlv *Dataset::FindTlv(Tlv::Type aType) const { return As<Tlv>(Tlv::FindTlv
 
 void Dataset::ConvertTo(Info &aDatasetInfo) const
 {
+    Timestamp timestamp;
+
     aDatasetInfo.Clear();
 
     for (const Tlv *cur = GetTlvsStart(); cur < GetTlvsEnd(); cur = cur->GetNext())
@@ -238,7 +240,8 @@ void Dataset::ConvertTo(Info &aDatasetInfo) const
         switch (cur->GetType())
         {
         case Tlv::kActiveTimestamp:
-            aDatasetInfo.Set<kActiveTimestamp>(cur->ReadValueAs<ActiveTimestampTlv>());
+            cur->ReadValueAs<ActiveTimestampTlv>().ConvertTo(timestamp);
+            aDatasetInfo.Set<kActiveTimestamp>(timestamp);
             break;
 
         case Tlv::kChannel:
@@ -282,7 +285,8 @@ void Dataset::ConvertTo(Info &aDatasetInfo) const
             break;
 
         case Tlv::kPendingTimestamp:
-            aDatasetInfo.Set<kPendingTimestamp>(cur->ReadValueAs<PendingTimestampTlv>());
+            cur->ReadValueAs<PendingTimestampTlv>().ConvertTo(timestamp);
+            aDatasetInfo.Set<kPendingTimestamp>(timestamp);
             break;
 
         case Tlv::kPskc:
@@ -354,7 +358,16 @@ exit:
 
 Error Dataset::ReadTimestamp(Type aType, Timestamp &aTimestamp) const
 {
-    return (aType == kActive) ? Read<ActiveTimestampTlv>(aTimestamp) : Read<PendingTimestampTlv>(aTimestamp);
+    Error             error;
+    TimestampTlvValue timestampTlvValue;
+
+    aTimestamp.Clear();
+    SuccessOrExit(error = (aType == kActive) ? Read<ActiveTimestampTlv>(timestampTlvValue)
+                                             : Read<PendingTimestampTlv>(timestampTlvValue));
+    timestampTlvValue.ConvertTo(aTimestamp);
+
+exit:
+    return error;
 }
 
 Error Dataset::WriteTlv(Tlv::Type aType, const void *aValue, uint8_t aLength)
@@ -387,6 +400,19 @@ exit:
 }
 
 Error Dataset::WriteTlv(const Tlv &aTlv) { return WriteTlv(aTlv.GetType(), aTlv.GetValue(), aTlv.GetLength()); }
+
+Error Dataset::WriteActiveTimestamp(const Timestamp &aTimestamp) { return WriteTimestamp(kActive, aTimestamp); }
+
+Error Dataset::WritePendingTimestamp(const Timestamp &aTimestamp) { return WriteTimestamp(kPending, aTimestamp); }
+
+Error Dataset::WriteTimestamp(Type aType, const Timestamp &aTimestamp)
+{
+    TimestampTlvValue tlvValue;
+
+    tlvValue.InitFrom(aTimestamp);
+
+    return (aType == kActive) ? Write<ActiveTimestampTlv>(tlvValue) : Write<PendingTimestampTlv>(tlvValue);
+}
 
 Error Dataset::WriteTlvsFrom(const Dataset &aDataset)
 {
@@ -424,7 +450,7 @@ Error Dataset::WriteTlvsFrom(const Dataset::Info &aDatasetInfo)
         Timestamp activeTimestamp;
 
         aDatasetInfo.Get<kActiveTimestamp>(activeTimestamp);
-        SuccessOrExit(error = Write<ActiveTimestampTlv>(activeTimestamp));
+        SuccessOrExit(error = WriteActiveTimestamp(activeTimestamp));
     }
 
     if (aDatasetInfo.IsPresent<kPendingTimestamp>())
@@ -432,7 +458,7 @@ Error Dataset::WriteTlvsFrom(const Dataset::Info &aDatasetInfo)
         Timestamp pendingTimestamp;
 
         aDatasetInfo.Get<kPendingTimestamp>(pendingTimestamp);
-        SuccessOrExit(error = Write<PendingTimestampTlv>(pendingTimestamp));
+        SuccessOrExit(error = WritePendingTimestamp(pendingTimestamp));
     }
 
     if (aDatasetInfo.IsPresent<kDelay>())

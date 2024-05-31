@@ -49,14 +49,30 @@
 namespace ot {
 namespace MeshCoP {
 
-/**
- * Implements Timestamp generation and parsing.
- *
- */
-OT_TOOL_PACKED_BEGIN
+class TimestampTlvValue;
+
 class Timestamp : public Clearable<Timestamp>
 {
+    friend class TimestampTlvValue;
+
 public:
+    Timestamp(void) { Clear(); }
+
+    /**
+     * Initializes the timestamp from a given `otTimestamp`.
+     *
+     * @param[in] aTimestam   An `otTimestampe`
+     *
+     */
+    void InitFrom(const otTimestamp &aTimestamp);
+
+    /**
+     * Initializes the `Timestamp` for use in an MLE Orphan Announce message, i.e., zero seconds, and ticks with
+     * authoritative flag set.
+     *
+     */
+    void InitForOrphanAnnounce(void);
+
     /**
      * Converts the timestamp to `otTimestamp`.
      *
@@ -64,73 +80,18 @@ public:
     void ConvertTo(otTimestamp &aTimestamp) const;
 
     /**
-     * Sets the timestamp from `otTimestamp`.
+     * Indicates whether the `TimeStamp` is set or empty.
      *
      */
-    void SetFromTimestamp(const otTimestamp &aTimestamp);
+    bool IsSet(void) const { return mIsSet; }
 
     /**
-     * Returns the Seconds value.
+     * Returns the seconds filed.
      *
-     * @returns The Seconds value.
-     *
-     */
-    uint64_t GetSeconds(void) const
-    {
-        return (static_cast<uint64_t>(BigEndian::HostSwap16(mSeconds16)) << 32) + BigEndian::HostSwap32(mSeconds32);
-    }
-
-    /**
-     * Sets the Seconds value.
-     *
-     * @param[in]  aSeconds  The Seconds value.
+     * @returns The seconds field.
      *
      */
-    void SetSeconds(uint64_t aSeconds)
-    {
-        mSeconds16 = BigEndian::HostSwap16(static_cast<uint16_t>(aSeconds >> 32));
-        mSeconds32 = BigEndian::HostSwap32(static_cast<uint32_t>(aSeconds & 0xffffffff));
-    }
-
-    /**
-     * Returns the Ticks value.
-     *
-     * @returns The Ticks value.
-     *
-     */
-    uint16_t GetTicks(void) const { return BigEndian::HostSwap16(mTicks) >> kTicksOffset; }
-
-    /**
-     * Sets the Ticks value.
-     *
-     * @param[in]  aTicks  The Ticks value.
-     *
-     */
-    void SetTicks(uint16_t aTicks)
-    {
-        mTicks = BigEndian::HostSwap16((BigEndian::HostSwap16(mTicks) & ~kTicksMask) |
-                                       ((aTicks << kTicksOffset) & kTicksMask));
-    }
-
-    /**
-     * Returns the Authoritative value.
-     *
-     * @returns The Authoritative value.
-     *
-     */
-    bool GetAuthoritative(void) const { return (BigEndian::HostSwap16(mTicks) & kAuthoritativeMask) != 0; }
-
-    /**
-     * Sets the Authoritative value.
-     *
-     * @param[in]  aAuthoritative  The Authoritative value.
-     *
-     */
-    void SetAuthoritative(bool aAuthoritative)
-    {
-        mTicks = BigEndian::HostSwap16((BigEndian::HostSwap16(mTicks) & kTicksMask) |
-                                       ((aAuthoritative << kAuthoritativeOffset) & kAuthoritativeMask));
-    }
+    uint64_t GetSeconds(void) { return mSeconds; }
 
     /**
      * Increments the timestamp by a random number of ticks [0, 32767].
@@ -145,7 +106,7 @@ public:
      * @retval FALSE  If the timestamp does not indicate an Orphan Announce message.
      *
      */
-    bool IsOrphanTimestamp(void) const { return GetSeconds() == 0 && GetTicks() == 0 && GetAuthoritative(); }
+    bool IsOrphanTimestamp(void) const { return (mSeconds == 0) && (mTicks == 0) && mAuthoritative; }
 
     /**
      * Compares two timestamps.
@@ -161,31 +122,38 @@ public:
      * @retval  1  if @p aFirst is greater than @p aSecond (`aFirst > aSecond`).
      *
      */
-    static int Compare(const Timestamp *aFirst, const Timestamp *aSecond);
-
-    /**
-     * Compares two timestamps.
-     *
-     * @param[in]  aFirst   A reference to the first timestamp to compare.
-     * @param[in]  aSecond  A reference to the second timestamp to compare.
-     *
-     * @retval -1  if @p aFirst is less than @p aSecond (`aFirst < aSecond`).
-     * @retval  0  if @p aFirst is equal to @p aSecond (`aFirst == aSecond`).
-     * @retval  1  if @p aFirst is greater than @p aSecond (`aFirst > aSecond`).
-     *
-     */
     static int Compare(const Timestamp &aFirst, const Timestamp &aSecond);
+
+public:
+    static constexpr uint16_t kMaxTicks       = 0x7fff;
+    static constexpr uint16_t kMaxRandomTicks = 0x7fff;
+
+    uint64_t mSeconds;
+    uint16_t mTicks;
+    bool     mAuthoritative : 1;
+    bool     mIsSet : 1;
+};
+
+/**
+ * Represents an Active or Pending Timestamp TLV value.
+ *
+ */
+OT_TOOL_PACKED_BEGIN
+class TimestampTlvValue
+{
+public:
+    void InitFrom(const Timestamp &aTimestamp);
+    void ConvertTo(Timestamp &aTimestamp) const;
 
 private:
     static constexpr uint8_t  kTicksOffset         = 1;
-    static constexpr uint16_t kTicksMask           = 0x7fff << kTicksOffset;
-    static constexpr uint16_t kMaxRandomTicks      = 0x7fff;
     static constexpr uint8_t  kAuthoritativeOffset = 0;
-    static constexpr uint16_t kAuthoritativeMask   = 1 << kAuthoritativeOffset;
+    static constexpr uint16_t kTicksMask           = 0x7fff << kTicksOffset;
+    static constexpr uint16_t kAuthoritativeBit    = 1 << kAuthoritativeOffset;
 
     uint16_t mSeconds16; // bits 32-47
     uint32_t mSeconds32; // bits 0-31
-    uint16_t mTicks;
+    uint16_t mTicksAndFlags;
 } OT_TOOL_PACKED_END;
 
 } // namespace MeshCoP

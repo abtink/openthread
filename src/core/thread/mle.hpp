@@ -1023,6 +1023,7 @@ private:
         Error AppendXtalAccuracyTlv(void);
         Error AppendActiveTimestampTlv(void);
         Error AppendPendingTimestampTlv(void);
+        Error AppendTimestampTlv(Tlv::Type aTlvType, const MeshCoP::Timestamp &aTimestamp);
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
         Error AppendTimeRequestTlv(void);
         Error AppendTimeParameterTlv(void);
@@ -1069,6 +1070,8 @@ private:
         Error ReadFrameCounterTlvs(uint32_t &aLinkFrameCounter, uint32_t &aMleFrameCounter) const;
         Error ReadTlvRequestTlv(TlvList &aTlvList) const;
         Error ReadLeaderDataTlv(LeaderData &aLeaderData) const;
+        Error ReadActiveTimestampTlv(MeshCoP::Timestamp &aTimestamp) const;
+        Error ReadPendingTimestampTlv(MeshCoP::Timestamp &aTimestamp) const;
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
         Error ReadCslClockAccuracyTlv(Mac::CslAccuracy &aCslAccuracy) const;
 #endif

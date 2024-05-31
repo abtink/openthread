@@ -2017,10 +2017,10 @@ void MleRouter::HandleChildIdRequest(RxInfo &aRxInfo)
         ExitNow(error = kErrorParse);
     }
 
-    switch (Tlv::Find<ActiveTimestampTlv>(aRxInfo.mMessage, timestamp))
+    switch (aRxInfo.mMessage.ReadActiveTimestampTlv(timestamp))
     {
     case kErrorNone:
-        if (MeshCoP::Timestamp::Compare(&timestamp, Get<MeshCoP::ActiveDatasetManager>().GetTimestamp()) == 0)
+        if (MeshCoP::Timestamp::Compare(timestamp, Get<MeshCoP::ActiveDatasetManager>().GetTimestamp()) == 0)
         {
             break;
         }
@@ -2035,10 +2035,10 @@ void MleRouter::HandleChildIdRequest(RxInfo &aRxInfo)
         ExitNow(error = kErrorParse);
     }
 
-    switch (Tlv::Find<PendingTimestampTlv>(aRxInfo.mMessage, timestamp))
+    switch (aRxInfo.mMessage.ReadPendingTimestampTlv(timestamp))
     {
     case kErrorNone:
-        if (MeshCoP::Timestamp::Compare(&timestamp, Get<MeshCoP::PendingDatasetManager>().GetTimestamp()) == 0)
+        if (MeshCoP::Timestamp::Compare(timestamp, Get<MeshCoP::PendingDatasetManager>().GetTimestamp()) == 0)
         {
             break;
         }
@@ -2500,10 +2500,10 @@ void MleRouter::HandleDataRequest(RxInfo &aRxInfo)
 
     SuccessOrExit(error = aRxInfo.mMessage.ReadTlvRequestTlv(tlvList));
 
-    switch (Tlv::Find<ActiveTimestampTlv>(aRxInfo.mMessage, timestamp))
+    switch (aRxInfo.mMessage.ReadActiveTimestampTlv(timestamp))
     {
     case kErrorNone:
-        if (MeshCoP::Timestamp::Compare(&timestamp, Get<MeshCoP::ActiveDatasetManager>().GetTimestamp()) == 0)
+        if (MeshCoP::Timestamp::Compare(timestamp, Get<MeshCoP::ActiveDatasetManager>().GetTimestamp()) == 0)
         {
             break;
         }
@@ -2518,10 +2518,10 @@ void MleRouter::HandleDataRequest(RxInfo &aRxInfo)
         ExitNow(error = kErrorParse);
     }
 
-    switch (Tlv::Find<PendingTimestampTlv>(aRxInfo.mMessage, timestamp))
+    switch (aRxInfo.mMessage.ReadPendingTimestampTlv(timestamp))
     {
     case kErrorNone:
-        if (MeshCoP::Timestamp::Compare(&timestamp, Get<MeshCoP::PendingDatasetManager>().GetTimestamp()) == 0)
+        if (MeshCoP::Timestamp::Compare(timestamp, Get<MeshCoP::PendingDatasetManager>().GetTimestamp()) == 0)
         {
             break;
         }
