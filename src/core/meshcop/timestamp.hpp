@@ -188,6 +188,48 @@ private:
     uint16_t mTicks;
 } OT_TOOL_PACKED_END;
 
+class Dataset;
+
+class OptionalTimestamp : public Clearable<OptionalTimestamp>
+{
+    friend class Dataset;
+
+public:
+    OptionalTimestamp(void) { mIsPresent = false; }
+
+    bool IsPresent(void) const { return mIsPresent; }
+
+    const Timestamp &GetTimestamp(void) const { return mTimestamp; }
+    const Timestamp *GetAsPtr(void) const { return mIsPresent ? &mTimestamp : nullptr; }
+
+    void SetTimestamp(const Timestamp &aTimestamp)
+    {
+        mIsPresent = true;
+        mTimestamp = aTimestamp;
+    }
+
+private:
+    Timestamp mTimestamp;
+    bool      mIsPresent;
+};
+
+#define DefineOperatorOverloads(TypeA, TypeB, aGetterA, aGetterB)                                                    \
+    inline bool operator==(const TypeA &aA, const TypeB &aB) { return Timestamp::Compare(aGetterA, aGetterB) == 0; } \
+    inline bool operator!=(const TypeA &aA, const TypeB &aB) { return Timestamp::Compare(aGetterA, aGetterB) != 0; } \
+    inline bool operator>(const TypeA &aA, const TypeB &aB) { return Timestamp::Compare(aGetterA, aGetterB) > 0; }   \
+    inline bool operator<(const TypeA &aA, const TypeB &aB) { return Timestamp::Compare(aGetterA, aGetterB) < 0; }   \
+    inline bool operator>=(const TypeA &aA, const TypeB &aB) { return Timestamp::Compare(aGetterA, aGetterB) >= 0; } \
+    inline bool operator<=(const TypeA &aA, const TypeB &aB) { return Timestamp::Compare(aGetterA, aGetterB) <= 0; }
+
+// clang-format off
+
+DefineOperatorOverloads(Timestamp, Timestamp, aA, aB)
+DefineOperatorOverloads(Timestamp, OptionalTimestamp, &aA, aB.GetAsPtr())
+DefineOperatorOverloads(OptionalTimestamp, Timestamp, aA.GetAsPtr(), &aB)
+DefineOperatorOverloads(OptionalTimestamp, OptionalTimestamp, aA.GetAsPtr(), aB.GetAsPtr())
+
+// clang-format on
+
 } // namespace MeshCoP
 } // namespace ot
 

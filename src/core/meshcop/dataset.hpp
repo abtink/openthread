@@ -378,6 +378,15 @@ public:
     Error ReadTimestamp(Type aType, Timestamp &aTimestamp) const;
 
     /**
+     * Reads the Timestamp (Active or Pending).
+     *
+     * @param[in]  aType       The type: active or pending.
+     * @param[out] aTimestamp  A reference to an `OptionalTimestamp` to output the value.
+     *
+     */
+    void ReadTimestamp(Type aType, OptionalTimestamp &aOptionalTimestamp) const;
+
+    /**
      * Writes a TLV to the Dataset.
      *
      * If the specified TLV type already exists, it will be replaced. Otherwise, the TLV will be appended.

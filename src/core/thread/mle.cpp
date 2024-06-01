@@ -2938,7 +2938,7 @@ Error Mle::HandleLeaderData(RxInfo &aRxInfo)
             break;
         }
 #endif
-        if (MeshCoP::Timestamp::Compare(&activeTimestamp, Get<MeshCoP::ActiveDatasetManager>().GetTimestamp()) != 0)
+        if (activeTimestamp != Get<MeshCoP::ActiveDatasetManager>().GetTimestamp())
         {
             // Send an MLE Data Request if the received timestamp
             // mismatches the local value and the message does not
@@ -2966,7 +2966,7 @@ Error Mle::HandleLeaderData(RxInfo &aRxInfo)
             break;
         }
 #endif
-        if (MeshCoP::Timestamp::Compare(&pendingTimestamp, Get<MeshCoP::PendingDatasetManager>().GetTimestamp()) != 0)
+        if (pendingTimestamp != Get<MeshCoP::PendingDatasetManager>().GetTimestamp())
         {
             VerifyOrExit(aRxInfo.mMessage.ContainsTlv(Tlv::kPendingDataset), dataRequest = true);
             savePendingDataset = true;
@@ -3676,15 +3676,13 @@ exit:
 
 void Mle::HandleAnnounce(RxInfo &aRxInfo)
 {
-    Error                     error = kErrorNone;
-    ChannelTlvValue           channelTlvValue;
-    MeshCoP::Timestamp        timestamp;
-    const MeshCoP::Timestamp *localTimestamp;
-    uint8_t                   channel;
-    uint16_t                  panId;
-    bool                      isFromOrphan;
-    bool                      channelAndPanIdMatch;
-    int                       timestampCompare;
+    Error              error = kErrorNone;
+    ChannelTlvValue    channelTlvValue;
+    MeshCoP::Timestamp timestamp;
+    uint8_t            channel;
+    uint16_t           panId;
+    bool               isFromOrphan;
+    bool               channelAndPanIdMatch;
 
     Log(kMessageReceive, kTypeAnnounce, aRxInfo.mMessageInfo.GetPeerAddr());
 
@@ -3696,13 +3694,10 @@ void Mle::HandleAnnounce(RxInfo &aRxInfo)
 
     aRxInfo.mClass = RxInfo::kPeerMessage;
 
-    localTimestamp = Get<MeshCoP::ActiveDatasetManager>().GetTimestamp();
-
     isFromOrphan         = timestamp.IsOrphanTimestamp();
-    timestampCompare     = MeshCoP::Timestamp::Compare(&timestamp, localTimestamp);
     channelAndPanIdMatch = (channel == Get<Mac::Mac>().GetPanChannel()) && (panId == Get<Mac::Mac>().GetPanId());
 
-    if (isFromOrphan || (timestampCompare < 0))
+    if (isFromOrphan || (timestamp < Get<MeshCoP::ActiveDatasetManager>().GetTimestamp()))
     {
         if (isFromOrphan)
         {
@@ -3715,7 +3710,7 @@ void Mle::HandleAnnounce(RxInfo &aRxInfo)
         SendAnnounce(channel, aRxInfo.mMessageInfo.GetPeerAddr());
 #endif
     }
-    else if (timestampCompare > 0)
+    else if (timestamp > Get<MeshCoP::ActiveDatasetManager>().GetTimestamp())
     {
         // No action is required if device is detached, and current
         // channel and pan-id match the values from the received MLE
@@ -4735,11 +4730,11 @@ Error Mle::TxMessage::AppendXtalAccuracyTlv(void)
 
 Error Mle::TxMessage::AppendActiveTimestampTlv(void)
 {
-    Error                     error     = kErrorNone;
-    const MeshCoP::Timestamp *timestamp = Get<MeshCoP::ActiveDatasetManager>().GetTimestamp();
+    Error                             error           = kErrorNone;
+    const MeshCoP::OptionalTimestamp &activeTimestamp = Get<MeshCoP::ActiveDatasetManager>().GetTimestamp();
 
-    VerifyOrExit(timestamp != nullptr);
-    error = Tlv::Append<ActiveTimestampTlv>(*this, *timestamp);
+    VerifyOrExit(activeTimestamp.IsPresent());
+    error = Tlv::Append<ActiveTimestampTlv>(*this, activeTimestamp.GetTimestamp());
 
 exit:
     return error;
@@ -4747,11 +4742,12 @@ exit:
 
 Error Mle::TxMessage::AppendPendingTimestampTlv(void)
 {
-    Error                     error     = kErrorNone;
-    const MeshCoP::Timestamp *timestamp = Get<MeshCoP::PendingDatasetManager>().GetTimestamp();
+    Error                            error            = kErrorNone;
+    const MeshCoP::OptionalTimestamp pendingTimestamp = Get<MeshCoP::PendingDatasetManager>().GetTimestamp();
 
-    VerifyOrExit(timestamp != nullptr && timestamp->GetSeconds() != 0);
-    error = Tlv::Append<PendingTimestampTlv>(*this, *timestamp);
+    VerifyOrExit(pendingTimestamp.IsPresent());
+    VerifyOrExit(pendingTimestamp.GetTimestamp().GetSeconds() != 0);
+    error = Tlv::Append<PendingTimestampTlv>(*this, pendingTimestamp.GetTimestamp());
 
 exit:
     return error;

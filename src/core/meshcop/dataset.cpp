@@ -357,6 +357,11 @@ Error Dataset::ReadTimestamp(Type aType, Timestamp &aTimestamp) const
     return (aType == kActive) ? Read<ActiveTimestampTlv>(aTimestamp) : Read<PendingTimestampTlv>(aTimestamp);
 }
 
+void Dataset::ReadTimestamp(Type aType, OptionalTimestamp &aOptionalTimestamp) const
+{
+    aOptionalTimestamp.mIsPresent = (ReadTimestamp(aType, aOptionalTimestamp.mTimestamp) == kErrorNone);
+}
+
 Error Dataset::WriteTlv(Tlv::Type aType, const void *aValue, uint8_t aLength)
 {
     Error    error          = kErrorNone;
