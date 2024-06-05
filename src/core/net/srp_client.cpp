@@ -68,13 +68,19 @@ void Client::HostInfo::Clear(void)
     SetState(kRemoved);
 }
 
-void Client::HostInfo::SetState(ItemState aState)
+bool Client::HostInfo::SetState(ItemState aState)
 {
-    if (aState != GetState())
-    {
-        LogInfo("HostInfo %s -> %s", ItemStateToString(GetState()), ItemStateToString(aState));
-        mState = MapEnum(aState);
-    }
+    bool didChange;
+
+    VerifyOrExit(aState != GetState(), didChange = false);
+
+    LogInfo("HostInfo %s -> %s", ItemStateToString(GetState()), ItemStateToString(aState));
+
+    mState    = MapEnum(aState);
+    didChange = true;
+
+exit:
+    return didChange;
 }
 
 void Client::HostInfo::EnableAutoAddress(void)
@@ -121,9 +127,11 @@ exit:
     return error;
 }
 
-void Client::Service::SetState(ItemState aState)
+bool Client::Service::SetState(ItemState aState)
 {
-    VerifyOrExit(GetState() != aState);
+    bool didChange;
+
+    VerifyOrExit(GetState() != aState, didChange = false);
 
     LogInfo("Service %s -> %s, \"%s\" \"%s\"", ItemStateToString(GetState()), ItemStateToString(aState),
             GetInstanceName(), GetName());
@@ -150,10 +158,11 @@ void Client::Service::SetState(ItemState aState)
                 GetPriority(), GetNumTxtEntries());
     }
 
-    mState = MapEnum(aState);
+    mState    = MapEnum(aState);
+    didChange = true;
 
 exit:
-    return;
+    return didChange;
 }
 
 bool Client::Service::Matches(const Service &aOther) const
@@ -249,7 +258,8 @@ Client::Client(Instance &aInstance)
     , mServiceKeyRecordEnabled(false)
     , mUseShortLeaseOption(false)
 #endif
-    , mUpdateMessageId(0)
+    , mNextMessageId(0)
+    , mResponseMessageId(0)
     , mAutoHostAddressCount(0)
     , mRetryWaitInterval(kMinRetryWaitInterval)
     , mTtl(0)
@@ -739,13 +749,15 @@ exit:
     return;
 }
 
-void Client::ChangeHostAndServiceStates(const ItemState *aNewStates, ServiceStateChangeMode aMode)
+bool Client::ChangeHostAndServiceStates(const ItemState *aNewStates, ServiceStateChangeMode aMode)
 {
+    bool anyChanged;
+
 #if OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_API_ENABLE && OPENTHREAD_CONFIG_SRP_CLIENT_SAVE_SELECTED_SERVER_ENABLE
     ItemState oldHostState = mHostInfo.GetState();
 #endif
 
-    mHostInfo.SetState(aNewStates[mHostInfo.GetState()]);
+    anyChanged = mHostInfo.SetState(aNewStates[mHostInfo.GetState()]);
 
     for (Service &service : mServices)
     {
@@ -754,7 +766,7 @@ void Client::ChangeHostAndServiceStates(const ItemState *aNewStates, ServiceStat
             continue;
         }
 
-        service.SetState(aNewStates[service.GetState()]);
+        anyChanged |= service.SetState(aNewStates[service.GetState()]);
     }
 
 #if OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_API_ENABLE && OPENTHREAD_CONFIG_SRP_CLIENT_SAVE_SELECTED_SERVER_ENABLE
@@ -781,6 +793,8 @@ void Client::ChangeHostAndServiceStates(const ItemState *aNewStates, ServiceStat
         }
     }
 #endif // OPENTHREAD_CONFIG_SRP_CLIENT_AUTO_START_API_ENABLE && OPENTHREAD_CONFIG_SRP_CLIENT_SAVE_SELECTED_SERVER_ENABLE
+
+    return anyChanged;
 }
 
 void Client::InvokeCallback(Error aError) const { InvokeCallback(aError, mHostInfo, nullptr); }
@@ -806,6 +820,7 @@ void Client::SendUpdate(void)
     Error    error   = kErrorNone;
     Message *message = mSocket.NewMessage();
     uint32_t length;
+    bool     anyChanged;
 
     VerifyOrExit(message != nullptr, error = kErrorNoBufs);
     SuccessOrExit(error = PrepareUpdateMessage(*message));
@@ -829,7 +844,14 @@ void Client::SendUpdate(void)
     //   kToRefresh -> kRefreshing
     //   kToRemove  -> kRemoving
 
-    ChangeHostAndServiceStates(kNewStateOnMessageTx, kForServicesAppendedInMessage);
+    anyChanged = ChangeHostAndServiceStates(kNewStateOnMessageTx, kForServicesAppendedInMessage);
+
+    if (anyChanged)
+    {
+        mResponseMessageId = mNextMessageId;
+    }
+
+    mNextMessageId++;
 
     // Remember the update message tx time to use later to determine the
     // lease renew time.
@@ -902,13 +924,7 @@ Error Client::PrepareUpdateMessage(Message &aMessage)
     SuccessOrExit(error = ReadOrGenerateKey(info.mKeyPair));
 #endif
 
-    // Generate random Message ID and ensure it is different from last one
-    do
-    {
-        SuccessOrExit(error = header.SetRandomMessageId());
-    } while (header.GetMessageId() == mUpdateMessageId);
-
-    mUpdateMessageId = header.GetMessageId();
+    header.SetMessageId(mNextMessageId);
 
     // SRP Update (DNS Update) message must have exactly one record in
     // Zone section, no records in Prerequisite Section, can have
@@ -1578,13 +1594,23 @@ void Client::ProcessResponse(Message &aMessage)
     uint16_t            recordCount;
     LinkedList<Service> removedServices;
 
-    VerifyOrExit(GetState() == kStateUpdating);
+    switch (GetState())
+    {
+    case kStateToUpdate:
+    case kStateUpdating:
+    case kStateToRetry:
+        break;
+    case kStateStopped:
+    case kStatePaused:
+    case kStateUpdated:
+        ExitNow();
+    }
 
     SuccessOrExit(error = aMessage.Read(offset, header));
 
     VerifyOrExit(header.GetType() == Dns::Header::kTypeResponse, error = kErrorParse);
     VerifyOrExit(header.GetQueryType() == Dns::Header::kQueryTypeUpdate, error = kErrorParse);
-    VerifyOrExit(header.GetMessageId() == mUpdateMessageId, error = kErrorDrop);
+    VerifyOrExit(IsResponseMessageIdValid(header.GetMessageId()), error = kErrorDrop);
 
     if (!Get<Mle::Mle>().IsRxOnWhenIdle())
     {
@@ -1720,6 +1746,13 @@ exit:
     {
         LogInfo("Failed to process response %s", ErrorToString(error));
     }
+}
+
+bool Client::IsResponseMessageIdValid(uint16_t aId) const
+{
+    // Semantically equivalent to `(aId >= mResponseMessageId) && (aId < mNextMessageId)`
+
+    return !SerialNumber::IsLess(aId, mResponseMessageId) && SerialNumber::IsLess(aId, mNextMessageId);
 }
 
 void Client::HandleUpdateDone(void)
