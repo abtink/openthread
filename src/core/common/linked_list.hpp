@@ -94,6 +94,105 @@ public:
     void SetNext(Type *aNext) { static_cast<Type *>(this)->mNext = aNext; }
 };
 
+class LinkedListBase
+{
+protected:
+    typedef void *(*NextGetter)(void *aEntry);
+    typedef void (*NextSetter)(void *aEntry, void *aNext);
+
+    LinkedListBase(NextGetter aNextGetter, NextSetter aNextSetter)
+        : mHead(nullptr)
+        , mNextGetter(aNextGetter)
+        , mNextSetter(aNextSetter)
+    {
+    }
+
+    void Push(void *aEntry)
+    {
+        SetNextOf(aEntry, mHead);
+        mHead = aEntry;
+    }
+
+    void PushAfter(void *aEntry, void *aPrevEntry)
+    {
+        SetNextOf(aEntry, GetNextOf(aPrevEntry));
+        SetNextOf(aPrevEntry, aEntry);
+    }
+
+    void PushAfterTail(void *aEntry)
+    {
+        void *tail = GetTail();
+
+        if (tail == nullptr)
+        {
+            Push(aEntry);
+        }
+        else
+        {
+            PushAfter(aEntry, tail);
+        }
+    }
+
+    void *Pop(void)
+    {
+        void *entry = mHead;
+
+        if (mHead != nullptr)
+        {
+            mHead = GetNextOf(mHead);
+        }
+
+        return entry;
+    }
+
+    void *PopAfter(void *aPrevEntry)
+    {
+        void *entry;
+
+        if (aPrevEntry == nullptr)
+        {
+            entry = Pop();
+        }
+        else
+        {
+            entry = GetNextOf(aPrevEntry);
+
+            if (entry != nullptr)
+            {
+                SetNextOf(aPrevEntry, GetNextOf(entry));
+            }
+        }
+
+        return entry;
+    }
+
+    const void *GetTail(void) const
+    {
+        const void *tail = mHead;
+
+        if (tail != nullptr)
+        {
+            while (GetNextOf(tail) != nullptr)
+            {
+                tail = GetNextOf(tail);
+            }
+        }
+
+        return tail;
+    }
+
+    void *GetTail(void) { return AsNonConst(AsConst(this)->GetTail()); }
+
+    void       *GetNextOf(void *aEntry) { return mNextGetter(aEntry); }
+    const void *GetNextOf(const void *aEntry) const { return AsConst(mNextGetter(AsNonConst(aEntry))); }
+
+    void SetNextOf(void *aEntry, void *aNext) { mNextSetter(aEntry, aNext); }
+
+    void      *mHead;
+    NextGetter mNextGetter;
+    NextSetter mNextSetter;
+};
+
 /**
  * Represents a singly linked list.
  *
@@ -101,10 +200,16 @@ public:
  * inheriting from `LinkedListEntry<Type>` class).
  *
  */
-template <typename Type> class LinkedList
+template <typename Type> class LinkedList : private LinkedListBase
 {
     class Iterator;
     class ConstIterator;
+
+    static Type       *AsType(void *aEntry) { return static_cast<Type *>(aEntry); }
+    static const Type *AsType(const void *aEntry) { return static_cast<const Type *>(aEntry); }
+
+    static void *GetNextOf(void *aEntry) { return AsType(aEntry)->GetNext(); }
+    static void  SetNextOf(void *aEntry, void *aNext) { AsType(aEntry)->SetNext(AsType(aNext)); }
 
 public:
     /**
@@ -112,7 +217,7 @@ public:
      *
      */
     LinkedList(void)
-        : mHead(nullptr)
+        : LinkedListBase(&GetNextOf, &SetNextOf)
     {
     }
 
@@ -122,7 +227,7 @@ public:
      * @returns Pointer to the entry at the head of the linked list, or `nullptr` if the list is empty.
      *
      */
-    Type *GetHead(void) { return mHead; }
+    Type *GetHead(void) { return AsType(mHead); }
 
     /**
      * Returns the entry at the head of the linked list.
@@ -130,7 +235,7 @@ public:
      * @returns Pointer to the entry at the head of the linked list, or `nullptr` if the list is empty.
      *
      */
-    const Type *GetHead(void) const { return mHead; }
+    const Type *GetHead(void) const { return AsType(mHead); }
 
     /**
      * Sets the head of the linked list to a given entry.
@@ -161,11 +266,7 @@ public:
      * @param[in] aEntry   A reference to an entry to push at the head of linked list.
      *
      */
-    void Push(Type &aEntry)
-    {
-        aEntry.SetNext(mHead);
-        mHead = &aEntry;
-    }
+    void Push(Type &aEntry) { LinkedListBase::Push(&aEntry); }
 
     /**
      * Pushes an entry after a given previous existing entry in the linked list.
@@ -174,11 +275,7 @@ public:
      * @param[in] aPrevEntry   A reference to a previous entry (new entry @p aEntry will be pushed after this).
      *
      */
-    void PushAfter(Type &aEntry, Type &aPrevEntry)
-    {
-        aEntry.SetNext(aPrevEntry.GetNext());
-        aPrevEntry.SetNext(&aEntry);
-    }
+    void PushAfter(Type &aEntry, Type &aPrevEntry) { LinkedListBase::PushAfter(&aEntry, &aPrevEntry); }
 
     /**
      * Pushes an entry after the tail in the linked list.
@@ -186,19 +283,7 @@ public:
      * @param[in] aEntry       A reference to an entry to push into the list.
      *
      */
-    void PushAfterTail(Type &aEntry)
-    {
-        Type *tail = GetTail();
-
-        if (tail == nullptr)
-        {
-            Push(aEntry);
-        }
-        else
-        {
-            PushAfter(aEntry, *tail);
-        }
-    }
+    void PushAfterTail(Type &aEntry) { LinkedListBase::PushAfterTail(&aEntry); }
 
     /**
      * Pops an entry from head of the linked list.
@@ -208,17 +293,7 @@ public:
      * @returns The entry that was popped if the list is not empty, or `nullptr` if the list is empty.
      *
      */
-    Type *Pop(void)
-    {
-        Type *entry = mHead;
-
-        if (mHead != nullptr)
-        {
-            mHead = mHead->GetNext();
-        }
-
-        return entry;
-    }
+    Type *Pop(void) { return AsType(LinkedListBase::Pop()); }
 
     /**
      * Pops an entry after a given previous entry.
@@ -231,26 +306,7 @@ public:
      * @returns Pointer to the entry that was popped, or `nullptr` if there is no entry to pop.
      *
      */
-    Type *PopAfter(Type *aPrevEntry)
-    {
-        Type *entry;
-
-        if (aPrevEntry == nullptr)
-        {
-            entry = Pop();
-        }
-        else
-        {
-            entry = aPrevEntry->GetNext();
-
-            if (entry != nullptr)
-            {
-                aPrevEntry->SetNext(entry->GetNext());
-            }
-        }
-
-        return entry;
-    }
+    Type *PopAfter(Type *aPrevEntry) { return AsType(LinkedListBase::PopAfter(aPrevEntry)); }
 
     /**
      * Indicates whether the linked list contains a given entry.
@@ -427,7 +483,7 @@ public:
 
         aPrevEntry = nullptr;
 
-        for (const Type *entry = mHead; entry != nullptr; aPrevEntry = entry, entry = entry->GetNext())
+        for (const Type *entry = AsType(mHead); entry != nullptr; aPrevEntry = entry, entry = entry->GetNext())
         {
             if (entry == &aEntry)
             {
@@ -545,7 +601,7 @@ public:
      */
     template <typename Indicator> const Type *FindMatching(const Indicator &aIndicator, const Type *&aPrevEntry) const
     {
-        return FindMatching(mHead, nullptr, aIndicator, aPrevEntry);
+        return FindMatching(AsType(mHead), nullptr, aIndicator, aPrevEntry);
     }
 
     /**
@@ -618,20 +674,7 @@ public:
      * @returns A pointer to the tail entry in the linked list or `nullptr` if the list is empty.
      *
      */
-    const Type *GetTail(void) const
-    {
-        const Type *tail = mHead;
-
-        if (tail != nullptr)
-        {
-            while (tail->GetNext() != nullptr)
-            {
-                tail = tail->GetNext();
-            }
-        }
-
-        return tail;
-    }
+    const Type *GetTail(void) const { return AsType(LinkedListBase::GetTail()); }
 
     /**
      * Returns the tail of the linked list (i.e., the last entry in the list).
@@ -639,7 +682,7 @@ public:
      * @returns A pointer to the tail entry in the linked list or `nullptr` if the list is empty.
      *
      */
-    Type *GetTail(void) { return AsNonConst(AsConst(this)->GetTail()); }
+    Type *GetTail(void) { return AsType(LinkedListBase::GetTail()); }
 
     // The following methods are intended to support range-based `for`
     // loop iteration over the linked-list entries and should not be
@@ -681,8 +724,6 @@ private:
 
         void Advance(void) { mItem = mItem->GetNext(); }
     };
-
-    Type *mHead;
 };
 
 /**
