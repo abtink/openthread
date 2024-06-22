@@ -168,8 +168,7 @@ template <> void JoinerRouter::HandleTmf<kUriRelayTx>(Coap::Message &aMessage, c
     uint16_t                 joinerPort;
     Ip6::InterfaceIdentifier joinerIid;
     Kek                      kek;
-    uint16_t                 offset;
-    uint16_t                 length;
+    OffsetRange              offsetRange;
     Message                 *message = nullptr;
     Message::Settings        settings(Message::kNoLinkSecurity, Message::kPriorityNet);
     Ip6::MessageInfo         messageInfo;
@@ -181,11 +180,11 @@ template <> void JoinerRouter::HandleTmf<kUriRelayTx>(Coap::Message &aMessage, c
     SuccessOrExit(error = Tlv::Find<JoinerUdpPortTlv>(aMessage, joinerPort));
     SuccessOrExit(error = Tlv::Find<JoinerIidTlv>(aMessage, joinerIid));
 
-    SuccessOrExit(error = Tlv::FindTlvValueOffset(aMessage, Tlv::kJoinerDtlsEncapsulation, offset, length));
+    SuccessOrExit(error = Tlv::FindTlvValueOffsetRange(aMessage, Tlv::kJoinerDtlsEncapsulation, offsetRange));
 
     VerifyOrExit((message = mSocket.NewMessage(0, settings)) != nullptr, error = kErrorNoBufs);
 
-    SuccessOrExit(error = message->AppendBytesFromMessage(aMessage, offset, length));
+    SuccessOrExit(error = message->AppendBytesFromMessage(aMessage, offsetRange));
 
     messageInfo.GetPeerAddr().SetToLinkLocalAddress(joinerIid);
     messageInfo.SetPeerPort(joinerPort);

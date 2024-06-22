@@ -317,22 +317,20 @@ template <> void BorderAgent::HandleTmf<kUriProxyTx>(Coap::Message &aMessage, co
     Error                     error   = kErrorNone;
     Message                  *message = nullptr;
     Ip6::MessageInfo          messageInfo;
-    uint16_t                  offset;
-    uint16_t                  length;
+    OffsetRange               offsetRange;
     UdpEncapsulationTlvHeader udpEncapHeader;
 
     VerifyOrExit(mState != kStateStopped);
 
-    SuccessOrExit(error = Tlv::FindTlvValueOffset(aMessage, Tlv::kUdpEncapsulation, offset, length));
+    SuccessOrExit(error = Tlv::FindTlvValueOffsetRange(aMessage, Tlv::kUdpEncapsulation, offsetRange));
 
-    SuccessOrExit(error = aMessage.Read(offset, udpEncapHeader));
-    offset += sizeof(UdpEncapsulationTlvHeader);
-    length -= sizeof(UdpEncapsulationTlvHeader);
+    SuccessOrExit(error = aMessage.Read(offsetRange, udpEncapHeader));
+    offsetRange.AdvanceOffset(sizeof(UdpEncapsulationTlvHeader));
 
     VerifyOrExit(udpEncapHeader.GetSourcePort() > 0 && udpEncapHeader.GetDestinationPort() > 0, error = kErrorDrop);
 
     VerifyOrExit((message = Get<Ip6::Udp>().NewMessage()) != nullptr, error = kErrorNoBufs);
-    SuccessOrExit(error = message->AppendBytesFromMessage(aMessage, offset, length));
+    SuccessOrExit(error = message->AppendBytesFromMessage(aMessage, offsetRange));
 
     messageInfo.SetSockPort(udpEncapHeader.GetSourcePort());
     messageInfo.SetSockAddr(mCommissionerAloc.GetAddress());

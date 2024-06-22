@@ -161,14 +161,16 @@ void DatasetUpdater::HandleNotifierEvents(Events aEvents)
 
 void DatasetUpdater::HandleDatasetChanged(Dataset::Type aType)
 {
-    Dataset   requestedDataset;
-    Dataset   newDataset;
-    Timestamp newTimestamp;
-    Timestamp requestedTimestamp;
+    Dataset     requestedDataset;
+    Dataset     newDataset;
+    Timestamp   newTimestamp;
+    Timestamp   requestedTimestamp;
+    OffsetRange offsetRange;
 
     VerifyOrExit(IsUpdateOngoing());
 
-    SuccessOrExit(requestedDataset.SetFrom(*mDataset, /* aOffset */ 0, mDataset->GetLength()));
+    offsetRange.Init(/* aOffset */ 0, mDataset->GetLength());
+    SuccessOrExit(requestedDataset.SetFrom(*mDataset, offsetRange));
 
     if (aType == Dataset::kActive)
     {

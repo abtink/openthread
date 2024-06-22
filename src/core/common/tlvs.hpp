@@ -42,6 +42,7 @@
 #include "common/const_cast.hpp"
 #include "common/encoding.hpp"
 #include "common/error.hpp"
+#include "common/offset_range.hpp"
 #include "common/type_traits.hpp"
 
 namespace ot {
@@ -390,39 +391,19 @@ public:
     }
 
     /**
-     * Finds the offset and length of TLV value for a given TLV type within @p aMessage.
+     * Finds the offset range of the TLV value for a given TLV type within @p aMessage.
      *
      * Can be used independent of whether the read TLV (from message) is an Extended TLV or not.
      *
      * @param[in]   aMessage      A reference to the message.
      * @param[in]   aType         The Type value to search for.
-     * @param[out]  aValueOffset  The offset where the value starts.
-     * @param[out]  aLength       The length of the value.
+     * @param[out]  aOffsetRange  A reference to return the offset range of the TLV value when found.
      *
      * @retval kErrorNone       Successfully found the TLV.
      * @retval kErrorNotFound   Could not find the TLV with Type @p aType.
      *
      */
-    static Error FindTlvValueOffset(const Message &aMessage, uint8_t aType, uint16_t &aValueOffset, uint16_t &aLength);
-
-    /**
-     * Finds the start and end offset of TLV value for a given TLV type with @p aMessage.
-     *
-     * Can be used independent of whether the read TLV (from message) is an Extended TLV or not.
-     *
-     * @param[in]   aMessage           A reference to the message.
-     * @param[in]   aType              The Type value to search for.
-     * @param[out]  aValueStartOffset  The offset where the value starts.
-     * @param[out]  aValueEndOffset    The offset immediately after the last byte of value.
-     *
-     * @retval kErrorNone       Successfully found the TLV.
-     * @retval kErrorNotFound   Could not find the TLV with Type @p aType.
-     *
-     */
-    static Error FindTlvValueStartEndOffsets(const Message &aMessage,
-                                             uint8_t        aType,
-                                             uint16_t      &aValueStartOffset,
-                                             uint16_t      &aValueEndOffset);
+    static Error FindTlvValueOffsetRange(const Message &aMessage, uint8_t aType, OffsetRange &aOffsetRange);
 
     /**
      * Searches for a TLV with a given type in a message, ensures its length is same or larger than

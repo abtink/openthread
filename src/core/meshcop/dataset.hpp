@@ -644,6 +644,9 @@ public:
      */
     Error SetFrom(const Message &aMessage, uint16_t aOffset, uint16_t aLength);
 
+    // TODO: TO WRITE AND REMOVE OTHER ONE?
+    Error SetFrom(const Message &aMessage, const OffsetRange &aOffsetRange);
+
     /**
      * Returns a pointer to the start of Dataset TLVs sequence.
      *

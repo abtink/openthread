@@ -206,25 +206,25 @@ exit:
 
 template <> void Leader::HandleTmf<kUriCommissionerGet>(Coap::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
-    uint16_t       length;
-    uint16_t       offset;
     Coap::Message *response = nullptr;
+    OffsetRange    offsetRange;
 
     VerifyOrExit(Get<Mle::Mle>().IsLeader() && !mWaitingForNetDataSync);
 
     response = Get<Tmf::Agent>().NewPriorityResponseMessage(aMessage);
     VerifyOrExit(response != nullptr);
 
-    if (Tlv::FindTlvValueOffset(aMessage, MeshCoP::Tlv::kGet, offset, length) == kErrorNone)
+    if (Tlv::FindTlvValueOffsetRange(aMessage, MeshCoP::Tlv::kGet, offsetRange) == kErrorNone)
     {
         // Append the requested sub-TLV types given in Get TLV.
 
-        for (; length > 0; offset++, length--)
+        while (!offsetRange.IsEmpty())
         {
             uint8_t             type;
             const MeshCoP::Tlv *subTlv;
 
-            IgnoreError(aMessage.Read(offset, type));
+            IgnoreError(aMessage.Read(offsetRange, type));
+            offsetRange.AdvanceOffset(sizeof(type));
 
             subTlv = FindCommissioningDataSubTlv(type);
 

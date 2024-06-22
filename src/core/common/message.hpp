@@ -52,6 +52,7 @@
 #include "common/linked_list.hpp"
 #include "common/locator.hpp"
 #include "common/non_copyable.hpp"
+#include "common/offset_range.hpp"
 #include "common/pool.hpp"
 #include "common/timer.hpp"
 #include "common/type_traits.hpp"
@@ -707,6 +708,9 @@ public:
      */
     Error AppendBytesFromMessage(const Message &aMessage, uint16_t aOffset, uint16_t aLength);
 
+    // TODO:
+    Error AppendBytesFromMessage(const Message &aMessage, const OffsetRange &aOffsetRange);
+
     /**
      * Appends an object to the end of the message.
      *
@@ -757,6 +761,9 @@ public:
      */
     uint16_t ReadBytes(uint16_t aOffset, void *aBuf, uint16_t aLength) const;
 
+    // TODO:
+    uint16_t ReadBytes(const OffsetRange &aOffsetRange, void *aBuf) const;
+
     /**
      * Reads a given number of bytes from the message.
      *
@@ -772,6 +779,8 @@ public:
      *
      */
     Error Read(uint16_t aOffset, void *aBuf, uint16_t aLength) const;
+
+    Error Read(const OffsetRange &aOffsetRange, void *aBuf, uint16_t aLength) const;
 
     /**
      * Reads an object from the message.
@@ -794,6 +803,13 @@ public:
         static_assert(!TypeTraits::IsPointer<ObjectType>::kValue, "ObjectType must not be a pointer");
 
         return Read(aOffset, &aObject, sizeof(ObjectType));
+    }
+
+    template <typename ObjectType> Error Read(const OffsetRange &aOffsetRange, ObjectType &aObject) const
+    {
+        static_assert(!TypeTraits::IsPointer<ObjectType>::kValue, "ObjectType must not be a pointer");
+
+        return Read(aOffsetRange, &aObject, sizeof(ObjectType));
     }
 
     /**
