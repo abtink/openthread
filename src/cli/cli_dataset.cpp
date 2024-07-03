@@ -1086,16 +1086,22 @@ exit:
  */
 template <> otError Dataset::Process<Cmd("set")>(Arg aArgs[])
 {
+    enum Type : uint8_t
+    {
+        kActive,
+        kPending,
+    };
+
     otError                error = OT_ERROR_NONE;
-    MeshCoP::Dataset::Type datasetType;
+    Type datasetType;
 
     if (aArgs[0] == "active")
     {
-        datasetType = MeshCoP::Dataset::Type::kActive;
+        datasetType = kActive;
     }
     else if (aArgs[0] == "pending")
     {
-        datasetType = MeshCoP::Dataset::Type::kPending;
+        datasetType = kPending;
     }
     else
     {
@@ -1114,10 +1120,10 @@ template <> otError Dataset::Process<Cmd("set")>(Arg aArgs[])
 
         switch (datasetType)
         {
-        case MeshCoP::Dataset::Type::kActive:
+        case kActive:
             SuccessOrExit(error = otDatasetSetActiveTlvs(GetInstancePtr(), &datasetTlvs));
             break;
-        case MeshCoP::Dataset::Type::kPending:
+        case kPending:
             SuccessOrExit(error = otDatasetSetPendingTlvs(GetInstancePtr(), &datasetTlvs));
             break;
         }

@@ -1118,11 +1118,14 @@ namespace Mle
 class Mle;
 }
 
-template <> inline Mle::Mle &Instance::Get(void) { return *reinterpret_cast<Mle::Mle *>(this); }
+template <> inline Mle::Mle &Instance::Get(void)
+{
+    static_assert(false, "WHO IS USING THIS");
+    return *reinterpret_cast<Mle::Mle *>(this);
+}
+
 
 #endif
-
-
 
 /**
  * @}

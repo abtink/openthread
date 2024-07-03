@@ -34,6 +34,7 @@
 #include "cli_ping.hpp"
 
 #include <openthread/ping_sender.h>
+#include <openthread/icmp6.h>
 
 #include "cli/cli.hpp"
 #include "cli/cli_utils.hpp"

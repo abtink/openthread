@@ -92,6 +92,7 @@
 #include "common/new.hpp"
 #include "common/numeric_limits.hpp"
 #include "common/string.hpp"
+#include "instance/instance.hpp"
 #include "mac/channel_mask.hpp"
 
 namespace ot {
@@ -7826,12 +7827,12 @@ void Interpreter::HandleDiagnosticGetResponse(otError              aError,
                                               void                *aContext)
 {
     static_cast<Interpreter *>(aContext)->HandleDiagnosticGetResponse(
-        aError, aMessage, static_cast<const Ip6::MessageInfo *>(aMessageInfo));
+        aError, aMessage, aMessageInfo);
 }
 
 void Interpreter::HandleDiagnosticGetResponse(otError                 aError,
                                               const otMessage        *aMessage,
-                                              const Ip6::MessageInfo *aMessageInfo)
+                                              const otMessageInfo *aMessageInfo)
 {
     uint8_t               buf[16];
     uint16_t              bytesToPrint;

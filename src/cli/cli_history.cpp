@@ -37,6 +37,8 @@
 
 #include <string.h>
 
+#include <openthread/icmp6.h>
+
 #include "cli/cli.hpp"
 
 namespace ot {
