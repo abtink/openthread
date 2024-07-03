@@ -31,14 +31,9 @@
  *   This file implements the OpenThread Border Agent API.
  */
 
-#include "openthread-core-config.h"
+#include "openthread.hpp"
 
 #if OPENTHREAD_CONFIG_BORDER_AGENT_ENABLE
-
-#include <openthread/border_agent.h>
-
-#include "common/as_core_type.hpp"
-#include "common/locator_getters.hpp"
 
 using namespace ot;
 

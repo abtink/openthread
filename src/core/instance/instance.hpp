@@ -1111,6 +1111,19 @@ template <> inline FactoryDiags::Diags &Instance::Get(void) { return mDiags; }
 template <> inline Utils::PowerCalibration &Instance::Get(void) { return mPowerCalibration; }
 #endif
 
+#if OPENTHREAD_RADIO
+
+namespace Mle
+{
+class Mle;
+}
+
+template <> inline Mle::Mle &Instance::Get(void) { return *reinterpret_cast<Mle::Mle *>(this); }
+
+#endif
+
+
+
 /**
  * @}
  *

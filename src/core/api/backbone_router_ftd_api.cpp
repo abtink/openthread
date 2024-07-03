@@ -32,14 +32,9 @@
  *  `OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE`).
  */
 
-#include "openthread-core-config.h"
+#include "openthread.hpp"
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_BACKBONE_ROUTER_ENABLE
-
-#include <openthread/backbone_router_ftd.h>
-
-#include "common/as_core_type.hpp"
-#include "common/locator_getters.hpp"
 
 using namespace ot;
 

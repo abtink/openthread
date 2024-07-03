@@ -31,14 +31,9 @@
  *  This file defines the OpenThread Backbone Router API (Thread 1.2)
  */
 
-#include "openthread-core-config.h"
+#include "openthread.hpp"
 
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2)
-
-#include <openthread/backbone_router.h>
-
-#include "common/as_core_type.hpp"
-#include "common/locator_getters.hpp"
 
 using namespace ot;
 

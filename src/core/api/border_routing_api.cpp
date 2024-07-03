@@ -31,15 +31,9 @@
  *   This file implements the OpenThread Border Routing Manager API.
  */
 
-#include "openthread-core-config.h"
+#include "openthread.hpp"
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTING_ENABLE
-
-#include <openthread/border_routing.h>
-#include <openthread/platform/border_routing.h>
-
-#include "border_router/routing_manager.hpp"
-#include "instance/instance.hpp"
 
 using namespace ot;
 

@@ -31,18 +31,9 @@
  *   This file implements the OpenThread BLE Secure API.
  */
 
-#include "openthread-core-config.h"
+#include "openthread.hpp"
 
 #if OPENTHREAD_CONFIG_BLE_TCAT_ENABLE
-
-#include <openthread/ble_secure.h>
-#include <openthread/platform/ble.h>
-
-#include "common/as_core_type.hpp"
-#include "common/code_utils.hpp"
-#include "common/locator_getters.hpp"
-#include "meshcop/tcat_agent.hpp"
-#include "radio/ble_secure.hpp"
 
 using namespace ot;
 

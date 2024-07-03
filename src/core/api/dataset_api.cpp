@@ -31,14 +31,7 @@
  *   This file implements the OpenThread Operational Dataset API (for both FTD and MTD).
  */
 
-#include "openthread-core-config.h"
-
-#include <openthread/dataset.h>
-
-#include "common/as_core_type.hpp"
-#include "common/locator_getters.hpp"
-#include "meshcop/dataset_manager.hpp"
-#include "meshcop/meshcop.hpp"
+#include "openthread.hpp"
 
 using namespace ot;
 

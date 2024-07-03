@@ -31,11 +31,7 @@
  *   This file implements the DNS-SD Server APIs.
  */
 
-#include "openthread-core-config.h"
-
-#include "instance/instance.hpp"
-#include "net/dns_types.hpp"
-#include "net/dnssd_server.hpp"
+#include "openthread.hpp"
 
 using namespace ot;
 

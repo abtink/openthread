@@ -31,11 +31,7 @@
  *   This file implements the OpenThread external heap API.
  */
 
-#include "openthread-core-config.h"
-
-#include <openthread/heap.h>
-
-#include "common/heap.hpp"
+#include "openthread.hpp"
 
 #if OPENTHREAD_RADIO
 

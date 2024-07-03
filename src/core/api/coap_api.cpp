@@ -31,15 +31,9 @@
  *   This file implements the OpenThread CoAP API.
  */
 
-#include "openthread-core-config.h"
+#include "openthread.hpp"
 
 #if OPENTHREAD_CONFIG_COAP_API_ENABLE
-
-#include <openthread/coap.h>
-
-#include "coap/coap_message.hpp"
-#include "common/as_core_type.hpp"
-#include "common/locator_getters.hpp"
 
 using namespace ot;
 

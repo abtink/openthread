@@ -31,9 +31,7 @@
  *   This file implements the OpenThread error code functions.
  */
 
-#include "openthread-core-config.h"
-
-#include "common/error.hpp"
+#include "openthread.hpp"
 
 using namespace ot;
 

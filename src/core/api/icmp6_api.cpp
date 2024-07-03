@@ -31,12 +31,7 @@
  *   This file implements the OpenThread ICMPv6 API.
  */
 
-#include "openthread-core-config.h"
-
-#include <openthread/icmp6.h>
-
-#include "common/as_core_type.hpp"
-#include "common/locator_getters.hpp"
+#include "openthread.hpp"
 
 using namespace ot;
 

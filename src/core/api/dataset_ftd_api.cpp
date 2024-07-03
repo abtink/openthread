@@ -31,14 +31,9 @@
  *   This file implements the OpenThread Operational Dataset API (FTD only).
  */
 
-#include "openthread-core-config.h"
+#include "openthread.hpp"
 
 #if OPENTHREAD_FTD
-
-#include <openthread/dataset_ftd.h>
-
-#include "common/as_core_type.hpp"
-#include "common/locator_getters.hpp"
 
 using namespace ot;
 

@@ -31,14 +31,9 @@
  *   This file implements the OpenThread channel monitor APIs.
  */
 
-#include "openthread-core-config.h"
+#include "openthread.hpp"
 
 #if OPENTHREAD_CONFIG_CHANNEL_MONITOR_ENABLE
-
-#include <openthread/channel_monitor.h>
-
-#include "common/as_core_type.hpp"
-#include "common/locator_getters.hpp"
 
 using namespace ot;
 

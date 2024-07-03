@@ -37,6 +37,7 @@
 
 #include <stdint.h>
 
+#include <openthread/border_routing.h>
 #include <openthread/error.h>
 #include <openthread/instance.h>
 
