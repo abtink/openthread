@@ -1238,36 +1238,34 @@ exit:
     return isValid;
 }
 
-Error LeaseOption::ReadFrom(const Message &aMessage, uint16_t aOffset, uint16_t aLength)
+Error LeaseOption::ReadFrom(const Message &aMessage, const OffsetRange &aOffsetRange)
 {
-    Error    error = kErrorNone;
-    uint16_t endOffset;
+    Error       error       = kErrorNone;
+    OffsetRange offsetRange = aOffsetRange;
 
-    VerifyOrExit(static_cast<uint32_t>(aOffset) + aLength <= aMessage.GetLength(), error = kErrorParse);
+    VerifyOrExit(offsetRange.GetEndOffset() <= aMessage.GetLength(), error = kErrorParse);
 
-    endOffset = aOffset + aLength;
-
-    while (aOffset < endOffset)
+    while (!offsetRange.IsEmpty())
     {
-        uint16_t size;
+        SuccessOrExit(error = aMessage.Read(offsetRange, this, sizeof(Option)));
 
-        SuccessOrExit(error = aMessage.Read(aOffset, this, sizeof(Option)));
-
-        VerifyOrExit(aOffset + GetSize() <= endOffset, error = kErrorParse);
-
-        size = static_cast<uint16_t>(GetSize());
+        VerifyOrExit(offsetRange.Contains(GetSize()), error = kErrorParse);
 
         if (GetOptionCode() == kUpdateLease)
         {
+            uint16_t size;
+
             VerifyOrExit(GetOptionLength() >= kShortLength, error = kErrorParse);
 
-            IgnoreError(aMessage.Read(aOffset, this, Min(size, static_cast<uint16_t>(sizeof(LeaseOption)))));
+            size = static_cast<uint16_t>(Min<uint32_t>(GetSize(), sizeof(LeaseOption)));
+
+            IgnoreError(aMessage.Read(offsetRange, this, size));
             VerifyOrExit(IsValid(), error = kErrorParse);
 
             ExitNow();
         }
 
-        aOffset += size;
+        offsetRange.AdvanceOffset(GetSize());
     }
 
     error = kErrorNotFound;

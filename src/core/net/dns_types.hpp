@@ -2751,16 +2751,15 @@ public:
      *
      * Reads the Update Lease Option whether it follows the short or long variant formats.
      *
-     * @param[in] aMessage   The message to read the Option from.
-     * @param[in] aOffset    Offset in @p aMessage to the start of Options (start of OPT Record data).
-     * @param[in] aLength    Length of Option data in OPT record.
+     * @param[in] aMessage      The message to read the Option from.
+     * @param[in] aOffsetRange  Offset raneg in @p aMessage to the include Options (start of OPT Record data).
      *
      * @retval kErrorNone      Successfully read and validated the Update Lease Option from @p aMessage.
      * @retval kErrorNotFound  Did not find any Update Lease Option.
      * @retval kErrorParse     Failed to parse the Options.
      *
      */
-    Error ReadFrom(const Message &aMessage, uint16_t aOffset, uint16_t aLength);
+    Error ReadFrom(const Message &aMessage, const OffsetRange &aOffsetRange);
 
 private:
     static constexpr uint16_t kShortLength = sizeof(uint32_t);                    // lease only.

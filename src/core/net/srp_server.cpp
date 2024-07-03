@@ -1223,6 +1223,7 @@ Error Server::ProcessAdditionalSection(Host *aHost, const Message &aMessage, Mes
     Dns::SigRecord    sigRecord;
     char              name[2]; // The root domain name (".") is expected.
     uint16_t          offset = aMetadata.mOffset;
+    OffsetRange       offsetRange;
     uint16_t          sigOffset;
     uint16_t          sigRdataOffset;
     Dns::Name::Buffer signerName;
@@ -1235,7 +1236,8 @@ Error Server::ProcessAdditionalSection(Host *aHost, const Message &aMessage, Mes
     SuccessOrExit(error = Dns::Name::ReadName(aMessage, offset, name));
     SuccessOrExit(error = aMessage.Read(offset, optRecord));
 
-    SuccessOrExit(error = leaseOption.ReadFrom(aMessage, offset + sizeof(optRecord), optRecord.GetLength()));
+    offsetRange.Init(offset + sizeof(optRecord), optRecord.GetLength());
+    SuccessOrExit(error = leaseOption.ReadFrom(aMessage, offsetRange));
 
     offset += optRecord.GetSize();
 

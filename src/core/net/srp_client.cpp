@@ -1947,11 +1947,12 @@ Error Client::ProcessOptRecord(const Message &aMessage, uint16_t aOffset, const 
 
     Error            error = kErrorNone;
     Dns::LeaseOption leaseOption;
+    OffsetRange      offsetRange;
 
     IgnoreError(Dns::Name::ParseName(aMessage, aOffset));
-    aOffset += sizeof(Dns::OptRecord);
+    offsetRange.Init(aOffset + sizeof(Dns::OptRecord), aOptRecord.GetLength());
 
-    switch (error = leaseOption.ReadFrom(aMessage, aOffset, aOptRecord.GetLength()))
+    switch (error = leaseOption.ReadFrom(aMessage, offsetRange))
     {
     case kErrorNone:
         mLease    = Min(leaseOption.GetLeaseInterval(), kMaxLease);
