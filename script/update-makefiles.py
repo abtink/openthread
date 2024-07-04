@@ -122,6 +122,9 @@ include_platform_h_files = [name[8:] for name in include_h_files if name.startsw
 
 core_cmakelist_txt_file = "./src/core/CMakeLists.txt"
 
+formatted_list = ["    {}\n".format(file_name[9:]) for file_name in core_hpp_files]
+update_build_file(core_cmakelist_txt_file, "set(COMMON_HEADERS_TO_PRECOMPILE\n", ")\n", formatted_list)
+
 formatted_list = ["    {}\n".format(file_name[9:]) for file_name in core_cpp_files]
 update_build_file(core_cmakelist_txt_file, "set(COMMON_SOURCES\n", ")\n", formatted_list)
 

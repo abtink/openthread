@@ -40,6 +40,8 @@ target_compile_options(openthread-mtd PRIVATE
 
 target_include_directories(openthread-mtd PUBLIC ${OT_PUBLIC_INCLUDES} PRIVATE ${COMMON_INCLUDES})
 
+target_precompile_headers(openthread-mtd PRIVATE ${COMMON_HEADERS_TO_PRECOMPILE})
+
 target_sources(openthread-mtd PRIVATE ${COMMON_SOURCES})
 
 target_link_libraries(openthread-mtd

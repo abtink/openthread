@@ -40,6 +40,8 @@ target_compile_options(openthread-ftd PRIVATE
 
 target_include_directories(openthread-ftd PUBLIC ${OT_PUBLIC_INCLUDES} PRIVATE ${COMMON_INCLUDES})
 
+target_precompile_headers(openthread-ftd PRIVATE ${COMMON_HEADERS_TO_PRECOMPILE})
+
 target_sources(openthread-ftd PRIVATE ${COMMON_SOURCES})
 
 target_link_libraries(openthread-ftd
