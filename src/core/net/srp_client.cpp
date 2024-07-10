@@ -681,7 +681,17 @@ bool Client::ShouldUpdateHostAutoAddresses(void) const
 
         if (ShouldHostAutoAddressRegister(unicastAddress) != unicastAddress.mSrpRegistered)
         {
-            ExitNow(shouldUpdate = true);
+            // If this address was registered earlier but is no longer
+            // eligible, we skip sending an immediate update only if
+            // the address is in the process of being deprecated
+            // (still valid but no longer preferred).
+
+            bool skip = unicastAddress.mSrpRegistered && unicastAddress.mValid && !unicastAddress.mPreferred;
+
+            if (!skip)
+            {
+                ExitNow(shouldUpdate = true);
+            }
         }
 
         if (unicastAddress.mSrpRegistered)
