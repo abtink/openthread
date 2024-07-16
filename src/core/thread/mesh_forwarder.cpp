@@ -212,15 +212,7 @@ void MeshForwarder::EvictMessage(Message &aMessage)
 
     if (queue == &mSendQueue)
     {
-#if OPENTHREAD_FTD
-        for (Child &child : Get<ChildTable>().Iterate(Child::kInStateAnyExceptInvalid))
-        {
-            IgnoreError(mIndirectSender.RemoveMessageFromSleepyChild(aMessage, child));
-        }
-#endif
-
-        FinalizeMessageDirectTx(aMessage, kErrorNoBufs);
-        RemoveMessageIfNoPendingTx(aMessage);
+        FinalizeAllMessageTxAndRemove(aMessage, kErrorNoBufs);
     }
     else
     {
@@ -1345,6 +1337,35 @@ void MeshForwarder::FinalizeMessageDirectTx(Message &aMessage, Error aError)
 
 exit:
     return;
+}
+
+void MeshForwarder::FinalizeAllMessageTxAndRemove(Message &aMessage, Error aError)
+{
+#if OPENTHREAD_FTD
+    for (uint16_t childIndex = 0; aMessage.IsChildPending(); childIndex++)
+    {
+        Child *child;
+
+        if (!aMessage.GetChildMask(childIndex))
+        {
+            continue;
+        }
+
+        child = Get<ChildTable>().GetChildAtIndex(childIndex);
+
+        if (child == nullptr)
+        {
+            aMessage.ClearChildMask(childIndex);
+        }
+        else
+        {
+            mIndirectSender.RemoveMessageFromSleepyChild(aMessage, *child);
+        }
+    }
+#endif
+
+    FinalizeMessageDirectTx(aMessage, aError);
+    RemoveMessageIfNoPendingTx(aMessage);
 }
 
 bool MeshForwarder::RemoveMessageIfNoPendingTx(Message &aMessage)

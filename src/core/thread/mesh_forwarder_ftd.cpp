@@ -268,6 +268,8 @@ exit:
 
 void MeshForwarder::RemoveMessagesForChild(Child &aChild, MessageChecker &aMessageChecker)
 {
+    uint16_t childIndex = Get<ChildTable>().GetChildIndex(aChild);
+
     for (Message &message : mSendQueue)
     {
         if (!aMessageChecker(message))
@@ -275,7 +277,11 @@ void MeshForwarder::RemoveMessagesForChild(Child &aChild, MessageChecker &aMessa
             continue;
         }
 
-        if (mIndirectSender.RemoveMessageFromSleepyChild(message, aChild) != kErrorNone)
+        if (message.GetChildMask(childIndex))
+        {
+            mIndirectSender.RemoveMessageFromSleepyChild(message, aChild);
+        }
+        else
         {
             const Neighbor *neighbor = nullptr;
 
@@ -306,8 +312,6 @@ void MeshForwarder::RemoveMessagesForChild(Child &aChild, MessageChecker &aMessa
 
 void MeshForwarder::RemoveDataResponseMessages(void)
 {
-    Ip6::Header ip6Header;
-
     for (Message &message : mSendQueue)
     {
         if (message.GetSubType() != Message::kSubTypeMleDataResponse)
@@ -315,19 +319,8 @@ void MeshForwarder::RemoveDataResponseMessages(void)
             continue;
         }
 
-        IgnoreError(message.Read(0, ip6Header));
-
-        if (!(ip6Header.GetDestination().IsMulticast()))
-        {
-            for (Child &child : Get<ChildTable>().Iterate(Child::kInStateAnyExceptInvalid))
-            {
-                IgnoreError(mIndirectSender.RemoveMessageFromSleepyChild(message, child));
-            }
-        }
-
         LogMessage(kMessageDrop, message);
-        FinalizeMessageDirectTx(message, kErrorDrop);
-        RemoveMessageIfNoPendingTx(message);
+        FinalizeAllMessageTxAndRemove(message, kErrorDrop);
     }
 }
 

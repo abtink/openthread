@@ -107,7 +107,7 @@ void IndirectSender::AddMessageForSleepyChild(Message &aMessage, Child &aChild)
 
         if (supervisionMessage != nullptr)
         {
-            IgnoreError(RemoveMessageFromSleepyChild(*supervisionMessage, aChild));
+            RemoveMessageFromSleepyChild(*supervisionMessage, aChild);
             Get<MeshForwarder>().RemoveMessageIfNoPendingTx(*supervisionMessage);
         }
     }
@@ -118,20 +118,16 @@ exit:
     return;
 }
 
-Error IndirectSender::RemoveMessageFromSleepyChild(Message &aMessage, Child &aChild)
+void IndirectSender::RemoveMessageFromSleepyChild(Message &aMessage, Child &aChild)
 {
-    Error    error      = kErrorNone;
     uint16_t childIndex = Get<ChildTable>().GetChildIndex(aChild);
 
-    VerifyOrExit(aMessage.GetChildMask(childIndex), error = kErrorNotFound);
-
-    aMessage.ClearChildMask(childIndex);
-    mSourceMatchController.DecrementMessageCount(aChild);
-
-    RequestMessageUpdate(aChild);
-
-exit:
-    return error;
+    if (aMessage.GetChildMask(childIndex))
+    {
+        aMessage.ClearChildMask(childIndex);
+        mSourceMatchController.DecrementMessageCount(aChild);
+        RequestMessageUpdate(aChild);
+    }
 }
 
 void IndirectSender::ClearAllMessagesForSleepyChild(Child &aChild)

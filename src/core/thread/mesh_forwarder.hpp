@@ -585,6 +585,7 @@ private:
     void HandleSentFrame(Mac::TxFrame &aFrame, Error aError);
     void UpdateSendMessage(Error aFrameTxError, Mac::Address &aMacDest, Neighbor *aNeighbor);
     void FinalizeMessageDirectTx(Message &aMessage, Error aError);
+    void FinalizeAllMessageTxAndRemove(Message &aMessage, Error aError);
     bool RemoveMessageIfNoPendingTx(Message &aMessage);
 
     void HandleTimeTick(void);

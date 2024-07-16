@@ -167,14 +167,13 @@ public:
     /**
      * Removes a message for indirect transmission to a sleepy child.
      *
+     * If @p aMessage is not scheduled for indirect tx to @p aChild, no action is performed.
+     *
      * @param[in] aMessage  The message to update.
      * @param[in] aChild    The (sleepy) child for indirect transmission.
      *
-     * @retval kErrorNone          Successfully removed the message for indirect transmission.
-     * @retval kErrorNotFound      The message was not scheduled for indirect transmission to the child.
-     *
      */
-    Error RemoveMessageFromSleepyChild(Message &aMessage, Child &aChild);
+    void RemoveMessageFromSleepyChild(Message &aMessage, Child &aChild);
 
     /**
      * Removes all added messages for a specific child and frees message (with no indirect/direct tx).
