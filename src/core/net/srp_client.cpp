@@ -2274,7 +2274,7 @@ void Client::ProcessAutoStart(void)
 
     serverSockAddr.Clear();
 
-    if (SelectUnicastEntry(DnsSrpUnicast::kFromServiceData, unicastInfo) == kErrorNone)
+    if (SelectUnicastEntry(DnsSrpUnicast::kAddrInServiceData, unicastInfo) == kErrorNone)
     {
         mAutoStart.SetState(AutoStart::kSelectedUnicastPreferred);
         serverSockAddr = unicastInfo.mSockAddr;
@@ -2299,7 +2299,7 @@ void Client::ProcessAutoStart(void)
 
         mAutoStart.SetState(AutoStart::kSelectedAnycast);
     }
-    else if (SelectUnicastEntry(DnsSrpUnicast::kFromServerData, unicastInfo) == kErrorNone)
+    else if (SelectUnicastEntry(DnsSrpUnicast::kAddrInServerData, unicastInfo) == kErrorNone)
     {
         mAutoStart.SetState(AutoStart::kSelectedUnicast);
         serverSockAddr = unicastInfo.mSockAddr;
@@ -2378,7 +2378,7 @@ exit:
     return;
 }
 
-Error Client::SelectUnicastEntry(DnsSrpUnicast::Origin aOrigin, DnsSrpUnicast::Info &aInfo) const
+Error Client::SelectUnicastEntry(DnsSrpUnicast::Type aType, DnsSrpUnicast::Info &aInfo) const
 {
     Error                                   error = kErrorNotFound;
     DnsSrpUnicast::Info                     unicastInfo;
@@ -2393,13 +2393,8 @@ Error Client::SelectUnicastEntry(DnsSrpUnicast::Origin aOrigin, DnsSrpUnicast::I
     }
 #endif
 
-    while (Get<NetworkData::Service::Manager>().GetNextDnsSrpUnicastInfo(iterator, unicastInfo) == kErrorNone)
+    while (Get<NetworkData::Service::Manager>().GetNextDnsSrpUnicastInfo(iterator, aType, unicastInfo) == kErrorNone)
     {
-        if (unicastInfo.mOrigin != aOrigin)
-        {
-            continue;
-        }
-
         if (mAutoStart.HasSelectedServer() && (GetServerAddress() == unicastInfo.mSockAddr))
         {
             aInfo = unicastInfo;
@@ -2441,9 +2436,9 @@ void Client::SelectNextServer(bool aDisallowSwitchOnRegisteredHost)
     // restarts the client with the new server (keeping the retry wait
     // interval as before).
 
-    Ip6::SockAddr         serverSockAddr;
-    bool                  selectNext = false;
-    DnsSrpUnicast::Origin origin     = DnsSrpUnicast::kFromServiceData;
+    Ip6::SockAddr       serverSockAddr;
+    bool                selectNext = false;
+    DnsSrpUnicast::Type type       = DnsSrpUnicast::kAddrInServiceData;
 
     serverSockAddr.Clear();
 
@@ -2455,11 +2450,11 @@ void Client::SelectNextServer(bool aDisallowSwitchOnRegisteredHost)
     switch (mAutoStart.GetState())
     {
     case AutoStart::kSelectedUnicastPreferred:
-        origin = DnsSrpUnicast::kFromServiceData;
+        type = DnsSrpUnicast::kAddrInServiceData;
         break;
 
     case AutoStart::kSelectedUnicast:
-        origin = DnsSrpUnicast::kFromServerData;
+        type = DnsSrpUnicast::kAddrInServerData;
         break;
 
     case AutoStart::kSelectedAnycast:
@@ -2485,13 +2480,8 @@ void Client::SelectNextServer(bool aDisallowSwitchOnRegisteredHost)
         DnsSrpUnicast::Info                     unicastInfo;
         NetworkData::Service::Manager::Iterator iterator;
 
-        while (Get<NetworkData::Service::Manager>().GetNextDnsSrpUnicastInfo(iterator, unicastInfo) == kErrorNone)
+        while (Get<NetworkData::Service::Manager>().GetNextDnsSrpUnicastInfo(iterator, type, unicastInfo) == kErrorNone)
         {
-            if (unicastInfo.mOrigin != origin)
-            {
-                continue;
-            }
-
             if (selectNext)
             {
                 serverSockAddr = unicastInfo.mSockAddr;
