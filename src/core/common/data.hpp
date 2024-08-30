@@ -254,6 +254,14 @@ public:
         return (mLength >= aOtherData.mLength) && aOtherData.MatchesBytesIn(mBuffer);
     }
 
+    /**
+     * Cats the `Data` into `MuratbleData`.
+     *
+     * @returns The `Data` cast as `MutableData`.
+     *
+     */
+    MutableData<kDataLengthType> &AsMutable(void) { return static_cast<MutableData<kDataLengthType> &>(*this); }
+
 private:
     const uint8_t *mBuffer;
     LengthType     mLength;

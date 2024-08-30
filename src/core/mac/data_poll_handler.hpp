@@ -269,7 +269,7 @@ public:
 
 private:
     // Callbacks from MAC
-    void          HandleDataPoll(Mac::RxFrame &aFrame);
+    void          HandleDataPoll(Mac::RxFrame::Info &aFrameInfo);
     Mac::TxFrame *HandleFrameRequest(Mac::TxFrames &aTxFrames);
     void          HandleSentFrame(const Mac::TxFrame &aFrame, Error aError);
 

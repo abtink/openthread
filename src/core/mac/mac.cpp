@@ -224,48 +224,40 @@ bool Mac::IsInTransmitState(void) const
     return retval;
 }
 
-Error Mac::ConvertBeaconToActiveScanResult(const RxFrame *aBeaconFrame, ActiveScanResult &aResult)
+Error Mac::ConvertBeaconToActiveScanResult(const RxFrame::Info &aBeaconInfo, ActiveScanResult &aResult)
 {
-    Error   error = kErrorNone;
-    Address address;
-#if OPENTHREAD_CONFIG_MAC_BEACON_PAYLOAD_PARSING_ENABLE
-    const BeaconPayload *beaconPayload = nullptr;
-    const Beacon        *beacon        = nullptr;
-    uint16_t             payloadLength;
-#endif
+    Error          error       = kErrorNone;
+    const RxFrame &beaconFrame = static_cast<RxFrame &>(*aBeaconInfo.mFrame);
 
     ClearAllBytes(aResult);
 
-    VerifyOrExit(aBeaconFrame != nullptr, error = kErrorInvalidArgs);
+    VerifyOrExit(aBeaconInfo.mType == Frame::kTypeBeacon, error = kErrorParse);
+    VerifyOrExit(aBeaconInfo.mAddresses.mSource.IsExtended(), error = kErrorParse);
+    aResult.mExtAddress = aBeaconInfo.mAddresses.mSource.GetExtended();
 
-    VerifyOrExit(aBeaconFrame->GetType() == Frame::kTypeBeacon, error = kErrorParse);
-    SuccessOrExit(error = aBeaconFrame->GetSrcAddr(address));
-    VerifyOrExit(address.IsExtended(), error = kErrorParse);
-    aResult.mExtAddress = address.GetExtended();
+    aResult.mPanId =
+        aBeaconInfo.mPanIds.IsSourcePresent() ? aBeaconInfo.mPanIds.GetSource() : aBeaconInfo.mPanIds.GetDestination();
 
-    if (kErrorNone != aBeaconFrame->GetSrcPanId(aResult.mPanId))
-    {
-        IgnoreError(aBeaconFrame->GetDstPanId(aResult.mPanId));
-    }
-
-    aResult.mChannel = aBeaconFrame->GetChannel();
-    aResult.mRssi    = aBeaconFrame->GetRssi();
-    aResult.mLqi     = aBeaconFrame->GetLqi();
+    aResult.mChannel = beaconFrame.GetChannel();
+    aResult.mRssi    = beaconFrame.GetRssi();
+    aResult.mLqi     = beaconFrame.GetLqi();
 
 #if OPENTHREAD_CONFIG_MAC_BEACON_PAYLOAD_PARSING_ENABLE
-    payloadLength = aBeaconFrame->GetPayloadLength();
-
-    beacon        = reinterpret_cast<const Beacon *>(aBeaconFrame->GetPayload());
-    beaconPayload = reinterpret_cast<const BeaconPayload *>(beacon->GetPayload());
-
-    if ((payloadLength >= (sizeof(*beacon) + sizeof(*beaconPayload))) && beacon->IsValid() && beaconPayload->IsValid())
     {
-        aResult.mVersion    = beaconPayload->GetProtocolVersion();
-        aResult.mIsJoinable = beaconPayload->IsJoiningPermitted();
-        aResult.mIsNative   = beaconPayload->IsNative();
-        IgnoreError(AsCoreType(&aResult.mNetworkName).Set(beaconPayload->GetNetworkName()));
-        VerifyOrExit(IsValidUtf8String(aResult.mNetworkName.m8), error = kErrorParse);
-        aResult.mExtendedPanId = beaconPayload->GetExtendedPanId();
+        const Beacon        *beacon        = reinterpret_cast<const Beacon *>(aBeaconInfo.mPayloadData.GetBytes());
+        const BeaconPayload *beaconPayload = reinterpret_cast<const BeaconPayload *>(beacon->GetPayload());
+        uint16_t             payloadLength = aBeaconInfo.mPayloadData.GetLength();
+
+        if ((payloadLength >= (sizeof(Beacon) + sizeof(BeaconPayload))) && beacon->IsValid() &&
+            beaconPayload->IsValid())
+        {
+            aResult.mVersion    = beaconPayload->GetProtocolVersion();
+            aResult.mIsJoinable = beaconPayload->IsJoiningPermitted();
+            aResult.mIsNative   = beaconPayload->IsNative();
+            IgnoreError(AsCoreType(&aResult.mNetworkName).Set(beaconPayload->GetNetworkName()));
+            VerifyOrExit(IsValidUtf8String(aResult.mNetworkName.m8), error = kErrorParse);
+            aResult.mExtendedPanId = beaconPayload->GetExtendedPanId();
+        }
     }
 #endif
 
@@ -303,11 +295,11 @@ void Mac::PerformActiveScan(void)
     }
 }
 
-void Mac::ReportActiveScanResult(const RxFrame *aBeaconFrame)
+void Mac::ReportActiveScanResult(const RxFrame::Info *aBeaconInfo)
 {
     VerifyOrExit(mActiveScanHandler != nullptr);
 
-    if (aBeaconFrame == nullptr)
+    if (aBeaconInfo == nullptr)
     {
         mActiveScanHandler(nullptr, mScanHandlerContext);
     }
@@ -315,7 +307,7 @@ void Mac::ReportActiveScanResult(const RxFrame *aBeaconFrame)
     {
         ActiveScanResult result;
 
-        SuccessOrExit(ConvertBeaconToActiveScanResult(aBeaconFrame, result));
+        SuccessOrExit(ConvertBeaconToActiveScanResult(*aBeaconInfo, result));
         mActiveScanHandler(&result, mScanHandlerContext);
     }
 
@@ -848,15 +840,23 @@ bool Mac::IsJoinable(void) const
 
 void Mac::ProcessTransmitSecurity(TxFrame &aFrame)
 {
+    Frame::Info frameInfo;
+
+    SuccessOrExit(frameInfo.ParseFrom(aFrame));
+    ProcessTransmitSecurity(aFrame, frameInfo);
+
+exit:
+    return;
+}
+
+void Mac::ProcessTransmitSecurity(TxFrame &aFrame, Frame::Info &aFrameInfo)
+{
     KeyManager       &keyManager = Get<KeyManager>();
-    uint8_t           keyIdMode;
     const ExtAddress *extAddress = nullptr;
 
-    VerifyOrExit(aFrame.GetSecurityEnabled());
+    VerifyOrExit(aFrameInfo.mSecurityEnabled);
 
-    IgnoreError(aFrame.GetKeyIdMode(keyIdMode));
-
-    switch (keyIdMode)
+    switch (aFrameInfo.mKeyIdMode)
     {
     case Frame::kKeyIdMode0:
         aFrame.SetAesKey(keyManager.GetKek());
@@ -864,7 +864,7 @@ void Mac::ProcessTransmitSecurity(TxFrame &aFrame)
 
         if (!aFrame.IsHeaderUpdated())
         {
-            aFrame.SetFrameCounter(keyManager.GetKekFrameCounter());
+            aFrameInfo.WriteFrameCounter(keyManager.GetKekFrameCounter());
             keyManager.IncrementKekFrameCounter();
         }
 
@@ -883,7 +883,7 @@ void Mac::ProcessTransmitSecurity(TxFrame &aFrame)
 #endif
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-        aFrame.SetAesKey(*mLinks.GetCurrentMacKey(aFrame));
+        aFrame.SetAesKey(*mLinks.GetCurrentMacKey(aFrameInfo));
         extAddress = &GetExtAddress();
 
         // If the frame header is marked as updated, `MeshForwarder` which
@@ -894,8 +894,8 @@ void Mac::ProcessTransmitSecurity(TxFrame &aFrame)
 
         if (!aFrame.IsHeaderUpdated())
         {
-            mLinks.SetMacFrameCounter(aFrame);
-            aFrame.SetKeyId((keyManager.GetCurrentKeySequence() & 0x7f) + 1);
+            mLinks.SetMacFrameCounter(aFrameInfo);
+            aFrameInfo.WriteKeyId((keyManager.GetCurrentKeySequence() & 0x7f) + 1);
         }
 #endif
         break;
@@ -907,9 +907,9 @@ void Mac::ProcessTransmitSecurity(TxFrame &aFrame)
         aFrame.SetAesKey(mMode2KeyMaterial);
 
         mKeyIdMode2FrameCounter++;
-        aFrame.SetFrameCounter(mKeyIdMode2FrameCounter);
-        aFrame.SetKeySource(keySource);
-        aFrame.SetKeyId(0xff);
+        aFrameInfo.WriteFrameCounter(mKeyIdMode2FrameCounter);
+        aFrameInfo.WriteKeySource(keySource);
+        aFrameInfo.WriteKeyIndex(0xff);
         extAddress = &AsCoreType(&sMode2ExtAddress);
         break;
     }
@@ -928,7 +928,7 @@ void Mac::ProcessTransmitSecurity(TxFrame &aFrame)
     VerifyOrExit(!aFrame.IsCslIePresent());
 #endif
 
-    aFrame.ProcessTransmitAesCcm(*extAddress);
+    aFrameInfo.ProcessTransmitAesCcm(*extAddress);
 
 exit:
     return;
@@ -938,6 +938,7 @@ void Mac::BeginTransmit(void)
 {
     TxFrame  *frame    = nullptr;
     TxFrames &txFrames = mLinks.GetTxFrames();
+    Frame::Info frameInfo;
     Address   dstAddr;
 
     txFrames.Clear();
@@ -1028,6 +1029,8 @@ void Mac::BeginTransmit(void)
         OT_ASSERT(false);
     }
 
+    SuccessOrAssert(frameInfo.ParseFrom(*frame));
+
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
     {
         uint8_t timeIeOffset = GetTimeIeOffset(*frame);
@@ -1074,7 +1077,7 @@ void Mac::BeginTransmit(void)
             }
         }
 #else
-        ProcessTransmitSecurity(*frame);
+        ProcessTransmitSecurity(*frame, frameInfo);
 #endif
     }
 
@@ -1099,7 +1102,7 @@ void Mac::BeginTransmit(void)
 #if OPENTHREAD_CONFIG_MAC_STAY_AWAKE_BETWEEN_FRAGMENTS
     if (!mRxOnWhenIdle && !mPromiscuous)
     {
-        mShouldDelaySleep = frame->GetFramePending();
+        mShouldDelaySleep = frameInfo.mFramePending;
         LogDebg("Delay sleep for pending tx");
     }
 #endif
@@ -1153,18 +1156,18 @@ void Mac::RecordCcaStatus(bool aCcaSuccess, uint8_t aChannel)
 
 void Mac::RecordFrameTransmitStatus(const TxFrame &aFrame, Error aError, uint8_t aRetryCount, bool aWillRetx)
 {
-    bool      ackRequested = aFrame.GetAckRequest();
-    Address   dstAddr;
-    Neighbor *neighbor;
+    Frame::Info frameInfo;
+    Neighbor   *neighbor;
 
     VerifyOrExit(!aFrame.IsEmpty());
 
-    IgnoreError(aFrame.GetDstAddr(dstAddr));
-    neighbor = Get<NeighborTable>().FindNeighbor(dstAddr);
+    SuccessOrExit(frameInfo.ParseFrom(aFrame));
+
+    neighbor = Get<NeighborTable>().FindNeighbor(frameInfo.mAddresses.mDestination);
 
     // Record frame transmission success/failure state (for a neighbor).
 
-    if ((neighbor != nullptr) && ackRequested)
+    if ((neighbor != nullptr) && frameInfo.mAckRequest)
     {
         bool frameTxSuccess = true;
 
@@ -1192,8 +1195,8 @@ void Mac::RecordFrameTransmitStatus(const TxFrame &aFrame, Error aError, uint8_t
 
     if (aError != kErrorNone)
     {
-        LogFrameTxFailure(aFrame, aError, aRetryCount, aWillRetx);
-        DumpDebg("TX ERR", aFrame.GetHeader(), 16);
+        LogFrameTxFailure(frameInfo, aError, aRetryCount, aWillRetx);
+        DumpDebg("TX ERR", aFrame.GetPsdu(), 16);
 
         if (aWillRetx)
         {
@@ -1221,7 +1224,7 @@ void Mac::RecordFrameTransmitStatus(const TxFrame &aFrame, Error aError, uint8_t
         mCounters.mTxErrBusyChannel++;
     }
 
-    if (ackRequested)
+    if (frameInfo.mAckRequest)
     {
         mCounters.mTxAckRequested++;
 
@@ -1235,7 +1238,7 @@ void Mac::RecordFrameTransmitStatus(const TxFrame &aFrame, Error aError, uint8_t
         mCounters.mTxNoAckRequested++;
     }
 
-    if (dstAddr.IsBroadcast())
+    if (frameInfo.mAddresses.mDestination.IsBroadcast())
     {
         mCounters.mTxBroadcast++;
     }
@@ -1250,7 +1253,18 @@ exit:
 
 void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, Error aError)
 {
-    bool ackRequested = aFrame.GetAckRequest();
+    Frame::Info frameInfo;
+    Frame::Info ackInfo;
+
+    if (!aFrame.IsEmpty())
+    {
+        SuccessOrExit(frameInfo.ParseFrom(aFrame));
+    }
+
+    if (aAckFrame != nullptr)
+    {
+        SuccessOrExit(ackInfo.ParseFrom(*aAckFrame));
+    }
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
     if (!aFrame.IsEmpty()
@@ -1259,12 +1273,8 @@ void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, Error aError)
 #endif
     )
     {
-        Address dstAddr;
-
-        IgnoreError(aFrame.GetDstAddr(dstAddr));
-
         // Determine whether to re-transmit a broadcast frame.
-        if (dstAddr.IsBroadcast())
+        if (frameInfo.mAddresses.mDestination.IsBroadcast())
         {
             mBroadcastTransmitCount++;
 
@@ -1285,9 +1295,9 @@ void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, Error aError)
             mBroadcastTransmitCount = 0;
         }
 
-        if (ackRequested && (aAckFrame != nullptr))
+        if (frameInfo.mAckRequest && (aAckFrame != nullptr))
         {
-            Neighbor *neighbor = Get<NeighborTable>().FindNeighbor(dstAddr);
+            Neighbor *neighbor = Get<NeighborTable>().FindNeighbor(frameInfo.mAddresses.mDestination);
 
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
             if ((aError == kErrorNone) && (neighbor != nullptr) &&
@@ -1299,7 +1309,7 @@ void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, Error aError)
 
 #if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
             // Verify Enh-ACK integrity by checking its MIC
-            if ((aError == kErrorNone) && (ProcessEnhAckSecurity(aFrame, *aAckFrame) != kErrorNone))
+            if ((aError == kErrorNone) && (ProcessEnhAckSecurity(frameInfo, ackInfo) != kErrorNone))
             {
                 aError = kErrorNoAck;
             }
@@ -1310,10 +1320,10 @@ void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, Error aError)
                 UpdateNeighborLinkInfo(*neighbor, *aAckFrame);
 
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
-                ProcessEnhAckProbing(*aAckFrame, *neighbor);
+                ProcessEnhAckProbing(ackInfo, *neighbor);
 #endif
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
-                ProcessCsl(*aAckFrame, dstAddr);
+                ProcessCsl(ackInfo, frameInfo.mAddresses.mDestination);
 #endif
 #if OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
                 if (!mRxOnWhenIdle && aFrame.HasCslIe())
@@ -1390,18 +1400,16 @@ void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, Error aError)
         break;
 
     case kOperationTransmitPoll:
-        OT_ASSERT(aFrame.IsEmpty() || ackRequested);
+        OT_ASSERT(aFrame.IsEmpty() || frameInfo.mAckRequest);
 
         if ((aError == kErrorNone) && (aAckFrame != nullptr))
         {
-            bool framePending = aAckFrame->GetFramePending();
-
-            if (IsEnabled() && framePending)
+            if (IsEnabled() && ackInfo.mFramePending)
             {
                 StartOperation(kOperationWaitingForData);
             }
 
-            LogInfo("Sent data poll, fp:%s", ToYesNo(framePending));
+            LogInfo("Sent data poll, fp:%s", ToYesNo(ackInfo.mFramePending));
         }
 
         mCounters.mTxDataPoll++;
@@ -1424,7 +1432,7 @@ void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, Error aError)
         }
 #endif
 
-        DumpDebg("TX", aFrame.GetHeader(), aFrame.GetLength());
+        DumpDebg("TX", aFrame.GetPsdu(), aFrame.GetLength());
         FinishOperation();
         Get<MeshForwarder>().HandleSentFrame(aFrame, aError);
 #if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
@@ -1438,7 +1446,7 @@ void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, Error aError)
     case kOperationTransmitDataCsl:
         mCounters.mTxData++;
 
-        DumpDebg("TX", aFrame.GetHeader(), aFrame.GetLength());
+        DumpDebg("TX", aFrame.GetPsdu(), aFrame.GetLength());
         FinishOperation();
         Get<CslTxScheduler>().HandleSentFrame(aFrame, aError);
         PerformNextOperation();
@@ -1459,7 +1467,7 @@ void Mac::HandleTransmitDone(TxFrame &aFrame, RxFrame *aAckFrame, Error aError)
         }
 #endif
 
-        DumpDebg("TX", aFrame.GetHeader(), aFrame.GetLength());
+        DumpDebg("TX", aFrame.GetPsdu(), aFrame.GetLength());
         FinishOperation();
         Get<DataPollHandler>().HandleSentFrame(aFrame, aError);
         PerformNextOperation();
@@ -1516,29 +1524,22 @@ void Mac::HandleTimer(void)
     }
 }
 
-Error Mac::ProcessReceiveSecurity(RxFrame &aFrame, const Address &aSrcAddr, Neighbor *aNeighbor)
+Error Mac::ProcessReceiveSecurity(const Frame::Info &aFrameInfo, const Address &aSrcAddr, Neighbor *aNeighbor)
 {
     KeyManager        &keyManager = Get<KeyManager>();
     Error              error      = kErrorSecurity;
-    uint8_t            securityLevel;
-    uint8_t            keyIdMode;
-    uint32_t           frameCounter;
-    uint8_t            keyid;
+    uint8_t            keyId;
     uint32_t           keySequence = 0;
     const KeyMaterial *macKey;
     const ExtAddress  *extAddress;
 
-    VerifyOrExit(aFrame.GetSecurityEnabled(), error = kErrorNone);
+    VerifyOrExit(aFrameInfo.mSecurityEnabled, error = kErrorNone);
 
-    IgnoreError(aFrame.GetSecurityLevel(securityLevel));
-    VerifyOrExit(securityLevel == Frame::kSecurityEncMic32);
+    VerifyOrExit(aFrameInfo.mSecurityLevel == Frame::kSecurityEncMic32);
 
-    IgnoreError(aFrame.GetFrameCounter(frameCounter));
-    LogDebg("Rx security - frame counter %lu", ToUlong(frameCounter));
+    LogDebg("Rx security - frame counter %lu", ToUlong(aFrameInfo.mFrameCounter));
 
-    IgnoreError(aFrame.GetKeyIdMode(keyIdMode));
-
-    switch (keyIdMode)
+    switch (aFrameInfo.mKeyIdMode)
     {
     case Frame::kKeyIdMode0:
         macKey     = &keyManager.GetKek();
@@ -1548,23 +1549,23 @@ Error Mac::ProcessReceiveSecurity(RxFrame &aFrame, const Address &aSrcAddr, Neig
     case Frame::kKeyIdMode1:
         VerifyOrExit(aNeighbor != nullptr);
 
-        IgnoreError(aFrame.GetKeyId(keyid));
-        keyid--;
+        keyId = aFrameInfo.mKeyIndex;
+        keyId--;
 
-        if (keyid == (keyManager.GetCurrentKeySequence() & 0x7f))
+        if (keyId == (keyManager.GetCurrentKeySequence() & 0x7f))
         {
             keySequence = keyManager.GetCurrentKeySequence();
-            macKey      = mLinks.GetCurrentMacKey(aFrame);
+            macKey      = mLinks.GetCurrentMacKey(aFrameInfo);
         }
-        else if (keyid == ((keyManager.GetCurrentKeySequence() - 1) & 0x7f))
+        else if (keyId == ((keyManager.GetCurrentKeySequence() - 1) & 0x7f))
         {
             keySequence = keyManager.GetCurrentKeySequence() - 1;
-            macKey      = mLinks.GetTemporaryMacKey(aFrame, keySequence);
+            macKey      = mLinks.GetTemporaryMacKey(aFrameInfo, keySequence);
         }
-        else if (keyid == ((keyManager.GetCurrentKeySequence() + 1) & 0x7f))
+        else if (keyId == ((keyManager.GetCurrentKeySequence() + 1) & 0x7f))
         {
             keySequence = keyManager.GetCurrentKeySequence() + 1;
-            macKey      = mLinks.GetTemporaryMacKey(aFrame, keySequence);
+            macKey      = mLinks.GetTemporaryMacKey(aFrameInfo, keySequence);
         }
         else
         {
@@ -1591,9 +1592,9 @@ Error Mac::ProcessReceiveSecurity(RxFrame &aFrame, const Address &aSrcAddr, Neig
 #endif
 
                 // If frame counter is one off, then frame is a duplicate.
-                VerifyOrExit((frameCounter + 1) != neighborFrameCounter, error = kErrorDuplicated);
+                VerifyOrExit((aFrameInfo.mFrameCounter + 1) != neighborFrameCounter, error = kErrorDuplicated);
 
-                VerifyOrExit(frameCounter >= neighborFrameCounter);
+                VerifyOrExit(aFrameInfo.mFrameCounter >= neighborFrameCounter);
             }
         }
 
@@ -1610,9 +1611,9 @@ Error Mac::ProcessReceiveSecurity(RxFrame &aFrame, const Address &aSrcAddr, Neig
         ExitNow();
     }
 
-    SuccessOrExit(aFrame.ProcessReceiveAesCcm(*extAddress, *macKey));
+    SuccessOrExit(aFrameInfo.ProcessReceiveAesCcm(*extAddress, *macKey));
 
-    if ((keyIdMode == Frame::kKeyIdMode1) && aNeighbor->IsStateValid())
+    if ((aFrameInfo.mKeyIdMode == Frame::kKeyIdMode1) && aNeighbor->IsStateValid())
     {
         if (aNeighbor->GetKeySequence() != keySequence)
         {
@@ -1622,19 +1623,19 @@ Error Mac::ProcessReceiveSecurity(RxFrame &aFrame, const Address &aSrcAddr, Neig
         }
 
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-        aNeighbor->GetLinkFrameCounters().Set(aFrame.GetRadioType(), frameCounter + 1);
+        aNeighbor->GetLinkFrameCounters().Set(aFrameInfo.mFrame->GetRadioType(), aFrameInfo.mFrameCounter + 1);
 #else
-        aNeighbor->GetLinkFrameCounters().Set(frameCounter + 1);
+        aNeighbor->GetLinkFrameCounters().Set(aFrameInfo.mFrameCounter + 1);
 #endif
 
 #if (OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2) && OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-        if (aFrame.GetRadioType() == kRadioTypeIeee802154)
+        if (aFrameInfo.mFrame->GetRadioType() == kRadioTypeIeee802154)
 #endif
         {
-            if ((frameCounter + 1) > aNeighbor->GetLinkAckFrameCounter())
+            if ((aFrameInfo.mFrameCounter + 1) > aNeighbor->GetLinkAckFrameCounter())
             {
-                aNeighbor->SetLinkAckFrameCounter(frameCounter + 1);
+                aNeighbor->SetLinkAckFrameCounter(aFrameInfo.mFrameCounter + 1);
             }
         }
 #endif
@@ -1652,62 +1653,44 @@ exit:
 }
 
 #if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
-Error Mac::ProcessEnhAckSecurity(TxFrame &aTxFrame, RxFrame &aAckFrame)
+Error Mac::ProcessEnhAckSecurity(const Frame::Info &aTxFrameInfo, Frame::Info &aAckInfo)
 {
     Error              error = kErrorSecurity;
-    uint8_t            securityLevel;
-    uint8_t            txKeyId;
     uint8_t            ackKeyId;
-    uint8_t            keyIdMode;
-    uint32_t           frameCounter;
-    Address            srcAddr;
-    Address            dstAddr;
     Neighbor          *neighbor   = nullptr;
     KeyManager        &keyManager = Get<KeyManager>();
     const KeyMaterial *macKey;
 
-    VerifyOrExit(aAckFrame.GetSecurityEnabled(), error = kErrorNone);
-    VerifyOrExit(aAckFrame.IsVersion2015());
+    VerifyOrExit(aAckInfo.mSecurityEnabled, error = kErrorNone);
+    VerifyOrExit(aAckInfo.mVersion == Frame::kVersion2015);
 
-    SuccessOrExit(aAckFrame.ValidatePsdu());
+    VerifyOrExit(aAckInfo.mSecurityLevel == Frame::kSecurityEncMic32);
+    VerifyOrExit(aAckInfo.mKeyIdMode == Frame::kKeyIdMode1);
 
-    IgnoreError(aAckFrame.GetSecurityLevel(securityLevel));
-    VerifyOrExit(securityLevel == Frame::kSecurityEncMic32);
+    ackKeyId = aAckInfo.mKeyIndex;
+    VerifyOrExit(aTxFrameInfo.mKeyIndex == ackKeyId);
 
-    IgnoreError(aAckFrame.GetKeyIdMode(keyIdMode));
-    VerifyOrExit(keyIdMode == Frame::kKeyIdMode1);
+    LogDebg("Rx security - Ack frame counter %lu", ToUlong(aAckInfo.mFrameCounter));
 
-    IgnoreError(aTxFrame.GetKeyId(txKeyId));
-    IgnoreError(aAckFrame.GetKeyId(ackKeyId));
-
-    VerifyOrExit(txKeyId == ackKeyId);
-
-    IgnoreError(aAckFrame.GetFrameCounter(frameCounter));
-    LogDebg("Rx security - Ack frame counter %lu", ToUlong(frameCounter));
-
-    IgnoreError(aAckFrame.GetSrcAddr(srcAddr));
-
-    if (!srcAddr.IsNone())
+    if (!aAckInfo.mAddresses.mSource.IsNone())
     {
-        neighbor = Get<NeighborTable>().FindNeighbor(srcAddr);
+        neighbor = Get<NeighborTable>().FindNeighbor(aAckInfo.mAddresses.mSource);
     }
     else
     {
-        IgnoreError(aTxFrame.GetDstAddr(dstAddr));
-
-        if (!dstAddr.IsNone())
+        if (!aTxFrameInfo.mAddresses.mDestination.IsNone())
         {
             // Get neighbor from destination address of transmitted frame
-            neighbor = Get<NeighborTable>().FindNeighbor(dstAddr);
+            neighbor = Get<NeighborTable>().FindNeighbor(aTxFrameInfo.mAddresses.mDestination);
         }
     }
 
-    if (!srcAddr.IsExtended() && neighbor != nullptr)
+    if (!aAckInfo.mAddresses.mSource.IsExtended() && neighbor != nullptr)
     {
-        srcAddr.SetExtended(neighbor->GetExtAddress());
+        aAckInfo.mAddresses.mSource.SetExtended(neighbor->GetExtAddress());
     }
 
-    VerifyOrExit(srcAddr.IsExtended() && neighbor != nullptr);
+    VerifyOrExit(aAckInfo.mAddresses.mSource.IsExtended() && neighbor != nullptr);
 
     ackKeyId--;
 
@@ -1730,15 +1713,14 @@ Error Mac::ProcessEnhAckSecurity(TxFrame &aTxFrame, RxFrame &aAckFrame)
 
     if (neighbor->IsStateValid())
     {
-        VerifyOrExit(frameCounter >= neighbor->GetLinkAckFrameCounter());
+        VerifyOrExit(aAckInfo.mFrameCounter >= neighbor->GetLinkAckFrameCounter());
     }
 
-    error = aAckFrame.ProcessReceiveAesCcm(srcAddr.GetExtended(), *macKey);
-    SuccessOrExit(error);
+    SuccessOrExit(error = aAckInfo.ProcessReceiveAesCcm(aAckInfo.mAddresses.mSource.GetExtended(), *macKey));
 
     if (neighbor->IsStateValid())
     {
-        neighbor->SetLinkAckFrameCounter(frameCounter + 1);
+        neighbor->SetLinkAckFrameCounter(aAckInfo.mFrameCounter + 1);
     }
 
 exit:
@@ -1753,11 +1735,10 @@ exit:
 
 void Mac::HandleReceivedFrame(RxFrame *aFrame, Error aError)
 {
-    Address   srcaddr;
-    Address   dstaddr;
-    PanId     panid;
-    Neighbor *neighbor;
-    Error     error = aError;
+    Error       error = aError;
+    Address     srcAddr;
+    Neighbor   *neighbor = nullptr;
+    Frame::Info frameInfo;
 
     mCounters.mRxTotal++;
 
@@ -1767,71 +1748,80 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, Error aError)
 
     // Ensure we have a valid frame before attempting to read any contents of
     // the buffer received from the radio.
-    SuccessOrExit(error = aFrame->ValidatePsdu());
+    SuccessOrExit(error = frameInfo.ParseFrom(*aFrame));
 
-    IgnoreError(aFrame->GetSrcAddr(srcaddr));
-    IgnoreError(aFrame->GetDstAddr(dstaddr));
-    neighbor = !srcaddr.IsNone() ? Get<NeighborTable>().FindNeighbor(srcaddr) : nullptr;
+    // Track `srcAddr` separately as we may replace a short address
+    // with the corresponding extended address if we find a matching
+    // neighbor.
+
+    srcAddr = frameInfo.mAddresses.mSource;
+
+    neighbor = !srcAddr.IsNone() ? Get<NeighborTable>().FindNeighbor(srcAddr) : nullptr;
 
     // Destination Address Filtering
-    switch (dstaddr.GetType())
+    switch (frameInfo.mAddresses.mDestination.GetType())
     {
     case Address::kTypeNone:
         break;
 
     case Address::kTypeShort:
-        VerifyOrExit((mRxOnWhenIdle && dstaddr.IsBroadcast()) || dstaddr.GetShort() == GetShortAddress(),
+        VerifyOrExit((mRxOnWhenIdle && frameInfo.mAddresses.mDestination.IsBroadcast()) ||
+                         frameInfo.mAddresses.mDestination.GetShort() == GetShortAddress(),
                      error = kErrorDestinationAddressFiltered);
 
 #if OPENTHREAD_FTD
         // Allow multicasts from neighbor routers if FTD
-        if (neighbor == nullptr && dstaddr.IsBroadcast() && Get<Mle::MleRouter>().IsFullThreadDevice())
+        if (neighbor == nullptr && frameInfo.mAddresses.mDestination.IsBroadcast() &&
+            Get<Mle::MleRouter>().IsFullThreadDevice())
         {
-            neighbor = Get<NeighborTable>().FindRxOnlyNeighborRouter(srcaddr);
+            neighbor = Get<NeighborTable>().FindRxOnlyNeighborRouter(srcAddr);
         }
 #endif
 
         break;
 
     case Address::kTypeExtended:
-        VerifyOrExit(dstaddr.GetExtended() == GetExtAddress(), error = kErrorDestinationAddressFiltered);
+        VerifyOrExit(frameInfo.mAddresses.mDestination.GetExtended() == GetExtAddress(),
+                     error = kErrorDestinationAddressFiltered);
         break;
     }
 
     // Verify destination PAN ID if present
-    if (kErrorNone == aFrame->GetDstPanId(panid))
+    if (frameInfo.mPanIds.IsDestinationPresent())
     {
-        VerifyOrExit(panid == kShortAddrBroadcast || panid == mPanId, error = kErrorDestinationAddressFiltered);
+        uint16_t dstPanId = frameInfo.mPanIds.GetDestination();
+
+        VerifyOrExit(dstPanId == kShortAddrBroadcast || dstPanId == mPanId, error = kErrorDestinationAddressFiltered);
     }
 
     // Source Address Filtering
-    switch (srcaddr.GetType())
+    switch (srcAddr.GetType())
     {
     case Address::kTypeNone:
         break;
 
     case Address::kTypeShort:
-        LogDebg("Received frame from short address 0x%04x", srcaddr.GetShort());
+        LogDebg("Received frame from short address 0x%04x", srcAddr.GetShort());
 
         VerifyOrExit(neighbor != nullptr, error = kErrorUnknownNeighbor);
 
-        srcaddr.SetExtended(neighbor->GetExtAddress());
+        srcAddr.SetExtended(neighbor->GetExtAddress());
 
         OT_FALL_THROUGH;
 
     case Address::kTypeExtended:
 
         // Duplicate Address Protection
-        VerifyOrExit(srcaddr.GetExtended() != GetExtAddress(), error = kErrorInvalidSourceAddress);
+        VerifyOrExit(srcAddr.GetExtended() != GetExtAddress(), error = kErrorInvalidSourceAddress);
 
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
-        SuccessOrExit(error = mFilter.ApplyToRxFrame(*aFrame, srcaddr.GetExtended(), neighbor));
+        SuccessOrExit(error = mFilter.ApplyToRxFrame(*aFrame, srcAddr.GetExtended(), neighbor));
 #endif
 
         break;
     }
 
-    if (dstaddr.IsBroadcast())
+    if (frameInfo.mAddresses.mDestination.IsBroadcast())
     {
         mCounters.mRxBroadcast++;
     }
@@ -1840,7 +1830,7 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, Error aError)
         mCounters.mRxUnicast++;
     }
 
-    error = ProcessReceiveSecurity(*aFrame, srcaddr, neighbor);
+    error = ProcessReceiveSecurity(frameInfo, srcAddr, neighbor);
 
     switch (error)
     {
@@ -1871,22 +1861,18 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, Error aError)
     }
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
-    ProcessCsl(*aFrame, srcaddr);
+    ProcessCsl(frameInfo, srcAddr);
 #endif
 
-    Get<DataPollSender>().ProcessRxFrame(*aFrame);
+    Get<DataPollSender>().ProcessRxFrame(frameInfo);
 
     if (neighbor != nullptr)
     {
         UpdateNeighborLinkInfo(*neighbor, *aFrame);
 
-        if (aFrame->GetSecurityEnabled())
+        if (frameInfo.mSecurityEnabled)
         {
-            uint8_t keyIdMode;
-
-            IgnoreError(aFrame->GetKeyIdMode(keyIdMode));
-
-            if (keyIdMode == Frame::kKeyIdMode1)
+            if (frameInfo.mKeyIdMode == Frame::kKeyIdMode1)
             {
                 switch (neighbor->GetState())
                 {
@@ -1897,7 +1883,8 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, Error aError)
                 case Neighbor::kStateChildUpdateRequest:
 
                     // Only accept a "MAC Data Request" frame from a child being restored.
-                    VerifyOrExit(aFrame->IsDataRequestCommand(), error = kErrorDrop);
+                    VerifyOrExit(frameInfo.mIsCommand && (frameInfo.mCommandId == Frame::kMacCmdDataRequest),
+                                 error = kErrorDrop);
                     break;
 
                 default:
@@ -1906,7 +1893,7 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, Error aError)
 
 #if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2 && OPENTHREAD_FTD
                 // From Thread 1.2, MAC Data Frame can also act as keep-alive message if child supports
-                if (aFrame->GetType() == Frame::kTypeData && !neighbor->IsRxOnWhenIdle() &&
+                if (frameInfo.mType == Frame::kTypeData && !neighbor->IsRxOnWhenIdle() &&
                     neighbor->IsEnhancedKeepAliveSupported())
                 {
                     neighbor->SetLastHeard(TimerMilli::GetNow());
@@ -1924,10 +1911,10 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, Error aError)
     {
     case kOperationActiveScan:
 
-        if (aFrame->GetType() == Frame::kTypeBeacon)
+        if (frameInfo.mType == Frame::kTypeBeacon)
         {
             mCounters.mRxBeacon++;
-            ReportActiveScanResult(aFrame);
+            ReportActiveScanResult(&frameInfo);
             ExitNow();
         }
 
@@ -1944,12 +1931,12 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, Error aError)
 
     case kOperationWaitingForData:
 
-        if (!dstaddr.IsNone())
+        if (!frameInfo.mAddresses.mDestination.IsNone())
         {
             mTimer.Stop();
 
 #if OPENTHREAD_CONFIG_MAC_STAY_AWAKE_BETWEEN_FRAGMENTS
-            if (!mRxOnWhenIdle && !mPromiscuous && aFrame->GetFramePending())
+            if (!mRxOnWhenIdle && !mPromiscuous && frameInfo.mFramePending)
             {
                 mShouldDelaySleep = true;
                 LogDebg("Delay sleep for pending rx");
@@ -1967,10 +1954,10 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, Error aError)
         break;
     }
 
-    switch (aFrame->GetType())
+    switch (frameInfo.mType)
     {
     case Frame::kTypeMacCmd:
-        if (HandleMacCommand(*aFrame)) // returns `true` when handled
+        if (HandleMacCommand(frameInfo)) // returns `true` when handled
         {
             ExitNow(error = kErrorNone);
         }
@@ -1990,8 +1977,8 @@ void Mac::HandleReceivedFrame(RxFrame *aFrame, Error aError)
         ExitNow();
     }
 
-    DumpDebg("RX", aFrame->GetHeader(), aFrame->GetLength());
-    Get<MeshForwarder>().HandleReceivedFrame(*aFrame);
+    DumpDebg("RX", aFrame->GetPsdu(), aFrame->mLength);
+    Get<MeshForwarder>().HandleReceivedFrame(frameInfo);
 
     UpdateIdleMode();
 
@@ -1999,7 +1986,7 @@ exit:
 
     if (error != kErrorNone)
     {
-        LogFrameRxFailure(aFrame, error);
+        LogFrameRxFailure(frameInfo, error);
 
         switch (error)
         {
@@ -2063,14 +2050,11 @@ exit:
     return;
 }
 
-bool Mac::HandleMacCommand(RxFrame &aFrame)
+bool Mac::HandleMacCommand(RxFrame::Info &aFrameInfo)
 {
-    bool    didHandle = false;
-    uint8_t commandId;
+    bool didHandle = false;
 
-    IgnoreError(aFrame.GetCommandId(commandId));
-
-    switch (commandId)
+    switch (aFrameInfo.mCommandId)
     {
     case Frame::kMacCmdBeaconRequest:
         mCounters.mRxBeaconRequest++;
@@ -2079,7 +2063,7 @@ bool Mac::HandleMacCommand(RxFrame &aFrame)
         if (ShouldSendBeacon())
         {
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-            mTxBeaconRadioLinks.Add(aFrame.GetRadioType());
+            mTxBeaconRadioLinks.Add(aFrameInfo.mFrame->GetRadioType());
 #endif
             StartOperation(kOperationTransmitBeacon);
         }
@@ -2090,7 +2074,7 @@ bool Mac::HandleMacCommand(RxFrame &aFrame)
     case Frame::kMacCmdDataRequest:
         mCounters.mRxDataPoll++;
 #if OPENTHREAD_FTD
-        Get<DataPollHandler>().HandleDataPoll(aFrame);
+        Get<DataPollHandler>().HandleDataPoll(aFrameInfo);
         didHandle = true;
 #endif
         break;
@@ -2207,7 +2191,7 @@ const char *Mac::OperationToString(Operation aOperation)
     return kOperationStrings[aOperation];
 }
 
-void Mac::LogFrameRxFailure(const RxFrame *aFrame, Error aError) const
+void Mac::LogFrameRxFailure(const RxFrame::Info &aFrameInfo, Error aError) const
 {
     LogLevel logLevel;
 
@@ -2225,28 +2209,23 @@ void Mac::LogFrameRxFailure(const RxFrame *aFrame, Error aError) const
         break;
     }
 
-    if (aFrame == nullptr)
-    {
-        LogAt(logLevel, "Frame rx failed, error:%s", ErrorToString(aError));
-    }
-    else
-    {
-        LogAt(logLevel, "Frame rx failed, error:%s, %s", ErrorToString(aError), aFrame->ToInfoString().AsCString());
-    }
+    LogAt(logLevel, "Frame rx failed, error:%s, %s", ErrorToString(aError), aFrameInfo.ToString().AsCString());
 }
 
-void Mac::LogFrameTxFailure(const TxFrame &aFrame, Error aError, uint8_t aRetryCount, bool aWillRetx) const
+void Mac::LogFrameTxFailure(const TxFrame::Info &aFrameInfo, Error aError, uint8_t aRetryCount, bool aWillRetx) const
 {
+    VerifyOrExit(aFrameInfo.IsValid());
+
 #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-    if (aFrame.GetRadioType() == kRadioTypeIeee802154)
+    if (aFrameInfo.mFrame->GetRadioType() == kRadioTypeIeee802154)
 #endif
     {
-        uint8_t maxAttempts = aFrame.GetMaxFrameRetries() + 1;
+        uint8_t maxAttempts = static_cast<const TxFrame *>(aFrameInfo.mFrame)->GetMaxFrameRetries() + 1;
         uint8_t curAttempt  = aWillRetx ? (aRetryCount + 1) : maxAttempts;
 
         LogInfo("Frame tx attempt %u/%u failed, error:%s, %s", curAttempt, maxAttempts, ErrorToString(aError),
-                aFrame.ToInfoString().AsCString());
+                aFrameInfo.ToString().AsCString());
     }
 #else
     OT_UNUSED_VARIABLE(aRetryCount);
@@ -2255,26 +2234,29 @@ void Mac::LogFrameTxFailure(const TxFrame &aFrame, Error aError, uint8_t aRetryC
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-    if (aFrame.GetRadioType() == kRadioTypeTrel)
+    if (aFrameInfo.mFrame->GetRadioType() == kRadioTypeTrel)
 #endif
     {
         if (Get<Trel::Interface>().IsEnabled())
         {
-            LogInfo("Frame tx failed, error:%s, %s", ErrorToString(aError), aFrame.ToInfoString().AsCString());
+            LogInfo("Frame tx failed, error:%s, %s", ErrorToString(aError), aFrameInfo.ToString().AsCString());
         }
     }
 #endif
+
+exit:
+    return;
 }
 
 void Mac::LogBeacon(const char *aActionText) const { LogInfo("%s Beacon", aActionText); }
 
 #else // #if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_INFO)
 
-void Mac::LogFrameRxFailure(const RxFrame *, Error) const {}
+void Mac::LogFrameRxFailure(const RxFrame::Info &, Error) const {}
 
 void Mac::LogBeacon(const char *) const {}
 
-void Mac::LogFrameTxFailure(const TxFrame &, Error, uint8_t, bool) const {}
+void Mac::LogFrameTxFailure(const TxFrame::Info &, Error, uint8_t, bool) const {}
 
 #endif // #if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_INFO)
 
@@ -2354,29 +2336,29 @@ bool Mac::IsCslSupported(void) const
 #endif // OPENTHREAD_CONFIG_MAC_CSL_RECEIVER_ENABLE
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
-void Mac::ProcessCsl(const RxFrame &aFrame, const Address &aSrcAddr)
+void Mac::ProcessCsl(const RxFrame::Info &aFrameInfo, const Address &aSrcAddr)
 {
-    Child       *child;
-    const CslIe *csl;
+    const RxFrame &rxFrame = static_cast<RxFrame &>(*aFrameInfo.mFrame);
+    Child         *child;
 
-    VerifyOrExit(aFrame.IsVersion2015() && aFrame.GetSecurityEnabled());
+    VerifyOrExit(aFrameInfo.mVersion == Frame::kVersion2015);
+    VerifyOrExit(aFrameInfo.mSecurityEnabled);
 
-    csl = aFrame.GetCslIe();
-    VerifyOrExit(csl != nullptr);
+    VerifyOrExit(aFrameInfo.mCslIe != nullptr);
 
     child = Get<ChildTable>().FindChild(aSrcAddr, Child::kInStateAnyExceptInvalid);
     VerifyOrExit(child != nullptr);
 
-    VerifyOrExit(csl->GetPeriod() >= kMinCslIePeriod);
+    VerifyOrExit(aFrameInfo.mCslIe->GetPeriod() >= kMinCslIePeriod);
 
-    child->SetCslPeriod(csl->GetPeriod());
-    child->SetCslPhase(csl->GetPhase());
+    child->SetCslPeriod(aFrameInfo.mCslIe->GetPeriod());
+    child->SetCslPhase(aFrameInfo.mCslIe->GetPhase());
     child->SetCslSynchronized(true);
     child->SetCslLastHeard(TimerMilli::GetNow());
-    child->SetLastRxTimestamp(aFrame.GetTimestamp());
+    child->SetLastRxTimestamp(rxFrame.GetTimestamp());
     LogDebg("Timestamp=%lu Sequence=%u CslPeriod=%u CslPhase=%u TransmitPhase=%u",
-            ToUlong(static_cast<uint32_t>(aFrame.GetTimestamp())), aFrame.GetSequence(), csl->GetPeriod(),
-            csl->GetPhase(), child->GetCslPhase());
+            ToUlong(static_cast<uint32_t>(rxFrame.GetTimestamp())), aFrameInfo.mSeqNum, aFrameInfo.mCslIe->GetPeriod(),
+            aFrameInfo.mCslIe->GetPhase(), child->GetCslPhase());
 
     Get<CslTxScheduler>().Update();
 
@@ -2386,26 +2368,20 @@ exit:
 #endif // OPENTHREAD_FTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
 
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
-void Mac::ProcessEnhAckProbing(const RxFrame &aFrame, const Neighbor &aNeighbor)
+void Mac::ProcessEnhAckProbing(const RxFrame::Info &aAckInfo, const Neighbor &aNeighbor)
 {
     constexpr uint8_t kEnhAckProbingIeMaxLen = 2;
 
-    const HeaderIe *enhAckProbingIe =
-        reinterpret_cast<const HeaderIe *>(aFrame.GetThreadIe(ThreadIe::kEnhAckProbingIe));
-    const uint8_t *data =
-        reinterpret_cast<const uint8_t *>(enhAckProbingIe) + sizeof(HeaderIe) + sizeof(VendorIeHeader);
-    uint8_t dataLen = 0;
+    VerifyOrExit(aAckInfo.mHasEnhAckIeData);
 
-    VerifyOrExit(enhAckProbingIe != nullptr);
+    VerifyOrExit(aAckInfo.mEnhAckIeData.GetLength() <= kEnhAckProbingIeMaxLen);
 
-    dataLen = enhAckProbingIe->GetLength() - sizeof(VendorIeHeader);
-    VerifyOrExit(dataLen <= kEnhAckProbingIeMaxLen);
-
-    Get<LinkMetrics::Initiator>().ProcessEnhAckIeData(data, dataLen, aNeighbor);
+    Get<LinkMetrics::Initiator>().ProcessEnhAckIeData(aAckInfo.mEnhAckIeData.GetBytes(),
+                                                      aAckInfo.mEnhAckIeData.GetLength(), aNeighbor);
 exit:
     return;
 }
-#endif // OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
+#endif
 
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE && OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
 void Mac::SetRadioFilterEnabled(bool aFilterEnabled)

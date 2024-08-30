@@ -90,6 +90,30 @@ void ExtAddress::CopyAddress(uint8_t *aDst, const uint8_t *aSrc, CopyByteOrder a
     }
 }
 
+bool Address::operator==(const Address &aOther) const
+{
+    bool matches = false;
+
+    VerifyOrExit(GetType() == aOther.GetType());
+
+    switch (GetType())
+    {
+    case kTypeNone:
+        break;
+    case kTypeShort:
+        VerifyOrExit(GetShort() == aOther.GetShort());
+        break;
+    case kTypeExtended:
+        VerifyOrExit(GetExtended() == aOther.GetExtended());
+        break;
+    }
+
+    matches = true;
+
+exit:
+    return matches;
+}
+
 Address::InfoString Address::ToString(void) const
 {
     InfoString string;

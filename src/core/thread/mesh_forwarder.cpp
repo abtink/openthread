@@ -55,53 +55,50 @@ namespace ot {
 
 RegisterLogModule("MeshForwarder");
 
-void ThreadLinkInfo::SetFrom(const Mac::RxFrame &aFrame)
+void ThreadLinkInfo::SetFrom(const Mac::RxFrame::Info &aFrameInfo)
 {
+    const Mac::RxFrame &rxFrame = *static_cast<const Mac::RxFrame *>(aFrameInfo.mFrame);
+
     Clear();
 
-    if (kErrorNone != aFrame.GetSrcPanId(mPanId))
+    if (aFrameInfo.mPanIds.IsSourcePresent())
     {
-        IgnoreError(aFrame.GetDstPanId(mPanId));
+        mPanId = aFrameInfo.mPanIds.GetSource();
     }
 
     {
-        Mac::PanId dstPanId;
+        Mac::PanId dstPanId = mPanId;
 
-        if (kErrorNone != aFrame.GetDstPanId(dstPanId))
+        if (aFrameInfo.mPanIds.IsDestinationPresent())
         {
-            dstPanId = mPanId;
+            dstPanId = aFrameInfo.mPanIds.GetDestination();
         }
 
         mIsDstPanIdBroadcast = (dstPanId == Mac::kPanIdBroadcast);
     }
 
-    if (aFrame.GetSecurityEnabled())
+    if (aFrameInfo.mSecurityEnabled)
     {
-        uint8_t keyIdMode;
-
-        // MAC Frame Security was already validated at the MAC
-        // layer. As a result, `GetKeyIdMode()` will never return
-        // failure here.
-        IgnoreError(aFrame.GetKeyIdMode(keyIdMode));
-
-        mLinkSecurity = (keyIdMode == Mac::Frame::kKeyIdMode0) || (keyIdMode == Mac::Frame::kKeyIdMode1);
+        mLinkSecurity =
+            (aFrameInfo.mKeyIdMode == Mac::Frame::kKeyIdMode0) || (aFrameInfo.mKeyIdMode == Mac::Frame::kKeyIdMode1);
     }
     else
     {
         mLinkSecurity = false;
     }
-    mChannel = aFrame.GetChannel();
-    mRss     = aFrame.GetRssi();
-    mLqi     = aFrame.GetLqi();
+
+    mChannel = rxFrame.GetChannel();
+    mRss     = rxFrame.GetRssi();
+    mLqi     = rxFrame.GetLqi();
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
-    if (aFrame.GetTimeIe() != nullptr)
+    if (rxFrame.GetTimeIe() != nullptr)
     {
-        mNetworkTimeOffset = aFrame.ComputeNetworkTimeOffset();
-        mTimeSyncSeq       = aFrame.ReadTimeSyncSeq();
+        mNetworkTimeOffset = rxFrame.ComputeNetworkTimeOffset();
+        mTimeSyncSeq       = rxFrame.ReadTimeSyncSeq();
     }
 #endif
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-    mRadioType = static_cast<uint8_t>(aFrame.GetRadioType());
+    mRadioType = static_cast<uint8_t>(rxFrame.GetRadioType());
 #endif
 }
 
@@ -1382,23 +1379,21 @@ exit:
     return error;
 }
 
-void MeshForwarder::HandleReceivedFrame(Mac::RxFrame &aFrame)
+void MeshForwarder::HandleReceivedFrame(Mac::RxFrame::Info &aFrameInfo)
 {
     Error  error = kErrorNone;
     RxInfo rxInfo(GetInstance());
 
     VerifyOrExit(mEnabled, error = kErrorInvalidState);
 
-    rxInfo.mFrameData.Init(aFrame.GetPayload(), aFrame.GetPayloadLength());
+    rxInfo.mFrameData = aFrameInfo.mPayloadData;
+    rxInfo.mMacAddrs  = aFrameInfo.mAddresses;
 
-    SuccessOrExit(error = aFrame.GetSrcAddr(rxInfo.mMacAddrs.mSource));
-    SuccessOrExit(error = aFrame.GetDstAddr(rxInfo.mMacAddrs.mDestination));
-
-    rxInfo.mLinkInfo.SetFrom(aFrame);
+    rxInfo.mLinkInfo.SetFrom(aFrameInfo);
 
     Get<SupervisionListener>().UpdateOnReceive(rxInfo.mMacAddrs.mSource, rxInfo.IsLinkSecurityEnabled());
 
-    switch (aFrame.GetType())
+    switch (aFrameInfo.mType)
     {
     case Mac::Frame::kTypeData:
         if (Lowpan::MeshHeader::IsMeshHeader(rxInfo.mFrameData))
@@ -1419,7 +1414,7 @@ void MeshForwarder::HandleReceivedFrame(Mac::RxFrame &aFrame)
         {
             VerifyOrExit(rxInfo.mFrameData.GetLength() == 0, error = kErrorNotLowpanDataFrame);
 
-            LogFrame("Received empty payload frame", aFrame, kErrorNone);
+            LogFrame("Received empty payload frame", *aFrameInfo.mFrame, kErrorNone);
         }
 
         break;
@@ -1436,7 +1431,7 @@ exit:
 
     if (error != kErrorNone)
     {
-        LogFrame("Dropping rx frame", aFrame, error);
+        LogFrame("Dropping rx frame", *aFrameInfo.mFrame, error);
     }
 }
 

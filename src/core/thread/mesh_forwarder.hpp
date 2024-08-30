@@ -153,10 +153,10 @@ public:
     /**
      * Sets the `ThreadLinkInfo` from a given received frame.
      *
-     * @param[in] aFrame  A received frame.
+     * @param[in] aFrameInfo  A received frame info.
      *
      */
-    void SetFrom(const Mac::RxFrame &aFrame);
+    void SetFrom(const Mac::RxFrame::Info &aFrameInfo);
 };
 
 /**
@@ -575,7 +575,7 @@ private:
     void  EvictMessage(Message &aMessage);
     void  HandleDiscoverComplete(void);
 
-    void          HandleReceivedFrame(Mac::RxFrame &aFrame);
+    void          HandleReceivedFrame(Mac::RxFrame::Info &aFrameInfo);
     Mac::TxFrame *HandleFrameRequest(Mac::TxFrames &aTxFrames);
     Neighbor     *UpdateNeighborOnSentFrame(Mac::TxFrame       &aFrame,
                                             Error               aError,

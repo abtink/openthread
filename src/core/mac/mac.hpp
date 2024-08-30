@@ -794,10 +794,12 @@ private:
     };
 #endif // OPENTHREAD_CONFIG_MAC_RETRY_SUCCESS_HISTOGRAM_ENABLE
 
-    Error ProcessReceiveSecurity(RxFrame &aFrame, const Address &aSrcAddr, Neighbor *aNeighbor);
+    Error ProcessReceiveSecurity(const Frame::Info &aFrameInfo, const Address &aSrcAddr, Neighbor *aNeighbor);
     void  ProcessTransmitSecurity(TxFrame &aFrame);
+    void  ProcessTransmitSecurity(TxFrame &aFrame, Frame::Info &aFrameInfo);
+
 #if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
-    Error ProcessEnhAckSecurity(TxFrame &aTxFrame, RxFrame &aAckFrame);
+    Error ProcessEnhAckSecurity(const Frame::Info &aTxFrameInfo, Frame::Info &aAckInfo);
 #endif
 
     void     UpdateIdleMode(void);
@@ -814,19 +816,19 @@ private:
     bool     IsJoinable(void) const;
     void     BeginTransmit(void);
     void     UpdateNeighborLinkInfo(Neighbor &aNeighbor, const RxFrame &aRxFrame);
-    bool     HandleMacCommand(RxFrame &aFrame);
+    bool     HandleMacCommand(RxFrame::Info &aFrameInfo);
     void     HandleTimer(void);
 
     void  Scan(Operation aScanOperation, uint32_t aScanChannels, uint16_t aScanDuration);
     Error UpdateScanChannel(void);
     void  PerformActiveScan(void);
-    void  ReportActiveScanResult(const RxFrame *aBeaconFrame);
-    Error ConvertBeaconToActiveScanResult(const RxFrame *aBeaconFrame, ActiveScanResult &aResult);
+    void  ReportActiveScanResult(const RxFrame::Info *aBeaconFrame);
+    Error ConvertBeaconToActiveScanResult(const RxFrame::Info &aBeaconInfo, ActiveScanResult &aResult);
     void  PerformEnergyScan(void);
     void  ReportEnergyScanResult(int8_t aRssi);
 
-    void LogFrameRxFailure(const RxFrame *aFrame, Error aError) const;
-    void LogFrameTxFailure(const TxFrame &aFrame, Error aError, uint8_t aRetryCount, bool aWillRetx) const;
+    void LogFrameRxFailure(const RxFrame::Info &aFrameInfo, Error aError) const;
+    void LogFrameTxFailure(const TxFrame::Info &aFrameInfo, Error aError, uint8_t aRetryCount, bool aWillRetx) const;
     void LogBeacon(const char *aActionText) const;
 
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
@@ -834,10 +836,10 @@ private:
 #endif
 
 #if OPENTHREAD_FTD && OPENTHREAD_CONFIG_MAC_CSL_TRANSMITTER_ENABLE
-    void ProcessCsl(const RxFrame &aFrame, const Address &aSrcAddr);
+    void ProcessCsl(const RxFrame::Info &aFrameInfo, const Address &aSrcAddr);
 #endif
 #if OPENTHREAD_CONFIG_MLE_LINK_METRICS_INITIATOR_ENABLE
-    void ProcessEnhAckProbing(const RxFrame &aFrame, const Neighbor &aNeighbor);
+    void ProcessEnhAckProbing(const RxFrame::Info &aFrameInfo, const Neighbor &aNeighbor);
 #endif
     static const char *OperationToString(Operation aOperation);
 

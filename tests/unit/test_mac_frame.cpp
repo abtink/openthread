@@ -28,6 +28,7 @@
 
 #include "common/code_utils.hpp"
 #include "common/debug.hpp"
+#include "common/string.hpp"
 #include "mac/mac.hpp"
 #include "mac/mac_frame.hpp"
 #include "radio/radio.hpp"
@@ -53,37 +54,15 @@ bool CompareReversed(const uint8_t *aFirst, const uint8_t *aSecond, uint16_t aLe
     return matches;
 }
 
-bool CompareAddresses(const Mac::Address &aFirst, const Mac::Address &aSecond)
-{
-    bool matches = false;
-
-    VerifyOrExit(aFirst.GetType() == aSecond.GetType());
-
-    switch (aFirst.GetType())
-    {
-    case Mac::Address::kTypeNone:
-        break;
-    case Mac::Address::kTypeShort:
-        VerifyOrExit(aFirst.GetShort() == aSecond.GetShort());
-        break;
-    case Mac::Address::kTypeExtended:
-        VerifyOrExit(aFirst.GetExtended() == aSecond.GetExtended());
-        break;
-    }
-
-    matches = true;
-
-exit:
-    return matches;
-}
-
 void TestMacAddress(void)
 {
     const uint8_t           kExtAddr[OT_EXT_ADDRESS_SIZE] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0};
     const Mac::ShortAddress kShortAddr                    = 0x1234;
+    const Mac::ShortAddress kShortAddr2                   = 0x7889;
 
     Instance       *instance;
     Mac::Address    addr;
+    Mac::Address    addr2;
     Mac::ExtAddress extAddr;
     uint8_t         buffer[OT_EXT_ADDRESS_SIZE];
 
@@ -174,6 +153,26 @@ void TestMacAddress(void)
     addr.SetShort(Mac::kShortAddrInvalid);
     VerifyOrQuit(!addr.IsBroadcast());
     VerifyOrQuit(addr.IsShortAddrInvalid());
+
+    addr.SetNone();
+    addr2.SetNone();
+    VerifyOrQuit(addr == addr2);
+
+    addr.SetShort(kShortAddr);
+    VerifyOrQuit(addr != addr2);
+    addr2.SetShort(kShortAddr);
+    VerifyOrQuit(addr == addr2);
+    addr2.SetShort(kShortAddr2);
+    VerifyOrQuit(addr != addr2);
+
+    addr.SetExtended(extAddr);
+    VerifyOrQuit(addr != addr2);
+    addr2.SetNone();
+    VerifyOrQuit(addr != addr2);
+    addr2.SetExtended(extAddr);
+    VerifyOrQuit(addr == addr2);
+    addr2.GetExtended().m8[7] ^= 0xff;
+    VerifyOrQuit(addr != addr2);
 
     testFreeInstance(instance);
 }
@@ -276,7 +275,9 @@ void TestMacHeader(void)
     const uint8_t  kExtAddr1[] = {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0};
     const uint8_t  kExtAddr2[] = {0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88};
 
-    char            string[100];
+    const uint8_t  kFcsSize    = sizeof(uint16_t);
+    const uint16_t kStringSize = 200;
+
     Mac::ExtAddress extAddr1;
     Mac::ExtAddress extAddr2;
 
@@ -287,15 +288,18 @@ void TestMacHeader(void)
 
     for (const TestCase &testCase : kTestCases)
     {
-        uint8_t psdu[OT_RADIO_FRAME_MAX_SIZE];
-        uint8_t offset;
+        String<kStringSize> string;
+        uint8_t             psdu[OT_RADIO_FRAME_MAX_SIZE];
+        uint8_t             offset;
 
-        Mac::TxFrame   frame;
-        Mac::Addresses addresses;
-        Mac::Address   address;
-        Mac::PanIds    panIds;
-        Mac::PanId     panId;
+        Mac::TxFrame     frame;
+        Mac::Addresses   addresses;
+        Mac::Address     address;
+        Mac::PanIds      panIds;
+        Mac::PanId       panId;
+        Mac::Frame::Info info;
 
+        ClearAllBytes(psdu);
         frame.mPsdu      = psdu;
         frame.mLength    = 0;
         frame.mRadioType = 0;
@@ -372,10 +376,10 @@ void TestMacHeader(void)
 
         VerifyOrQuit(frame.IsSrcAddrPresent() == (testCase.mSrcAddrType != kNoneAddr));
         SuccessOrQuit(frame.GetSrcAddr(address));
-        VerifyOrQuit(CompareAddresses(address, addresses.mSource));
+        VerifyOrQuit(address == addresses.mSource);
         VerifyOrQuit(frame.IsDstAddrPresent() == (testCase.mDstAddrType != kNoneAddr));
         SuccessOrQuit(frame.GetDstAddr(address));
-        VerifyOrQuit(CompareAddresses(address, addresses.mDestination));
+        VerifyOrQuit(address == addresses.mDestination);
 
         VerifyOrQuit(frame.IsDstPanIdPresent() == (testCase.mDstPanIdMode != kNoPanId));
 
@@ -405,21 +409,98 @@ void TestMacHeader(void)
             VerifyOrQuit(keyIdMode == testCase.mKeyIdMode);
         }
 
-        offset = snprintf(string, sizeof(string), "\nver:%s, src[addr:%s, pan:%s], dst[addr:%s, pan:%s], sec:%s",
-                          (testCase.mVersion == kVer2006) ? "2006" : "2015", kAddrTypeStrings[testCase.mSrcAddrType],
-                          kPanIdModeStrings[testCase.mSrcPanIdMode], kAddrTypeStrings[testCase.mDstAddrType],
-                          kPanIdModeStrings[testCase.mDstPanIdMode], testCase.mSecurity == kNoSec ? "no" : "mic32");
+        string.Append("\nver:%s, src[addr:%s, pan:%s], dst[addr:%s, pan:%s], sec:%s",
+                      (testCase.mVersion == kVer2006) ? "2006" : "2015", kAddrTypeStrings[testCase.mSrcAddrType],
+                      kPanIdModeStrings[testCase.mSrcPanIdMode], kAddrTypeStrings[testCase.mDstAddrType],
+                      kPanIdModeStrings[testCase.mDstPanIdMode], testCase.mSecurity == kNoSec ? "no" : "mic32");
 
         if (!testCase.mSuppressSequence)
         {
             VerifyOrQuit(frame.IsSequencePresent());
-            offset += snprintf(string + offset, sizeof(string) - offset, ", seq:%u", frame.GetSequence());
+            string.Append(", seq:%u", frame.GetSequence());
+            ;
         }
         else
         {
             VerifyOrQuit(!frame.IsSequencePresent());
         }
-        DumpBuffer(string, frame.GetPsdu(), frame.GetLength());
+
+        DumpBuffer(string.AsCString(), frame.GetPsdu(), frame.GetLength());
+
+        //-------------------------------------------------------------------------------------
+
+        SuccessOrQuit(info.ParseFrom(frame));
+
+        VerifyOrQuit(info.mType == Mac::Frame::kTypeData);
+        VerifyOrQuit(info.mVersion == testCase.mVersion);
+
+        VerifyOrQuit(!info.mFramePending);
+
+        VerifyOrQuit(info.mHasSeqNum != testCase.mSuppressSequence);
+
+        if (info.mHasSeqNum)
+        {
+            VerifyOrQuit(info.mSeqNum == 0);
+        }
+
+        VerifyOrQuit(info.mAddresses.mDestination == addresses.mDestination);
+        VerifyOrQuit(info.mAddresses.mSource == addresses.mSource);
+
+        VerifyOrQuit(info.mPanIds.IsDestinationPresent() == panIds.IsDestinationPresent());
+
+        if (info.mPanIds.IsDestinationPresent())
+        {
+            VerifyOrQuit(info.mPanIds.GetDestination() == panIds.GetDestination());
+        }
+
+        if (panIds.IsSourcePresent())
+        {
+            if (panIds.IsDestinationPresent() && (panIds.GetDestination() == panIds.GetSource()))
+            {
+                VerifyOrQuit(!info.mPanIds.IsSourcePresent());
+            }
+            else
+            {
+                VerifyOrQuit(info.mPanIds.IsSourcePresent());
+                VerifyOrQuit(info.mPanIds.GetSource() == panIds.GetSource());
+            }
+        }
+        else
+        {
+            VerifyOrQuit(!info.mPanIds.IsSourcePresent());
+        }
+
+        VerifyOrQuit(info.mSecurityEnabled == (testCase.mSecurity != Mac::Frame::kSecurityNone));
+
+        if (info.mSecurityEnabled)
+        {
+            VerifyOrQuit(info.mSecurityLevel == testCase.mSecurity);
+            VerifyOrQuit(info.mKeyIdMode == testCase.mKeyIdMode);
+
+            switch (info.mKeyIdMode)
+            {
+            case Mac::Frame::kKeyIdMode1:
+            case Mac::Frame::kKeyIdMode0:
+                VerifyOrQuit(info.mKeySourceData.GetLength() == 0);
+                break;
+            case Mac::Frame::kKeyIdMode2:
+                VerifyOrQuit(info.mKeySourceData.GetLength() == 4);
+                break;
+            default:
+                break;
+            }
+        }
+
+        VerifyOrQuit(!info.mIePresent);
+
+        VerifyOrQuit(!info.mIsCommand);
+
+        VerifyOrQuit(info.mHeadersData.GetLength() == testCase.mHeaderLength);
+
+        VerifyOrQuit(info.mPayloadData.GetBytes() - psdu == testCase.mHeaderLength);
+        VerifyOrQuit(info.mPayloadData.GetLength() == 0);
+
+        VerifyOrQuit(info.mMicData.GetLength() == (testCase.mFooterLength - kFcsSize));
     }
 }
 

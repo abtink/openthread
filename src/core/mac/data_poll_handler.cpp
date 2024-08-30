@@ -126,33 +126,32 @@ void DataPollHandler::RequestFrameChange(FrameChange aChange, Child &aChild)
     }
 }
 
-void DataPollHandler::HandleDataPoll(Mac::RxFrame &aFrame)
+void DataPollHandler::HandleDataPoll(Mac::RxFrame::Info &aFrameInfo)
 {
-    Mac::Address macSource;
-    Child       *child;
-    uint16_t     indirectMsgCount;
+    Mac::RxFrame &rxFrame = static_cast<Mac::RxFrame &>(*aFrameInfo.mFrame);
+    Child        *child;
+    uint16_t      indirectMsgCount;
 
-    VerifyOrExit(aFrame.GetSecurityEnabled());
+    VerifyOrExit(aFrameInfo.mSecurityEnabled);
     VerifyOrExit(!Get<Mle::MleRouter>().IsDetached());
 
-    SuccessOrExit(aFrame.GetSrcAddr(macSource));
-    child = Get<ChildTable>().FindChild(macSource, Child::kInStateValidOrRestoring);
+    child = Get<ChildTable>().FindChild(aFrameInfo.mAddresses.mSource, Child::kInStateValidOrRestoring);
     VerifyOrExit(child != nullptr);
 
     child->SetLastHeard(TimerMilli::GetNow());
     child->ResetLinkFailures();
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-    child->SetLastPollRadioType(aFrame.GetRadioType());
+    child->SetLastPollRadioType(rxFrame.GetRadioType());
 #endif
 
     indirectMsgCount = child->GetIndirectMessageCount();
 
     LogInfo("Rx data poll, src:0x%04x, qed_msgs:%d, rss:%d, ack-fp:%d", child->GetRloc16(), indirectMsgCount,
-            aFrame.GetRssi(), aFrame.IsAckedWithFramePending());
+            rxFrame.GetRssi(), rxFrame.IsAckedWithFramePending());
 
-    if (!aFrame.IsAckedWithFramePending())
+    if (!rxFrame.IsAckedWithFramePending())
     {
-        if ((indirectMsgCount > 0) && macSource.IsShort())
+        if ((indirectMsgCount > 0) && aFrameInfo.mAddresses.mSource.IsShort())
         {
             Get<SourceMatchController>().SetSrcMatchAsShort(*child, true);
         }

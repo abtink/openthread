@@ -234,7 +234,7 @@ private:
  * Represents an IEEE 802.15.4 Short or Extended Address.
  *
  */
-class Address
+class Address : public Unequatable<Address>
 {
 public:
     /**
@@ -392,6 +392,17 @@ public:
      *
      */
     bool IsShortAddrInvalid(void) const { return ((mType == kTypeShort) && (GetShort() == kShortAddrInvalid)); }
+
+    /**
+     * Overloads `==` operator to compare two `Address` instances.
+     *
+     * @param[in] aOther  The other address to compare with.
+     *
+     * @retval TRUE  The two addresses match.
+     * @retval FALE  The two addresses do not match.
+     *
+     */
+    bool operator==(const Address &aOther) const;
 
     /**
      * Converts an address to a null-terminated string

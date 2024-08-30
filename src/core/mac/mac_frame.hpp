@@ -39,6 +39,7 @@
 #include "common/as_core_type.hpp"
 #include "common/const_cast.hpp"
 #include "common/encoding.hpp"
+#include "common/frame_data.hpp"
 #include "common/numeric_limits.hpp"
 #include "mac/mac_types.hpp"
 #include "meshcop/network_name.hpp"
@@ -422,6 +423,80 @@ public:
      *
      */
     typedef String<kInfoStringSize> InfoString;
+
+    //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+    class Info : public Clearable<Info>
+    {
+        friend class Mac;
+
+    public:
+        Info(void) { mFrame = nullptr; }
+
+        bool IsValid(void) const { return mFrame != nullptr; }
+
+        /**
+         * Parses all the headers from given frame and populates the `Info`.
+         *
+         * @param[in] aFrame The frame to parse from.
+         *
+         * @retval kError        Successfully parsed the frame.
+         * @retval kErrorParse   Failed to parse the frame.
+         *
+         */
+        Error ParseFrom(const Frame &aFrame);
+
+        void WriteFrameCounter(uint32_t aFrameCounter);
+        void WriteKeyIndex(uint8_t aKeyIndex);
+        void WriteKeySource(const uint8_t *aKeySource);
+
+        Error ProcessReceiveAesCcm(const ExtAddress &aExtAddress, const KeyMaterial &aMacKey) const;
+        void  ProcessTransmitAesCcm(const ExtAddress &aExtAddress) const;
+
+        /**
+         * Returns information about the frame object as an `InfoString` object.
+         *
+         * @returns An `InfoString` containing info about the frame.
+         *
+         */
+        InfoString ToString(void) const;
+
+        bool      mSecurityEnabled : 1; ///< Security enabled flag
+        bool      mFramePending : 1;    ///< Frame pending flag
+        bool      mAckRequest : 1;      ///< Ack Request flag
+        bool      mIePresent : 1;       ///< IE Present flag
+        bool      mIsCommand : 1;       ///< Is a MAC command
+        bool      mHasSeqNum : 1;       ///< Has sequence number
+        bool      mHasEnhAckIeData : 1; ///< Enhanced ACK Probing IE data
+        uint8_t   mSeqNum;              ///< Sequence number (valid when `mHasSeqNum`).
+        uint8_t   mSecurityLevel;       ///< Security Level (valid when `mSecurityEnabled`)
+        uint8_t   mKeyIdMode;           ///< Key ID Mode (valid when `mSecurityEnabled`)
+        uint8_t   mKeyIndex;            ///< Key Index value (valid when `mSecurityEnabled`)
+        uint8_t   mCommandId;           ///< Command ID (valid when `mIsCommand`)
+        uint16_t  mType;                ///< Frame type
+        uint16_t  mVersion;             ///< Frame version
+        uint32_t  mFrameCounter;        ///< Security frame counter (valid when `mSecurityEnabled`)
+        Addresses mAddresses;           ///< MAC source and destination addresses
+        PanIds    mPanIds;              ///< Source and destination PAN Identifiers
+        FrameData mKeySourceData;       ///< Key Source data (valid when `mSecurityEnabled`)
+        FrameData mMicData;             ///< MIC data (valid when `mSecurityEnabled`)
+        FrameData mHeadersData;         ///< MAC, Security and IE headers.
+        FrameData mEnhAckIeData;        ///< Enhanced ACK Probing IE data (valid when `mHasEnhAckIeData`)
+        FrameData mPayloadData;         ///< Payload data
+        Frame    *mFrame;               ///< Pointer to associated frame
+        CslIe    *mCslIe;               ///< Pointer to CSL IE (`nullptr` if not present)
+#if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
+        TimeIe *mTimeIe; ///< Pointer to Time IE (`nullptr` if not present)
+#endif
+
+    private:
+        void ParseHeaderIe(const HeaderIe *aHeaderIe);
+
+        uint8_t *mFrameCounterPtr;
+        uint8_t *mKeyIndexPtr;
+    };
+
+    //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
     /**
      * Indicates whether the frame is empty (no payload).
@@ -1333,19 +1408,6 @@ public:
      * @returns The timestamp in microseconds.
      */
     const uint64_t &GetTimestamp(void) const { return mInfo.mRxInfo.mTimestamp; }
-
-    /**
-     * Performs AES CCM on the frame which is received.
-     *
-     * @param[in]  aExtAddress  A reference to the extended address, which will be used to generate nonce
-     *                          for AES CCM computation.
-     * @param[in]  aMacKey      A reference to the MAC key to decrypt the received frame.
-     *
-     * @retval kErrorNone      Process of received frame AES CCM succeeded.
-     * @retval kErrorSecurity  Received frame MIC check failed.
-     *
-     */
-    Error ProcessReceiveAesCcm(const ExtAddress &aExtAddress, const KeyMaterial &aMacKey);
 
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
     /**

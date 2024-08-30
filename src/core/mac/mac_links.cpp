@@ -169,13 +169,13 @@ void Links::Send(TxFrame &aFrame, RadioTypes aRadioTypes)
 
 #endif // #if OPENTHREAD_CONFIG_MULTI_RADIO
 
-const KeyMaterial *Links::GetCurrentMacKey(const Frame &aFrame) const
+const KeyMaterial *Links::GetCurrentMacKey(const Frame::Info &aFrameInfo) const
 {
-    // Gets the security MAC key (for Key Mode 1) based on radio link type of `aFrame`.
+    // Gets the security MAC key (for Key Mode 1) based on radio link type of `aFrameInfo`.
 
     const KeyMaterial *key = nullptr;
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-    RadioType radioType = aFrame.GetRadioType();
+    RadioType radioType = aFrameInfo.mFrame->GetRadioType();
 #endif
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
@@ -196,20 +196,20 @@ const KeyMaterial *Links::GetCurrentMacKey(const Frame &aFrame) const
     }
 #endif
 
-    OT_UNUSED_VARIABLE(aFrame);
+    OT_UNUSED_VARIABLE(aFrameInfo);
 
 exit:
     return key;
 }
 
-const KeyMaterial *Links::GetTemporaryMacKey(const Frame &aFrame, uint32_t aKeySequence) const
+const KeyMaterial *Links::GetTemporaryMacKey(const Frame::Info &aFrameInfo, uint32_t aKeySequence) const
 {
     // Gets the security MAC key (for Key Mode 1) based on radio link
-    // type of `aFrame` and given Key Sequence.
+    // type of `aFrameInfo` and given Key Sequence.
 
     const KeyMaterial *key = nullptr;
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-    RadioType radioType = aFrame.GetRadioType();
+    RadioType radioType = aFrameInfo.mFrame->GetRadioType();
 #endif
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
@@ -241,17 +241,17 @@ const KeyMaterial *Links::GetTemporaryMacKey(const Frame &aFrame, uint32_t aKeyS
     }
 #endif
 
-    OT_UNUSED_VARIABLE(aFrame);
+    OT_UNUSED_VARIABLE(aFrameInfo);
 
 exit:
     return key;
 }
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-void Links::SetMacFrameCounter(TxFrame &aFrame)
+void Links::SetMacFrameCounter(TxFrame::Info &aFrameInfo)
 {
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-    RadioType radioType = aFrame.GetRadioType();
+    RadioType radioType = aFrameInfo.mFrame->GetRadioType();
 #endif
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
@@ -259,7 +259,7 @@ void Links::SetMacFrameCounter(TxFrame &aFrame)
     if (radioType == kRadioTypeTrel)
 #endif
     {
-        aFrame.SetFrameCounter(Get<KeyManager>().GetTrelMacFrameCounter());
+        aFrameInfo.WriteFrameCounter(Get<KeyManager>().GetTrelMacFrameCounter());
         Get<KeyManager>().IncrementTrelMacFrameCounter();
         ExitNow();
     }

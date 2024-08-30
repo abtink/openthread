@@ -317,13 +317,13 @@ exit:
     return;
 }
 
-void DataPollSender::ProcessRxFrame(const Mac::RxFrame &aFrame)
+void DataPollSender::ProcessRxFrame(const Mac::Frame::Info &aFrameInfo)
 {
     VerifyOrExit(mEnabled);
 
     mPollTimeoutCounter = 0;
 
-    if (aFrame.GetFramePending())
+    if (aFrameInfo.mFramePending)
     {
         IgnoreError(SendDataPoll());
     }

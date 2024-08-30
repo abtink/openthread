@@ -153,10 +153,10 @@ public:
     /**
      * Informs the data poll sender to process a received MAC frame.
      *
-     * @param[in] aFrame     A reference to the received frame to process.
+     * @param[in] aFrameInfo   The received frame information.
      *
      */
-    void ProcessRxFrame(const Mac::RxFrame &aFrame);
+    void ProcessRxFrame(const Mac::Frame::Info &aFrameInfo);
 
 #if OPENTHREAD_CONFIG_THREAD_VERSION >= OT_THREAD_VERSION_1_2
     /**
