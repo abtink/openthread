@@ -1209,6 +1209,10 @@ void RoutingManager::RxRaTracker::ProcessRouterAdvertMessage(const RouterAdvert:
             ProcessRouteInfoOption(static_cast<const RouteInfoOption &>(option), *router);
             break;
 
+        case Option::kTypeRaFlagsExtension:
+            ProcessRaFlagsExtOption(static_cast<const RaFlagsExtOption &>(option), *router);
+            break;
+
         default:
             break;
         }
@@ -1407,6 +1411,17 @@ void RoutingManager::RxRaTracker::ProcessRouteInfoOption(const RouteInfoOption &
     }
 
     entry->SetDisregardFlag(disregard);
+
+exit:
+    return;
+}
+
+void RoutingManager::RxRaTracker::ProcessRaFlagsExtOption(const RaFlagsExtOption &aRaFlagsOption, Router &aRouter)
+{
+    VerifyOrExit(aRaFlagsOption.IsValid());
+    aRouter.mLegacyStubRouterFlag = aRaFlagsOption.IsLegacyStubRouterFlagSet();
+
+    LogInfo("- FlagsExt - LegacyStubRouter:%u", aRouter.mLegacyStubRouterFlag);
 
 exit:
     return;
@@ -2131,6 +2146,7 @@ void RoutingManager::RxRaTracker::Router::CopyInfoTo(RouterEntry &aEntry, TimeMi
     aEntry.mManagedAddressConfigFlag = mManagedAddressConfigFlag;
     aEntry.mOtherConfigFlag          = mOtherConfigFlag;
     aEntry.mSnacRouterFlag           = mSnacRouterFlag;
+    aEntry.mLegacyStubRouterFlag     = mLegacyStubRouterFlag;
     aEntry.mIsLocalDevice            = mIsLocalDevice;
     aEntry.mIsReachable              = IsReachable();
     aEntry.mIsPeerBr                 = IsPeerBr();
@@ -2148,7 +2164,7 @@ void RoutingManager::RxRaTracker::DecisionFactors::UpdateFlagsFrom(const Router 
     // stub router (e.g., another Thread BR) includes the `M` or `O`
     // flag, we also include the same flag.
 
-    VerifyOrExit(!aRouter.mSnacRouterFlag);
+    VerifyOrExit(!aRouter.mSnacRouterFlag && !aRouter.mLegacyStubRouterFlag);
     VerifyOrExit(aRouter.IsReachable());
 
     if (aRouter.mManagedAddressConfigFlag)

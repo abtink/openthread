@@ -488,6 +488,15 @@ public:
      */
     bool IsValid(void) const { return GetSize() >= sizeof(*this); }
 
+    /**
+     * Indicates whether or not the legacy Stub Router Flag is set.
+     *
+     * @retval TRUE   The Stub Router Flag is set.
+     * @retval FALSE  The Stub Router Flag is not set.
+     *
+     */
+    bool IsLegacyStubRouterFlagSet(void) const { return (mFlags[0] & kLegacyStubRouterFlag) != 0; }
+
     RaFlagsExtOption(void) = delete;
 
 private:
@@ -500,6 +509,8 @@ private:
     //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     //  ... for assignment                                              |
     //  +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+                                .
+
+    static constexpr uint8_t kLegacyStubRouterFlag = 1 << 7;
 
     uint8_t mFlags[6];
 } OT_TOOL_PACKED_END;
