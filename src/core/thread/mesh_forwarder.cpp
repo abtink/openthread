@@ -1914,30 +1914,40 @@ void MeshForwarder::LogIp6Message(MessageAction       aAction,
                                   Error               aError,
                                   LogLevel            aLogLevel)
 {
-    Ip6::Headers headers;
-    bool         shouldLogRss;
-    bool         shouldLogRadio = false;
-    const char  *radioString    = "";
+    Ip6::Headers              headers;
+    String<kMaxLogStringSize> string;
 
     SuccessOrExit(headers.ParseFrom(aMessage));
 
-    shouldLogRss = (aAction == kMessageReceive) || (aAction == kMessageReassemblyDrop);
+    string.Append("%s IPv6 %s msg, len:%u, chksum:%04x, ecn:%s, ", MessageActionToString(aAction, aError),
+                  Ip6::Ip6::IpProtoToString(headers.GetIpProto()), aMessage.GetLength(), headers.GetChecksum(),
+                  Ip6::Ip6::EcnToString(headers.GetEcn()));
+
+    if (aMacAddress != nullptr)
+    {
+        (aAction == kMessageReceive) ? string.Append("from:") : string.Append("to:");
+        string.Append("%s, ", aMacAddress->ToString().AsCString());
+    }
+
+    string.Append("sec:%s, ", ToYesNo(aMessage.IsLinkSecurityEnabled()));
+
+    if (aError != kErrorNone)
+    {
+        string.Append("error:%s, ", ErrorToString(aError));
+    }
+
+    string.Append("prio:%s", MessagePriorityToString(aMessage));
+
+    if ((aAction == kMessageReceive) || (aAction == kMessageReassemblyDrop))
+    {
+        string.Append(", rss:%s", aMessage.GetRssAverager().ToString().AsCString());
+    }
 
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-    shouldLogRadio = true;
-    radioString    = aMessage.IsRadioTypeSet() ? RadioTypeToString(aMessage.GetRadioType()) : "all";
+    string.Append(", radio:%s", aMessage.IsRadioTypeSet() ? RadioTypeToString(aMessage.GetRadioType()) : "all");
 #endif
 
-    LogAt(aLogLevel, "%s IPv6 %s msg, len:%d, chksum:%04x, ecn:%s%s%s, sec:%s%s%s, prio:%s%s%s%s%s",
-          MessageActionToString(aAction, aError), Ip6::Ip6::IpProtoToString(headers.GetIpProto()), aMessage.GetLength(),
-          headers.GetChecksum(), Ip6::Ip6::EcnToString(headers.GetEcn()),
-          (aMacAddress == nullptr) ? "" : ((aAction == kMessageReceive) ? ", from:" : ", to:"),
-          (aMacAddress == nullptr) ? "" : aMacAddress->ToString().AsCString(),
-          ToYesNo(aMessage.IsLinkSecurityEnabled()),
-          (aError == kErrorNone) ? "" : ", error:", (aError == kErrorNone) ? "" : ErrorToString(aError),
-          MessagePriorityToString(aMessage), shouldLogRss ? ", rss:" : "",
-          shouldLogRss ? aMessage.GetRssAverager().ToString().AsCString() : "", shouldLogRadio ? ", radio:" : "",
-          radioString);
+    LogAt(aLogLevel, "%s", string.AsCString());
 
     if (aAction != kMessagePrepareIndirect)
     {
