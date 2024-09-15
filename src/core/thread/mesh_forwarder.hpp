@@ -644,6 +644,11 @@ private:
                        const Mac::Address *aAddress,
                        Error               aError,
                        LogLevel            aLogLevel);
+    void AppendSecErrorPrioRssRadioLabelsToLogString(StringWriter  &aString,
+                                                     MessageAction  aAction,
+                                                     const Message &aMessage,
+                                                     Error          aError);
+    void AppendMacAddrToLogString(StringWriter &aString, MessageAction aAction, const Mac::Address *aMacAddress);
 #endif // #if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_NOTE)
 
     using TxTask = TaskletIn<MeshForwarder, &MeshForwarder::ScheduleTransmissionTask>;

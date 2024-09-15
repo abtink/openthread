@@ -896,30 +896,13 @@ Error MeshForwarder::LogMeshFragmentHeader(MessageAction       aAction,
 
     string.Append("%s mesh frame, len:%u, ", MessageActionToString(aAction, aError), aMessage.GetLength());
 
-    if (aMacAddress != nullptr)
-    {
-        (aAction == kMessageReceive) ? string.Append("from") : string.Append("to");
-        string.Append(":%s, ", aMacAddress->ToString().AsCString());
-    }
+    AppendMacAddrToLogString(string, aAction, aMacAddress);
 
-    string.Append("msrc:%s, mdst:%s, hops:%d, frag:%s, sec:%s", aMeshAddrs.mSource.ToString().AsCString(),
+    string.Append("msrc:%s, mdst:%s, hops:%d, frag:%s, ", aMeshAddrs.mSource.ToString().AsCString(),
                   aMeshAddrs.mDestination.ToString().AsCString(),
-                  meshHeader.GetHopsLeft() + ((aAction == kMessageReceive) ? 1 : 0), ToYesNo(hasFragmentHeader),
-                  ToYesNo(aMessage.IsLinkSecurityEnabled()));
+                  meshHeader.GetHopsLeft() + ((aAction == kMessageReceive) ? 1 : 0), ToYesNo(hasFragmentHeader));
 
-    if (aError != kErrorNone)
-    {
-        string.Append(", error:%s", ErrorToString(aError));
-    }
-
-    if ((aAction == kMessageReceive) || (aAction == kMessageReassemblyDrop))
-    {
-        string.Append(", rss:%s", aMessage.GetRssAverager().ToString().AsCString());
-    }
-
-#if OPENTHREAD_CONFIG_MULTI_RADIO
-    string.Append(", radio:%s", aMessage.IsRadioTypeSet() ? RadioTypeToString(aMessage.GetRadioType()) : "all");
-#endif
+    AppendSecErrorPrioRssRadioLabelsToLogString(string, aAction, aMessage, aError);
 
     LogAt(aLogLevel, "%s", string.AsCString());
 

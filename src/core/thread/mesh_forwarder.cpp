@@ -1923,29 +1923,8 @@ void MeshForwarder::LogIp6Message(MessageAction       aAction,
                   Ip6::Ip6::IpProtoToString(headers.GetIpProto()), aMessage.GetLength(), headers.GetChecksum(),
                   Ip6::Ip6::EcnToString(headers.GetEcn()));
 
-    if (aMacAddress != nullptr)
-    {
-        (aAction == kMessageReceive) ? string.Append("from:") : string.Append("to:");
-        string.Append("%s, ", aMacAddress->ToString().AsCString());
-    }
-
-    string.Append("sec:%s, ", ToYesNo(aMessage.IsLinkSecurityEnabled()));
-
-    if (aError != kErrorNone)
-    {
-        string.Append("error:%s, ", ErrorToString(aError));
-    }
-
-    string.Append("prio:%s", MessagePriorityToString(aMessage));
-
-    if ((aAction == kMessageReceive) || (aAction == kMessageReassemblyDrop))
-    {
-        string.Append(", rss:%s", aMessage.GetRssAverager().ToString().AsCString());
-    }
-
-#if OPENTHREAD_CONFIG_MULTI_RADIO
-    string.Append(", radio:%s", aMessage.IsRadioTypeSet() ? RadioTypeToString(aMessage.GetRadioType()) : "all");
-#endif
+    AppendMacAddrToLogString(string, aAction, aMacAddress);
+    AppendSecErrorPrioRssRadioLabelsToLogString(string, aAction, aMessage, aError);
 
     LogAt(aLogLevel, "%s", string.AsCString());
 
@@ -1956,6 +1935,49 @@ void MeshForwarder::LogIp6Message(MessageAction       aAction,
 
 exit:
     return;
+}
+
+void MeshForwarder::AppendSecErrorPrioRssRadioLabelsToLogString(StringWriter  &aString,
+                                                                MessageAction  aAction,
+                                                                const Message &aMessage,
+                                                                Error          aError)
+{
+    aString.Append("sec:%s, ", ToYesNo(aMessage.IsLinkSecurityEnabled()));
+
+    if (aError != kErrorNone)
+    {
+        aString.Append("error:%s, ", ErrorToString(aError));
+    }
+
+    aString.Append("prio:%s", MessagePriorityToString(aMessage));
+
+    if ((aAction == kMessageReceive) || (aAction == kMessageReassemblyDrop))
+    {
+        aString.Append(", rss:%s", aMessage.GetRssAverager().ToString().AsCString());
+    }
+
+#if OPENTHREAD_CONFIG_MULTI_RADIO
+    aString.Append(", radio:%s", aMessage.IsRadioTypeSet() ? RadioTypeToString(aMessage.GetRadioType()) : "all");
+#endif
+}
+
+void MeshForwarder::AppendMacAddrToLogString(StringWriter       &aString,
+                                             MessageAction       aAction,
+                                             const Mac::Address *aMacAddress)
+{
+    if (aMacAddress != nullptr)
+    {
+        if (aAction == kMessageReceive)
+        {
+            aString.Append("from:");
+        }
+        else
+        {
+            aString.Append("to:");
+        }
+
+        aString.Append("%s, ", aMacAddress->ToString().AsCString());
+    }
 }
 
 void MeshForwarder::LogMessage(MessageAction aAction, const Message &aMessage)
