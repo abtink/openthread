@@ -617,6 +617,21 @@ private:
     void LogLowpanHcFrameDrop(Error aError, const RxInfo &aRxInfo);
 
 #if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_NOTE)
+    class LogString : public String<150>
+    {
+    public:
+        void AppendLabel(const char *aLabel, bool aBool) { Append(", %s:%s", aLabel, ToYesNo(aBool)); }
+        void AppendLabel(const char *aLabel, uint8_t aUint8) { Append(", %s:%u", aLabel, aUint8); }
+        void AppendLabel(const char *aLabel, uint16_t aUint16) { Append(", %s:%u", aLabel, aUint16); }
+        void AppendLabel(const char *aLabel, uint32_t aUint32) { Append(", %s:%lu", aLabel, ToUlong(aUint32)); }
+        void AppendLabel(const char *aLabel, const char *aValue) { Append(", %s:%s", aLabel, aValue); }
+        void AppendLabelHex(const char *aLabel, uint16_t aUint16) { Append(", %s:0x%04x", aLabel, aUint16); }
+        template <typename ItemType> void AppendLabel(const char *aLabel, const ItemType &aItem)
+        {
+            Append(", %s:%s", aLabel, aItem.ToString().AsCString());
+        }
+    };
+
     const char *MessageActionToString(MessageAction aAction, Error aError);
     const char *MessagePriorityToString(const Message &aMessage);
 

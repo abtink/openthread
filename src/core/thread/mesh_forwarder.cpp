@@ -1915,34 +1915,49 @@ void MeshForwarder::LogIp6Message(MessageAction       aAction,
                                   LogLevel            aLogLevel)
 {
     Ip6::Headers headers;
-    bool         shouldLogRss;
-    bool         shouldLogRadio = false;
-    const char  *radioString    = "";
+    LogString    string;
 
     SuccessOrExit(headers.ParseFrom(aMessage));
 
-    shouldLogRss = (aAction == kMessageReceive) || (aAction == kMessageReassemblyDrop);
+    string.Append("%s IPv6 %s msg", MessageActionToString(aAction, aError),
+                  Ip6::Ip6::IpProtoToString(headers.GetIpProto()));
+    string.AppendLabel("len", aMessage.GetLength());
+    string.AppendLabelHex("chksum", headers.GetChecksum());
+    string.AppendLabel("ecn", Ip6::Ip6::EcnToString(headers.GetEcn()));
+
+    if (aMacAddress != nullptr)
+    {
+        string.AppendLabel((aAction == kMessageReceive) ? "from" : "to", *aMacAddress);
+    }
+
+    string.AppendLabel("sec", aMessage.IsLinkSecurityEnabled());
+
+    if (aError != kErrorNone)
+    {
+        string.AppendLabel("error", ErrorToString(aError));
+    }
+
+    string.AppendLabel("prio", MessagePriorityToString(aMessage));
+
+    if ((aAction == kMessageReceive) || (aAction == kMessageReassemblyDrop))
+    {
+        string.AppendLabel("rss", aMessage.GetRssAverager());
+    }
 
 #if OPENTHREAD_CONFIG_MULTI_RADIO
-    shouldLogRadio = true;
-    radioString    = aMessage.IsRadioTypeSet() ? RadioTypeToString(aMessage.GetRadioType()) : "all";
+    string.AppendLabel("radio", aMessage.IsRadioTypeSet() ? RadioTypeToString(aMessage.GetRadioType()) : "all");
 #endif
 
-    LogAt(aLogLevel, "%s IPv6 %s msg, len:%d, chksum:%04x, ecn:%s%s%s, sec:%s%s%s, prio:%s%s%s%s%s",
-          MessageActionToString(aAction, aError), Ip6::Ip6::IpProtoToString(headers.GetIpProto()), aMessage.GetLength(),
-          headers.GetChecksum(), Ip6::Ip6::EcnToString(headers.GetEcn()),
-          (aMacAddress == nullptr) ? "" : ((aAction == kMessageReceive) ? ", from:" : ", to:"),
-          (aMacAddress == nullptr) ? "" : aMacAddress->ToString().AsCString(),
-          ToYesNo(aMessage.IsLinkSecurityEnabled()),
-          (aError == kErrorNone) ? "" : ", error:", (aError == kErrorNone) ? "" : ErrorToString(aError),
-          MessagePriorityToString(aMessage), shouldLogRss ? ", rss:" : "",
-          shouldLogRss ? aMessage.GetRssAverager().ToString().AsCString() : "", shouldLogRadio ? ", radio:" : "",
-          radioString);
+    LogAt(aLogLevel, "%s", string.AsCString());
 
-    if (aAction != kMessagePrepareIndirect)
-    {
-        LogIp6SourceDestAddresses(headers, aLogLevel);
-    }
+#if OPENTHREAD_CONFIG_LOG_SRC_DST_IP_ADDRESSES
+    VerifyOrExit(aAction != kMessagePrepareIndirect);
+
+    string.Clear();
+
+
+    LogIp6SourceDestAddresses(headers, aLogLevel);
+#endif
 
 exit:
     return;
@@ -2028,9 +2043,16 @@ void MeshForwarder::LogFragmentFrameDrop(Error                         aError,
                                          const RxInfo                 &aRxInfo,
                                          const Lowpan::FragmentHeader &aFragmentHeader)
 {
-    LogNote("Dropping rx frag frame, error:%s, %s, tag:%d, offset:%d, dglen:%d", ErrorToString(aError),
-            aRxInfo.ToString().AsCString(), aFragmentHeader.GetDatagramTag(), aFragmentHeader.GetDatagramOffset(),
-            aFragmentHeader.GetDatagramSize());
+    LogString string;
+
+    string.Append("Dropping rx frag frame");
+    string.AppendLabel("error", ErrorToString(aError));
+    string.Append(", %s", aRxInfo.ToString().AsCString());
+    string.AppendLabel("tag", aFragmentHeader.GetDatagramTag());
+    string.AppendLabel("offset", aFragmentHeader.GetDatagramOffset());
+    string.AppendLabel("dglen", aFragmentHeader.GetDatagramSize());
+
+    LogNote("%s", string.AsCString());
 }
 
 void MeshForwarder::LogLowpanHcFrameDrop(Error aError, const RxInfo &aRxInfo)
