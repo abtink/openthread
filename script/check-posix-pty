@@ -90,7 +90,7 @@ timeout_run()
 do_build()
 {
     ./script/cmake-build simulation
-    ./script/cmake-build posix -DOT_PLATFORM_NETIF=1 -DOT_PLATFORM_UDP=1 -DOT_UDP_FORWARD=0 -DOT_POSIX_MAX_POWER_TABLE=1 -DOT_DAEMON="${OT_DAEMON}" -DOT_READLINE="${OT_READLINE}"
+    ./script/cmake-build posix -DOT_PLATFORM_NETIF=1 -DOT_PLATFORM_UDP=0 -DOT_UDP_FORWARD=0 -DOT_POSIX_MAX_POWER_TABLE=1 -DOT_DAEMON="${OT_DAEMON}" -DOT_READLINE="${OT_READLINE}"
 }
 
 do_check()

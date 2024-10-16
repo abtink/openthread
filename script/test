@@ -201,7 +201,7 @@ build_posix()
     fi
 
     if [[ ${OT_NATIVE_IP} == 1 ]]; then
-        options+=("-DOT_PLATFORM_UDP=ON" "-DOT_PLATFORM_NETIF=ON")
+        options+=("-DOT_PLATFORM_UDP=OFF" "-DOT_PLATFORM_NETIF=ON")
     fi
 
     if [[ ${ot_extra_options[*]+x} ]]; then
