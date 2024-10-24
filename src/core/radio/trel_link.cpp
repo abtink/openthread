@@ -314,7 +314,7 @@ exit:
     return;
 }
 
-void Link::ProcessReceivedPacket(Packet &aPacket)
+void Link::ProcessReceivedPacket(Packet &aPacket, const Ip6::SockAddr &aSockAddr)
 {
     Header::Type type;
 
@@ -341,6 +341,9 @@ void Link::ProcessReceivedPacket(Packet &aPacket)
 
     // Drop packets originating from same device.
     VerifyOrExit(aPacket.GetHeader().GetSource() != Get<Mac::Mac>().GetExtAddress());
+
+    mRxPacketSenderAddr = aSockAddr;
+    mRxPacketPeer       = Get<Interface>().FindPeer(aPacket.GetHeader().GetSource());
 
     if (type != Header::kTypeBroadcast)
     {
@@ -373,8 +376,40 @@ void Link::ProcessReceivedPacket(Packet &aPacket)
 
     Get<Mac::Mac>().HandleReceivedFrame(&mRxFrame, kErrorNone);
 
+    // As the received frame is processed by the MAC or MLE layers,
+    // `CheckPeerAddrOnRxSuccess()` may be called with different modes,
+    // depending on whether the frame passes receive security checks
+    // at either the MAC or MLE layers, allowing or disallowing peer
+    // socket address to be updated from received TREL packet info.
+
 exit:
-    return;
+    mRxPacketPeer = nullptr;
+}
+
+void Link::CheckPeerAddrOnRxSuccess(PeerSockAddrUpdateMode aMode)
+{
+    Ip6::SockAddr prevSockAddr;
+
+    VerifyOrExit(mState != kStateDisabled);
+
+    VerifyOrExit(mRxPacketPeer != nullptr);
+
+    prevSockAddr = mRxPacketPeer->GetSockAddr();
+    VerifyOrExit(prevSockAddr != mRxPacketSenderAddr);
+
+    LogNote("Peer %s rx sock-addr %s differs from previously discovered %s by platform",
+            mRxPacketPeer->GetExtAddress().ToString().AsCString(), mRxPacketSenderAddr.ToString().AsCString(),
+            prevSockAddr.ToString().AsCString());
+
+    if (aMode == kAllowPeerSockAddrUpdate)
+    {
+        mRxPacketPeer->SetSockAddr(mRxPacketSenderAddr);
+    }
+
+    Get<Interface>().NotifyPeerSocketAddressDifference(prevSockAddr, mRxPacketSenderAddr);
+
+exit:
+    mRxPacketPeer = nullptr;
 }
 
 void Link::HandleAck(Packet &aAckPacket)
@@ -411,6 +446,8 @@ void Link::HandleAck(Packet &aAckPacket)
         VerifyOrExit(!neighbor->IsStateInvalid());
 
     } while (ackError == kErrorNoAck);
+
+    CheckPeerAddrOnRxSuccess(kDisallowPeerSockAddrUpdate);
 
 exit:
     return;
