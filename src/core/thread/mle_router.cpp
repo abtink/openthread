@@ -737,7 +737,7 @@ void MleRouter::HandleLinkRequest(RxInfo &aRxInfo)
 
     if (aRxInfo.mMessageInfo.GetSockAddr().IsMulticast())
     {
-        mDelayedSender.ScheduleLinkAccept(info, 1 + Random::NonCrypto::GetUint16InRange(0, kMaxLinkAcceptDelay));
+        mDelayedSender.ScheduleLinkAccept(info, 0); // 1 + Random::NonCrypto::GetUint16InRange(0, kMaxLinkAcceptDelay));
     }
     else
     {
