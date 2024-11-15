@@ -373,7 +373,15 @@ public:
 private:
     typedef BitSet<kNumIp6Addresses> ChildIp6AddressSet;
 
+    uint8_t  mNetworkDataVersion;
+    uint16_t mSupervisionInterval;
+    uint16_t mSecondsSinceSupervision;
     uint32_t mTimeout;
+    union
+    {
+        uint8_t          mRequestTlvs[kMaxRequestTlvs];
+        Mle::TxChallenge mAttachChallenge;
+    };
 
     Ip6::InterfaceIdentifier mMeshLocalIid;
     Ip6AddressArray          mIp6Addresses;
@@ -381,19 +389,6 @@ private:
     ChildIp6AddressSet mMlrToRegisterSet;
     ChildIp6AddressSet mMlrRegisteredSet;
 #endif
-
-    uint8_t mNetworkDataVersion;
-
-    union
-    {
-        uint8_t          mRequestTlvs[kMaxRequestTlvs];
-        Mle::TxChallenge mAttachChallenge;
-    };
-
-    uint16_t mSupervisionInterval;
-    uint16_t mSecondsSinceSupervision;
-
-    static_assert(OPENTHREAD_CONFIG_NUM_MESSAGE_BUFFERS < 8192, "mQueuedMessageCount cannot fit max required!");
 };
 
 DefineCoreType(otChildInfo, Child::Info);
