@@ -1783,7 +1783,7 @@ void Mle::SendParentRequest(ParentRequestType aType)
     else
 #endif
 #if OPENTHREAD_CONFIG_WAKEUP_END_DEVICE_ENABLE
-    if (aType == kToWakeupCoordinator)
+        if (aType == kToWakeupCoordinator)
     {
         destination.SetToLinkLocalAddress(GetWakeupParent()->GetExtAddress());
         SuccessOrExit(error = message->AppendCslClockAccuracyTlv());
@@ -5625,14 +5625,11 @@ void Mle::AddWakeupParent(const Mac::ExtAddress &aParent, TimeMilli aAttachTime,
     mWakeupParentAttachWindow = aAttachWindowMs;
 }
 
-CslNeighbor *Mle::GetWakeupParent(void)
-{
-    return mCslNeighborTable.GetFirstCslNeighbor();
-}
+CslNeighbor *Mle::GetWakeupParent(void) { return mCslNeighborTable.GetFirstCslNeighbor(); }
 
 void Mle::AttachToWakeupParent()
 {
-    CslNeighbor *       parent = GetWakeupParent();
+    CslNeighbor *parent = GetWakeupParent();
 
     OT_ASSERT(parent != nullptr);
 

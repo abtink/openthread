@@ -48,7 +48,7 @@ void MeshForwarder::SendMessage(OwnedPtr<Message> aMessagePtr)
     message.SetOffset(0);
     message.SetDatagramTag(0);
     message.SetTimestampToNow();
-   
+
     mSendQueue.Enqueue(message);
 
     switch (message.GetType())
@@ -98,7 +98,7 @@ void MeshForwarder::SendMessage(OwnedPtr<Message> aMessagePtr)
                     {
                         mIndirectSender.AddMessageForEnhCslNeighbor(message, *cslNeighbor);
                     }
-                }   
+                }
 #endif
             }
         }
@@ -115,8 +115,8 @@ void MeshForwarder::SendMessage(OwnedPtr<Message> aMessagePtr)
             }
             else
 #endif
-            if ((neighbor != nullptr) && !neighbor->IsRxOnWhenIdle() && !message.IsDirectTransmission() &&
-                Get<ChildTable>().Contains(*neighbor))
+                if ((neighbor != nullptr) && !neighbor->IsRxOnWhenIdle() && !message.IsDirectTransmission() &&
+                    Get<ChildTable>().Contains(*neighbor))
             {
                 mIndirectSender.AddMessageForSleepyChild(message, *static_cast<Child *>(neighbor));
             }

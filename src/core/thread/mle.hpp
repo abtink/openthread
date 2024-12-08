@@ -765,24 +765,24 @@ public:
 
     /**
      * Adds a Wake-up Parent to the list of potential parents.
-        *
-        * @param[in] aParent         The extended address of the Wake-up Parent.
-        * @param[in] aAttachTime     The time when the Thread interface attached to the Wake-up Parent.
-        * @param[in] aAttachWindowMs The time window in milliseconds during which the Thread interface can attach to the
-        * Wake-up Parent.
-        */
+     *
+     * @param[in] aParent         The extended address of the Wake-up Parent.
+     * @param[in] aAttachTime     The time when the Thread interface attached to the Wake-up Parent.
+     * @param[in] aAttachWindowMs The time window in milliseconds during which the Thread interface can attach to the
+     * Wake-up Parent.
+     */
     void AddWakeupParent(const Mac::ExtAddress &aParent, TimeMilli aAttachTime, uint32_t aAttachWindowMs);
 
     /**
      * Returns the Wake-up Parent that the Thread interface is currently communicating to.
-        *
-        * @returns The Wake-up Parent that the Thread interface is currently communicating to.
-        */
+     *
+     * @returns The Wake-up Parent that the Thread interface is currently communicating to.
+     */
     CslNeighbor *GetWakeupParent(void);
 
     /**
-    * Starts the process of attaching to a Wake-up Parent, if previously configured with `AddWakeupParent`.
-    */   
+     * Starts the process of attaching to a Wake-up Parent, if previously configured with `AddWakeupParent`.
+     */
     void AttachToWakeupParent();
 #endif
 
@@ -793,8 +793,8 @@ private:
     // All time intervals are in milliseconds
     static constexpr uint32_t kParentRequestRouterTimeout    = 750;  // Wait time after tx of Parent Req to routers
     static constexpr uint32_t kParentRequestReedTimeout      = 1250; // Wait timer after tx of Parent Req to REEDs
-    static constexpr uint32_t kWakeupParentParentRespTimeout = 500;  // Max delay for receiving a Parent Response from WC
-    static constexpr uint32_t kParentRequestDuplicateMargin  = 50;   // Margin to detect duplicate received Parent Req
+    static constexpr uint32_t kWakeupParentParentRespTimeout = 500; // Max delay for receiving a Parent Response from WC
+    static constexpr uint32_t kParentRequestDuplicateMargin  = 50;  // Margin to detect duplicate received Parent Req
     static constexpr uint32_t kChildIdResponseTimeout        = 1250; // Wait time to receive Child ID Response
     static constexpr uint32_t kAttachStartJitter             = 50;   // Max jitter time added to start of attach
     static constexpr uint32_t kAnnounceProcessTimeout        = 250;  // Delay after Announce rx before processing
@@ -1582,9 +1582,9 @@ private:
 #if OPENTHREAD_CONFIG_MLE_ATTACH_BACKOFF_ENABLE
     TimeMilli mAttachFireTime;
 #endif
-    DeviceRole      mPreviousRole;
-    TimeMilli       mWakeupParentAttachTime;
-    uint32_t        mWakeupParentAttachWindow;
+    DeviceRole       mPreviousRole;
+    TimeMilli        mWakeupParentAttachTime;
+    uint32_t         mWakeupParentAttachWindow;
     CslNeighborTable mCslNeighborTable;
 #endif
 };

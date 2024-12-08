@@ -79,7 +79,7 @@ private:
     // static constexpr uint16_t kMaxCslNeighbors = OPENTHREAD_CONFIG_MLE_MAX_ENH_CSL_NEIGHBORS;
     static constexpr uint16_t kMaxCslNeighbors = 1;
 
-    CslNeighbor    mCslNeighbors[kMaxCslNeighbors];
+    CslNeighbor mCslNeighbors[kMaxCslNeighbors];
 };
 
 } // namespace ot

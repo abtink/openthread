@@ -47,15 +47,9 @@ CslNeighborTable::CslNeighborTable(Instance &aInstance)
     }
 }
 
-CslNeighbor *CslNeighborTable::GetNewCslNeighbor(void)
-{
-    return mCslNeighbors;
-}
+CslNeighbor *CslNeighborTable::GetNewCslNeighbor(void) { return mCslNeighbors; }
 
-CslNeighbor *CslNeighborTable::GetFirstCslNeighbor(void)
-{
-    return mCslNeighbors;
-}
+CslNeighbor *CslNeighborTable::GetFirstCslNeighbor(void) { return mCslNeighbors; }
 
 } // namespace ot
 

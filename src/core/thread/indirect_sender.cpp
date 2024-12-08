@@ -122,7 +122,10 @@ uint16_t IndirectSender::PrepareDataFrame(Mac::TxFrame &aFrame, CslNeighbor &aNe
     return nextOffset;
 }
 
-void IndirectSender::HandleSentFrameToCslNeighbor(const Mac::TxFrame &aFrame, const FrameContext &aContext, Error aError, CslNeighbor &aNeighbor)
+void IndirectSender::HandleSentFrameToCslNeighbor(const Mac::TxFrame &aFrame,
+                                                  const FrameContext &aContext,
+                                                  Error               aError,
+                                                  CslNeighbor        &aNeighbor)
 {
     Message *message    = aNeighbor.GetIndirectMessage();
     uint16_t nextOffset = aContext.mMessageNextOffset;
@@ -199,7 +202,7 @@ void IndirectSender::HandleSentFrameToCslNeighbor(const Mac::TxFrame &aFrame, co
     {
         // The indirect tx of this message to the child is done.
 
-        Error        txError    = aError;
+        Error        txError = aError;
         Mac::Address macDest;
 
         aNeighbor.SetIndirectMessage(nullptr);
@@ -301,7 +304,6 @@ void IndirectSender::UpdateIndirectMessage(CslNeighbor &aNeighbor)
         message = FindQueuedMessageForWedNeighbor(aNeighbor);
     }
 #endif
-    
 
     aNeighbor.SetWaitingForMessageUpdate(false);
     aNeighbor.SetIndirectMessage(message);
@@ -322,10 +324,7 @@ void IndirectSender::UpdateIndirectMessage(CslNeighbor &aNeighbor)
 }
 
 #if OPENTHREAD_FTD
-bool IndirectSender::IsChild(const Neighbor &aNeighbor) const
-{
-    return Get<ChildTable>().Contains(aNeighbor);
-}
+bool IndirectSender::IsChild(const Neighbor &aNeighbor) const { return Get<ChildTable>().Contains(aNeighbor); }
 
 void IndirectSender::AddMessageForSleepyChild(Message &aMessage, Child &aChild)
 {
@@ -573,7 +572,7 @@ exit:
 
 uint16_t IndirectSender::PrepareDataFrameForSleepyChild(Mac::TxFrame &aFrame, Child &aChild, Message &aMessage)
 {
-    uint16_t       nextOffset;
+    uint16_t nextOffset;
 
     nextOffset = PrepareDataFrame(aFrame, aChild, aMessage);
 
@@ -633,7 +632,9 @@ void IndirectSender::AddMessageForEnhCslNeighbor(Message &aMessage, CslNeighbor 
     aMessage.SetForEnhancedCslNeighbor(true);
 }
 
-Error IndirectSender::PrepareFrameForEnhCslNeighbor(Mac::TxFrame &aFrame, FrameContext &aContext, CslNeighbor &aNeighbor)
+Error IndirectSender::PrepareFrameForEnhCslNeighbor(Mac::TxFrame &aFrame,
+                                                    FrameContext &aContext,
+                                                    CslNeighbor  &aNeighbor)
 {
     Error    error   = kErrorNone;
     Message *message = aNeighbor.GetIndirectMessage();
@@ -657,7 +658,7 @@ exit:
 
 Message *IndirectSender::FindQueuedMessageForWedNeighbor(CslNeighbor &aNeighbor)
 {
-    Message *match      = nullptr;
+    Message *match = nullptr;
 
     OT_UNUSED_VARIABLE(aNeighbor);
 

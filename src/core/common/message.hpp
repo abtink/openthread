@@ -1475,10 +1475,10 @@ public:
 #if OPENTHREAD_CONFIG_WAKEUP_END_DEVICE_ENABLE
     /**
      * Indicates whether the message is destined for an enhanced CSL neighbor.
-        *
-        * @retval TRUE   If the message is destined for an enhanced CSL neighbor.
-        * @retval FALSE  If the message is not destined for an enhanced CSL neighbor.
-        */
+     *
+     * @retval TRUE   If the message is destined for an enhanced CSL neighbor.
+     * @retval FALSE  If the message is not destined for an enhanced CSL neighbor.
+     */
     bool IsForEnhancedCslNeighbor(void) const { return GetMetadata().mIsEnhCslNeighbor; }
 
     /**

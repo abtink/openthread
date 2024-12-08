@@ -2639,7 +2639,7 @@ Error Mac::HandleWakeupFrame(const RxFrame &aFrame)
     uint8_t             retryInterval;
     uint8_t             retryCount;
     Address             parentAddress;
-    CslNeighbor *       parent;
+    CslNeighbor        *parent;
 
     VerifyOrExit(mWakeupListenEnabled && aFrame.IsWakeupFrame());
     connectionIe  = aFrame.GetConnectionIe();
@@ -2676,8 +2676,8 @@ Error Mac::HandleWakeupFrame(const RxFrame &aFrame)
 
     IgnoreError(aFrame.GetSrcAddr(parentAddress));
     Get<Mle::Mle>().AddWakeupParent(parentAddress.GetExtended(), TimerMilli::GetNow() + attachDelayMs,
-                                         kWakeupIntervalUs * retryInterval * retryCount / 1000);
-    
+                                    kWakeupIntervalUs * retryInterval * retryCount / 1000);
+
     parent = Get<Mle::Mle>().GetWakeupParent();
     OT_ASSERT(parent != nullptr);
     parent->SetCslPeriod(kDefaultWedListenInterval * retryInterval);

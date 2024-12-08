@@ -274,8 +274,11 @@ private:
 #endif
 
     uint16_t PrepareDataFrame(Mac::TxFrame &aFrame, CslNeighbor &aNeighbor, Message &aMessage);
-    void  HandleSentFrameToCslNeighbor(const Mac::TxFrame &aFrame, const FrameContext &aContext, Error aError, CslNeighbor &aNeighbor);
-    void UpdateIndirectMessage(CslNeighbor &aNeighbor);
+    void     HandleSentFrameToCslNeighbor(const Mac::TxFrame &aFrame,
+                                          const FrameContext &aContext,
+                                          Error               aError,
+                                          CslNeighbor        &aNeighbor);
+    void     UpdateIndirectMessage(CslNeighbor &aNeighbor);
 
 #if OPENTHREAD_FTD
     bool IsChild(const Neighbor &aNeighbor) const;
@@ -293,9 +296,8 @@ private:
     static bool AcceptSupervisionMessage(const Message &aMessage);
 #endif // OPENTHREAD_FTD
 
-
 #if OPENTHREAD_CONFIG_WAKEUP_END_DEVICE_ENABLE
-    Error PrepareFrameForEnhCslNeighbor(Mac::TxFrame &aFrame, FrameContext &aContext, CslNeighbor &aNeighbor);
+    Error    PrepareFrameForEnhCslNeighbor(Mac::TxFrame &aFrame, FrameContext &aContext, CslNeighbor &aNeighbor);
     Message *FindQueuedMessageForWedNeighbor(CslNeighbor &aNeighbor);
 #endif
 
