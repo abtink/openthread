@@ -77,6 +77,7 @@ extern "C" {
 #define OT_NETWORK_DIAGNOSTIC_TLV_QUERY_ID 33             ///< Query ID TLV
 #define OT_NETWORK_DIAGNOSTIC_TLV_MLE_COUNTERS 34         ///< MLE Counters TLV
 #define OT_NETWORK_DIAGNOSTIC_TLV_VENDOR_APP_URL 35       ///< Vendor App URL TLV
+#define OT_NETWORK_DIAGNOSTIC_TLV_ENHANCED_ROUTE 37       ///< Enhanced Route TLV
 
 #define OT_NETWORK_DIAGNOSTIC_MAX_VENDOR_NAME_TLV_LENGTH 32          ///< Max length of Vendor Name TLV.
 #define OT_NETWORK_DIAGNOSTIC_MAX_VENDOR_MODEL_TLV_LENGTH 32         ///< Max length of Vendor Model TLV.
@@ -127,6 +128,45 @@ typedef struct otNetworkDiagRoute
     uint8_t                mRouteCount;                              ///< Number of routes.
     otNetworkDiagRouteData mRouteData[OT_NETWORK_MAX_ROUTER_ID + 1]; ///< Link Quality and Routing Cost data.
 } otNetworkDiagRoute;
+
+/**
+ * Represents a Network Diagnostic Enhanced Route data.
+ */
+typedef struct otNetworkDiagEnhRouteData
+{
+    uint8_t mRouterId;           ///< The Router ID.
+    bool    mIsSelf : 1;         ///< This is the queried device itself. If set, the other fields should be ignored.
+    bool    mHasLink : 1;        ///< Indicates whether the queried device has a direct link with router.
+    uint8_t mLinkQualityOut : 2; ///< Link Quality Out (applicable when `mHasLink`).
+    uint8_t mLinkQualityIn : 2;  ///< Link Quality (applicable when `mHasLink`).
+
+    /**
+     * The next hop Router ID tracked towards this router.
+     *
+     * If the device has no direct link with the router (`mHasLink == false`), this field indicates the next hop router
+     * that would be used to forward messages.
+     *
+     * If the device has a direct link with the router (`mHasLink == true`), this field indicates the backup next hop
+     * that would be used if the direct link is no longer usable.
+     *
+     * If there is no next hop, then `OT_NETWORK_MAX_ROUTER_ID + 1` will be used.
+     */
+    uint8_t mNextHop;
+
+    /**
+     * The cost associated with forwarding using Next Hop (regardless of whether the device has a direct ink or not).
+     */
+    uint8_t mNextHopCost;
+} otNetworkDiagEnhRouteData;
+
+/**
+ * Represents a Network Diagnostic Enhanced Route TLV value.
+ */
+typedef struct otNetworkDiagEnhRoute
+{
+    uint8_t                   mRouteCount;                              ///< Number of `mRouteData` entries.
+    otNetworkDiagEnhRouteData mRouteData[OT_NETWORK_MAX_ROUTER_ID + 1]; ///< Route Data per router
+} otNetworkDiagEnhRoute;
 
 /**
  * Represents a Network Diagnostic Mac Counters value.
@@ -195,6 +235,7 @@ typedef struct otNetworkDiagTlv
         uint32_t                  mTimeout;
         otNetworkDiagConnectivity mConnectivity;
         otNetworkDiagRoute        mRoute;
+        otNetworkDiagEnhRoute     mEnhRoute;
         otLeaderData              mLeaderData;
         otNetworkDiagMacCounters  mMacCounters;
         otNetworkDiagMleCounters  mMleCounters;
