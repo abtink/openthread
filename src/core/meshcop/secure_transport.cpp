@@ -703,13 +703,18 @@ exit:
     return error;
 }
 
+SecureSession *SecureTransport::FindSessionMatching(const Ip6::MessageInfo &aMessageInfo)
+{
+    return mSessions.FindMatching(aMessageInfo);
+}
+
 void SecureTransport::HandleReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     SecureSession *session;
 
     VerifyOrExit(mIsOpen);
 
-    session = mSessions.FindMatching(aMessageInfo);
+    session = FindSessionMatching(aMessageInfo);
 
     if (session != nullptr)
     {

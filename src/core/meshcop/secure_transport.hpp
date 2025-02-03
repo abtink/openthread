@@ -100,7 +100,7 @@ class Tls;
 /**
  * Represents a secure session.
  */
-class SecureSession : private LinkedListEntry<SecureSession>, private NonCopyable
+class SecureSession : public LinkedListEntry<SecureSession>, private NonCopyable
 {
     friend class LinkedListEntry<SecureSession>;
     friend class LinkedList<SecureSession>;
@@ -708,6 +708,15 @@ public:
      * @returns The list of associated sessions.
      */
     LinkedList<SecureSession> &GetSessions(void) { return mSessions; }
+
+    /**
+     * Finds a session matching a given peer socket address.
+     *
+     * @param[in] aMessageInfo  The message information to match (`HasSamePeerAddrAndPort()` is used to match).
+     *
+     * @returns A pointer to the matching session if found, or `nullptr` if no match is found.
+     */
+    SecureSession *FindSessionMatching(const Ip6::MessageInfo &aMessageInfo);
 
 protected:
     SecureTransport(Instance &aInstance, LinkSecurityMode aLayerTwoSecurity, bool aDatagramTransport);
