@@ -115,6 +115,9 @@ public:
     typedef otMdnsAddressCallback  AddressCallback;  ///< Address callback
     typedef otMdnsAddressResult    AddressResult;    ///< Address result.
     typedef otMdnsAddressAndTtl    AddressAndTtl;    ///< Address and TTL.
+    typedef otMdnsRecordResult     RecordResult;     ///< Record query result
+    typedef otMdnsRecordCallback   RecordCallback;   ///< Record query callback.
+    typedef otMdnsRecordQuerier    RecordQuerier;    ///< Record querier.
     typedef otMdnsIterator         Iterator;         ///< An entry iterator.
     typedef otMdnsCacheInfo        CacheInfo;        ///< Cache information.
 
@@ -537,6 +540,10 @@ public:
      */
     Error StopIp4AddressResolver(const AddressResolver &aResolver);
 
+    /*TOWRITE*/
+    Error StartRecordQuerier(const RecordQuerier &aQuerier);
+    Error StopRecordQuerier(const RecordQuerier &aQuerier);
+
     /**
      * Sets the max size threshold for mDNS messages.
      *
@@ -690,6 +697,24 @@ public:
      * @retval kErrorInvalidArg   @p aIterator is not valid.
      */
     Error GetNextIp4AddressResolver(Iterator &aIterator, AddressResolver &aResolver, CacheInfo &aInfo) const;
+
+    /**
+     * Iterates over record querier.
+     *
+     * On success, @p aQuerier is populated with information about the next querier . The `mCallback` field is always
+     * set to `nullptr` as there may be multiple active querier with different callbacks. Other pointers within the
+     * `RecordQuerier` structure remain valid until the next call to any OpenThread stack's public or platform
+     * API/callback.
+     *
+     * @param[in]  aIterator   The iterator to use
+     * @param[out] aQuerier    A `RecordQuerier` to return the information about the next querier.
+     * @param[out] aInfo       A `CacheInfo` to return additional information.
+     *
+     * @retval kErrorNone            @p aQuerier, @p aInfo, & @p aIterator are updated successfully.
+     * @retval kErrorNotFound        Reached the end of the list.
+     * @retval kErrorInvalidArg      @p aIterator is not valid.
+     */
+    Error GetNextRecordQuerier(Iterator &aIterator, RecordQuerier &aQuerier, CacheInfo &aInfo) const;
 
 #endif // OPENTHREAD_CONFIG_MULTICAST_DNS_ENTRY_ITERATION_API_ENABLE
 
@@ -1354,6 +1379,7 @@ private:
         void ProcessTxtRecord(const Name &aName, const ResourceRecord &aRecord, uint16_t aRecordOffset);
         void ProcessAaaaRecord(const Name &aName, const ResourceRecord &aRecord, uint16_t aRecordOffset);
         void ProcessARecord(const Name &aName, const ResourceRecord &aRecord, uint16_t aRecordOffset);
+        void ProcessOtherRecord(const Name &aName, const ResourceRecord &aRecord, uint16_t aRecordOffset);
 
         RxMessage            *mNext;
         TimeMilli             mRxTime;
@@ -1480,12 +1506,14 @@ private:
         bool Matches(SrvCallback aCallback) const { return mSharedCallback.mSrv == aCallback; }
         bool Matches(TxtCallback aCallback) const { return mSharedCallback.mTxt == aCallback; }
         bool Matches(AddressCallback aCallback) const { return mSharedCallback.mAddress == aCallback; }
+        bool Matches(RecordCallback aCallback) const { return mSharedCallback.mRecord == aCallback; }
         bool Matches(EmptyChecker) const { return (mSharedCallback.mSrv == nullptr); }
 
         void Invoke(Instance &aInstance, const BrowseResult &aResult) const;
         void Invoke(Instance &aInstance, const SrvResult &aResult) const;
         void Invoke(Instance &aInstance, const TxtResult &aResult) const;
         void Invoke(Instance &aInstance, const AddressResult &aResult) const;
+        void Invoke(Instance &aInstance, const RecordResult &aResult) const;
 
         void ClearCallback(void) { mSharedCallback.Clear(); }
 
@@ -1496,6 +1524,7 @@ private:
             explicit SharedCallback(SrvCallback aCallback) { mSrv = aCallback; }
             explicit SharedCallback(TxtCallback aCallback) { mTxt = aCallback; }
             explicit SharedCallback(AddressCallback aCallback) { mAddress = aCallback; }
+            explicit SharedCallback(RecordCallback aCallback) { mRecord = aCallback; }
 
             void Clear(void) { mBrowse = nullptr; }
 
@@ -1503,6 +1532,7 @@ private:
             SrvCallback     mSrv;
             TxtCallback     mTxt;
             AddressCallback mAddress;
+            RecordCallback  mRecord;
         };
 
         ResultCallback *mNext;
@@ -1574,6 +1604,7 @@ private:
             kTxtCache,
             kIp6AddrCache,
             kIp4AddrCache,
+            kRecordCache,
         };
 
         void  Init(Instance &aInstance, Type aType);
@@ -1609,7 +1640,7 @@ private:
         uint8_t      mInitalQueries;          // Number initial queries sent already.
         bool         mQueryPending : 1;       // Whether a query tx request is pending.
         bool         mLastQueryTimeValid : 1; // Whether `mLastQueryTime` is valid.
-        bool         mIsActive : 1;           // Whether there is any active resolver/browser for this entry.
+        bool         mIsActive : 1;           // Whether there is any active resolver/browser/querier for this entry.
         TimeMilli    mNextQueryTime;          // The next query tx time when `mQueryPending`.
         TimeMilli    mLastQueryTime;          // The last query tx time or the upcoming tx time of first initial query.
         TimeMilli    mDeleteTime;             // The time to delete the entry when not `mIsActive`.
@@ -1884,6 +1915,61 @@ private:
 
     // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+    class RecordCache : public CacheEntry, public LinkedListEntry<RecordCache>, public Heap::Allocatable<RecordCache>
+    {
+        friend class CacheEntry;
+        friend class LinkedListEntry<RecordCache>;
+        friend class Heap::Allocatable<RecordCache>;
+
+    public:
+        bool  Matches(const Name &aFullName, uint16_t aRecordType) const;
+        bool  Matches(const RecordQuerier &aQuerier) const;
+        bool  Matches(const ExpireChecker &aExpireChecker) const;
+        Error Add(const RecordQuerier &aQuerier);
+        void  Remove(const RecordQuerier &aQuerier);
+        void  ProcessResponseRecord(const Message &aMessage, const ResourceRecord &aRecord, uint16_t aRecordOffset);
+        void  CommitNewResponseEntries(void);
+#if OPENTHREAD_CONFIG_MULTICAST_DNS_ENTRY_ITERATION_API_ENABLE
+        void CopyInfoTo(RecordQuerier &aQuerier, CacheInfo &aInfo) const;
+#endif
+
+    private:
+        struct RecordDataEntry : public LinkedListEntry<RecordDataEntry>, public Heap::Allocatable<RecordDataEntry>
+        {
+            explicit RecordDataEntry(Heap::Data &aData);
+            bool     Matches(const Heap::Data &aData) const { return (mData == aData); }
+            bool     Matches(const ExpireChecker &aExpireChecker) const;
+            bool     Matches(EmptyChecker aChecker) const;
+            uint32_t GetTtl(void) const { return mRecord.GetTtl(); }
+
+            RecordDataEntry *mNext;
+            Heap::Data       mData;
+            CacheRecordInfo  mRecord;
+        };
+
+        // Called by base class `CacheEntry`
+        void PrepareQueryQuestion(TxMessage &aQuery);
+        void UpdateRecordStateAfterQuery(TimeMilli aNow);
+        void DetermineRecordFireTime(void);
+        void ProcessExpiredRecords(TimeMilli aNow);
+        void ReportResultsTo(ResultCallback &aCallback) const;
+
+        Error Init(Instance &aInstance, const RecordQuerier &aQuerier);
+        void  AppendNameTo(TxMessage &aTxMessage, Section aSection);
+        void  PreareResultFor(const RecordDataEntry &aEntry, RecordResult &aResult) const;
+        void  PrepareResultAndInvokeCallbacks(const RecordDataEntry &aEntry);
+
+        RecordCache                *mNext;
+        Heap::String                mFirstLabel;
+        Heap::String                mNextLabels;
+        uint16_t                    mRecordType;
+        OwningList<RecordDataEntry> mCommittedEntries;
+        OwningList<RecordDataEntry> mNewEntries;
+        bool                        mShouldFlush;
+    };
+
+    // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 #if OPENTHREAD_CONFIG_MULTICAST_DNS_ENTRY_ITERATION_API_ENABLE
 
     class EntryIterator : public Iterator, public InstanceLocator, public Heap::Allocatable<EntryIterator>
@@ -1900,6 +1986,7 @@ private:
         Error GetNextTxtResolver(TxtResolver &aResolver, CacheInfo &aInfo);
         Error GetNextIp6AddressResolver(AddressResolver &aResolver, CacheInfo &aInfo);
         Error GetNextIp4AddressResolver(AddressResolver &aResolver, CacheInfo &aInfo);
+        Error GetNextRecordQuerier(RecordQuerier &aQuerier, CacheInfo &aInfo);
 
     private:
         static constexpr uint16_t kArrayCapacityIncrement = 32;
@@ -1916,6 +2003,7 @@ private:
             kTxtResolver,
             kIp6AddrResolver,
             kIp4AddrResolver,
+            kRecordQuerier,
         };
 
         explicit EntryIterator(Instance &aInstance);
@@ -1931,6 +2019,7 @@ private:
             const TxtCache     *mTxtCache;
             const Ip6AddrCache *mIp6AddrCache;
             const Ip4AddrCache *mIp4AddrCache;
+            const RecordCache  *mRecordCache;
         };
 
         Heap::Array<const char *, kArrayCapacityIncrement> mSubTypeArray;
@@ -2005,6 +2094,7 @@ private:
     OwningList<TxtCache>     mTxtCacheList;
     OwningList<Ip6AddrCache> mIp6AddrCacheList;
     OwningList<Ip4AddrCache> mIp4AddrCacheList;
+    OwningList<RecordCache>  mRecordCacheList;
     TimeMilli                mNextQueryTxTime;
     CacheTimer               mCacheTimer;
     CacheTask                mCacheTask;
@@ -2038,6 +2128,11 @@ template <> inline OwningList<Core::Ip6AddrCache> &Core::GetCacheList<Core::Ip6A
 template <> inline OwningList<Core::Ip4AddrCache> &Core::GetCacheList<Core::Ip4AddrCache>(void)
 {
     return mIp4AddrCacheList;
+}
+
+template <> inline OwningList<Core::RecordCache> &Core::GetCacheList<Core::RecordCache>(void)
+{
+    return mRecordCacheList;
 }
 
 } // namespace Multicast
