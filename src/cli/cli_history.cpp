@@ -1437,6 +1437,149 @@ exit:
     return error;
 }
 
+/**
+ * @cli history dnssrp-unicast
+ * @code
+ * history dnssrp-unicast
+ * | Age                  | Event   | SockAddr                                         | Ver  | Type | RLOC16 |
+ * +----------------------+---------+--------------------------------------------------+------+------+--------+
+ * |         00:00:09.882 | Added   | [fdf6:4bce:1ac9:62f2:6599:48d5:1ca3:5efb]:44412  |    0 | mesh | 0x6400 |
+ * |         00:01:28.127 | Removed | [fdf6:4bce:1ac9:62f2:6599:48d5:1ca3:5efb]:12345  |    1 | mesh | 0x6400 |
+ * |         00:02:20.111 | Added   | [fdf6:4bce:1ac9:62f2:6599:48d5:1ca3:5efb]:12345  |    1 | mesh | 0x6400 |
+ * Done
+ * @endcode
+ * @code
+ * history dnssrp-unicast list
+ * 00:01:15.737 -> event:Added scokaddr:[fdf6:4bce:1ac9:62f2:6599:48d5:1ca3:5efb]:44412 ver:0 type:mesh rloc16:0x6400
+ * 00:02:33.982 -> event:Removed scokaddr:[fdf6:4bce:1ac9:62f2:6599:48d5:1ca3:5efb]:12345 ver:1 type:mesh rloc16:0x6400
+ * 00:03:25.966 -> event:Added scokaddr:[fdf6:4bce:1ac9:62f2:6599:48d5:1ca3:5efb]:12345 ver:1 type:mesh rloc16:0x6400
+ * Done
+ * @endcode
+ * @cparam history dnssrp-unicast [@ca{list}] [@ca{num-entries}]
+ * * Use the `list` option to display the output in list format. Otherwise, the output is shown in table format.
+ * * Use the `num-entries` option to limit the output to the number of most-recent entries specified. If this option
+ *   is not used, all stored entries are shown in the output.
+ * @par
+ * Displays the network data DNS/SRP unicast address info history in table or list format.
+ * @par
+ * Each table or list entry provides:
+ * * Age: Time elapsed since the command was issued, and given in the format:
+ *        `hours`:`minutes`:`seconds`:`milliseconds`
+ * * Event: Possible values are `Added` or `Removed`.
+ * * Socket address (server address and port)
+ * * Version number
+ * * Unicast type: "mesh" (address is from server data, indicating it is mesh BR), "infr" (address is from service data)
+ * * RLOC16
+ * @sa otHistoryTrackerIterateDnsSrpUnicastHistory
+ */
+
+template <> otError History::Process<Cmd("dnssrp-unicast")>(Arg aArgs[])
+{
+    otError                                  error;
+    bool                                     isList;
+    uint16_t                                 numEntries;
+    otHistoryTrackerIterator                 iterator;
+    const otHistoryTrackerDnsSrpUnicastInfo *info;
+    uint32_t                                 entryAge;
+    char                                     ageString[OT_HISTORY_TRACKER_ENTRY_AGE_STRING_SIZE];
+    char                                     sockAddrString[OT_IP6_SOCK_ADDR_STRING_SIZE];
+
+    SuccessOrExit(error = ParseArgs(aArgs, isList, numEntries));
+
+    if (!isList)
+    {
+        // | Age                  | Event   | SockAddr                                         | Ver  | Type | RLOC16 |
+        // +----------------------+---------+--------------------------------------------------+------+------+--------+
+
+        static const char *const kRouteTitles[]       = {"Age", "Event", "SockAddr", "Ver", "Type", "RLOC16"};
+        static const uint8_t     kRouteColumnWidths[] = {22, 9, 50, 6, 6, 8};
+
+        OutputTableHeader(kRouteTitles, kRouteColumnWidths);
+    }
+
+    otHistoryTrackerInitIterator(&iterator);
+
+    for (uint16_t index = 0; (numEntries == 0) || (index < numEntries); index++)
+    {
+        info = otHistoryTrackerIterateDnsSrpUnicastHistory(GetInstancePtr(), &iterator, &entryAge);
+        VerifyOrExit(info != nullptr);
+
+        otHistoryTrackerEntryAgeToString(entryAge, ageString, sizeof(ageString));
+
+        otIp6SockAddrToString(&info->mSockAddr, sockAddrString, sizeof(sockAddrString));
+
+        OutputLine(isList ? "%s -> event:%s scokaddr:%s ver:%u type:%s rloc16:0x%04x"
+                          : "| %20s | %-7s | %-48s | %4u | %4s | 0x%04x |",
+                   ageString, Stringify(info->mEvent, kSimpleEventStrings), sockAddrString, info->mVersion,
+                   info->mFromServerData ? "mesh" : "infr", info->mRloc16);
+    }
+
+exit:
+    return error;
+}
+
+/*
+
+>
+> history dnssrp-anycast
+| Age                  | Event   | Anycast Address                         |SeqNo | Ver  | RLOC16 |
++----------------------+---------+-----------------------------------------+------+------+--------+
+|         00:00:25.333 | Removed | fdf6:4bce:1ac9:62f2:0:ff:fe00:fc10      |   12 |    0 | 0x6400 |
+|         00:01:38.178 | Added   | fdf6:4bce:1ac9:62f2:0:ff:fe00:fc10      |   12 |    0 | 0x6400 |
+Done
+
+> history dnssrp-anycast list
+00:01:26.061 -> event:Removed anycast-addr:fdf6:4bce:1ac9:62f2:0:ff:fe00:fc10 seqno:12 ver:0 rloc16:0x6400
+00:02:38.906 -> event:Added anycast-addr:fdf6:4bce:1ac9:62f2:0:ff:fe00:fc10 seqno:12 ver:0 rloc16:0x6400
+Done
+
+*/
+
+template <> otError History::Process<Cmd("dnssrp-anycast")>(Arg aArgs[])
+{
+    otError                                  error;
+    bool                                     isList;
+    uint16_t                                 numEntries;
+    otHistoryTrackerIterator                 iterator;
+    const otHistoryTrackerDnsSrpAnycastInfo *info;
+    uint32_t                                 entryAge;
+    char                                     ageString[OT_HISTORY_TRACKER_ENTRY_AGE_STRING_SIZE];
+    char                                     addrString[OT_IP6_ADDRESS_STRING_SIZE];
+
+    SuccessOrExit(error = ParseArgs(aArgs, isList, numEntries));
+
+    if (!isList)
+    {
+        // | Age                  | Event   | Anycast Address                         | SeqNo | Ver  | RLOC16 |
+        // +----------------------+---------+-----------------------------------------+-------+------+--------+
+
+        static const char *const kRouteTitles[]       = {"Age", "Event", "Anycast Address", "SeqNo", "Ver", "RLOC16"};
+        static const uint8_t     kRouteColumnWidths[] = {22, 9, 41, 6, 6, 8};
+
+        OutputTableHeader(kRouteTitles, kRouteColumnWidths);
+    }
+
+    otHistoryTrackerInitIterator(&iterator);
+
+    for (uint16_t index = 0; (numEntries == 0) || (index < numEntries); index++)
+    {
+        info = otHistoryTrackerIterateDnsSrpAnycastHistory(GetInstancePtr(), &iterator, &entryAge);
+        VerifyOrExit(info != nullptr);
+
+        otHistoryTrackerEntryAgeToString(entryAge, ageString, sizeof(ageString));
+
+        otIp6AddressToString(&info->mAnycastAddress, addrString, sizeof(addrString));
+
+        OutputLine(isList ? "%s -> event:%s anycast-addr:%s seqno:%u ver:%u rloc16:0x%04x"
+                          : "| %20s | %-7s | %-39s | %4u | %4u | 0x%04x |",
+                   ageString, Stringify(info->mEvent, kSimpleEventStrings), addrString, info->mSequenceNumber,
+                   info->mVersion, info->mRloc16);
+    }
+
+exit:
+    return error;
+}
+
 otError History::Process(Arg aArgs[])
 {
 #define CmdEntry(aCommandString)                               \
@@ -1445,8 +1588,12 @@ otError History::Process(Arg aArgs[])
     }
 
     static constexpr Command kCommands[] = {
-        CmdEntry("ipaddr"), CmdEntry("ipmaddr"), CmdEntry("neighbor"), CmdEntry("netinfo"), CmdEntry("prefix"),
-        CmdEntry("route"),  CmdEntry("router"),  CmdEntry("rx"),       CmdEntry("rxtx"),    CmdEntry("tx"),
+        CmdEntry("dnssrp-anycast"), CmdEntry("dnssrp-unicast"),
+        CmdEntry("ipaddr"),         CmdEntry("ipmaddr"),
+        CmdEntry("neighbor"),       CmdEntry("netinfo"),
+        CmdEntry("prefix"),         CmdEntry("route"),
+        CmdEntry("router"),         CmdEntry("rx"),
+        CmdEntry("rxtx"),           CmdEntry("tx"),
     };
 
 #undef CmdEntry

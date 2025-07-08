@@ -241,6 +241,30 @@ typedef struct otHistoryTrackerExternalRouteInfo
 } otHistoryTrackerExternalRouteInfo;
 
 /**
+ * Represents information about an DNS/SRP server information parsed from a Network Data service entry.
+ */
+typedef struct otHistoryTrackerDnsSrpUnicastInfo
+{
+    otSockAddr mSockAddr;                ///< The socket address (IPv6 address and port) of the DNS/SRP server.
+    uint8_t    mVersion;                 ///< Version number.
+    bool       mFromServerData;          ///< TRUE if addr is from NetData server data, FALSE if from service data.
+    uint16_t   mRloc16;                  ///< The BR RLOC16 adding the entry.
+    otHistoryTrackerNetDataEvent mEvent; ///< Indicates the event (added/removed).
+} otHistoryTrackerDnsSrpUnicastInfo;
+
+/**
+ * Represents information about an DNS/SRP server parsed from a Network Data service entry.
+ */
+typedef struct otHistoryTrackerDnsSrpAnycastInfo
+{
+    otIp6Address                 mAnycastAddress; ///< The anycast address associated with the DNS/SRP servers.
+    uint8_t                      mSequenceNumber; ///< Sequence number associated with this entry.
+    uint8_t                      mVersion;        ///< Version number.
+    uint16_t                     mRloc16;         ///< The BR RLOC16 adding the entry.
+    otHistoryTrackerNetDataEvent mEvent;          ///< Indicates the event (added/removed).
+} otHistoryTrackerDnsSrpAnycastInfo;
+
+/**
  * Represents events during the Border Agent's ePSKc journey.
  */
 typedef enum
@@ -418,6 +442,40 @@ const otHistoryTrackerOnMeshPrefixInfo *otHistoryTrackerIterateOnMeshPrefixHisto
  * @returns The `otHistoryTrackerExternalRouteInfo` entry or `NULL` if no more entries in the list.
  */
 const otHistoryTrackerExternalRouteInfo *otHistoryTrackerIterateExternalRouteHistory(
+    otInstance               *aInstance,
+    otHistoryTrackerIterator *aIterator,
+    uint32_t                 *aEntryAge);
+
+/**
+ * Iterates over the entries in the Network Data SRP/DNS unicast server info history list.
+ *
+ * @param[in]     aInstance  A pointer to the OpenThread instance.
+ * @param[in,out] aIterator  A pointer to an iterator. MUST be initialized or the behavior is undefined.
+ * @param[out]    aEntryAge  A pointer to a variable to output the entry's age. MUST NOT be NULL.
+ *                           Age is provided as the duration (in milliseconds) from when entry was recorded to
+ *                           @p aIterator initialization time. It is set to `OT_HISTORY_TRACKER_MAX_AGE` for entries
+ *                           older than max age.
+ *
+ * @returns The `otHistoryTrackerDnsSrpUnicastInfo` entry or `NULL` if no more entries in the list.
+ */
+const otHistoryTrackerDnsSrpUnicastInfo *otHistoryTrackerIterateDnsSrpUnicastHistory(
+    otInstance               *aInstance,
+    otHistoryTrackerIterator *aIterator,
+    uint32_t                 *aEntryAge);
+
+/**
+ * Iterates over the entries in the Network Data SRP/DNS anycast server info history list.
+ *
+ * @param[in]     aInstance  A pointer to the OpenThread instance.
+ * @param[in,out] aIterator  A pointer to an iterator. MUST be initialized or the behavior is undefined.
+ * @param[out]    aEntryAge  A pointer to a variable to output the entry's age. MUST NOT be NULL.
+ *                           Age is provided as the duration (in milliseconds) from when entry was recorded to
+ *                           @p aIterator initialization time. It is set to `OT_HISTORY_TRACKER_MAX_AGE` for entries
+ *                           older than max age.
+ *
+ * @returns The `otHistoryTrackerDnsSrpAnycastInfo` entry or `NULL` if no more entries in the list.
+ */
+const otHistoryTrackerDnsSrpAnycastInfo *otHistoryTrackerIterateDnsSrpAnycastHistory(
     otInstance               *aInstance,
     otHistoryTrackerIterator *aIterator,
     uint32_t                 *aEntryAge);

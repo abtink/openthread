@@ -161,6 +161,28 @@
 #endif
 
 /**
+ * @def OPENTHREAD_CONFIG_HISTORY_TRACKER_DNSSRP_UNICAST_LIST_SIZE
+ *
+ * Specifies the maximum number of entries in Network Data DNS/SRP Unicast Address info history list.
+ *
+ * Can be set to zero to configure History Tracker module not to collect this info.
+ */
+#ifndef OPENTHREAD_CONFIG_HISTORY_TRACKER_DNSSRP_UNICAST_LIST_SIZE
+#define OPENTHREAD_CONFIG_HISTORY_TRACKER_DNSSRP_UNICAST_LIST_SIZE 20
+#endif
+
+/**
+ * @def OPENTHREAD_CONFIG_HISTORY_TRACKER_DNSSRP_ANYCAST_LIST_SIZE
+ *
+ * Specifies the maximum number of entries in Network Data DNS/SRP Anycast Address info history list.
+ *
+ * Can be set to zero to configure History Tracker module not to collect this info.
+ */
+#ifndef OPENTHREAD_CONFIG_HISTORY_TRACKER_DNSSRP_ANYCAST_LIST_SIZE
+#define OPENTHREAD_CONFIG_HISTORY_TRACKER_DNSSRP_ANYCAST_LIST_SIZE 20
+#endif
+
+/**
  * @def OPENTHREAD_CONFIG_HISTORY_TRACKER_EPSKC_EVENT_SIZE
  *
  * Specifies the maximum number of entries in Border Agent ePSKc history list.
