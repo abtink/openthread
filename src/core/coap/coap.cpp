@@ -1014,42 +1014,59 @@ Message *CoapBase::FindRelatedRequest(const Message          &aResponse,
                                       const Ip6::MessageInfo &aMessageInfo,
                                       Metadata               &aMetadata)
 {
-    Message *request = nullptr;
-
-    for (Message &message : mPendingRequests)
+    class RequestMatcher : public Message::Matcher<RequestMatcher>
     {
-        aMetadata.ReadFrom(message);
-
-        if (((aMetadata.mDestinationAddress == aMessageInfo.GetPeerAddr() &&
-              aMetadata.mDestinationPort == aMessageInfo.GetPeerPort()) ||
-             aMetadata.mDestinationAddress.IsMulticast() || aMetadata.mDestinationAddress.GetIid().IsAnycastLocator()))
+    public:
+        RequestMatcher(const Message &aResponse, const Ip6::MessageInfo &aMessageInfo)
+            : mResponse(aResponse)
+            , mMessageInfo(aMessageInfo)
         {
-            switch (aResponse.GetType())
+        }
+
+        bool Matches(const ot::Message &aMessage) const
+        {
+            bool           matches = false;
+            const Message &message = AsCoapMessage(&aMessage);
+            Metadata       metadata;
+
+            metadata.ReadFrom(message);
+
+            VerifyOrExit(((metadata.mDestinationAddress == mMessageInfo.GetPeerAddr() &&
+                           metadata.mDestinationPort == mMessageInfo.GetPeerPort()) ||
+                          metadata.mDestinationAddress.IsMulticast() ||
+                          metadata.mDestinationAddress.GetIid().IsAnycastLocator()));
+
+            switch (mResponse.GetType())
             {
             case kTypeReset:
             case kTypeAck:
-                if (aResponse.GetMessageId() == message.GetMessageId())
-                {
-                    request = &message;
-                    ExitNow();
-                }
-
+                VerifyOrExit(mResponse.GetMessageId() == message.GetMessageId());
+                matches = true;
                 break;
 
             case kTypeConfirmable:
             case kTypeNonConfirmable:
-                if (aResponse.IsTokenEqual(message))
-                {
-                    request = &message;
-                    ExitNow();
-                }
-
+                VerifyOrExit(mResponse.IsTokenEqual(message));
+                matches = true;
                 break;
             }
+
+        exit:
+            return matches;
         }
+
+    private:
+        const Message          &mResponse;
+        const Ip6::MessageInfo &mMessageInfo;
+    };
+
+    Message *request = AsCoapMessagePtr(mPendingRequests.FindMatching(RequestMatcher(aResponse, aMessageInfo)));
+
+    if (request != nullptr)
+    {
+        aMetadata.ReadFrom(*request);
     }
 
-exit:
     return request;
 }
 
@@ -1495,25 +1512,36 @@ exit:
 
 const Message *ResponsesQueue::FindMatchedResponse(const Message &aRequest, const Ip6::MessageInfo &aMessageInfo) const
 {
-    const Message *response = nullptr;
-
-    for (const Message &message : mQueue)
+    class ResponseMatcher : public Message::Matcher<ResponseMatcher>
     {
-        if (message.GetMessageId() == aRequest.GetMessageId())
+    public:
+        ResponseMatcher(const Message &aRequest, const Ip6::MessageInfo &aMessageInfo)
+            : mMessageId(aRequest.GetMessageId())
+            , mMessageInfo(aMessageInfo)
         {
-            ResponseMetadata metadata;
-
-            metadata.ReadFrom(message);
-
-            if (metadata.mMessageInfo.HasSamePeerAddrAndPort(aMessageInfo))
-            {
-                response = &message;
-                break;
-            }
         }
-    }
 
-    return response;
+        bool Matches(const ot::Message &aMessage) const
+        {
+            bool             matches = false;
+            ResponseMetadata metadata;
+            const Message   &message = AsCoapMessage(&aMessage);
+
+            VerifyOrExit(message.GetMessageId() == mMessageId);
+            metadata.ReadFrom(message);
+            VerifyOrExit(metadata.mMessageInfo.HasSamePeerAddrAndPort(mMessageInfo));
+            matches = true;
+
+        exit:
+            return matches;
+        }
+
+    private:
+        uint16_t                mMessageId;
+        const Ip6::MessageInfo &mMessageInfo;
+    };
+
+    return AsCoapMessagePtr(mQueue.FindMatching(ResponseMatcher(aRequest, aMessageInfo)));
 }
 
 void ResponsesQueue::EnqueueResponse(Message                &aMessage,

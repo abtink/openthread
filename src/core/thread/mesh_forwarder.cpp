@@ -1399,6 +1399,27 @@ exit:
     }
 }
 
+MeshForwarder::FragMatcher::FragMatcher(const Lowpan::FragmentHeader &aFragmentHeader, const RxInfo &aRxInfo)
+    : mFragmentHeader(aFragmentHeader)
+    , mRxInfo(aRxInfo)
+{
+}
+
+bool MeshForwarder::FragMatcher::Matches(const Message &aMessage) const
+{
+    bool matches = false;
+
+    VerifyOrExit(aMessage.GetLength() == mFragmentHeader.GetDatagramSize());
+    VerifyOrExit(aMessage.GetDatagramTag() == mFragmentHeader.GetDatagramTag());
+    VerifyOrExit(aMessage.GetOffset() == mFragmentHeader.GetDatagramOffset());
+    VerifyOrExit(aMessage.GetOffset() + mRxInfo.mFrameData.GetLength() <= mFragmentHeader.GetDatagramSize());
+    VerifyOrExit(aMessage.IsLinkSecurityEnabled() == mRxInfo.IsLinkSecurityEnabled());
+    matches = true;
+
+exit:
+    return matches;
+}
+
 void MeshForwarder::HandleFragment(RxInfo &aRxInfo)
 {
     Error                  error = kErrorNone;
@@ -1476,19 +1497,7 @@ void MeshForwarder::HandleFragment(RxInfo &aRxInfo)
     }
     else // Received frame is a "next fragment".
     {
-        for (Message &msg : mReassemblyList)
-        {
-            // Security Check: only consider reassembly buffers that had the same Security Enabled setting.
-            if (msg.GetLength() == fragmentHeader.GetDatagramSize() &&
-                msg.GetDatagramTag() == fragmentHeader.GetDatagramTag() &&
-                msg.GetOffset() == fragmentHeader.GetDatagramOffset() &&
-                msg.GetOffset() + aRxInfo.mFrameData.GetLength() <= fragmentHeader.GetDatagramSize() &&
-                msg.IsLinkSecurityEnabled() == aRxInfo.IsLinkSecurityEnabled())
-            {
-                message = &msg;
-                break;
-            }
-        }
+        message = mReassemblyList.FindMatching(FragMatcher(fragmentHeader, aRxInfo));
 
         // For a sleepy-end-device, if we receive a new (secure) next fragment
         // with a non-matching fragmentation offset or tag, it indicates that

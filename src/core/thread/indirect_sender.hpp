@@ -147,6 +147,19 @@ public:
      */
     typedef bool (&MessageChecker)(const Message &aMessage);
 
+#if OPENTHREAD_FTD
+    class ChildMsgMatcher : public Message::Matcher<ChildMsgMatcher>
+    {
+    public:
+        ChildMsgMatcher(uint16_t aChildIndex, MessageChecker aChecker);
+        bool Matches(const Message &aMessage) const;
+
+    private:
+        uint16_t       mChildIndex;
+        MessageChecker mChecker;
+    };
+#endif
+
     /**
      * Initializes the object.
      *

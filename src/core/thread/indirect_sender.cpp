@@ -158,21 +158,21 @@ exit:
     return;
 }
 
+IndirectSender::ChildMsgMatcher::ChildMsgMatcher(uint16_t aChildIndex, MessageChecker aChecker)
+    : mChildIndex(aChildIndex)
+    , mChecker(aChecker)
+{
+}
+
+bool IndirectSender::ChildMsgMatcher::Matches(const Message &aMessage) const
+{
+    return aMessage.GetIndirectTxChildMask().Has(mChildIndex) && mChecker(aMessage);
+}
+
 const Message *IndirectSender::FindQueuedMessageForSleepyChild(const Child &aChild, MessageChecker aChecker) const
 {
-    const Message *match      = nullptr;
-    uint16_t       childIndex = Get<ChildTable>().GetChildIndex(aChild);
-
-    for (const Message &message : Get<MeshForwarder>().mSendQueue)
-    {
-        if (message.GetIndirectTxChildMask().Has(childIndex) && aChecker(message))
-        {
-            match = &message;
-            break;
-        }
-    }
-
-    return match;
+    return Get<MeshForwarder>().mSendQueue.FindMatching(
+        ChildMsgMatcher(Get<ChildTable>().GetChildIndex(aChild), aChecker));
 }
 
 void IndirectSender::SetChildUseShortAddress(Child &aChild, bool aUseShortAddress)

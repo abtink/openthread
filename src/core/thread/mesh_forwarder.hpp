@@ -345,6 +345,17 @@ private:
         bool           mParsedIp6Headers;
     };
 
+    class FragMatcher : public Message::Matcher<FragMatcher>
+    {
+    public:
+        FragMatcher(const Lowpan::FragmentHeader &aFragmentHeader, const RxInfo &aRxInfo);
+        bool Matches(const Message &aMessage) const;
+
+    private:
+        const Lowpan::FragmentHeader &mFragmentHeader;
+        const RxInfo                 &mRxInfo;
+    };
+
 #if OPENTHREAD_FTD
 
 #if OPENTHREAD_CONFIG_DELAY_AWARE_QUEUE_MANAGEMENT_ENABLE

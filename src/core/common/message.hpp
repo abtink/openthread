@@ -479,6 +479,20 @@ public:
         DataType       &AsDataType(void) { return static_cast<DataType &>(*this); }
     };
 
+    typedef bool (*MatcherFn)(const Message &aMessage, const void *aMatcher);
+
+    template <typename Type> class Matcher
+    {
+        friend class MessageQueue;
+        friend class PriorityQueue;
+
+    private:
+        static bool MatchMessage(const Message &aMessage, const void *aMatcher)
+        {
+            return static_cast<const Type *>(static_cast<const Matcher<Type> *>(aMatcher))->Matches(aMessage);
+        }
+    };
+
     /**
      * Returns a reference to the OpenThread Instance which owns the `Message`.
      *
@@ -1699,6 +1713,16 @@ public:
      */
     static void AddQueueInfos(Info &aInfo, const Info &aOther);
 
+    template <typename Type> const Message *FindMatching(const Message::Matcher<Type> &aMatcher) const
+    {
+        return Find(&Message::Matcher<Type>::MatchMessage, &aMatcher);
+    }
+
+    template <typename Type> Message *FindMatching(const Message::Matcher<Type> &aMatcher)
+    {
+        return Find(&Message::Matcher<Type>::MatchMessage, &aMatcher);
+    }
+
     // The following methods are intended to support range-based `for`
     // loop iteration over the queue entries and should not be used
     // directly. The range-based `for` works correctly even if the
@@ -1715,6 +1739,13 @@ private:
     Message       *GetTail(void) { return static_cast<Message *>(mData2); }
     const Message *GetTail(void) const { return static_cast<const Message *>(mData2); }
     void           SetTail(Message *aMessage) { mData2 = aMessage; }
+
+    const Message *Find(Message::MatcherFn aMatcherFn, const void *aMatcher) const;
+
+    Message *Find(Message::MatcherFn aMatcherFn, const void *aMatcher)
+    {
+        return AsNonConst(AsConst(this)->Find(aMatcherFn, aMatcher));
+    }
 };
 
 /**
@@ -1831,6 +1862,16 @@ public:
      */
     void GetInfo(Info &aInfo) const;
 
+    template <typename Type> const Message *FindMatching(const Message::Matcher<Type> &aMatcher) const
+    {
+        return Find(&Message::Matcher<Type>::MatchMessage, &aMatcher);
+    }
+
+    template <typename Type> Message *FindMatching(const Message::Matcher<Type> &aMatcher)
+    {
+        return Find(&Message::Matcher<Type>::MatchMessage, &aMatcher);
+    }
+
     // The following methods are intended to support range-based `for`
     // loop iteration over the queue entries and should not be used
     // directly. The range-based `for` works correctly even if the
@@ -1848,6 +1889,13 @@ private:
     Message *FindTailForPriorityOrHigher(uint8_t aPriority)
     {
         return AsNonConst(AsConst(this)->FindTailForPriorityOrHigher(aPriority));
+    }
+
+    const Message *Find(Message::MatcherFn aMatcherFn, const void *aMatcher) const;
+
+    Message *Find(Message::MatcherFn aMatcherFn, const void *aMatcher)
+    {
+        return AsNonConst(AsConst(this)->Find(aMatcherFn, aMatcher));
     }
 
     Message *mHead;

@@ -964,6 +964,22 @@ void MessageQueue::AddQueueInfos(Info &aInfo, const Info &aOther)
     aInfo.mTotalBytes += aOther.mTotalBytes;
 }
 
+const Message *MessageQueue::Find(Message::MatcherFn aMatcherFn, const void *aMatcher) const
+{
+    const Message *match = nullptr;
+
+    for (const Message &message : *this)
+    {
+        if (aMatcherFn(message, aMatcher))
+        {
+            match = &message;
+            break;
+        }
+    }
+
+    return match;
+}
+
 //---------------------------------------------------------------------------------------------------------------------
 // PriorityQueue
 
@@ -1148,6 +1164,22 @@ void PriorityQueue::GetInfo(Info &aInfo) const
         aInfo.mNumBuffers += message.GetBufferCount();
         aInfo.mTotalBytes += message.GetLength();
     }
+}
+
+const Message *PriorityQueue::Find(Message::MatcherFn aMatcherFn, const void *aMatcher) const
+{
+    const Message *match = nullptr;
+
+    for (const Message &message : *this)
+    {
+        if (aMatcherFn(message, aMatcher))
+        {
+            match = &message;
+            break;
+        }
+    }
+
+    return match;
 }
 
 } // namespace ot
