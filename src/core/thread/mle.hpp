@@ -236,7 +236,7 @@ public:
      * @retval TRUE   Device is currently trying to attach.
      * @retval FALSE  Device is not in middle of attach process.
      */
-    bool IsAttaching(void) const { return (mAttachState != kAttachStateIdle); }
+    bool IsAttaching(void) const { return mAttacher.IsAttaching(); }
 
     /**
      * Returns the current Thread device role.
@@ -1583,6 +1583,60 @@ private:
 
     //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
+    void HandleAttacherTimer(void) {  mAttacher.HandleTimer(); }
+
+    class Attacher : public InstanceLocator
+    {
+    public:
+        explicit Attacher(Instance &aInstance);
+
+        bool IsAttaching(void) const { return mState != kStateIdle; }
+
+        void Start(StartMode aStartMode);
+        void Attach(AttachMode aAttachMode);
+        void StopOnRoleChange(void);
+
+        void HandleTimer(void) {}
+
+    //private:
+
+        enum State : uint8_t
+        {
+            kStateIdle,           // Not currently searching for a parent.
+            kStateStart,          // Starting to look for a parent.
+            kStateParentRequest,  // Send Parent Request (current number tracked by `mParentRequestCounter`).
+            kStateAnnounce,       // Send Announce messages
+            kStateChildIdRequest, // Sending a Child ID Request message.
+        };
+
+        /*
+        enum ReattachState : uint8_t
+        {
+            kReattachStop,    // Reattach process is disabled or finished
+            kReattachActive,  // Reattach using stored Active Dataset
+            kReattachPending, // Reattach using stored Pending Dataset
+        };
+        */
+
+        void SetState(State aState);
+
+#if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_NOTE)
+        static const char *ModeToString(AttachMode aMode);
+        static const char *StateToString(State aState);
+        static const char *ReattachToString(ReattachState aReattach);
+#endif
+
+        using AttachTimer = TimerMilliIn<Mle, &Mle::HandleAttacherTimer>;
+
+        State         mState;
+        ReattachState mReattach;
+        AttachMode    mMode;
+        uint16_t      mCounter;
+        AttachTimer   mTimer;
+    };
+
+    //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
 #if OPENTHREAD_FTD
     struct ParentResponseInfo
     {
@@ -1966,8 +2020,8 @@ private:
     Error      RestorePrevRole(void);
     TxMessage *NewMleMessage(Command aCommand);
     void       SetRole(DeviceRole aRole);
-    void       Attach(AttachMode aMode);
-    void       SetAttachState(AttachState aState);
+        void       Attach(AttachMode aMode); // TOREMOVE !(!@*(!&@!(&@@*(!&@!@*(!&@*())))))
+        void       SetAttachState(AttachState aState);
     void       InitNeighbor(Neighbor &aNeighbor, const RxInfo &aRxInfo);
     void       ClearParentCandidate(void) { mParentCandidate.Clear(); }
     Error      SendDataRequestToParent(void);
@@ -2071,12 +2125,6 @@ private:
 
 #if OPENTHREAD_CONFIG_WAKEUP_COORDINATOR_ENABLE
     void HandleWedAttachTimer(void);
-#endif
-
-#if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_NOTE)
-    static const char *AttachModeToString(AttachMode aMode);
-    static const char *AttachStateToString(AttachState aState);
-    static const char *ReattachStateToString(ReattachState aState);
 #endif
 
 #if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_WARN)
@@ -2211,6 +2259,7 @@ private:
     LeaderData      mLeaderData;
     Parent          mParent;
     NeighborTable   mNeighborTable;
+    Attacher        mAttacher;
     DelayedSender   mDelayedSender;
     TxChallenge     mParentRequestChallenge;
     ParentCandidate mParentCandidate;

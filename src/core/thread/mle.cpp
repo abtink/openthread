@@ -73,6 +73,7 @@ Mle::Mle(Instance &aInstance)
     , mCslTimeout(kDefaultCslTimeout)
 #endif
     , mNeighborTable(aInstance)
+    , mAttacher(aInstance)
     , mDelayedSender(aInstance)
     , mSocket(aInstance, *this)
     , mRetxTracker(aInstance)
@@ -221,16 +222,11 @@ Error Mle::Start(StartMode aMode)
 
     SetRloc16(GetRloc16());
 
-    mAttachCounter = 0;
-
     Get<KeyManager>().Start();
 
     switch (aMode)
     {
     case kNormalAttach:
-        mReattachState =
-            (Get<MeshCoP::ActiveDatasetManager>().Restore() == kErrorNone) ? kReattachActive : kReattachStop;
-
         if (RestorePrevRole() == kErrorNone)
         {
             ExitNow();
@@ -241,7 +237,7 @@ Error Mle::Start(StartMode aMode)
         break;
     }
 
-    Attach(kAnyPartition);
+    mAttacher.Start(aMode);
 
 exit:
     return error;
@@ -423,7 +419,7 @@ exit:
 void Mle::SetAttachState(AttachState aState)
 {
     VerifyOrExit(aState != mAttachState);
-    LogInfo("AttachState %s -> %s", AttachStateToString(mAttachState), AttachStateToString(aState));
+    //LogInfo("AttachState %s -> %s", AttachStateToString(mAttachState), AttachStateToString(aState));
     mAttachState = aState;
 
 exit:
@@ -761,8 +757,7 @@ void Mle::SetStateDetached(void)
 #endif
 
     SetRole(kRoleDetached);
-    SetAttachState(kAttachStateIdle);
-    mAttachTimer.Stop();
+    mAttacher.StopOnRoleChange();
     mDelayedSender.RemoveScheduledChildUpdateRequestToParent();
     mRetxTracker.Stop();
     mInitiallyAttachedAsSleepy = false;
@@ -785,9 +780,7 @@ void Mle::SetStateChild(uint16_t aRloc16)
 
     SetRloc16(aRloc16);
     SetRole(kRoleChild);
-    SetAttachState(kAttachStateIdle);
-    mAttachTimer.Start(kAttachBackoffDelayToResetCounter);
-    mReattachState = kReattachStop;
+    mAttacher.StopOnRoleChange();
     Get<Mac::Mac>().SetBeaconEnabled(false);
     mRetxTracker.UpdateOnRoleChangeToChild();
 
@@ -1496,8 +1489,8 @@ void Mle::HandleAttachTimer(void)
         break;
 
     case kAttachStateStart:
-        LogNote("Attach attempt %d, %s %s", mAttachCounter, AttachModeToString(mAttachMode),
-                ReattachStateToString(mReattachState));
+        LogNote("Attach attempt %d, %s %s", mAttachCounter, Attacher::ModeToString(mAttachMode),
+                Attacher::ReattachToString(mReattachState));
 
         SetAttachState(kAttachStateParentRequest);
         mParentCandidate.SetState(Neighbor::kStateInvalid);
@@ -4103,7 +4096,7 @@ const char *Mle::MessageTypeActionToSuffixString(MessageType aType, MessageActio
 
 #if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_NOTE)
 
-const char *Mle::AttachModeToString(AttachMode aMode)
+const char *Mle::Attacher::ModeToString(AttachMode aMode)
 {
     static const char *const kAttachModeStrings[] = {
         "AnyPartition",    // (0) kAnyPartition
@@ -4128,32 +4121,32 @@ const char *Mle::AttachModeToString(AttachMode aMode)
     return kAttachModeStrings[aMode];
 }
 
-const char *Mle::AttachStateToString(AttachState aState)
+const char *Mle::Attacher::StateToString(State aState)
 {
-    static const char *const kAttachStateStrings[] = {
-        "Idle",       // (0) kAttachStateIdle
-        "Start",      // (1) kAttachStateStart
-        "ParentReq",  // (2) kAttachStateParent
-        "Announce",   // (3) kAttachStateAnnounce
-        "ChildIdReq", // (4) kAttachStateChildIdRequest
+    static const char *const kStateStrings[] = {
+        "Idle",       // (0) kStateIdle
+        "Start",      // (1) kStateStart
+        "ParentReq",  // (2) kStateParent
+        "Announce",   // (3) kStateAnnounce
+        "ChildIdReq", // (4) kStateChildIdRequest
     };
 
     struct EnumCheck
     {
         InitEnumValidatorCounter();
-        ValidateNextEnum(kAttachStateIdle);
-        ValidateNextEnum(kAttachStateStart);
-        ValidateNextEnum(kAttachStateParentRequest);
-        ValidateNextEnum(kAttachStateAnnounce);
-        ValidateNextEnum(kAttachStateChildIdRequest);
+        ValidateNextEnum(kStateIdle);
+        ValidateNextEnum(kStateStart);
+        ValidateNextEnum(kStateParentRequest);
+        ValidateNextEnum(kStateAnnounce);
+        ValidateNextEnum(kStateChildIdRequest);
     };
 
-    return kAttachStateStrings[aState];
+    return kStateStrings[aState];
 }
 
-const char *Mle::ReattachStateToString(ReattachState aState)
+const char *Mle::Attacher::ReattachToString(ReattachState aReattach)
 {
-    static const char *const kReattachStateStrings[] = {
+    static const char *const kReattachStrings[] = {
         "",                                 // (0) kReattachStop
         "reattaching with Active Dataset",  // (1) kReattachActive
         "reattaching with Pending Dataset", // (2) kReattachPending
@@ -4167,7 +4160,7 @@ const char *Mle::ReattachStateToString(ReattachState aState)
         ValidateNextEnum(kReattachPending);
     };
 
-    return kReattachStateStrings[aState];
+    return kReattachStrings[aReattach];
 }
 
 #endif // OT_SHOULD_LOG_AT( OT_LOG_LEVEL_NOTE)
@@ -4330,6 +4323,74 @@ void Mle::TlvList::AddElementsFrom(const TlvList &aTlvList)
         Add(tlvType);
     }
 }
+
+//---------------------------------------------------------------------------------------------------------------------
+// Attacher
+
+Mle::Attacher::Attacher(Instance &aInstance)
+    : InstanceLocator(aInstance)
+    , mState(kStateIdle)
+    , mReattach(kReattachStop)
+    , mMode(kAnyPartition)
+    , mCounter(0)
+    , mTimer(aInstance)
+{
+}
+
+void Mle::Attacher::Start(StartMode aStartMode)
+{
+    mCounter = 0;
+
+    switch (aStartMode)
+    {
+    case kNormalAttach:
+        mReattach = (Get<MeshCoP::ActiveDatasetManager>().Restore() == kErrorNone) ? kReattachActive : kReattachStop;
+        break;
+
+    case kAnnounceAttach:
+        break;
+    }
+
+    Attach(kAnyPartition);
+}
+
+void Mle::Attacher::StopOnRoleChange(void)
+{
+    SetState(kStateIdle);
+
+    switch (Get<Mle>().GetRole())
+    {
+    case kRoleDisabled:
+        break;
+
+    case kRoleDetached:
+        mTimer.Stop();
+        // Keep the counter as before so the attach backoff is resumed
+        break;
+
+    case kRoleChild:
+        mTimer.Start(kAttachBackoffDelayToResetCounter);
+        mReattach = kReattachStop;
+        break;
+
+    case kRoleRouter:
+    case kRoleLeader:
+        mCounter = 0;
+        mTimer.Stop();
+        break;
+    }
+}
+
+void Mle::Attacher::SetState(State aState)
+{
+    VerifyOrExit(aState != mState);
+    LogInfo("AttachState %s -> %s", StateToString(mState), StateToString(aState));
+    mState = aState;
+
+exit:
+    return;
+}
+
 
 //---------------------------------------------------------------------------------------------------------------------
 // DelayedSender
