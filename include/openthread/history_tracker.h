@@ -289,6 +289,19 @@ typedef enum
     OT_HISTORY_TRACKER_BORDER_AGENT_EPSKC_EVENT_DEACTIVATED_UNKNOWN,         ///< Deactivated for an unknown reason.
 } otHistoryTrackerBorderAgentEpskcEvent;
 
+typedef struct otHistoryTrackerFavoredOmrPrefix
+{
+    otIp6Prefix mOmrPrefix;
+    signed int  mPreference : 2; ///< A 2-bit signed int preference (`OT_ROUTE_PREFERENCE_*` values).
+    bool        mIsLocal : 1;
+} otHistoryTrackerFavoredOmrPrefix;
+
+typedef struct otHistoryTrackerFavoredOnLinkPrefix
+{
+    otIp6Prefix mOnLinkPrefix;
+    bool        mIsLocal : 1;
+} otHistoryTrackerFavoredOnLinkPrefix;
+
 /**
  * Initializes an `otHistoryTrackerIterator`.
  *

@@ -2654,6 +2654,10 @@ void RoutingManager::OmrPrefixManager::SetFavoredPrefix(const OmrPrefix &aOmrPre
 #endif
         LogInfo("Favored OMR prefix: %s -> %s", FavoredToString(oldFavoredPrefix).AsCString(),
                 FavoredToString(mFavoredPrefix).AsCString());
+
+#if OPENTHREAD_CONFIG_HISTORY_TRACKER_ENABLE
+        Get<HistoryTracker::Local>().RecordFavoredOmrPrefixEvenet();
+#endif
     }
 }
 
