@@ -43,8 +43,8 @@
 #include "common/encoding.hpp"
 #include "common/equatable.hpp"
 #include "net/ip6_address.hpp"
+#include "netdata/network_data_types.hpp"
 #include "thread/mle_types.hpp"
-#include "thread/network_data_types.hpp"
 
 namespace ot {
 namespace NetworkData {

@@ -48,7 +48,7 @@
 #include "common/locator.hpp"
 #include "common/non_copyable.hpp"
 #include "net/netif.hpp"
-#include "thread/network_data.hpp"
+#include "netdata/network_data.hpp"
 #include "thread/tmf.hpp"
 
 namespace ot {

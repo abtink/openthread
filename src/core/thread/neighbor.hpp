@@ -50,6 +50,7 @@
 #include "common/uptime.hpp"
 #include "mac/mac_types.hpp"
 #include "net/ip6.hpp"
+#include "netdata/network_data_types.hpp"
 #include "radio/radio.hpp"
 #include "radio/trel_link.hpp"
 #include "thread/csl_tx_scheduler.hpp"
@@ -58,7 +59,6 @@
 #include "thread/link_quality.hpp"
 #include "thread/mle_tlvs.hpp"
 #include "thread/mle_types.hpp"
-#include "thread/network_data_types.hpp"
 #include "thread/radio_selector.hpp"
 #include "thread/version.hpp"
 

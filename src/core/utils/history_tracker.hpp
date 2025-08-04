@@ -50,12 +50,12 @@
 #include "meshcop/border_agent.hpp"
 #include "net/netif.hpp"
 #include "net/socket.hpp"
+#include "netdata/network_data.hpp"
+#include "netdata/network_data_service.hpp"
 #include "thread/mesh_forwarder.hpp"
 #include "thread/mle.hpp"
 #include "thread/mle_types.hpp"
 #include "thread/neighbor_table.hpp"
-#include "thread/network_data.hpp"
-#include "thread/network_data_service.hpp"
 #include "thread/router_table.hpp"
 
 namespace ot {

@@ -76,7 +76,7 @@
 #include "net/ip6.hpp"
 #include "net/ip6_address.hpp"
 #include "net/udp6.hpp"
-#include "thread/network_data_publisher.hpp"
+#include "netdata/network_data_publisher.hpp"
 
 struct otSrpServerHost
 {

@@ -44,8 +44,8 @@
 #include "common/numeric_limits.hpp"
 #include "common/timer.hpp"
 #include "net/ip6_address.hpp"
+#include "netdata/network_data.hpp"
 #include "thread/mle.hpp"
-#include "thread/network_data.hpp"
 #include "thread/tmf.hpp"
 
 namespace ot {

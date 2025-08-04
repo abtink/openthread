@@ -52,7 +52,7 @@
 #include "net/ip6.hpp"
 #include "net/netif.hpp"
 #include "net/udp6.hpp"
-#include "thread/network_data_service.hpp"
+#include "netdata/network_data_service.hpp"
 
 /**
  * @file

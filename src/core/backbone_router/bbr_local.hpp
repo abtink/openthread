@@ -61,7 +61,7 @@
 #include "common/non_copyable.hpp"
 #include "common/time_ticker.hpp"
 #include "net/netif.hpp"
-#include "thread/network_data.hpp"
+#include "netdata/network_data.hpp"
 
 namespace ot {
 

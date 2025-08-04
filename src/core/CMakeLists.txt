@@ -198,6 +198,15 @@ set(COMMON_SOURCES
     net/tcp6.cpp
     net/tcp6_ext.cpp
     net/udp6.cpp
+    netdata/network_data.cpp
+    netdata/network_data_leader.cpp
+    netdata/network_data_leader_ftd.cpp
+    netdata/network_data_local.cpp
+    netdata/network_data_notifier.cpp
+    netdata/network_data_publisher.cpp
+    netdata/network_data_service.cpp
+    netdata/network_data_tlvs.cpp
+    netdata/network_data_types.cpp
     radio/ble_secure.cpp
     radio/radio.cpp
     radio/radio_callbacks.cpp
@@ -234,15 +243,6 @@ set(COMMON_SOURCES
     thread/mlr_manager.cpp
     thread/neighbor.cpp
     thread/neighbor_table.cpp
-    thread/network_data.cpp
-    thread/network_data_leader.cpp
-    thread/network_data_leader_ftd.cpp
-    thread/network_data_local.cpp
-    thread/network_data_notifier.cpp
-    thread/network_data_publisher.cpp
-    thread/network_data_service.cpp
-    thread/network_data_tlvs.cpp
-    thread/network_data_types.cpp
     thread/network_diagnostic.cpp
     thread/network_diagnostic_tlvs.cpp
     thread/panid_query_server.cpp

@@ -46,7 +46,7 @@
 #include "common/non_copyable.hpp"
 #include "common/serial_number.hpp"
 #include "net/socket.hpp"
-#include "thread/network_data_tlvs.hpp"
+#include "netdata/network_data_tlvs.hpp"
 
 namespace ot {
 namespace NetworkData {

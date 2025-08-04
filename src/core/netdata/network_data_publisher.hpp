@@ -56,8 +56,8 @@
 #include "common/string.hpp"
 #include "common/timer.hpp"
 #include "net/ip6_address.hpp"
-#include "thread/network_data_service.hpp"
-#include "thread/network_data_types.hpp"
+#include "netdata/network_data_service.hpp"
+#include "netdata/network_data_types.hpp"
 
 namespace ot {
 namespace NetworkData {

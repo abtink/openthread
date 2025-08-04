@@ -47,10 +47,10 @@
 #include "common/locator.hpp"
 #include "common/timer.hpp"
 #include "net/udp6.hpp"
+#include "netdata/network_data_tlvs.hpp"
+#include "netdata/network_data_types.hpp"
 #include "thread/lowpan.hpp"
 #include "thread/mle.hpp"
-#include "thread/network_data_tlvs.hpp"
-#include "thread/network_data_types.hpp"
 
 namespace ot {
 

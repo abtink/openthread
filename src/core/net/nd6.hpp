@@ -54,7 +54,7 @@
 #include "net/icmp6.hpp"
 #include "net/ip6.hpp"
 #include "net/ip6_headers.hpp"
-#include "thread/network_data_types.hpp"
+#include "netdata/network_data_types.hpp"
 
 namespace ot {
 namespace Ip6 {

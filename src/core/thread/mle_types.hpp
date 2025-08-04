@@ -56,7 +56,7 @@
 #include "mac/mac_types.hpp"
 #include "meshcop/extended_panid.hpp"
 #include "net/ip6_address.hpp"
-#include "thread/network_data_types.hpp"
+#include "netdata/network_data_types.hpp"
 
 namespace ot {
 

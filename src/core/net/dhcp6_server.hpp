@@ -45,7 +45,7 @@
 #include "mac/mac_types.hpp"
 #include "net/dhcp6_types.hpp"
 #include "net/udp6.hpp"
-#include "thread/network_data_leader.hpp"
+#include "netdata/network_data_leader.hpp"
 
 namespace ot {
 namespace Dhcp6 {
