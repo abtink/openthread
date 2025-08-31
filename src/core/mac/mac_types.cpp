@@ -76,13 +76,9 @@ void ExtAddress::SetFromIid(const Ip6::InterfaceIdentifier &aIid)
 
 bool ExtAddress::operator==(const ExtAddress &aOther) const { return (memcmp(m8, aOther.m8, sizeof(m8)) == 0); }
 
-ExtAddress::InfoString ExtAddress::ToString(void) const
+void ExtAddress::WriteAsString(StringWriter &aWriter) const
 {
-    InfoString string;
-
-    string.AppendHexBytes(m8, sizeof(ExtAddress));
-
-    return string;
+    aWriter.AppendHexBytes(m8, sizeof(ExtAddress));
 }
 
 void ExtAddress::CopyAddress(uint8_t *aDst, const uint8_t *aSrc, CopyByteOrder aByteOrder)
@@ -140,24 +136,20 @@ exit:
     return ret;
 }
 
-Address::InfoString Address::ToString(void) const
+void Address::WriteAsString(StringWriter &aWriter) const
 {
-    InfoString string;
-
     if (mType == kTypeExtended)
     {
-        string.AppendHexBytes(GetExtended().m8, sizeof(ExtAddress));
+        aWriter.AppendHexBytes(GetExtended().m8, sizeof(ExtAddress));
     }
     else if (mType == kTypeNone)
     {
-        string.Append("None");
+        aWriter.Append("None");
     }
     else
     {
-        string.Append("0x%04x", GetShort());
+        aWriter.Append("0x%04x", GetShort());
     }
-
-    return string;
 }
 
 void PanIds::SetSource(PanId aPanId)
@@ -199,16 +191,15 @@ void RadioTypes::AddAll(void)
 #endif
 }
 
-RadioTypes::InfoString RadioTypes::ToString(void) const
+void RadioTypes::WriteAsString(StringWriter &aWriter) const
 {
-    InfoString string;
     bool       addComma = false;
 
-    string.Append("{");
+    aWriter.Append("{");
 #if OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4_ENABLE
     if (Contains(kRadioTypeIeee802154))
     {
-        string.Append("%s%s", addComma ? ", " : " ", RadioTypeToString(kRadioTypeIeee802154));
+        aWriter.Append("%s%s", addComma ? ", " : " ", RadioTypeToString(kRadioTypeIeee802154));
         addComma = true;
     }
 #endif
@@ -216,16 +207,14 @@ RadioTypes::InfoString RadioTypes::ToString(void) const
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
     if (Contains(kRadioTypeTrel))
     {
-        string.Append("%s%s", addComma ? ", " : " ", RadioTypeToString(kRadioTypeTrel));
+        aWriter.Append("%s%s", addComma ? ", " : " ", RadioTypeToString(kRadioTypeTrel));
         addComma = true;
     }
 #endif
 
     OT_UNUSED_VARIABLE(addComma);
 
-    string.Append(" }");
-
-    return string;
+    aWriter.Append(" }");
 }
 
 const char *RadioTypeToString(RadioType aRadioType)

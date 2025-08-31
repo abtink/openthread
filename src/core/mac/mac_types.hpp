@@ -91,16 +91,14 @@ PanId GenerateRandomPanId(void);
  * Represents an IEEE 802.15.4 Extended Address.
  */
 OT_TOOL_PACKED_BEGIN
-class ExtAddress : public otExtAddress, public Equatable<ExtAddress>, public Clearable<ExtAddress>
+class ExtAddress : public otExtAddress,
+                   public Equatable<ExtAddress>,
+                   public Clearable<ExtAddress>,
+                   public Stringable<ExtAddress, 17>
 {
+    friend class ot::Stringable<ExtAddress, 17>;
+
 public:
-    static constexpr uint16_t kInfoStringSize = 17; ///< Max chars for the info string (`ToString()`).
-
-    /**
-     * Defines the fixed-length `String` object returned from `ToString()`.
-     */
-    typedef String<kInfoStringSize> InfoString;
-
     /**
      * Type specifies the copy byte order when Extended Address is being copied to/from a buffer.
      */
@@ -224,31 +222,23 @@ public:
      */
     bool operator==(const ExtAddress &aOther) const;
 
-    /**
-     * Converts an address to a string.
-     *
-     * @returns An `InfoString` containing the string representation of the Extended Address.
-     */
-    InfoString ToString(void) const;
-
 private:
     static constexpr uint8_t kGroupFlag = (1 << 0);
     static constexpr uint8_t kLocalFlag = (1 << 1);
 
     static void CopyAddress(uint8_t *aDst, const uint8_t *aSrc, CopyByteOrder aByteOrder);
+
+    void WriteAsString(StringWriter &aWriter) const;
 } OT_TOOL_PACKED_END;
 
 /**
  * Represents an IEEE 802.15.4 Short or Extended Address.
  */
-class Address
+class Address : public Stringable<Address, ExtAddress::kInfoStringSize>
 {
-public:
-    /**
-     * Defines the fixed-length `String` object returned from `ToString()`.
-     */
-    typedef ExtAddress::InfoString InfoString;
+    friend class ot::Stringable<Address, ExtAddress::kInfoStringSize>;
 
+public:
     /**
      * Specifies the IEEE 802.15.4 Address type.
      */
@@ -403,13 +393,6 @@ public:
      */
     bool operator==(const Address &aOther) const;
 
-    /**
-     * Converts an address to a null-terminated string
-     *
-     * @returns A `String` representing the address.
-     */
-    InfoString ToString(void) const;
-
 private:
     union
     {
@@ -418,6 +401,8 @@ private:
     } mShared;
 
     Type mType; ///< The address type (Short, Extended, or none).
+
+    void WriteAsString(StringWriter &aWriter) const;
 };
 
 /**
@@ -650,16 +635,11 @@ constexpr uint8_t kNumRadioTypes = (((OPENTHREAD_CONFIG_RADIO_LINK_IEEE_802_15_4
 /**
  * Represents a set of radio links.
  */
-class RadioTypes
+class RadioTypes : public Stringable<RadioType, 32>
 {
+    friend class ot::Stringable<aRadioType, 32>;
+
 public:
-    static constexpr uint16_t kInfoStringSize = 32; ///< Max chars for the info string (`ToString()`).
-
-    /**
-     * Defines the fixed-length `String` object returned from `ToString()`.
-     */
-    typedef String<kInfoStringSize> InfoString;
-
     /**
      * This static class variable defines an array containing all supported radio link types.
      */
@@ -756,17 +736,12 @@ public:
      */
     RadioTypes operator-(const RadioTypes &aOther) const { return RadioTypes(mBitMask & ~aOther.mBitMask); }
 
-    /**
-     * Converts the radio set to human-readable string.
-     *
-     * @return A string representation of the set of radio types.
-     */
-    InfoString ToString(void) const;
-
 private:
     static uint8_t BitFlag(RadioType aType) { return static_cast<uint8_t>(1U << static_cast<uint8_t>(aType)); }
 
     uint8_t mBitMask;
+
+    void WriteAsString(StringWriter &aWriter) const;
 };
 
 /**

@@ -186,23 +186,7 @@ exit:
     return error;
 }
 
-Prefix::InfoString Prefix::ToString(void) const
-{
-    InfoString string;
-
-    ToString(string);
-
-    return string;
-}
-
-void Prefix::ToString(char *aBuffer, uint16_t aSize) const
-{
-    StringWriter writer(aBuffer, aSize);
-
-    ToString(writer);
-}
-
-void Prefix::ToString(StringWriter &aWriter) const
+void Prefix::WriteAsString(StringWriter &aWriter) const
 {
     uint8_t sizeInUint16 = DivideAndRoundUp<uint8_t>(GetBytesSize(), sizeof(uint16_t));
     Prefix  tidyPrefix   = *this;
@@ -297,14 +281,7 @@ void InterfaceIdentifier::ApplyPrefix(const Prefix &aPrefix)
     }
 }
 
-InterfaceIdentifier::InfoString InterfaceIdentifier::ToString(void) const
-{
-    InfoString string;
-
-    string.AppendHexBytes(mFields.m8, kSize);
-
-    return string;
-}
+void InterfaceIdentifier::WriteAsString(StringWriter &aWriter) const { aWriter.AppendHexBytes(mFields.m8, kSize); }
 
 //---------------------------------------------------------------------------------------------------------------------
 // Address methods
@@ -634,22 +611,7 @@ exit:
     return error;
 }
 
-Address::InfoString Address::ToString(void) const
-{
-    InfoString string;
-
-    ToString(string);
-
-    return string;
-}
-
-void Address::ToString(char *aBuffer, uint16_t aSize) const
-{
-    StringWriter writer(aBuffer, aSize);
-    ToString(writer);
-}
-
-void Address::ToString(StringWriter &aWriter) const
+void Address::WriteAsString(StringWriter &aWriter) const
 {
     AppendHexWords(aWriter, static_cast<uint8_t>(GetArrayLength(mFields.m16)));
 }

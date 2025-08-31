@@ -52,22 +52,14 @@ namespace MeshCoP {
  * Represents an Extended PAN Identifier.
  */
 OT_TOOL_PACKED_BEGIN
-class ExtendedPanId : public otExtendedPanId, public Equatable<ExtendedPanId>, public Clearable<ExtendedPanId>
+class ExtendedPanId : public otExtendedPanId,
+                      public Equatable<ExtendedPanId>,
+                      public Clearable<ExtendedPanId>,
+                      public Stringable<ExtendedPanId, 17>
 {
+
 public:
-    static constexpr uint16_t kInfoStringSize = 17; ///< Max chars for the info string (`ToString()`).
-
-    /**
-     * Defines the fixed-length `String` object returned from `ToString()`.
-     */
-    typedef String<kInfoStringSize> InfoString;
-
-    /**
-     * Converts an address to a string.
-     *
-     * @returns An `InfoString` containing the string representation of the Extended PAN Identifier.
-     */
-    InfoString ToString(void) const;
+    void WriteAsString(StringWriter &aWriter) const;
 
 } OT_TOOL_PACKED_END;
 

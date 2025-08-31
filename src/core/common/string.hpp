@@ -44,6 +44,7 @@
 #include "common/code_utils.hpp"
 #include "common/error.hpp"
 #include "common/num_utils.hpp"
+#include "common/type_traits.hpp"
 
 namespace ot {
 
@@ -378,6 +379,8 @@ inline constexpr bool AreStringsInOrder(const char *aFirst, const char *aSecond)
                : ((*aFirst > *aSecond) || (*aFirst == '\0') ? false : AreStringsInOrder(aFirst + 1, aSecond + 1));
 }
 
+//---------------------------------------------------------------------------------------------------------------------
+
 /**
  * Implements writing to a string buffer.
  */
@@ -463,6 +466,15 @@ public:
      */
     StringWriter &AppendCharMultipleTimes(char aChar, uint16_t aCount);
 
+/*
+    template <typename ObjectType> void Append(const ObjectType &aObject)
+    {
+        static_assert(!TypeTraits::IsPointer<ObjectType>::kValue, "ObjectType must not be a pointer");
+
+        aObject.WriteAsString(*this);
+    }
+*/
+
     /**
      * Converts all uppercase letter characters in the string to lowercase.
      */
@@ -478,6 +490,8 @@ private:
     uint16_t       mLength;
     const uint16_t mSize;
 };
+
+//---------------------------------------------------------------------------------------------------------------------
 
 /**
  * Defines a fixed-size string.
@@ -505,6 +519,67 @@ public:
 private:
     char mBuffer[kSize];
 };
+
+//---------------------------------------------------------------------------------------------------------------------
+
+/**
+ * Defines a `Stringable` object which provides different flavors of `ToString()` methods.
+ *
+ * Users of this class should follow CRTP-style inheritance, i.e., the `Type` class itself should publicly inherit
+ * from `Stringable<Type, kStringSize>`.
+ *
+ * The `Type` class MUST provides `void Type::WriteAsString(StringWriter &aWriter) const` method which performs the
+ * string conversion.
+ *
+ * This single definition is then used to provide a vareirty of methods for string conversion, mainly the
+ * `StringWriter::Append<Type>()` along with various `ToString()` methods.
+ *
+ * @tparam Type          The object type.
+ * @tparam kStringSize   The size of the `InfoString` for string representation of `Type`.
+ */
+template <typename Type, uint16_t kStringSize> class Stringable
+{
+public:
+    static constexpr uint16_t kInfoStringSize = kStringSize; ///< Info string size (`ToString()`).
+
+    /**
+     * Defines the fixed-length `String` object returned from `ToString()`.
+     */
+    typedef String<kInfoStringSize> InfoString;
+
+    /**
+     * Converts the `Type` object to a human-readable string.
+     *
+     * @returns An `InfoString` containing the string representation of the `Type`.
+     */
+    InfoString ToString(void) const
+    {
+        InfoString string;
+
+        static_cast<const Type *>(this)->WriteAsString(string);
+        return string;
+    }
+
+    /**
+     * Converts the `Type` to a string.
+     *
+     * If the resulting string does not fit in @p aBuffer (within its @p aSize characters), the string will be
+     * truncated but the outputted string is always null-terminated.
+     *
+     * @param[out] aBuffer   A pointer to a char array to output the string (MUST NOT be `nullptr`).
+     * @param[in]  aSize     The size of @p aBuffer (in bytes).
+     */
+    void ToString(char *aBuffer, uint16_t aSize) const
+    {
+        StringWriter writer(aBuffer, aSize);
+
+        static_cast<const Type *>(this)->WriteAsString(writer);
+    }
+
+private:
+};
+
+//---------------------------------------------------------------------------------------------------------------------
 
 /**
  * Provides helper methods to convert from a set of `uint16_t` values (e.g., a non-sequential `enum`) to

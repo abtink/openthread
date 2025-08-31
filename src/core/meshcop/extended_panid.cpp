@@ -42,14 +42,7 @@ const otExtendedPanId ExtendedPanIdManager::sExtendedPanidInit = {
     {0xde, 0xad, 0x00, 0xbe, 0xef, 0x00, 0xca, 0xfe},
 };
 
-ExtendedPanId::InfoString ExtendedPanId::ToString(void) const
-{
-    InfoString string;
-
-    string.AppendHexBytes(m8, sizeof(ExtendedPanId));
-
-    return string;
-}
+void ExtendedPanId::WriteAsString(StringWriter &aWriter) const { aWriter.AppendHexBytes(m8, sizeof(ExtendedPanId)); }
 
 ExtendedPanIdManager::ExtendedPanIdManager(Instance &aInstance)
     : InstanceLocator(aInstance)
