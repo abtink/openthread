@@ -1428,16 +1428,18 @@ void MeshForwarder::LogIp6AddressAndPort(const char         *aLabel,
                                          uint16_t            aPort,
                                          LogLevel            aLogLevel)
 {
-    Ip6::SockAddr::InfoString string;
+    String<kMaxLogStringSize> string;
 
-    string.Append("[%s]", aAddress.ToString().AsCString());
+    string.Append("    %s:[", aLabel);
+    string.Append(aAddress);
+    string.Append("]");
 
     if (aPort != 0)
     {
         string.Append(":%u", aPort);
     }
 
-    LogAt(aLogLevel, "    %s:%s", aLabel, string.AsCString());
+    LogAt(aLogLevel, "%s", string.AsCString());
 }
 
 #else

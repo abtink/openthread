@@ -463,6 +463,13 @@ public:
      */
     StringWriter &AppendCharMultipleTimes(char aChar, uint16_t aCount);
 
+    template <typename ObjectType> void Append(const ObjectType &aObject)
+    {
+        static_assert(!TypeTraits::IsPointer<ObjectType>::kValue, "ObjectType MUST NOT be a pointer");
+
+        aObject.ToString(*this);
+    }
+
     /**
      * Converts all uppercase letter characters in the string to lowercase.
      */
