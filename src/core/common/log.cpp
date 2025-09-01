@@ -64,12 +64,25 @@ namespace ot {
 
 #if OT_SHOULD_LOG
 
+template <LogLevel kLogLevel> void Logger::LogAtLevelSimple(const char *aModuleName, const char *aLine)
+{
+    LogVarArgs(aModuleName, kLogLevel, aLine, nullptr);
+}
+
+// Explicit instantiations
+template void Logger::LogAtLevelSimple<kLogLevelNone>(const char *aModuleName, const char *aLine);
+template void Logger::LogAtLevelSimple<kLogLevelCrit>(const char *aModuleName, const char *aLine);
+template void Logger::LogAtLevelSimple<kLogLevelWarn>(const char *aModuleName, const char *aLine);
+template void Logger::LogAtLevelSimple<kLogLevelNote>(const char *aModuleName, const char *aLine);
+template void Logger::LogAtLevelSimple<kLogLevelInfo>(const char *aModuleName, const char *aLine);
+template void Logger::LogAtLevelSimple<kLogLevelDebg>(const char *aModuleName, const char *aLine);
+
 template <LogLevel kLogLevel> void Logger::LogAtLevel(const char *aModuleName, const char *aFormat, ...)
 {
     va_list args;
 
     va_start(args, aFormat);
-    LogVarArgs(aModuleName, kLogLevel, aFormat, args);
+    LogVarArgs(aModuleName, kLogLevel, aFormat, &args);
     va_end(args);
 }
 
@@ -86,11 +99,11 @@ void Logger::LogInModule(const char *aModuleName, LogLevel aLogLevel, const char
     va_list args;
 
     va_start(args, aFormat);
-    LogVarArgs(aModuleName, aLogLevel, aFormat, args);
+    LogVarArgs(aModuleName, aLogLevel, aFormat, &args);
     va_end(args);
 }
 
-void Logger::LogVarArgs(const char *aModuleName, LogLevel aLogLevel, const char *aFormat, va_list aArgs)
+void Logger::LogVarArgs(const char *aModuleName, LogLevel aLogLevel, const char *aFormat, va_list *aArgs)
 {
     static const char kModuleNamePadding[] = "--------------";
 
@@ -125,7 +138,14 @@ void Logger::LogVarArgs(const char *aModuleName, LogLevel aLogLevel, const char 
     logString.Append("%.*s%s: ", kMaxLogModuleNameLength, aModuleName,
                      &kModuleNamePadding[StringLength(aModuleName, kMaxLogModuleNameLength)]);
 
-    logString.AppendVarArgs(aFormat, aArgs);
+    if (aArgs != nullptr)
+    {
+        logString.AppendVarArgs(aFormat, *aArgs);
+    }
+    else
+    {
+        logString.Append("%s", aFormat);
+    }
 
     logString.Append("%s", OPENTHREAD_CONFIG_LOG_SUFFIX);
     otPlatLog(aLogLevel, OT_LOG_REGION_CORE, "%s", logString.AsCString());

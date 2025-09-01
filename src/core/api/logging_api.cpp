@@ -60,7 +60,7 @@ void otLogCritPlat(const char *aFormat, ...)
     va_list args;
 
     va_start(args, aFormat);
-    Logger::LogVarArgs(kPlatformModuleName, kLogLevelCrit, aFormat, args);
+    Logger::LogVarArgs(kPlatformModuleName, kLogLevelCrit, aFormat, &args);
     va_end(args);
 #else
     OT_UNUSED_VARIABLE(aFormat);
@@ -74,7 +74,7 @@ void otLogWarnPlat(const char *aFormat, ...)
     va_list args;
 
     va_start(args, aFormat);
-    Logger::LogVarArgs(kPlatformModuleName, kLogLevelWarn, aFormat, args);
+    Logger::LogVarArgs(kPlatformModuleName, kLogLevelWarn, aFormat, &args);
     va_end(args);
 #else
     OT_UNUSED_VARIABLE(aFormat);
@@ -87,7 +87,7 @@ void otLogNotePlat(const char *aFormat, ...)
     va_list args;
 
     va_start(args, aFormat);
-    Logger::LogVarArgs(kPlatformModuleName, kLogLevelNote, aFormat, args);
+    Logger::LogVarArgs(kPlatformModuleName, kLogLevelNote, aFormat, &args);
     va_end(args);
 #else
     OT_UNUSED_VARIABLE(aFormat);
@@ -100,7 +100,7 @@ void otLogInfoPlat(const char *aFormat, ...)
     va_list args;
 
     va_start(args, aFormat);
-    Logger::LogVarArgs(kPlatformModuleName, kLogLevelInfo, aFormat, args);
+    Logger::LogVarArgs(kPlatformModuleName, kLogLevelInfo, aFormat, &args);
     va_end(args);
 #else
     OT_UNUSED_VARIABLE(aFormat);
@@ -113,7 +113,7 @@ void otLogDebgPlat(const char *aFormat, ...)
     va_list args;
 
     va_start(args, aFormat);
-    Logger::LogVarArgs(kPlatformModuleName, kLogLevelDebg, aFormat, args);
+    Logger::LogVarArgs(kPlatformModuleName, kLogLevelDebg, aFormat, &args);
     va_end(args);
 #else
     OT_UNUSED_VARIABLE(aFormat);
@@ -198,7 +198,7 @@ void otLogPlatArgs(otLogLevel aLogLevel, const char *aPlatModuleName, const char
     OT_ASSERT(aLogLevel >= kLogLevelNone && aLogLevel <= kLogLevelDebg);
 
     moduleName.Append("P-%s", aPlatModuleName);
-    Logger::LogVarArgs(moduleName.AsCString(), static_cast<LogLevel>(aLogLevel), aFormat, aArgs);
+    Logger::LogVarArgs(moduleName.AsCString(), static_cast<LogLevel>(aLogLevel), aFormat, &aArgs);
 #else
     OT_UNUSED_VARIABLE(aLogLevel);
     OT_UNUSED_VARIABLE(aPlatModuleName);
@@ -218,7 +218,7 @@ void otLogCli(otLogLevel aLogLevel, const char *aFormat, ...)
     VerifyOrExit(aLogLevel >= kLogLevelNone && aLogLevel <= kLogLevelDebg);
 
     va_start(args, aFormat);
-    Logger::LogVarArgs(kCliModuleName, static_cast<LogLevel>(aLogLevel), aFormat, args);
+    Logger::LogVarArgs(kCliModuleName, static_cast<LogLevel>(aLogLevel), aFormat, &args);
     va_end(args);
 exit:
 #else

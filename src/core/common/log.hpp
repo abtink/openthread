@@ -40,6 +40,7 @@
 #include <openthread/platform/logging.h>
 #include <openthread/platform/toolchain.h>
 
+#include "common/arg_macros.hpp"
 #include "common/error.hpp"
 
 namespace ot {
@@ -106,7 +107,8 @@ constexpr uint16_t kMaxLogStringSize = OPENTHREAD_CONFIG_LOG_MAX_SIZE; ///< Max 
  *
  * @param[in]  ...   Arguments for the format specification.
  */
-#define LogCrit(...) Logger::LogAtLevel<kLogLevelCrit>(kLogModuleName, __VA_ARGS__)
+#define LogCrit(...) \
+    Logger::OT_PICK_FN_ARGS(LogAtLevelSimple, LogAtLevel, __VA_ARGS__)<kLogLevelCrit>(kLogModuleName, __VA_ARGS__)
 #else
 #define LogCrit(...)
 #endif
@@ -117,7 +119,8 @@ constexpr uint16_t kMaxLogStringSize = OPENTHREAD_CONFIG_LOG_MAX_SIZE; ///< Max 
  *
  * @param[in]  ...   Arguments for the format specification.
  */
-#define LogWarn(...) Logger::LogAtLevel<kLogLevelWarn>(kLogModuleName, __VA_ARGS__)
+#define LogWarn(...) \
+    Logger::OT_PICK_FN_ARGS(LogAtLevelSimple, LogAtLevel, __VA_ARGS__)<kLogLevelWarn>(kLogModuleName, __VA_ARGS__)
 #else
 #define LogWarn(...)
 #endif
@@ -128,7 +131,8 @@ constexpr uint16_t kMaxLogStringSize = OPENTHREAD_CONFIG_LOG_MAX_SIZE; ///< Max 
  *
  * @param[in]  ...   Arguments for the format specification.
  */
-#define LogNote(...) Logger::LogAtLevel<kLogLevelNote>(kLogModuleName, __VA_ARGS__)
+#define LogNote(...) \
+    Logger::OT_PICK_FN_ARGS(LogAtLevelSimple, LogAtLevel, __VA_ARGS__)<kLogLevelNote>(kLogModuleName, __VA_ARGS__)
 #else
 #define LogNote(...)
 #endif
@@ -139,7 +143,8 @@ constexpr uint16_t kMaxLogStringSize = OPENTHREAD_CONFIG_LOG_MAX_SIZE; ///< Max 
  *
  * @param[in]  ...   Arguments for the format specification.
  */
-#define LogInfo(...) Logger::LogAtLevel<kLogLevelInfo>(kLogModuleName, __VA_ARGS__)
+#define LogInfo(...) \
+    Logger::OT_PICK_FN_ARGS(LogAtLevelSimple, LogAtLevel, __VA_ARGS__)<kLogLevelInfo>(kLogModuleName, __VA_ARGS__)
 #else
 #define LogInfo(...)
 #endif
@@ -150,7 +155,8 @@ constexpr uint16_t kMaxLogStringSize = OPENTHREAD_CONFIG_LOG_MAX_SIZE; ///< Max 
  *
  * @param[in]  ...   Arguments for the format specification.
  */
-#define LogDebg(...) Logger::LogAtLevel<kLogLevelDebg>(kLogModuleName, __VA_ARGS__)
+#define LogDebg(...) \
+    Logger::T_PICK_FN_ARGS(LogAtLevelSimple, LogAtLevel, __VA_ARGS__)<kLogLevelDebg>(kLogModuleName, __VA_ARGS__)
 #else
 #define LogDebg(...)
 #endif
@@ -308,11 +314,13 @@ public:
     static void LogInModule(const char *aModuleName, LogLevel aLogLevel, const char *aFormat, ...)
         OT_TOOL_PRINTF_STYLE_FORMAT_ARG_CHECK(3, 4);
 
+    template <LogLevel kLogLevel> static void LogAtLevelSimple(const char *aModuleName, const char *aLine);
+
     template <LogLevel kLogLevel>
     static void LogAtLevel(const char *aModuleName, const char *aFormat, ...)
         OT_TOOL_PRINTF_STYLE_FORMAT_ARG_CHECK(2, 3);
 
-    static void LogVarArgs(const char *aModuleName, LogLevel aLogLevel, const char *aFormat, va_list aArgs);
+    static void LogVarArgs(const char *aModuleName, LogLevel aLogLevel, const char *aFormat, va_list *aArgs);
 
 #if OT_SHOULD_LOG_AT(OT_LOG_LEVEL_WARN)
     static void LogOnError(const char *aModuleName, Error aError, const char *aText);

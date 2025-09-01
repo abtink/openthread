@@ -68,6 +68,9 @@
  */
 #define OT_REST_ARGS(...) _OT_GET_REST_ARGS(_OT_HAS_ONE_ARG_VS_TWO_OR_MORE(__VA_ARGS__), __VA_ARGS__)
 
+#define OT_PICK_FN_ARGS(kOneArgFn, kVarArgsFn, ...) \
+    _OT_PICK_GETTER(_OT_HAS_ONE_ARG_VS_TWO_OR_MORE(__VA_ARGS__), kOneArgFn, kVarArgsFn)
+
 //---------------------------------------------------------------------------------------------------------------------
 // Private/local macros - for use in this header only.
 
@@ -96,5 +99,14 @@
 
 #define _OT_SELECT_20(a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12, a13, a14, a15, a16, a17, a18, a19, a20, ...) \
     a20
+
+#define _OT_PICK_GETTER(aNum, aOneArgGetter, aTwoOrMoreArgsGetter) \
+    _OT_PICK_GETTER_ARGS(aNum, aOneArgGetter, aTwoOrMoreArgsGetter)
+
+#define _OT_PICK_GETTER_ARGS(aNum, aOneArgGetter, aTwoOrMoreArgsGetter) \
+    _OT_PICK_GETTER_WITH_##aNum(aOneArgGetter, aTwoOrMoreArgsGetter)
+
+#define _OT_PICK_GETTER_WITH_ONE_ARG(aOneArgGetter, aTwoOrMoreArgsGetter) aOneArgGetter
+#define _OT_PICK_GETTER_WITH_TWO_OR_MORE_ARGS(aOneArgGetter, aTwoOrMoreArgsGetter) aTwoOrMoreArgsGetter
 
 #endif // OT_INCLUDE_COMMON_ARG_MACROS_HPP_
