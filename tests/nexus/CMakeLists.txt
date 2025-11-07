@@ -68,6 +68,7 @@ target_link_libraries(ot-nexus-platform
 )
 
 set(COMMON_LIBS
+    openthread-cli-ftd
     ot-nexus-platform
     openthread-ftd
     ot-nexus-platform
@@ -111,6 +112,7 @@ endmacro()
 
 #----------------------------------------------------------------------------------------------------------------------
 
+ot_nexus_test(cli)
 ot_nexus_test(border_agent)
 ot_nexus_test(border_agent_tracker)
 ot_nexus_test(dtls)
