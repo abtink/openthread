@@ -196,6 +196,7 @@ Error CoapBase::SendMessage(Message                &aMessage,
     Error    error;
     Message *storedCopy = nullptr;
     uint16_t copyLength = 0;
+    Header   header;
     Metadata metadata;
 
     if (aTxParameters == nullptr)
@@ -207,6 +208,8 @@ Error CoapBase::SendMessage(Message                &aMessage,
         SuccessOrExit(error = aTxParameters->ValidateFor(aMessage));
     }
 
+    SuccessOrExit(error = aMessage.ReadHeader(header));
+
 #if OPENTHREAD_CONFIG_COAP_BLOCKWISE_TRANSFER_ENABLE
     metadata.mBlockwiseReceiveHook  = aReceiveHook;
     metadata.mBlockwiseTransmitHook = aTransmitHook;
@@ -214,7 +217,7 @@ Error CoapBase::SendMessage(Message                &aMessage,
     SuccessOrExit(error = ProcessBlockwiseSend(aMessage, aTransmitHook, aContext));
 #endif
 
-    switch (aMessage.GetType())
+    switch (header.GetType())
     {
     case kTypeAck:
         mResponseCache.Add(aMessage, aMessageInfo, aTxParameters->CalculateExchangeLifetime());
@@ -229,14 +232,15 @@ Error CoapBase::SendMessage(Message                &aMessage,
 
     aMessage.Finish();
 
-    if (aMessage.IsConfirmable())
+    if (header.IsConfirmable())
     {
         copyLength = aMessage.GetLength();
     }
-    else if (aMessage.IsNonConfirmable() && (aHandler != nullptr))
+    else if (header.IsNonConfirmable() && (aHandler != nullptr))
     {
         // As we do not retransmit non confirmable messages, create a
         // copy of header only, for token information.
+        // TODO:
         copyLength = aMessage.GetOptionStart();
     }
 
@@ -246,7 +250,7 @@ Error CoapBase::SendMessage(Message                &aMessage,
         {
             bool shouldObserve = false;
 
-            SuccessOrExit(error = ProcessObserveSend(aMessage, aMessageInfo, shouldObserve));
+            SuccessOrExit(error = ProcessObserveSend(aMessage, header, aMessageInfo, shouldObserve));
             metadata.mObserve = shouldObserve;
         }
 #endif
@@ -366,7 +370,7 @@ Error CoapBase::SendEmptyMessage(Type aType, const Message &aRequest, const Ip6:
 
     VerifyOrExit((message = NewMessage()) != nullptr, error = kErrorNoBufs);
 
-    message->Init(aType, kCodeEmpty);
+    SuccessOrExit(error = message->Init(aType, kCodeEmpty));
     message->SetMessageId(aRequest.GetMessageId());
 
     message->Finish();
@@ -377,23 +381,27 @@ exit:
     return error;
 }
 
-Error CoapBase::SendHeaderResponse(Message::Code aCode, const Message &aRequest, const Ip6::MessageInfo &aMessageInfo)
+Error CoapBase::SendHeaderResponse(Code aCode, const Message &aRequest, const Ip6::MessageInfo &aMessageInfo)
 {
     Error    error   = kErrorNone;
     Message *message = nullptr;
+    Header requestHeader;
 
-    VerifyOrExit(aRequest.IsRequest(), error = kErrorInvalidArgs);
+    SuccessOrExit(error = aRequest.ReadHeader(requestHeader));
+
+    VerifyOrExit(requestHeader.IsRequest(), error = kErrorInvalidArgs);
+
     VerifyOrExit((message = NewMessage()) != nullptr, error = kErrorNoBufs);
 
-    switch (aRequest.GetType())
+    switch (requestHeader.GetType())
     {
     case kTypeConfirmable:
-        message->Init(kTypeAck, aCode);
-        message->SetMessageId(aRequest.GetMessageId());
+        SuccessOrExit(error = message->Init(kTypeAck, aCode));
+        message->SetMessageId(requestHeader.GetMessageId());
         break;
 
     case kTypeNonConfirmable:
-        message->Init(kTypeNonConfirmable, aCode);
+        SuccessOrExit(error = message->Init(kTypeNonConfirmable, aCode));
         break;
 
     default:
@@ -622,8 +630,9 @@ exit:
 void CoapBase::Receive(ot::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     Message &message = AsCoapMessage(&aMessage);
+    Header header;
 
-    if (message.ParseHeader() != kErrorNone)
+    if (message.ParseHeader(header) != kErrorNone)
     {
         LogDebg("Failed to parse CoAP header");
 
@@ -632,7 +641,7 @@ void CoapBase::Receive(ot::Message &aMessage, const Ip6::MessageInfo &aMessageIn
             IgnoreError(SendReset(message, aMessageInfo));
         }
     }
-    else if (message.IsRequest())
+    else if (header.IsRequest())
     {
         ProcessReceivedRequest(message, aMessageInfo);
     }
@@ -653,6 +662,7 @@ void CoapBase::ProcessReceivedResponse(Message &aMessage, const Ip6::MessageInfo
     Error    error   = kErrorNone;
 #if OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE
     bool shouldObserve = false;
+    Header requestHeader;
 #endif
 
     request = FindRelatedRequest(aMessage, aMessageInfo, metadata);
@@ -663,7 +673,10 @@ void CoapBase::ProcessReceivedResponse(Message &aMessage, const Ip6::MessageInfo
     // response, and we have a response handler; then we're dealing
     // with RFC7641 rules here. If there is no response handler, then
     // we're wasting our time!
-    if (metadata.mObserve && request->IsRequest() && (metadata.mResponseHandler != nullptr))
+
+    SuccessOrExit(error = request->ReadHeader(requestHeader));
+
+    if (metadata.mObserve && requestHeader.IsRequest() && (metadata.mResponseHandler != nullptr))
     {
         Option::Iterator iterator;
 
@@ -689,7 +702,7 @@ void CoapBase::ProcessReceivedResponse(Message &aMessage, const Ip6::MessageInfo
             // Empty acknowledgment.
 
 #if OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE
-            if (metadata.mObserve && !request->IsRequest())
+            if (metadata.mObserve && !requestHeader.IsRequest())
             {
                 // This is the ACK to our RFC7641 CON notification.
                 // There will be no "separate" response so pass it back
@@ -1531,7 +1544,7 @@ exit:
 
 #if OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE
 
-Error CoapBase::ProcessObserveSend(Message &aMessage, const Ip6::MessageInfo &aMessageInfo, bool &aShouldObserve)
+Error CoapBase::ProcessObserveSend(Message &aMessage, const Header &aHeader, const Ip6::MessageInfo &aMessageInfo, bool &aShouldObserve)
 {
     Error            error;
     Option::Iterator iterator;
@@ -1544,7 +1557,7 @@ Error CoapBase::ProcessObserveSend(Message &aMessage, const Ip6::MessageInfo &aM
     // Special case, if we're sending a GET with Observe=1, that is a
     // cancellation.
 
-    if (aShouldObserve && aMessage.IsGetRequest())
+    if (aShouldObserve && aHeader.IsGetRequest())
     {
         uint64_t value = 0;
 
@@ -1577,7 +1590,14 @@ bool CoapBase::IsObserveSubscription(const Message &aMessage, const Metadata &aM
     // Indicate whether the message is an RFC7641 subscription which
     // is already acknowledged.
 
-    return aMessage.IsRequest() && aMetadata.mObserve && aMetadata.mAcknowledged;
+    bool            isObserveSub = false;
+    Header header;
+
+    SuccessOrExit(aMessage.ReadHeader(header));
+    isObserveSub = header.IsRequest() && aMetadata.mObserve && aMetadata.mAcknowledged;
+
+exit:
+    return isObserveSub;
 }
 
 #endif // OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE

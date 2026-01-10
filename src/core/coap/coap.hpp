@@ -533,7 +533,7 @@ public:
      * @retval kErrorNoBufs        Insufficient buffers available to send the CoAP response.
      * @retval kErrorInvalidArgs   The @p aRequest header is not of confirmable type.
      */
-    Error SendHeaderResponse(Message::Code aCode, const Message &aRequest, const Ip6::MessageInfo &aMessageInfo);
+    Error SendHeaderResponse(Code aCode, const Message &aRequest, const Ip6::MessageInfo &aMessageInfo);
 
     /**
      * Sends a CoAP ACK empty message which is used in Separate Response for confirmable requests.
@@ -849,7 +849,7 @@ private:
 #endif // OPENTHREAD_CONFIG_COAP_BLOCKWISE_TRANSFER_ENABLE
 
 #if OPENTHREAD_CONFIG_COAP_OBSERVE_API_ENABLE
-    Error ProcessObserveSend(Message &aMessage, const Ip6::MessageInfo &aMessageInfo, bool &aShouldObserve);
+    Error ProcessObserveSend(Message &aMessage, const Header &aHeader, const Ip6::MessageInfo &aMessageInfo, bool &aShouldObserve);
 
     static bool IsObserveSubscription(const Message &aMessage, const Metadata &aMetadata);
 #endif

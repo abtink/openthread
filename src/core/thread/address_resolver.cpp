@@ -722,11 +722,14 @@ void AddressResolver::SendAddressError(const Ip6::Address             &aTarget,
 {
     Error            error;
     Coap::Message   *message;
+    Coap::Type       coapType;
     Tmf::MessageInfo messageInfo(GetInstance());
 
     VerifyOrExit((message = Get<Tmf::Agent>().NewMessage()) != nullptr, error = kErrorNoBufs);
 
-    message->Init(aDestination == nullptr ? Coap::kTypeNonConfirmable : Coap::kTypeConfirmable, Coap::kCodePost);
+    coapType = (aDestination == nullptr) ? Coap::kTypeNonConfirmable : Coap::kTypeConfirmable;
+
+    SuccessOrExit(error = message->Init(coapType, Coap::kCodePost));
     SuccessOrExit(error = message->AppendUriPathOptions(PathForUri(kUriAddressError)));
     SuccessOrExit(error = message->SetPayloadMarker());
 

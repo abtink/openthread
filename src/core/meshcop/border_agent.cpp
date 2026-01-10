@@ -793,7 +793,8 @@ void Manager::CoapDtlsSession::HandleLeaderResponseToFwdTmf(const ForwardContext
         }
     }
 
-    forwardMessage->Init(Coap::kTypeNonConfirmable, static_cast<Coap::Code>(aResponse->GetCode()));
+    SuccessOrExit(error =
+                      forwardMessage->Init(Coap::kTypeNonConfirmable, static_cast<Coap::Code>(aResponse->GetCode())));
 
     SuccessOrExit(error = forwardMessage->WriteToken(aForwardContext.mToken));
 
@@ -899,14 +900,14 @@ void Manager::CoapDtlsSession::SendErrorMessage(Error aError, const Coap::Token 
 {
     Error                   error = kErrorNone;
     OwnedPtr<Coap::Message> message;
-    Coap::Message::Code     code;
+    Coap::Code     code;
 
     message.Reset(NewPriorityMessage());
     VerifyOrExit(message != nullptr, error = kErrorNoBufs);
 
     code = (aError == kErrorParse) ? Coap::kCodeBadRequest : Coap::kCodeInternalError;
 
-    message->Init(Coap::kTypeNonConfirmable, code);
+    SuccessOrExit(error = message->Init(Coap::kTypeNonConfirmable, code));
     SuccessOrExit(error = message->WriteToken(aToken));
 
     SuccessOrExit(error = SendMessage(message.PassOwnership()));

@@ -48,13 +48,22 @@ uint16_t BlockSizeFromExponent(BlockSzx aBlockSzxq)
 //---------------------------------------------------------------------------------------------------------------------
 // `Token`
 
-Error Token::SetToken(const uint8_t *aBytes, uint8_t aLength)
+Error Token::SetLength(uint8_t aLength)
 {
     Error error = kErrorNone;
 
     VerifyOrExit(aLength <= kMaxLength, error = kErrorInvalidArgs);
-
     mLength = aLength;
+
+exit:
+    return error;
+}
+
+Error Token::SetToken(const uint8_t *aBytes, uint8_t aLength)
+{
+    Error error;
+
+    SuccessOrExit(error = SetLength(aLength));
     memcpy(m8, aBytes, aLength);
 
 exit:
@@ -78,39 +87,50 @@ Error Token::GenerateRandom(uint8_t aLength)
 {
     Error error;
 
-    VerifyOrExit(aLength <= kMaxLength, error = kErrorInvalidArgs);
-    mLength = aLength;
-    error   = Random::Crypto::FillBuffer(m8, mLength);
+    SuccessOrExit(error = SetLength(aLength));
+    error = Random::Crypto::FillBuffer(m8, mLength);
 
 exit:
     return error;
 }
 
 //---------------------------------------------------------------------------------------------------------------------
-// `Message`
+// `Header
 
-void Message::Init(void)
+bool Header::IsValid(void) const
 {
-    GetHelpData().Clear();
-    SetVersion(Header::kVersion1);
-    SetOffset(0);
-    GetHelpData().mHeaderLength = kMinHeaderLength;
-
-    IgnoreError(SetLength(GetHelpData().mHeaderLength));
+    return (GetVersion() == kVersion1) && (GetTokenLength() <= Token::kMaxLength);
 }
 
-void Message::Init(Type aType, Code aCode)
+bool Header::IsConfirmablePostRequest(void) const { return IsConfirmable() && IsPostRequest(); }
+
+bool Header::IsNonConfirmablePostRequest(void) const { return IsNonConfirmable() && IsPostRequest(); }
+
+//---------------------------------------------------------------------------------------------------------------------
+// `Message`
+
+Error Message::Init(Type aType, Code aCode)
 {
-    Init();
-    SetType(aType);
-    SetCode(aCode);
+    Header header;
+
+    IgnoreError(SetLength(0));
+
+    SetHeaderOffset(0);
+    SetOffset(0);
+
+    header.Clear();
+    header.SetVersion(Header::kVersion1);
+    header.SetType(aType);
+    header.SetCode(aCode);
+
+    return Append(header);
 }
 
 Error Message::Init(Type aType, Code aCode, Uri aUri)
 {
     Error error;
 
-    Init(aType, aCode);
+    SuccessOrExit(error = Init(aType, aCode));
     SuccessOrExit(error = WriteRandomToken(Token::kDefaultLength));
     SuccessOrExit(error = AppendUriPathOptions(PathForUri(aUri)));
 
@@ -121,6 +141,24 @@ exit:
 Error Message::InitAsPost(const Ip6::Address &aDestination, Uri aUri)
 {
     return Init(aDestination.IsMulticast() ? kTypeNonConfirmable : kTypeConfirmable, kCodePost, aUri);
+}
+
+Error Message::ReadHeader(Header &aHeader) const
+{
+    Error error;
+
+    SuccessOrExit(error = Read(GetHeaderOffset(), aHeader));
+    VerifyOrExit(aHeader.IsValid(), error = kErrorParse);
+
+exit:
+    return error;
+}
+
+void Message::WriteHeader(const Header &aHeader)
+{
+    // Update the header in the message.
+
+    Write(GetHeaderOffset(), aHeader);
 }
 
 bool Message::IsConfirmablePostRequest(void) const { return IsConfirmable() && IsPostRequest(); }
@@ -424,20 +462,15 @@ exit:
     return error;
 }
 
-Error Message::ParseHeader(void)
+Error Message::ParseHeader(Header &aHeader)
 {
     Error            error  = kErrorNone;
     uint16_t         offset = GetOffset();
     Option::Iterator iterator;
 
-    OT_ASSERT(GetReserved() >=
-              sizeof(HelpData) + static_cast<size_t>((reinterpret_cast<uint8_t *>(&GetHelpData()) - GetFirstData())));
+    SetHeaderOffset(offset);
 
-    GetHelpData().Clear();
-
-    GetHelpData().mHeaderOffset = offset;
-
-    SuccessOrExit(error = GetHelpData().mHeader.ParseFrom(*this));
+    SuccessOrExit(error = ReadHeader(aHeader));
 
     SuccessOrExit(error = iterator.Init(*this));
 
@@ -446,8 +479,7 @@ Error Message::ParseHeader(void)
         SuccessOrExit(error = iterator.Advance());
     }
 
-    GetHelpData().mHeaderLength = iterator.GetPayloadMessageOffset() - GetHelpData().mHeaderOffset;
-    MoveOffset(GetHelpData().mHeaderLength);
+    SetOffset(iterator.GetPayloadMessageOffset());
 
 exit:
     return error;
@@ -455,27 +487,77 @@ exit:
 
 Error Message::ReadTokenLength(uint8_t &aLength) const
 {
-    Error error = kErrorNone;
+    Error  error;
+    Header header;
 
-    VerifyOrExit(GetHelpData().mHeader.IsValid(), error = kErrorParse);
-    aLength = GetHelpData().mHeader.GetTokenLength();
+    SuccessOrExit(error = ReadHeader(header));
+    aLength = header.GetTokenLength();
 
 exit:
     return error;
 }
 
+uint16_t Message::GetTokenOffset(void) const
+{
+    // Return offset in the message to the token bytes.
+
+    uint16_t offset = GetHeaderOffset();
+
+    if (CanAddSafely<uint16_t>(offset, sizeof(Header)))
+    {
+        offset += sizeof(Header);
+    }
+    else
+    {
+        SetToUintMax(offset);
+    }
+
+    return offset;
+}
+
 Error Message::ReadToken(Token &aToken) const
 {
-    return aToken.SetToken(GetHelpData().mHeader.GetToken(), GetHelpData().mHeader.GetTokenLength());
+    Error   error;
+    uint8_t length;
+
+    SuccessOrExit(error = ReadTokenLength(length));
+
+    SuccessOrExit(error = Read(GetTokenOffset(), aToken.m8, length));
+    IgnoreError(aToken.SetLength(length));
+
+exit:
+    return error;
 }
 
 Error Message::WriteToken(const Token &aToken)
 {
-    Error error;
+    Error  error;
+    Header header;
 
-    SuccessOrExit(error = GetHelpData().mHeader.SetToken(aToken));
-    GetHelpData().mHeaderLength += aToken.GetLength();
-    error = SetLength(GetHelpData().mHeaderLength);
+    VerifyOrExit(aToken.IsValid(), error = kErrorInvalidArgs);
+
+    SuccessOrExit(error = ReadHeader(header));
+
+    if (GetLength() == GetTokenOffset())
+    {
+        // Token is not yet appended. We make room in the message for
+        // the token and update the header
+
+        SuccessOrExit(error = SetLength(GetLength() + aToken.GetLength()));
+
+        header.SetTokenLength(aToken.GetLength());
+        WriteHeader(header);
+    }
+    else
+    {
+        // Token was previously written, allow overwriting only if the
+        // new `aToken` has the same token length.
+
+        VerifyOrExit(header.GetTokenLength() == aToken.GetLength(), error = kErrorParse);
+        VerifyOrExit(GetLength() >= GetTokenOffset() + aToken.GetLength(), error = kErrorParse);
+    }
+
+    WriteBytes(GetTokenOffset(), aToken.GetBytes(), aToken.GetLength());
 
 exit:
     return error;
@@ -521,11 +603,14 @@ exit:
 
 Error Message::SetDefaultResponseHeader(const Message &aRequest)
 {
-    Init(kTypeAck, kCodeChanged);
+    Error error;
 
+    SuccessOrExit(error = Init(kTypeAck, kCodeChanged));
     SetMessageId(aRequest.GetMessageId());
+    error = WriteTokenFromMessage(aRequest);
 
-    return WriteTokenFromMessage(aRequest);
+exit:
+    return error;
 }
 
 Message *Message::Clone(uint16_t aLength) const
@@ -534,6 +619,7 @@ Message *Message::Clone(uint16_t aLength) const
 
     VerifyOrExit(message != nullptr);
 
+    message->SetHeaderOffset(GetHeaderOffset());
     message->GetHelpData() = GetHelpData();
 
 exit:
@@ -581,41 +667,6 @@ const char *Message::CodeToString(void) const
 #endif // OPENTHREAD_CONFIG_COAP_API_ENABLE
 
 //---------------------------------------------------------------------------------------------------------------------
-// `Message::Header`
-
-bool Message::Header::IsValid(void) const
-{
-    return (GetVersion() == kVersion1) && (GetTokenLength() <= Token::kMaxLength);
-}
-
-Error Message::Header::ParseFrom(const Message &aMessage)
-{
-    Error    error;
-    uint16_t offset = aMessage.GetOffset();
-
-    SuccessOrExit(error = aMessage.Read(offset, this, kMinSize));
-    VerifyOrExit(IsValid(), error = kErrorParse);
-
-    SuccessOrExit(error = aMessage.Read(offset + kMinSize, mToken, GetTokenLength()));
-
-exit:
-    return error;
-}
-
-Error Message::Header::SetToken(const Token &aToken)
-{
-    Error error = kErrorNone;
-
-    VerifyOrExit(aToken.IsValid(), error = kErrorInvalidArgs);
-
-    SetTokenLength(aToken.mLength);
-    memcpy(mToken, aToken.GetBytes(), aToken.GetLength());
-
-exit:
-    return error;
-}
-
-//---------------------------------------------------------------------------------------------------------------------
 // `Message::Iterator`
 
 Message::Iterator MessageQueue::begin(void) { return Message::Iterator(GetHead()); }
@@ -627,23 +678,36 @@ Message::ConstIterator MessageQueue::begin(void) const { return Message::ConstIt
 
 Error Option::Iterator::Init(const Message &aMessage)
 {
-    Error    error  = kErrorParse;
-    uint32_t offset = static_cast<uint32_t>(aMessage.GetHelpData().mHeaderOffset) + aMessage.GetOptionStart();
+    Error    error;
+    uint8_t  tokenLength;
+    uint16_t offset;
+
+    SuccessOrExit(error = aMessage.ReadTokenLength(tokenLength));
+
+    offset = aMessage.GetTokenOffset();
+
+    VerifyOrExit(CanAddSafely<uint16_t>(offset, tokenLength), error = kErrorParse);
+    offset += tokenLength;
 
     // Note that the case where `offset == aMessage.GetLength())` is
     // valid and indicates an empty payload (no CoAP Option and no
     // Payload Marker).
 
-    VerifyOrExit(offset <= aMessage.GetLength(), MarkAsParseErrored());
+    VerifyOrExit(offset <= aMessage.GetLength(), error = kErrorParse);
 
     mOption.mNumber   = 0;
     mOption.mLength   = 0;
     mMessage          = &aMessage;
-    mNextOptionOffset = static_cast<uint16_t>(offset);
+    mNextOptionOffset = offset;
 
     error = Advance();
 
 exit:
+    if (error != kErrorNone)
+    {
+        MarkAsParseErrored();
+    }
+
     return error;
 }
 

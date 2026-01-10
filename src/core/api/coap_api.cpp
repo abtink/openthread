@@ -44,20 +44,23 @@ otMessage *otCoapNewMessage(otInstance *aInstance, const otMessageSettings *aSet
     return AsCoreType(aInstance).Get<Coap::ApplicationCoap>().NewMessage(Message::Settings::From(aSettings));
 }
 
-void otCoapMessageInit(otMessage *aMessage, otCoapType aType, otCoapCode aCode)
+otError otCoapMessageInit(otMessage *aMessage, otCoapType aType, otCoapCode aCode)
 {
-    AsCoapMessage(aMessage).Init(MapEnum(aType), MapEnum(aCode));
+    return AsCoapMessage(aMessage).Init(MapEnum(aType), MapEnum(aCode));
 }
 
 otError otCoapMessageInitResponse(otMessage *aResponse, const otMessage *aRequest, otCoapType aType, otCoapCode aCode)
 {
+    otError              error;
     Coap::Message       &response = AsCoapMessage(aResponse);
     const Coap::Message &request  = AsCoapMessage(aRequest);
 
-    response.Init(MapEnum(aType), MapEnum(aCode));
+    SuccessOrExit(error = response.Init(MapEnum(aType), MapEnum(aCode)));
     response.SetMessageId(request.GetMessageId());
+    error = response.WriteTokenFromMessage(request);
 
-    return response.WriteTokenFromMessage(request);
+exit:
+    return error;
 }
 
 otError otCoapMessageWriteToken(otMessage *aMessage, const otCoapToken *aToken)

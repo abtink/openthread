@@ -314,11 +314,16 @@ typedef struct otCoapTxParameters
 /**
  * Initializes the CoAP header.
  *
+ * Any previously written content in the message will be erased upon initialization.
+ *
  * @param[in,out] aMessage   A pointer to the CoAP message to initialize.
  * @param[in]     aType      CoAP message type.
  * @param[in]     aCode      CoAP message code.
+ *
+ * @retval OT_ERROR_NONE     Successfully initialized the response message.
+ * @retval OT_ERROR_NO_BUFS  Insufficient message buffers available to initialize the response message.
  */
-void otCoapMessageInit(otMessage *aMessage, otCoapType aType, otCoapCode aCode);
+otError otCoapMessageInit(otMessage *aMessage, otCoapType aType, otCoapCode aCode);
 
 /**
  * Initializes a response message.
