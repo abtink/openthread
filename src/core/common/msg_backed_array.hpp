@@ -41,6 +41,7 @@
 #include "common/locator.hpp"
 #include "common/message.hpp"
 #include "common/non_copyable.hpp"
+#include "common/numeric_limits.hpp"
 
 namespace ot {
 
@@ -55,6 +56,28 @@ template <typename Type, uint16_t kMaxSize> class MessageBackedArray : public In
     static_assert(kMaxSize != 0, "MessageBackedArray `kMaxSize` cannot be zero");
 
 public:
+    static constexpr uint16_t kInvalidIndex = NumericLimits<uint16_t>::kMax; ///< Invalid Index.
+
+    /**
+     * Represent an entry in the array along with index.
+     */
+    class IndexedEntry : public Type
+    {
+        friend class MessageBackedArray;
+
+    public:
+        void InitForIteration(void) { mArrayIndex = kInvalidIndex; }
+
+        void SetIndexToInvalid(void) { mArrayIndex = kInvalidIndex; }
+
+        bool IsIndexInvalid(void) const { return mArrayIndex == kInvalidIndex; }
+
+        uint16_t GetIndex(void) const { return mArrayIndex; }
+
+    private:
+        uint16_t mArrayIndex;
+    };
+
     /**
      * Initializes the array as empty.
      *
@@ -93,6 +116,14 @@ public:
     uint16_t GetLength(void) const { return (mMessage == nullptr) ? 0 : mMessage->GetLength() / sizeof(Type); }
 
     /**
+     * Indicates whether the array is full.
+     *
+     * @retval TRUE   The array is full.
+     * @retval FALSE  The array is not full.
+     */
+    bool IsFull(void) const { return GetLength() == kMaxSize; }
+
+    /**
      * Reads an element from the array at a given index.
      *
      * @param[in]  aIndex  The index to read from.
@@ -114,6 +145,16 @@ public:
     }
 
     /**
+     * Reads an element from the array.
+     *
+     * @param[in,out] aIndexedEntry  A reference to an `IndexedEntry`.
+     *
+     * @retval kErrorNone      Successfully read the element.
+     * @retval kErrorNotFound  The `GetIndex()` in `aIndexedEntry` is out of bounds (beyond current array length).
+     */
+    Error Read(IndexedEntry &aIndexedEntry) const { return ReadAt(aIndexedEntry.GetIndex(), aIndexedEntry); }
+
+    /**
      * Writes an element to the array at a given index.
      *
      * @param[in] aIndex  The index to write to.
@@ -133,6 +174,16 @@ public:
     exit:
         return error;
     }
+
+    /**
+     * Writes an element to the array at a given index.
+     *
+     * @param[in] aIndexedEntry  A reference to an `IndexedEntry` specifying both the index and the element.
+     *
+     * @retval kErrorNone         Successfully wrote the element.
+     * @retval kErrorInvalidArgs  The `GetIndex()` in @p aIndexedEntry is out of bounds (beyond current array length).
+     */
+    Error Write(const IndexedEntry &aIndexedEntry) { return WriteAt(aIndexedEntry.GetIndex(), aIndexedEntry); }
 
     /**
      * Appends a new entry to the end of the array.
@@ -170,6 +221,43 @@ public:
     }
 
     /**
+     * Searches within the array to find the first entry matching a set of conditions.
+     *
+     * To check that an entry matches, the `Matches()` method is invoked on each `Type` entry in the array. The
+     * `Matches()` method with the same set of `Args` input types should be provided by the `Type` class accordingly:
+     *
+     *      bool Type::Matches(const Args &...) const
+     *
+     * @param[out] aIndexedEntry   A reference to an `IndexedEntry` to return the matched entry if found.
+     * @param[in]  aArgs           The args to pass to `Matches()`.
+     *
+     * @retval kErrorNone        A matching entry was found. @p aIndexedEntry is updated.
+     * @retval kErrorNotFound    Could not find a matching entry in the array. @p aIndexEntry may still be updated!
+     */
+    template <typename... Args> Error FindMatching(IndexedEntry &aIndexedEntry, Args &&...aArgs) const
+    {
+        Error error = kErrorNotFound;
+
+        for (aIndexedEntry.InitForIteration(); ReadNext(aIndexedEntry) == kErrorNone;)
+        {
+            if (aIndexedEntry.Matches(aArgs...))
+            {
+                error = kErrorNone;
+                break;
+            }
+        }
+
+        return error;
+    }
+
+    Error ReadNext(IndexedEntry &aIndexedEntry) const
+    {
+        aIndexedEntry.mArrayIndex++;
+        return Read(aIndexedEntry);
+    }
+
+#if 0
+    /**
      * Represents the function pointer check callback used in `Iterate()`.
      *
      * The callback should return `true` to continue iteration, or `false` to stop.
@@ -203,6 +291,7 @@ public:
     exit:
         return;
     }
+#endif
 
 private:
     Message *mMessage;

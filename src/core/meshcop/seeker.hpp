@@ -45,8 +45,11 @@
 #include "common/callback.hpp"
 #include "common/error.hpp"
 #include "common/locator.hpp"
+#include "common/msg_backed_array.hpp"
 #include "common/non_copyable.hpp"
+#include "common/numeric_limits.hpp"
 #include "mac/mac_types.hpp"
+#include "meshcop/extended_panid.hpp"
 #include "net/socket.hpp"
 #include "thread/discover_scanner.hpp"
 
@@ -154,38 +157,70 @@ public:
     Error SetUpNextConnection(Ip6::SockAddr &aSockAddr);
 
 private:
-    static constexpr uint16_t kMaxCandidates = OPENTHREAD_CONFIG_JOINER_MAX_CANDIDATES;
+    static constexpr uint16_t kMaxCandidates           = OPENTHREAD_CONFIG_JOINER_MAX_CANDIDATES;
+    static constexpr uint16_t kMaxCandidatesPerNetwork = 3;
 
     enum State : uint8_t
     {
         kStateStopped,
         kStateDiscovering,
         kStateDiscoverDone,
-        kStateConnecting,
+        kStateConnectingNetworks,
+        kStateConnectingAny,
     };
 
     struct Candidate
     {
-        bool IsValid(void) const { return mPriority != 0; }
+        enum Action : uint8_t
+        {
+            kSave,
+            kReplace,
+            kEvict,
+            kDrop,
+            kConnect,
+        };
 
-        Mac::ExtAddress mExtAddr;
-        Mac::PanId      mPanId;
-        uint16_t        mJoinerUdpPort;
-        uint8_t         mChannel;
-        uint8_t         mPriority;
+        void SetFrom(const ScanResult &aResult, bool aPreferred);
+        bool IsFavoredOver(const Candidate &aOther) const;
+        bool Matches(const MeshCoP::ExtendedPanId &aExtPanId) const { return mExtPanId == aExtPanId; }
+        bool Matches(const MeshCoP::ExtendedPanId &aExtPanId, const Mac::ExtAddress &aExtAddr) const;
+        void Log(Action aAction) const;
+
+        static const char *ActionToString(Action aAction);
+
+        MeshCoP::ExtendedPanId mExtPanId;
+        Mac::ExtAddress        mExtAddr;
+        Mac::PanId             mPanId;
+        uint16_t               mJoinerUdpPort;
+        uint8_t                mChannel;
+        int8_t                 mRssi;
+        bool                   mPreferred : 1;
+        bool                   mConnAttempted : 1;
     };
 
-    State          GetState(void) const { return mState; }
-    void           SetState(State aState) { mState = aState; }
-    static void    HandleDiscoverResult(ScanResult *aResult, void *aContext);
-    void           HandleDiscoverResult(ScanResult *aResult);
-    void           SaveCandidate(const ScanResult &aResult, bool aPreferred);
-    static uint8_t CalculatePriority(int8_t aRssi, bool aPreferred);
+    using CandidateArray = MessageBackedArray<Candidate, kMaxCandidates>;
+
+    struct CandidateEntry : public CandidateArray::IndexedEntry
+    {
+        void MarkAsEmpty(void) { SetIndexToInvalid(); }
+        bool IsEmpty(void) const { return IsIndexInvalid(); }
+        void ReplaceWithIfFavored(const CandidateEntry &aEntry);
+    };
+
+    State       GetState(void) const { return mState; }
+    void        SetState(State aState) { mState = aState; }
+    static void HandleDiscoverResult(ScanResult *aResult, void *aContext);
+    void        HandleDiscoverResult(ScanResult *aResult);
+    void        SaveCandidate(const ScanResult &aResult, bool aPreferred);
+    Error       EvictCandidate(CandidateEntry &aEntry);
+    Error       SelectNextCandidate(CandidateEntry &aCandidateEntry);
+    uint16_t    CountAndSelectLeastFavoredCandidateFor(const MeshCoP::ExtendedPanId &aExtPanId,
+                                                       CandidateEntry               &aEntry) const;
+    Error       SelectMostFavoredCandidateFor(MeshCoP::ExtendedPanId &aExtPanId, CandidateEntry &aFavoredEntry) const;
 
     State                   mState;
     Callback<ScanEvaluator> mScanEvaluator;
-    Candidate               mCandidates[kMaxCandidates];
-    uint16_t                mCandidateIndex;
+    CandidateArray          mCandidates;
 };
 
 } // namespace MeshCoP
