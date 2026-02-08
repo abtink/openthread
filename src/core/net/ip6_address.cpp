@@ -611,22 +611,7 @@ exit:
     return error;
 }
 
-Address::InfoString Address::ToString(void) const
-{
-    InfoString string;
-
-    ToString(string);
-
-    return string;
-}
-
-void Address::ToString(char *aBuffer, uint16_t aSize) const
-{
-    StringWriter writer(aBuffer, aSize);
-    ToString(writer);
-}
-
-void Address::ToString(StringWriter &aWriter) const
+void Address::ConvertToString(StringWriter &aWriter) const
 {
     AppendHexWords(aWriter, static_cast<uint8_t>(GetArrayLength(mFields.m16)));
 }
@@ -673,4 +658,7 @@ const Address &Address::GetRealmLocalAllMplForwarders(void)
 }
 
 } // namespace Ip6
+
+DefineToStringFor(Ip6::Address);
+
 } // namespace ot

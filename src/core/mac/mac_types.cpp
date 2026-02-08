@@ -75,13 +75,9 @@ void ExtAddress::SetFromIid(const Ip6::InterfaceIdentifier &aIid)
 
 #endif
 
-ExtAddress::InfoString ExtAddress::ToString(void) const
+void ExtAddress::ConvertToString(StringWriter &aWriter) const
 {
-    InfoString string;
-
-    string.AppendHexBytes(m8, sizeof(ExtAddress));
-
-    return string;
+    aWriter.AppendHexBytes(m8, sizeof(ExtAddress));
 }
 
 void ExtAddress::CopyAddress(uint8_t *aDst, const uint8_t *aSrc, CopyByteOrder aByteOrder)
@@ -139,24 +135,21 @@ exit:
     return ret;
 }
 
-Address::InfoString Address::ToString(void) const
+void Address::ConvertToString(StringWriter &aWriter) const
 {
-    InfoString string;
 
     if (mType == kTypeExtended)
     {
-        string.AppendHexBytes(GetExtended().m8, sizeof(ExtAddress));
+        aWriter.AppendHexBytes(GetExtended().m8, sizeof(ExtAddress));
     }
     else if (mType == kTypeNone)
     {
-        string.Append("None");
+        aWriter.Append("None");
     }
     else
     {
-        string.Append("0x%04x", GetShort());
+        aWriter.Append("0x%04x", GetShort());
     }
-
-    return string;
 }
 
 void PanIds::SetSource(PanId aPanId)
@@ -443,5 +436,10 @@ bool WakeupRequest::IsWakeupById(void) const { return MapEnum(mType) == kTypeWak
 
 bool WakeupRequest::IsWakeupByGroupId(void) const { return MapEnum(mType) == kTypeGroupWakeupId; }
 #endif
+
 } // namespace Mac
+
+DefineToStringFor(Mac::ExtAddress);
+DefineToStringFor(Mac::Address);
+
 } // namespace ot

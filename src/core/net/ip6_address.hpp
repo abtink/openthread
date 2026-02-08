@@ -504,7 +504,8 @@ private:
  * Implements an IPv6 address object.
  */
 OT_TOOL_PACKED_BEGIN
-class Address : public otIp6Address, public Equatable<Address>, public Clearable<Address>
+class Address : public otIp6Address, public Equatable<Address>, public Clearable<Address>,
+                public Stringable<Address, OT_IP6_ADDRESS_SIZE>
 {
     friend class Prefix;
     friend class InterfaceIdentifier;
@@ -513,8 +514,6 @@ public:
     static constexpr uint8_t kAloc16Mask = InterfaceIdentifier::kAloc16Mask; ///< The mask for ALOC16.
 
     static constexpr uint8_t kSize = OT_IP6_ADDRESS_SIZE; ///< Size of an IPv6 Address (in bytes).
-
-    static constexpr uint16_t kInfoStringSize = OT_IP6_ADDRESS_STRING_SIZE; ///< String Size for IPv6 address.
 
     // IPv6 Address Scopes
     static constexpr uint8_t kNodeLocalScope      = 0;  ///< Node-Local scope
@@ -536,11 +535,6 @@ public:
         kTypeMulticast,                     ///< Accept multicast IPv6 addresses only.
         kTypeMulticastLargerThanRealmLocal, ///< Accept multicast IPv6 addresses with scope larger than Realm Local.
     };
-
-    /**
-     * Defines the fixed-length `String` object returned from `ToString()`.
-     */
-    typedef String<kInfoStringSize> InfoString;
 
     /**
      * Gets the IPv6 address as a pointer to a byte array.
@@ -918,20 +912,7 @@ public:
      *
      * @returns An `InfoString` representing the IPv6 address.
      */
-    InfoString ToString(void) const;
-
-    /**
-     * Convert the IPv6 address to a C string.
-     *
-     * The IPv6 address string is formatted as 16 hex values separated by ':' (i.e., "%x:%x:%x:...:%x").
-     *
-     * If the resulting string does not fit in @p aBuffer (within its @p aSize characters), the string will be
-     * truncated but the outputted string is always null-terminated.
-     *
-     * @param[out] aBuffer   A pointer to a char array to output the string (MUST NOT be `nullptr`).
-     * @param[in]  aSize     The size of @p aBuffer (in bytes).
-     */
-    void ToString(char *aBuffer, uint16_t aSize) const;
+    void ConvertToString(StringWriter &aWriter) const;
 
     /**
      * Overloads operator `<` to compare two IPv6 addresses.
@@ -948,7 +929,6 @@ private:
     static constexpr uint8_t kMulticastNetworkPrefixOffset       = 4; // Prefix-Based Multicast Address (RFC3306)
 
     void SetToLocator(const NetworkPrefix &aNetworkPrefix, uint16_t aLocator);
-    void ToString(StringWriter &aWriter) const;
     void AppendHexWords(StringWriter &aWriter, uint8_t aLength) const;
 
     static const Address &GetLinkLocalAllNodesMulticast(void);

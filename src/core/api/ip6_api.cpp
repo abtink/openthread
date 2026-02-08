@@ -202,7 +202,9 @@ void otIp6AddressToString(const otIp6Address *aAddress, char *aBuffer, uint16_t 
 {
     AssertPointerIsNotNull(aBuffer);
 
-    AsCoreType(aAddress).ToString(aBuffer, aSize);
+    StringWriter writer(aBuffer, aSize);
+
+    AsCoreType(aAddress).ConvertToString(writer);
 }
 
 void otIp6SockAddrToString(const otSockAddr *aSockAddr, char *aBuffer, uint16_t aSize)

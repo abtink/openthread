@@ -543,6 +543,27 @@ private:
     char mBuffer[kSize];
 };
 
+template <typename Type, uint16_t kSize> class Stringable
+{
+public:
+    static constexpr uint16_t kInfoStringSize = kSize;
+
+    typedef String<kInfoStringSize> InfoString;
+
+    InfoString ToString(void) const;
+};
+
+#define DefineToStringFor(Type)                                                                                          \
+    template <>                                                                                                       \
+    ot::Stringable<Type, Type::kInfoStringSize>::InfoString ot::Stringable<Type, Type::kInfoStringSize>::ToString(void) const \
+    {                                                                                                                 \
+        InfoString string;                                                                                            \
+                                                                                                                      \
+        static_cast<const Type *>(this)->ConvertToString(string);                                                     \
+        return string;                                                                                                \
+    }                                                                                                                 \
+    static_assert(true, "Used to consume the semicolon")
+
 /**
  * Provides helper methods to convert from a set of `uint16_t` values (e.g., a non-sequential `enum`) to
  * string using binary search in a lookup table.

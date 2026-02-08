@@ -97,16 +97,10 @@ PanId GenerateRandomPanId(void);
  * Represents an IEEE 802.15.4 Extended Address.
  */
 OT_TOOL_PACKED_BEGIN
-class ExtAddress : public otExtAddress, public Equatable<ExtAddress>, public Clearable<ExtAddress>
+class ExtAddress : public otExtAddress, public Equatable<ExtAddress>, public Clearable<ExtAddress>,
+                   public Stringable<ExtAddress, 17>
 {
 public:
-    static constexpr uint16_t kInfoStringSize = 17; ///< Max chars for the info string (`ToString()`).
-
-    /**
-     * Defines the fixed-length `String` object returned from `ToString()`.
-     */
-    typedef String<kInfoStringSize> InfoString;
-
     /**
      * Type specifies the copy byte order when Extended Address is being copied to/from a buffer.
      */
@@ -225,7 +219,7 @@ public:
      *
      * @returns An `InfoString` containing the string representation of the Extended Address.
      */
-    InfoString ToString(void) const;
+    void ConvertToString(StringWriter &aWriter) const;
 
 private:
     static constexpr uint8_t kGroupFlag = (1 << 0);
@@ -237,14 +231,9 @@ private:
 /**
  * Represents an IEEE 802.15.4 Short or Extended Address.
  */
-class Address
+class Address : public Stringable<Address, 17>
 {
 public:
-    /**
-     * Defines the fixed-length `String` object returned from `ToString()`.
-     */
-    typedef ExtAddress::InfoString InfoString;
-
     /**
      * Specifies the IEEE 802.15.4 Address type.
      */
@@ -404,7 +393,7 @@ public:
      *
      * @returns A `String` representing the address.
      */
-    InfoString ToString(void) const;
+    void ConvertToString(StringWriter &aWriter) const;
 
 private:
     union
