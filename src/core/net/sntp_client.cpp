@@ -256,17 +256,15 @@ void Client::HandleRetransmissionTimer(void)
     mRetransmissionTimer.FireAt(nextTime);
 }
 
-void Client::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+void Client::HandleUdpReceive(const Ip6::Udp::Msg &aMsg)
 {
-    OT_UNUSED_VARIABLE(aMessageInfo);
-
     Error         error = kErrorNone;
     Header        responseHeader;
     QueryMetadata queryMetadata;
     Message      *message  = nullptr;
     uint64_t      unixTime = 0;
 
-    SuccessOrExit(aMessage.Read(aMessage.GetOffset(), responseHeader));
+    SuccessOrExit(aMsg.mMessage.Read(aMsg.mMessage.GetOffset(), responseHeader));
 
     VerifyOrExit((message = FindRelatedQuery(responseHeader, queryMetadata)) != nullptr);
 

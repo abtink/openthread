@@ -1637,9 +1637,9 @@ private:
             kPeerMessage,          // Peer message (adopt only if from a known neighbor and is greater by one).
         };
 
-        RxInfo(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
-            : mMessage(static_cast<RxMessage &>(aMessage))
-            , mMessageInfo(aMessageInfo)
+        RxInfo(const Ip6::Udp::Msg &aMsg)
+            : mMessage(static_cast<RxMessage &>(aMsg.mMessage))
+            , mMessageInfo(aMsg.mMessageInfo)
             , mFrameCounter(0)
             , mKeySequence(0)
             , mNeighbor(nullptr)
@@ -2274,7 +2274,7 @@ private:
     Error      SendDataRequestToParent(void);
     Error      SendDataRequest(const Ip6::Address &aDestination);
     void       HandleNotifierEvents(Events aEvents);
-    void       HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void       HandleUdpReceive(const Ip6::Udp::Msg &aMsg);
     void       ReestablishLinkWithNeighbor(Neighbor &aNeighbor);
     Error      SendChildUpdateRequestToParent(ChildUpdateRequestMode aMode);
     Error      SendChildUpdateRejectResponse(ChildUpdateResponseInfo &aInfo);

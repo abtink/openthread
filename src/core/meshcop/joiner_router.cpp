@@ -114,7 +114,7 @@ void JoinerRouter::SetJoinerUdpPort(uint16_t aJoinerUdpPort)
     Start();
 }
 
-void JoinerRouter::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+void JoinerRouter::HandleUdpReceive(const Ip6::Udp::Msg &aMsg)
 {
     Error            error;
     Coap::Message   *message = nullptr;
@@ -130,16 +130,16 @@ void JoinerRouter::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &a
     message = Get<Tmf::Agent>().NewPriorityNonConfirmablePostMessage(kUriRelayRx);
     VerifyOrExit(message != nullptr, error = kErrorNoBufs);
 
-    SuccessOrExit(error = Tlv::Append<JoinerUdpPortTlv>(*message, aMessageInfo.GetPeerPort()));
-    SuccessOrExit(error = Tlv::Append<JoinerIidTlv>(*message, aMessageInfo.GetPeerAddr().GetIid()));
+    SuccessOrExit(error = Tlv::Append<JoinerUdpPortTlv>(*message, aMsg.mMessageInfo.GetPeerPort()));
+    SuccessOrExit(error = Tlv::Append<JoinerIidTlv>(*message, aMsg.mMessageInfo.GetPeerAddr().GetIid()));
     SuccessOrExit(error = Tlv::Append<JoinerRouterLocatorTlv>(*message, Get<Mle::Mle>().GetRloc16()));
 
-    offsetRange.InitFromMessageOffsetToEnd(aMessage);
+    offsetRange.InitFromMessageOffsetToEnd(aMsg.mMessage);
 
     tlv.SetType(Tlv::kJoinerDtlsEncapsulation);
     tlv.SetLength(offsetRange.GetLength());
     SuccessOrExit(error = message->Append(tlv));
-    SuccessOrExit(error = message->AppendBytesFromMessage(aMessage, offsetRange));
+    SuccessOrExit(error = message->AppendBytesFromMessage(aMsg.mMessage, offsetRange));
 
     messageInfo.SetSockAddrToRlocPeerAddrTo(borderAgentRloc);
 

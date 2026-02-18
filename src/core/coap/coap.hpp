@@ -753,6 +753,13 @@ protected:
     void Receive(ot::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 
     /**
+     * Receives a CoAP message.
+     *
+     * @param[in]  aMsg          The received UDP message.
+     */
+    void Receive(const Ip6::Udp::Msg &aMsg);
+
+    /**
      * Sets the resource handler function.
      *
      * @param[in] aHandler   The resource handler function pointer.
@@ -1002,7 +1009,7 @@ public:
     Error Stop(void);
 
 protected:
-    void HandleUdpReceive(ot::Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void HandleUdpReceive(const Ip6::Udp::Msg &aMsg);
 
     using CoapSocket = Ip6::Udp::SocketIn<Coap, &Coap::HandleUdpReceive>;
 

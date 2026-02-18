@@ -1541,10 +1541,10 @@ exit:
     return error;
 }
 
-void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+void Mle::HandleUdpReceive(const Ip6::Udp::Msg &aMsg)
 {
     Error           error = kErrorNone;
-    RxInfo          rxInfo(aMessage, aMessageInfo);
+    RxInfo          rxInfo(aMsg);
     uint8_t         securitySuite;
     SecurityHeader  header;
     uint32_t        keySequence;
@@ -1558,19 +1558,19 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
 
     LogDebg("Receive MLE message");
 
-    VerifyOrExit(aMessage.GetOrigin() == Message::kOriginThreadNetif);
-    VerifyOrExit(aMessageInfo.GetPeerAddr().IsLinkLocalUnicast());
-    VerifyOrExit(aMessageInfo.GetSockAddr().IsLinkLocalUnicastOrMulticast());
+    VerifyOrExit(aMsg.mMessage.GetOrigin() == Message::kOriginThreadNetif);
+    VerifyOrExit(aMsg.mMessageInfo.GetPeerAddr().IsLinkLocalUnicast());
+    VerifyOrExit(aMsg.mMessageInfo.GetSockAddr().IsLinkLocalUnicastOrMulticast());
 
-    VerifyOrExit(aMessageInfo.GetHopLimit() == kMleHopLimit, error = kErrorParse);
+    VerifyOrExit(aMsg.mMessageInfo.GetHopLimit() == kMleHopLimit, error = kErrorParse);
 
-    SuccessOrExit(error = aMessage.Read(aMessage.GetOffset(), securitySuite));
-    aMessage.MoveOffset(sizeof(securitySuite));
+    SuccessOrExit(error = aMsg.mMessage.Read(aMsg.mMessage.GetOffset(), securitySuite));
+    aMsg.mMessage.MoveOffset(sizeof(securitySuite));
 
     if (securitySuite == kNoSecurity)
     {
-        SuccessOrExit(error = aMessage.Read(aMessage.GetOffset(), command));
-        aMessage.MoveOffset(sizeof(command));
+        SuccessOrExit(error = aMsg.mMessage.Read(aMsg.mMessage.GetOffset(), command));
+        aMsg.mMessage.MoveOffset(sizeof(command));
 
         switch (command)
         {
@@ -1593,21 +1593,21 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
     VerifyOrExit(!IsDisabled(), error = kErrorInvalidState);
     VerifyOrExit(securitySuite == k154Security, error = kErrorParse);
 
-    SuccessOrExit(error = aMessage.Read(aMessage.GetOffset(), header));
-    aMessage.MoveOffset(sizeof(header));
+    SuccessOrExit(error = aMsg.mMessage.Read(aMsg.mMessage.GetOffset(), header));
+    aMsg.mMessage.MoveOffset(sizeof(header));
 
     VerifyOrExit(header.IsSecurityControlValid(), error = kErrorParse);
 
     keySequence  = header.GetKeyId();
     frameCounter = header.GetFrameCounter();
 
-    SuccessOrExit(
-        error = ProcessMessageSecurity(Crypto::AesCcm::kDecrypt, aMessage, aMessageInfo, aMessage.GetOffset(), header));
+    SuccessOrExit(error = ProcessMessageSecurity(Crypto::AesCcm::kDecrypt, aMsg.mMessage, aMsg.mMessageInfo,
+                                                 aMsg.mMessage.GetOffset(), header));
 
-    IgnoreError(aMessage.Read(aMessage.GetOffset(), command));
-    aMessage.MoveOffset(sizeof(command));
+    IgnoreError(aMsg.mMessage.Read(aMsg.mMessage.GetOffset(), command));
+    aMsg.mMessage.MoveOffset(sizeof(command));
 
-    extAddr.SetFromIid(aMessageInfo.GetPeerAddr().GetIid());
+    extAddr.SetFromIid(aMsg.mMessageInfo.GetPeerAddr().GetIid());
     neighbor = (command == kCommandChildIdResponse) ? mNeighborTable.FindParent(extAddr)
                                                     : mNeighborTable.FindNeighbor(extAddr);
 
@@ -1637,11 +1637,11 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
 
             if ((frameCounter + 1) == neighbor->GetMleFrameCounter())
             {
-                OT_ASSERT(aMessage.IsRadioTypeSet());
-                Get<RadioSelector>().UpdateOnReceive(*neighbor, aMessage.GetRadioType(), /* IsDuplicate */ true);
+                OT_ASSERT(aMsg.mMessage.IsRadioTypeSet());
+                Get<RadioSelector>().UpdateOnReceive(*neighbor, aMsg.mMessage.GetRadioType(), /* IsDuplicate */ true);
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-                CheckTrelPeerAddrOnSecureMleRx(aMessage);
+                CheckTrelPeerAddrOnSecureMleRx(aMsg.mMessage);
 #endif
 
                 // We intentionally exit without setting the error to
@@ -1668,14 +1668,14 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
     }
 
 #if OPENTHREAD_CONFIG_RADIO_LINK_TREL_ENABLE
-    CheckTrelPeerAddrOnSecureMleRx(aMessage);
+    CheckTrelPeerAddrOnSecureMleRx(aMsg.mMessage);
 #endif
 
 #if OPENTHREAD_CONFIG_MULTI_RADIO
     if (neighbor != nullptr)
     {
-        OT_ASSERT(aMessage.IsRadioTypeSet());
-        Get<RadioSelector>().UpdateOnReceive(*neighbor, aMessage.GetRadioType(), /* IsDuplicate */ false);
+        OT_ASSERT(aMsg.mMessage.IsRadioTypeSet());
+        Get<RadioSelector>().UpdateOnReceive(*neighbor, aMsg.mMessage.GetRadioType(), /* IsDuplicate */ false);
     }
 #endif
 
@@ -1831,7 +1831,7 @@ void Mle::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageIn
 
         if (neighbor != nullptr)
         {
-            Get<RadioSelector>().UpdateOnReceive(*neighbor, aMessage.GetRadioType(), /* aIsDuplicate */ false);
+            Get<RadioSelector>().UpdateOnReceive(*neighbor, aMsg.mMessage.GetRadioType(), /* aIsDuplicate */ false);
         }
     }
 #endif
@@ -1840,7 +1840,7 @@ exit:
     // We skip logging failures for broadcast MLE messages since it
     // can be common to receive such messages from adjacent Thread
     // networks.
-    if (!aMessageInfo.GetSockAddr().IsMulticast() || !aMessage.IsDstPanIdBroadcast())
+    if (!aMsg.mMessageInfo.GetSockAddr().IsMulticast() || !aMsg.mMessage.IsDstPanIdBroadcast())
     {
         LogProcessError(kTypeGenericUdp, error);
     }

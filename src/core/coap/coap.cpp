@@ -648,6 +648,8 @@ exit:
     return error;
 }
 
+void CoapBase::Receive(const Ip6::Udp::Msg &aMsg) { Receive(aMsg.mMessage, aMsg.mMessageInfo); }
+
 void CoapBase::Receive(ot::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     Msg rxMsg(AsCoapMessage(&aMessage), aMessageInfo);
@@ -1981,10 +1983,7 @@ exit:
     return error;
 }
 
-void Coap::HandleUdpReceive(ot::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
-{
-    Receive(AsCoapMessage(&aMessage), aMessageInfo);
-}
+void Coap::HandleUdpReceive(const Ip6::Udp::Msg &aMsg) { Receive(aMsg); }
 
 Error Coap::Send(CoapBase &aCoapBase, ot::Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {

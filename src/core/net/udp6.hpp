@@ -84,6 +84,28 @@ class Udp : public InstanceLocator, private NonCopyable
 public:
     typedef otUdpReceive ReceiveHandler; ///< Receive handler callback.
 
+    class Msg
+    {
+        friend class Udp;
+
+    public:
+        Message           &mMessage;     ///< The UDP message
+        const MessageInfo &mMessageInfo; ///< The `MessageInfo` associated with the message.
+
+    protected:
+        Msg(Message &aMessage, const MessageInfo &aMessageInfo)
+            : mMessage(aMessage)
+            , mMessageInfo(aMessageInfo)
+        {
+        }
+
+        Msg(const Msg &aMsg)
+            : mMessage(aMsg.mMessage)
+            , mMessageInfo(aMsg.mMessageInfo)
+        {
+        }
+    };
+
     /**
      * Implements a UDP/IPv6 socket.
      */
@@ -163,21 +185,19 @@ public:
 
     private:
         bool Matches(const MessageInfo &aMessageInfo) const;
-
-        void HandleUdpReceive(Message &aMessage, const MessageInfo &aMessageInfo)
-        {
-            mHandler(mContext, &aMessage, &aMessageInfo);
-        }
+        void HandleUdpReceive(const Msg &aMsg);
     };
 
     /**
-     * Implements a UDP/IPv6 socket.
+     * Implements a UDP/IPv6 socket for use within core.
      */
     class Socket : public InstanceLocator, public SocketHandle
     {
         friend class Udp;
 
     public:
+        typedef void (*SocketHandler)(void *aContext, const Msg &aMsg);
+
         /**
          * Initializes the object.
          *
@@ -185,7 +205,7 @@ public:
          * @param[in]  aHandler  A pointer to a function that is called when receiving UDP messages.
          * @param[in]  aContext  A pointer to arbitrary context information.
          */
-        Socket(Instance &aInstance, ReceiveHandler aHandler, void *aContext);
+        Socket(Instance &aInstance, SocketHandler aHandler, void *aContext);
 
         /**
          * Returns a new UDP message with default settings (link security enabled and `kPriorityNormal`)
@@ -330,6 +350,9 @@ public:
          */
         Error LeaveNetifMulticastGroup(NetifIdentifier aNetifIdentifier, const Address &aAddress);
 #endif
+
+    private:
+        SocketHandler mSocketHandler;
     };
 
     /**
@@ -338,8 +361,7 @@ public:
      * @tparam Owner                The type of the owner of this socket.
      * @tparam HandleUdpReceivePtr  A pointer to a non-static member method of `Owner` to handle received messages.
      */
-    template <typename Owner, void (Owner::*HandleUdpReceivePtr)(Message &aMessage, const MessageInfo &aMessageInfo)>
-    class SocketIn : public Socket
+    template <typename Owner, void (Owner::*HandleUdpReceivePtr)(const Msg &aMsg)> class SocketIn : public Socket
     {
     public:
         /**
@@ -349,14 +371,14 @@ public:
          * @param[in]  aOnwer      The owner of the socket, providing the `HandleUdpReceivePtr` callback.
          */
         explicit SocketIn(Instance &aInstance, Owner &aOwner)
-            : Socket(aInstance, HandleUdpReceive, &aOwner)
+            : Socket(aInstance, HandleSocketReceive, &aOwner)
         {
         }
 
     private:
-        static void HandleUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
+        static void HandleSocketReceive(void *aContext, const Msg &aMsg)
         {
-            (reinterpret_cast<Owner *>(aContext)->*HandleUdpReceivePtr)(AsCoreType(aMessage), AsCoreType(aMessageInfo));
+            (reinterpret_cast<Owner *>(aContext)->*HandleUdpReceivePtr)(aMsg);
         }
     };
 
@@ -674,7 +696,7 @@ private:
 
     static bool IsPortReserved(uint16_t aPort);
 
-    void AddSocket(SocketHandle &aSocket);
+    Error OpenAndAddSocket(SocketHandle &aSocket);
     void RemoveSocket(SocketHandle &aSocket);
 
     uint16_t                 mEphemeralPort;

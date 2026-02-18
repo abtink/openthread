@@ -1031,7 +1031,7 @@ private:
     Error        AppendAaaaRecord(const Ip6::Address &aAddress, MsgInfo &aInfo) const;
     Error        AppendUpdateLeaseOptRecord(MsgInfo &aInfo);
     Error        AppendSignature(MsgInfo &aInfo, SignatureAppendMode aMode);
-    void         HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void         HandleUdpReceive(const Ip6::Udp::Msg &aMsg);
     void         ProcessResponse(Message &aMessage);
     void         SelectNewMessageId(void);
     void         HandleUpdateDone(void);
