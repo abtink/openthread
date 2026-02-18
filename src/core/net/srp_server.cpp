@@ -856,7 +856,7 @@ void Server::HandleDnssdServerStateChange(void)
     }
 }
 
-Error Server::HandleDnssdServerUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+Error Server::HandleDnssdServerUdpReceive(const Ip6::Udp::Msg &aMsg)
 {
     // This is called from` Dns::ServiceDiscovery::Server` when a UDP
     // message is received on its socket. We check whether we are
@@ -868,7 +868,7 @@ Error Server::HandleDnssdServerUdpReceive(Message &aMessage, const Ip6::MessageI
 
     VerifyOrExit((mState == kStateRunning) && !mSocket.IsOpen());
 
-    error = ProcessMessage(aMessage, aMessageInfo);
+    error = ProcessMessage(aMsg);
 
 exit:
     return error;
@@ -1704,17 +1704,17 @@ exit:
     FreeMessageOnError(response, error);
 }
 
-void Server::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+void Server::HandleUdpReceive(const Ip6::Udp::Msg &aMsg)
 {
-    Error error = ProcessMessage(aMessage, aMessageInfo);
+    Error error = ProcessMessage(aMsg);
 
     LogWarnOnError(error, "handle DNS message");
     OT_UNUSED_VARIABLE(error);
 }
 
-Error Server::ProcessMessage(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+Error Server::ProcessMessage(const Ip6::Udp::Msg &aMsg)
 {
-    return ProcessMessage(aMessage, TimerMilli::GetNow(), mTtlConfig, mLeaseConfig, &aMessageInfo);
+    return ProcessMessage(*aMsg.mMessage, TimerMilli::GetNow(), mTtlConfig, mLeaseConfig, &aMsg.mMessageInfo);
 }
 
 Error Server::ProcessMessage(Message                &aMessage,

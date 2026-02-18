@@ -730,6 +730,8 @@ public:
      */
     void HandleReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
 
+    void HandleReceive(const Ip6::Udp::Msg &aMsg);
+
     /**
      * Get the list of sessions associated with the `SecureTransport`.
      *

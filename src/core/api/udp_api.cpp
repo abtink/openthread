@@ -103,7 +103,9 @@ void otUdpForwardReceive(otInstance         *aInstance,
     messageInfo.SetPeerPort(aPeerPort);
     messageInfo.SetIsHostInterface(true);
 
-    AsCoreType(aInstance).Get<Ip6::Udp>().HandlePayload(AsCoreType(aMessage), messageInfo);
+    //AsCoreType(aInstance).Get<Ip6::Udp>().HandlePayload(AsCoreType(aMessage), messageInfo);
+    OT_UNUSED_VARIABLE(messageInfo);
+    OT_UNUSED_VARIABLE(aMessage)
 
     AsCoreType(aMessage).Free();
 }

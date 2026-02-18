@@ -39,6 +39,10 @@
 #include <stddef.h>
 #include <stdint.h>
 
+#include <openthread/ip6.h>
+
+#include "common/message.hpp"
+
 namespace ot {
 namespace Ip6 {
 
@@ -103,6 +107,194 @@ enum Ecn : uint8_t
     kEcnCapable0   = OT_ECN_CAPABLE_0,   ///< ECN Capable Transport, ECT(0).
     kEcnCapable1   = OT_ECN_CAPABLE_1,   ///< ECN Capable Transport, ECT(1).
     kEcnMarked     = OT_ECN_MARKED,      ///< Congestion encountered.
+};
+
+/**
+ * Implements message information for an IPv6 message.
+ */
+class MessageInfo : public otMessageInfo, public Clearable<MessageInfo>
+{
+public:
+    /**
+     * Initializes the object.
+     */
+    MessageInfo(void) { Clear(); }
+
+    /**
+     * Returns a reference to the local socket address.
+     *
+     * @returns A reference to the local socket address.
+     */
+    Address &GetSockAddr(void) { return AsCoreType(&mSockAddr); }
+
+    /**
+     * Returns a reference to the local socket address.
+     *
+     * @returns A reference to the local socket address.
+     */
+    const Address &GetSockAddr(void) const { return AsCoreType(&mSockAddr); }
+
+    /**
+     * Sets the local socket address.
+     *
+     * @param[in]  aAddress  The IPv6 address.
+     */
+    void SetSockAddr(const Address &aAddress) { mSockAddr = aAddress; }
+
+    /**
+     * Gets the local socket port.
+     *
+     * @returns The local socket port.
+     */
+    uint16_t GetSockPort(void) const { return mSockPort; }
+
+    /**
+     * Gets the local socket port.
+     *
+     * @param[in]  aPort  The port value.
+     */
+    void SetSockPort(uint16_t aPort) { mSockPort = aPort; }
+
+    /**
+     * Returns a reference to the peer socket address.
+     *
+     * @returns A reference to the peer socket address.
+     */
+    Address &GetPeerAddr(void) { return AsCoreType(&mPeerAddr); }
+
+    /**
+     * Returns a reference to the peer socket address.
+     *
+     * @returns A reference to the peer socket address.
+     */
+    const Address &GetPeerAddr(void) const { return AsCoreType(&mPeerAddr); }
+
+    /**
+     * Sets the peer's socket address.
+     *
+     * @param[in]  aAddress  The IPv6 address.
+     */
+    void SetPeerAddr(const Address &aAddress) { mPeerAddr = aAddress; }
+
+    /**
+     * Gets the peer socket port.
+     *
+     * @returns The peer socket port.
+     */
+    uint16_t GetPeerPort(void) const { return mPeerPort; }
+
+    /**
+     * Gets the peer socket port.
+     *
+     * @param[in]  aPort  The port value.
+     */
+    void SetPeerPort(uint16_t aPort) { mPeerPort = aPort; }
+
+    /**
+     * Gets the Hop Limit.
+     *
+     * @returns The Hop Limit.
+     */
+    uint8_t GetHopLimit(void) const { return mHopLimit; }
+
+    /**
+     * Sets the Hop Limit.
+     *
+     * @param[in]  aHopLimit  The Hop Limit.
+     */
+    void SetHopLimit(uint8_t aHopLimit) { mHopLimit = aHopLimit; }
+
+    /**
+     * Returns whether multicast may be looped back.
+     *
+     * @retval TRUE   If message may be looped back.
+     * @retval FALSE  If message must not be looped back.
+     */
+    bool GetMulticastLoop(void) const { return mMulticastLoop; }
+
+    /**
+     * Sets whether multicast may be looped back.
+     *
+     * @param[in]  aMulticastLoop  Whether allow looping back multicast.
+     */
+    void SetMulticastLoop(bool aMulticastLoop) { mMulticastLoop = aMulticastLoop; }
+
+    /**
+     * Gets the ECN status.
+     *
+     * @returns The ECN status, as represented in the IP header.
+     */
+    Ecn GetEcn(void) const { return static_cast<Ecn>(mEcn); }
+
+    /**
+     * Sets the ECN status.
+     *
+     * @param[in]  aEcn  The ECN status, as represented in the IP header.
+     */
+    void SetEcn(Ecn aEcn) { mEcn = aEcn; }
+
+    /**
+     * Indicates whether peer is via the host interface.
+     *
+     * @retval TRUE if the peer is via the host interface.
+     * @retval FALSE if the peer is via the Thread interface.
+     */
+    bool IsHostInterface(void) const { return mIsHostInterface; }
+
+    /**
+     * Indicates whether or not to apply hop limit 0.
+     *
+     * @retval TRUE  if applying hop limit 0 when `mHopLimit` field is 0.
+     * @retval FALSE if applying default `OPENTHREAD_CONFIG_IP6_HOP_LIMIT_DEFAULT` when `mHopLimit` field is 0.
+     */
+    bool ShouldAllowZeroHopLimit(void) const { return mAllowZeroHopLimit; }
+
+    /**
+     * Sets whether the peer is via the host interface.
+     *
+     * @param[in]  aIsHost  TRUE if the peer is via the host interface, FALSE otherwise.
+     */
+    void SetIsHostInterface(bool aIsHost) { mIsHostInterface = aIsHost; }
+
+    /**
+     * Checks if the peer address and port match those of another `MessageInfo`.
+     *
+     * @param[in] aOther  The other `MessageInfo` to compare with.
+     *
+     * @retval TRUE   The peer address and port of the two `MessageInfo` objects match.
+     * @retval FALSE  The peer address and port of the two `MessageInfo` objects do not match.
+     */
+    bool HasSamePeerAddrAndPort(const MessageInfo &aOther) const;
+};
+
+struct Msg
+{
+    Msg(void)
+        : mMessage(nullptr)
+    {
+    }
+
+    Msg(Message &aMessage)
+        : mMessage(&aMessage)
+    {
+    }
+
+    Msg(Message &aMessage, const MessageInfo &aMessageInfo)
+        : mMessage(&aMessage)
+    {
+        mMessageInfo = aMessageInfo;
+    }
+
+    Msg(const Msg &aMsg)
+        : mMessage(aMsg.mMessage)
+        , mMessageInfo(aMsg.mMessageInfo)
+    {
+    }
+
+    bool HasMessage(void) const { return mMessage != nullptr; }
+
+    Message    *mMessage;
+    MessageInfo mMessageInfo;
 };
 
 /**

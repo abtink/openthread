@@ -881,13 +881,13 @@ Error Ip6::Receive(Header            &aIp6Header,
 {
     Error             error = kErrorNone;
     OwnedPtr<Message> messagePtr;
-    MessageInfo       messageInfo;
+    Msg               msg;
 
-    messageInfo.Clear();
-    messageInfo.SetPeerAddr(aIp6Header.GetSource());
-    messageInfo.SetSockAddr(aIp6Header.GetDestination());
-    messageInfo.SetHopLimit(aIp6Header.GetHopLimit());
-    messageInfo.SetEcn(aIp6Header.GetEcn());
+    msg.mMessageInfo.Clear();
+    msg.mMessageInfo.SetPeerAddr(aIp6Header.GetSource());
+    msg.mMessageInfo.SetSockAddr(aIp6Header.GetDestination());
+    msg.mMessageInfo.SetHopLimit(aIp6Header.GetHopLimit());
+    msg.mMessageInfo.SetEcn(aIp6Header.GetEcn());
 
     switch (aIpProto)
     {
@@ -904,19 +904,21 @@ Error Ip6::Receive(Header            &aIp6Header,
 
     SuccessOrExit(error = TakeOrCopyMessagePtr(messagePtr, aMessagePtr, aMessageOwnership));
 
+    msg.mMessage = messagePtr.Get();
+
     switch (aIpProto)
     {
 #if OPENTHREAD_CONFIG_TCP_ENABLE
     case kProtoTcp:
-        error = mTcp.HandleMessage(aIp6Header, *messagePtr, messageInfo);
+        error = mTcp.HandleMessage(aIp6Header, *messagePtr, msg.mMessageInfo);
         break;
 #endif
     case kProtoUdp:
-        error = mUdp.HandleMessage(*messagePtr, messageInfo);
+        error = mUdp.HandleMessage(msg);
         break;
 
     case kProtoIcmp6:
-        error = mIcmp.HandleMessage(*messagePtr, messageInfo);
+        error = mIcmp.HandleMessage(*messagePtr, msg.mMessageInfo);
         break;
 
     default:

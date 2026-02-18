@@ -94,7 +94,7 @@ private:
 
     void HandleNotifierEvents(Events aEvents);
 
-    void HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void HandleUdpReceive(const Ip6::Udp::Msg &aMsg);
 
     template <Uri kUri> void HandleTmf(Coap::Msg &aMsg);
 

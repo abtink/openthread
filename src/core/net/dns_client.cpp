@@ -1423,11 +1423,7 @@ exit:
     return matchedQuery;
 }
 
-void Client::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMsgInfo)
-{
-    OT_UNUSED_VARIABLE(aMsgInfo);
-    ProcessResponse(aMessage);
-}
+void Client::HandleUdpReceive(const Ip6::Udp::Msg &aMsg) { ProcessResponse(*aMsg.mMessage); }
 
 void Client::ProcessResponse(const Message &aResponseMessage)
 {

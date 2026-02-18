@@ -1032,19 +1032,17 @@ static Ip6::MessageInfo sServerMsgInfo;
 static uint16_t         sServerLastMsgId;
 static uint16_t         sServerLastMsgLength;
 
-void HandleServerUdpReceive(void *aContext, otMessage *aMessage, const otMessageInfo *aMessageInfo)
+void HandleServerUdpReceive(void *aContext, const Ip6::Udp::Msg &aMsg)
 {
     Dns::Header header;
 
     VerifyOrQuit(aContext == nullptr);
-    VerifyOrQuit(aMessage != nullptr);
-    VerifyOrQuit(aMessageInfo != nullptr);
 
-    SuccessOrQuit(AsCoreType(aMessage).Read(0, header));
+    SuccessOrQuit(aMsg.mMessage->Read(0, header));
 
-    sServerMsgInfo       = AsCoreType(aMessageInfo);
+    sServerMsgInfo       = aMsg.mMessageInfo;
     sServerLastMsgId     = header.GetMessageId();
-    sServerLastMsgLength = AsCoreType(aMessage).GetLength();
+    sServerLastMsgLength = aMsg.mMessage->GetLength();
     sServerRxCount++;
 
     Log("HandleServerUdpReceive(), message-id:0x%x, message-len:%u", sServerLastMsgId, sServerLastMsgLength);

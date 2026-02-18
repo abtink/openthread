@@ -1753,12 +1753,7 @@ exit:
     return error;
 }
 
-void Client::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
-{
-    OT_UNUSED_VARIABLE(aMessageInfo);
-
-    ProcessResponse(aMessage);
-}
+void Client::HandleUdpReceive(const Ip6::Udp::Msg &aMsg) { ProcessResponse(*aMsg.mMessage); }
 
 void Client::ProcessResponse(Message &aMessage)
 {

@@ -113,7 +113,7 @@ private:
     Error AppendElapsedTimeOption(Message &aMessage);
     Error AppendRapidCommitOption(Message &aMessage) { return RapidCommitOption::AppendTo(aMessage); }
 
-    void HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo);
+    void HandleUdpReceive(const Ip6::Udp::Msg &aMsg);
 
     void  ProcessReply(const Message &aMessage);
     Error ProcessServerIdOption(const Message &aMessage);

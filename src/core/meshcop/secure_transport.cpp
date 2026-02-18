@@ -701,6 +701,8 @@ exit:
     return error;
 }
 
+void SecureTransport::HandleReceive(const Ip6::Udp::Msg &aMsg) { HandleReceive(*aMsg.mMessage, aMsg.mMessageInfo); }
+
 void SecureTransport::HandleReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
 {
     SecureSession *session;

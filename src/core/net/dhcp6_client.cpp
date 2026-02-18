@@ -352,18 +352,16 @@ exit:
     return error;
 }
 
-void Client::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+void Client::HandleUdpReceive(const Ip6::Udp::Msg &aMsg)
 {
-    OT_UNUSED_VARIABLE(aMessageInfo);
-
     Header header;
 
-    SuccessOrExit(aMessage.Read(aMessage.GetOffset(), header));
-    aMessage.MoveOffset(sizeof(header));
+    SuccessOrExit(aMsg.mMessage->Read(aMsg.mMessage->GetOffset(), header));
+    aMsg.mMessage->MoveOffset(sizeof(header));
 
     if ((header.GetMsgType() == kMsgTypeReply) && (header.GetTransactionId() == mTransactionId))
     {
-        ProcessReply(aMessage);
+        ProcessReply(*aMsg.mMessage);
     }
 
 exit:

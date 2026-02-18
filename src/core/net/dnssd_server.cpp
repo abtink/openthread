@@ -137,7 +137,7 @@ void Server::Stop(void)
 #endif
 }
 
-void Server::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessageInfo)
+void Server::HandleUdpReceive(const Ip6::Udp::Msg &aMsg)
 {
     Request request;
 
@@ -146,16 +146,16 @@ void Server::HandleUdpReceive(Message &aMessage, const Ip6::MessageInfo &aMessag
     // It returns `kErrorNone` to indicate that it successfully
     // processed the message.
 
-    VerifyOrExit(Get<Srp::Server>().HandleDnssdServerUdpReceive(aMessage, aMessageInfo) != kErrorNone);
+    VerifyOrExit(Get<Srp::Server>().HandleDnssdServerUdpReceive(aMsg) != kErrorNone);
 #endif
 
-    request.mMessage     = &aMessage;
-    request.mMessageInfo = &aMessageInfo;
-    SuccessOrExit(aMessage.Read(aMessage.GetOffset(), request.mHeader));
+    request.mMessage     = aMsg.mMessage;
+    request.mMessageInfo = &aMsg.mMessageInfo;
+    SuccessOrExit(aMsg.mMessage->Read(aMsg.mMessage->GetOffset(), request.mHeader));
 
     VerifyOrExit(request.mHeader.GetType() == Header::kTypeQuery);
 
-    LogInfo("Received query from %s", aMessageInfo.GetPeerAddr().ToString().AsCString());
+    LogInfo("Received query from %s", aMsg.mMessageInfo.GetPeerAddr().ToString().AsCString());
 
     ProcessQuery(request);
 
