@@ -3306,13 +3306,19 @@ void Mle::SendAddressRelease(void)
 
     GetLeaderRloc(leaderRloc);
 
-    SuccessOrExit(error = Get<Tmf::Agent>().SendMessageTo(*message, leaderRloc));
+    SuccessOrExit(error = Get<Tmf::Agent>().SendMessageTo(*message, leaderRloc, HandleAddressReleaseResponse, this));
 
     Log(kMessageSend, kTypeAddressRelease, leaderRloc);
 
 exit:
     FreeMessageOnError(message, error);
     LogSendError(kTypeAddressRelease, error);
+}
+
+void Mle::HandleAddressReleaseResponse(Coap::Msg *aMsg, Error aResult)
+{
+    OT_UNUSED_VARIABLE(aMsg);
+    LogInfo("Received HandleAddressReleaseResponse (%s)", ErrorToString(aResult));
 }
 
 void Mle::HandleAddressSolicitResponse(Coap::Msg *aMsg, Error aResult)
@@ -3645,7 +3651,9 @@ template <> void Mle::HandleTmf<kUriAddressRelease>(Coap::Msg &aMsg)
 
     IgnoreError(mRouterTable.Release(routerId));
 
-    SuccessOrExit(Get<Tmf::Agent>().SendEmptyAck(aMsg));
+    // ABTIN: Removing this so that leader does not ack the `kUriAddressRelease`
+    // so we can check if the CoAP retx happen properly
+    // SuccessOrExit(Get<Tmf::Agent>().SendEmptyAck(aMsg));
 
     Log(kMessageSend, kTypeAddressReleaseReply, aMsg.mMessageInfo.GetPeerAddr());
 
@@ -3719,10 +3727,14 @@ bool Mle::ShouldDowngrade(uint8_t aNeighborId, const RouteTlv &aRouteTlv) const
     uint8_t activeRouterCount = mRouterTable.GetActiveRouterCount();
     uint8_t count;
 
+    LogInfo("ABTIN Mle::ShouldDowngrade()");
+
     VerifyOrExit(IsRouter());
     VerifyOrExit(mRouterTable.IsAllocated(aNeighborId));
 
     VerifyOrExit(!mRouterRoleTransition.IsPending());
+
+    LogInfo("ABTIN Mle::ShouldDowngrade(), activeRouterCount %u", activeRouterCount);
 
     VerifyOrExit(activeRouterCount > mRouterDowngradeThreshold);
 
@@ -3746,7 +3758,11 @@ bool Mle::ShouldDowngrade(uint8_t aNeighborId, const RouteTlv &aRouteTlv) const
         }
     }
 
-    VerifyOrExit(count >= kMinDowngradeNeighbors);
+    LogInfo("ABTIN Mle::ShouldDowngrade(), count %u", count);
+
+    // VerifyOrExit(count >= kMinDowngradeNeighbors);
+
+    LogInfo("ABTIN Mle::ShouldDowngrade(), after `kMinDowngradeNeighbors` check");
 
     // Check that we have fewer children than three times the number
     // of excess routers (defined as the difference between number of
@@ -3768,6 +3784,8 @@ bool Mle::ShouldDowngrade(uint8_t aNeighborId, const RouteTlv &aRouteTlv) const
     shouldDowngrade = true;
 
 exit:
+    LogInfo("ABTIN Mle::ShouldDowngrade() >>> %s", ToYesNo(shouldDowngrade));
+
     return shouldDowngrade;
 }
 

@@ -504,6 +504,8 @@ void RouterTable::UpdateRouterIdSet(uint8_t aRouterIdSequence, const Mle::Router
 {
     bool shouldAdd = false;
 
+    LogInfo("ABTIN -> UpdateRouterIdSet(%u)", aRouterIdSequence);
+
     mRouterIdSequence            = aRouterIdSequence;
     mRouterIdSequenceLastUpdated = TimerMilli::GetNow();
 
@@ -534,6 +536,8 @@ void RouterTable::UpdateRouterIdSet(uint8_t aRouterIdSequence, const Mle::Router
 
     VerifyOrExit(shouldAdd);
 
+    LogInfo("ABTIN -> UpdateRouterIdSet() - we shouldAdd");
+
     // Now add all new routers in `aRouterIdSet`.
 
     for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
@@ -555,6 +559,8 @@ void RouterTable::UpdateRoutes(const Mle::RouteTlv &aRouteTlv, uint8_t aNeighbor
     Router          *neighbor;
     Mle::RouterIdSet finitePathCostIdSet;
     uint8_t          linkCostToNeighbor;
+
+    LogInfo("ABTIN -> UpdateRoutes(aNeighborId %u)", aNeighborId);
 
     neighbor = FindRouterById(aNeighborId);
     VerifyOrExit(neighbor != nullptr);
@@ -695,6 +701,8 @@ exit:
 
 void RouterTable::UpdateRouterOnFtdChild(const Mle::RouteTlv &aRouteTlv, uint8_t aParentId)
 {
+    LogInfo("ABTIN -> UpdateRouterOnFtdChild(aParentId %u)", aParentId);
+
     for (uint8_t routerId = 0, index = 0; routerId <= Mle::kMaxRouterId;
          index += aRouteTlv.IsRouterIdSet(routerId) ? 1 : 0, routerId++)
     {

@@ -278,6 +278,12 @@ class Node(object):
     def set_router_upgrade_threshold(self, threshold):
         self._cli_no_output('routerupgradethreshold', threshold)
 
+    def get_router_downgrade_threshold(self):
+        return self._cli_single_output('routerdowngradethreshold')
+
+    def set_router_downgrade_threshold(self, threshold):
+        self._cli_no_output('routerdowngradethreshold', threshold)
+
     def get_router_selection_jitter(self):
         return self._cli_single_output('routerselectionjitter')
 

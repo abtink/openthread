@@ -1492,6 +1492,9 @@ void CoapBase::Request::Metadata::UpdateRetxCounterAndTimeout(TimeMilli aNow)
     mRetxTimeout *= 2;
 
     mTimerFireTime = aNow + mRetxTimeout;
+
+    LogInfo("ABTIN ==> UpdateRetxCounterAndTimeout, mRetxRemaining = %u, timeout %lu", mRetxRemaining,
+            ToUlong(mRetxTimeout));
 }
 
 void CoapBase::Request::Metadata::CopyInfoTo(Ip6::MessageInfo &aMessageInfo) const
@@ -1537,6 +1540,8 @@ Error CoapBase::PendingRequests::AddClone(const Message &aMessage, uint16_t aCop
     mRequestMessages.Enqueue(*aRequest.mMessage);
 
     mTimer.FireAtIfEarlier(aRequest.mMetadata.mTimerFireTime);
+
+    LogInfo("ABTIN ==> PendingRequests::AddClone(%p)", (void *)aRequest.mMessage);
 
 exit:
     FreeAndNullMessageOnError(aRequest.mMessage, error);
@@ -1602,6 +1607,8 @@ void CoapBase::PendingRequests::FinalizeRequest(Request &aRequest, Error aResult
 void CoapBase::PendingRequests::FinalizeRequest(Request &aRequest, Error aResult, Msg *aResponse)
 {
     VerifyOrExit(aRequest.HasMessage());
+
+    LogInfo("ABTIN ==> PendingRequests::FinalizeRequest(%p)", (void *)aRequest.mMessage);
 
     Remove(aRequest);
     aRequest.mMetadata.mCallbacks.InvokeResponseHandler(aResponse, aResult);
@@ -1674,6 +1681,8 @@ void CoapBase::PendingRequests::RetransmitRequest(const Request &aRequest)
 
     aRequest.mMetadata.CopyInfoTo(messageInfo);
 
+    LogInfo("ABTIN ==> RetransmitRequest %p", (void *)aRequest.mMessage);
+
     SuccessOrExit(error = mCoapBase.Send(*clone, messageInfo));
 
 exit:
@@ -1708,6 +1717,8 @@ void CoapBase::PendingRequests::HandleTimer(void)
 
         if (nextTime.GetNow() >= request.mMetadata.mTimerFireTime)
         {
+            LogInfo("ABTIN ==> request %p timed out", (void *)request.mMessage);
+
             if (!request.mMetadata.ShouldRetransmit())
             {
                 // We move the expired request to a separate queue to
@@ -1715,6 +1726,8 @@ void CoapBase::PendingRequests::HandleTimer(void)
                 // iterator over `mRequestMessages` remains valid
                 // even if the user callback (invoked during
                 // finalization) modifies any pending requests
+
+                LogInfo("ABTIN ==> Finalizing request %p", (void *)request.mMessage);
 
                 mRequestMessages.Dequeue(message);
                 expiredMessages.Enqueue(message);
@@ -1726,6 +1739,7 @@ void CoapBase::PendingRequests::HandleTimer(void)
 
             if (!request.mMetadata.mAcknowledged)
             {
+                LogInfo("ABTIN ==> Not yet acked so retx request %p", (void *)request.mMessage);
                 RetransmitRequest(request);
             }
         }
