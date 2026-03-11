@@ -125,6 +125,10 @@ static_assert(BinarySearch::IsSorted(kEntries), "kEntries is not sorted");
 
 UriEntryMapList(_ValidateEntryElement)
 
+#define _UriStringArrayElement(kPathString, kUri, kName) kName,
+
+    const char *const kUriStrings[] = {UriEntryMapList(_UriStringArrayElement)};
+
 } // namespace UriList
 
 const char *PathForUri(Uri aUri)
