@@ -102,6 +102,21 @@ void ChildTableTlvEntry::Parse(ParseInfo &aParseInfo) const
 }
 
 //---------------------------------------------------------------------------------------------------------------------
+// RouteTlv
+
+Error RouteTlv::FindIn(const Message &aMessage, RouteTlvData &aRouteTlvData)
+{
+    Error       error;
+    OffsetRange offsetRange;
+
+    SuccessOrExit(error = Tlv::FindTlvValueOffsetRange(aMessage, Tlv::kRoute, offsetRange));
+    error = aRouteTlvData.ParseFrom(aMessage, offsetRange);
+
+exit:
+    return error;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
 // EnhancedRouteTlvEntry
 
 void EnhancedRouteTlvEntry::InitFrom(const Router &aRouter)

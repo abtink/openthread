@@ -294,23 +294,33 @@ typedef Mle::ConnectivityTlvValue ConnectivityTlvValue;
 typedef TlvInfo<Tlv::kConnectivity> ConnectivityTlv;
 
 /**
+ * Represents a Route TLV data.
+ */
+typedef Mle::RouteTlvData RouteTlvData;
+
+/**
  * Implements Route TLV generation and parsing.
  */
-OT_TOOL_PACKED_BEGIN
-class RouteTlv : public Mle::RouteTlv
+class RouteTlv : public TlvInfo<Tlv::kRoute>
 {
 public:
-    static constexpr uint8_t kType = ot::NetworkDiagnostic::Tlv::kRoute; ///< The TLV Type value.
-
     /**
-     * Initializes the TLV.
+     * Searches within a given message for Route TLV, parses and validates the TLV value and returns the
+     * read data.
+     *
+     * TODO: write the rest..
      */
-    void Init(void)
+    static Error FindIn(const Message &aMessage, RouteTlvData &aRouteTlvData);
+
+    // TODO: write
+    static Error AppendTo(Message &aMessage, const RouteTlvData &aRouteTlvData)
     {
-        Mle::RouteTlv::Init();
-        ot::Tlv::SetType(kType);
+        return aRouteTlvData.AppendAsTlv(Tlv::kRoute, aMessage);
     }
-} OT_TOOL_PACKED_END;
+
+private:
+    RouteTlv(void) = default;
+};
 
 /**
  * Represents a Leader Data TLV value.

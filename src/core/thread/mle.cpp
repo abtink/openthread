@@ -3967,14 +3967,20 @@ exit:
     return error;
 }
 
-Error Mle::TxMessage::AppendRouteTlv(Neighbor *aNeighbor)
+Error Mle::TxMessage::AppendRouteTlv(void)
 {
-    RouteTlv tlv;
+    RouteTlvData routeTlvData;
 
-    tlv.Init();
-    Get<RouterTable>().FillRouteTlv(tlv, aNeighbor);
+    Get<RouterTable>().PrepareRouteTlvData(routeTlvData);
+    return RouteTlv::AppendTo(*this, routeTlvData);
+}
 
-    return tlv.AppendTo(*this);
+Error Mle::TxMessage::AppendRouteTlvForLinkAccept(const Neighbor &aNeighbor)
+{
+    RouteTlvData routeTlvData;
+
+    Get<RouterTable>().PrepareRouteTlvDataForLinkAccept(routeTlvData, aNeighbor);
+    return RouteTlv::AppendTo(*this, routeTlvData);
 }
 
 Error Mle::TxMessage::AppendActiveDatasetTlv(void) { return AppendDatasetTlv(MeshCoP::Dataset::kActive); }
@@ -4244,16 +4250,7 @@ exit:
 #endif
 
 #if OPENTHREAD_FTD
-Error Mle::RxMessage::ReadRouteTlv(RouteTlv &aRouteTlv) const
-{
-    Error error;
-
-    SuccessOrExit(error = Tlv::FindTlv(*this, aRouteTlv));
-    VerifyOrExit(aRouteTlv.IsValid(), error = kErrorParse);
-
-exit:
-    return error;
-}
+Error Mle::RxMessage::ReadRouteTlv(RouteTlvData &aRouteTlvData) const { return RouteTlv::FindIn(*this, aRouteTlvData); }
 #endif
 
 //---------------------------------------------------------------------------------------------------------------------

@@ -105,20 +105,20 @@ Error Server::AppendEnhancedRoute(Message &aMessage)
 {
     Error                 error = kErrorNone;
     Tlv::Bookmark         tlvBookmark;
-    Mle::RouterIdSet      routerIdSet;
+    Mle::RouterIdMask     routerIdMask;
     EnhancedRouteTlvEntry entry;
 
     VerifyOrExit(Get<Mle::Mle>().IsRouterOrLeader());
 
-    Get<RouterTable>().GetRouterIdSet(routerIdSet);
+    Get<RouterTable>().GetRouterIdMask(routerIdMask);
 
     SuccessOrExit(error = Tlv::StartTlv(aMessage, Tlv::kEnhancedRoute, tlvBookmark));
 
-    SuccessOrExit(error = aMessage.Append(routerIdSet));
+    SuccessOrExit(error = routerIdMask.AppendMaskTo(aMessage));
 
     for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
     {
-        if (!routerIdSet.Contains(routerId))
+        if (!routerIdMask.IsAllocated(routerId))
         {
             continue;
         }
@@ -433,11 +433,10 @@ Error Server::AppendDiagTlv(uint8_t aTlvType, Message &aMessage)
 
     case Tlv::kRoute:
     {
-        RouteTlv tlv;
+        RouteTlvData routeTlvData;
 
-        tlv.Init();
-        Get<RouterTable>().FillRouteTlv(tlv);
-        SuccessOrExit(error = tlv.AppendTo(aMessage));
+        Get<RouterTable>().PrepareRouteTlvData(routeTlvData);
+        SuccessOrExit(RouteTlv::AppendTo(aMessage, routeTlvData));
         break;
     }
 
@@ -1066,33 +1065,35 @@ Error Client::SendDiagnosticReset(const Ip6::Address &aDestination, const uint8_
     return SendCommand(kUriDiagnosticReset, Message::kPriorityNormal, aDestination, aTlvTypes, aCount);
 }
 
-static void ParseRoute(const RouteTlv &aRouteTlv, otNetworkDiagRoute &aNetworkDiagRoute)
+static void ParseRoute(const RouteTlvData &aRouteTlvData, otNetworkDiagRoute &aNetworkDiagRoute)
 {
     uint8_t routeCount = 0;
 
-    for (uint8_t i = 0; i <= Mle::kMaxRouterId; ++i)
+    for (uint8_t id = 0; id <= Mle::kMaxRouterId; ++id)
     {
-        if (!aRouteTlv.IsRouterIdSet(i))
+        if (!aRouteTlvData.GetRouterIdMask().IsAllocated(id))
         {
             continue;
         }
-        aNetworkDiagRoute.mRouteData[routeCount].mRouterId       = i;
-        aNetworkDiagRoute.mRouteData[routeCount].mRouteCost      = aRouteTlv.GetRouteCost(routeCount);
-        aNetworkDiagRoute.mRouteData[routeCount].mLinkQualityIn  = aRouteTlv.GetLinkQualityIn(routeCount);
-        aNetworkDiagRoute.mRouteData[routeCount].mLinkQualityOut = aRouteTlv.GetLinkQualityOut(routeCount);
+
+        aNetworkDiagRoute.mRouteData[routeCount].mRouterId       = id;
+        aNetworkDiagRoute.mRouteData[routeCount].mRouteCost      = aRouteTlvData.GetRouteCost(id);
+        aNetworkDiagRoute.mRouteData[routeCount].mLinkQualityIn  = aRouteTlvData.GetLinkQualityIn(id);
+        aNetworkDiagRoute.mRouteData[routeCount].mLinkQualityOut = aRouteTlvData.GetLinkQualityOut(id);
         ++routeCount;
     }
+
     aNetworkDiagRoute.mRouteCount = routeCount;
-    aNetworkDiagRoute.mIdSequence = aRouteTlv.GetRouterIdSequence();
+    aNetworkDiagRoute.mIdSequence = aRouteTlvData.GetRouterIdMask().GetSequence();
 }
 
 static Error ParseEnhancedRoute(const Message &aMessage, uint16_t aOffset, otNetworkDiagEnhRoute &aNetworkDiagEnhRoute)
 {
-    Error            error;
-    OffsetRange      offsetRange;
-    Tlv              tlv;
-    Mle::RouterIdSet routerIdSet;
-    uint8_t          index;
+    Error             error;
+    OffsetRange       offsetRange;
+    Tlv               tlv;
+    Mle::RouterIdMask routerIdMask;
+    uint8_t           index;
 
     SuccessOrExit(error = aMessage.Read(aOffset, tlv));
 
@@ -1102,8 +1103,8 @@ static Error ParseEnhancedRoute(const Message &aMessage, uint16_t aOffset, otNet
     aOffset += sizeof(tlv);
     offsetRange.Init(aOffset, tlv.GetLength());
 
-    SuccessOrExit(error = aMessage.Read(offsetRange, routerIdSet));
-    offsetRange.AdvanceOffset(sizeof(routerIdSet));
+    SuccessOrExit(error = routerIdMask.ReadMaskFrom(aMessage, offsetRange));
+    offsetRange.AdvanceOffset(Mle::RouterIdMask::kMaskSize);
 
     index = 0;
 
@@ -1111,7 +1112,7 @@ static Error ParseEnhancedRoute(const Message &aMessage, uint16_t aOffset, otNet
     {
         EnhancedRouteTlvEntry entry;
 
-        if (!routerIdSet.Contains(routerId))
+        if (!routerIdMask.IsAllocated(routerId))
         {
             continue;
         }
@@ -1223,13 +1224,10 @@ Error Client::GetNextDiagTlv(const Coap::Message &aMessage, Iterator &aIterator,
 
         case Tlv::kRoute:
         {
-            RouteTlv routeTlv;
-            uint16_t bytesToRead = Min<uint16_t>(tlvInfo.GetSize(), sizeof(routeTlv));
+            RouteTlvData routeTlvData;
 
-            VerifyOrExit(!tlvInfo.IsExtended(), error = kErrorParse);
-            SuccessOrExit(error = aMessage.Read(offset, &routeTlv, bytesToRead));
-            VerifyOrExit(routeTlv.IsValid(), error = kErrorParse);
-            ParseRoute(routeTlv, aDiagTlv.mData.mRoute);
+            SuccessOrExit(error = routeTlvData.ParseFrom(aMessage, tlvInfo.GetValueOffsetRange()));
+            ParseRoute(routeTlvData, aDiagTlv.mData.mRoute);
             break;
         }
 

@@ -839,7 +839,7 @@ Error Mle::SendLinkAccept(const LinkAcceptInfo &aInfo)
         switch (tlvType)
         {
         case Tlv::kRoute:
-            SuccessOrExit(error = message->AppendRouteTlv(router));
+            SuccessOrExit(error = message->AppendRouteTlvForLinkAccept(*router));
             break;
 
         case Tlv::kAddress16:
@@ -899,7 +899,7 @@ void Mle::HandleLinkAcceptVariant(RxInfo &aRxInfo, MessageType aMessageType)
     uint32_t        mleFrameCounter;
     uint8_t         routerId;
     uint16_t        address16;
-    RouteTlv        routeTlv;
+    RouteTlvData    routeTlvData;
     LeaderData      leaderData;
     uint8_t         linkMargin;
     bool            shouldUpdateRoutes = false;
@@ -969,8 +969,8 @@ void Mle::HandleLinkAcceptVariant(RxInfo &aRxInfo, MessageType aMessageType)
         SetLeaderData(leaderData);
 
         mRouterTable.Clear();
-        SuccessOrExit(error = aRxInfo.mMessage.ReadRouteTlv(routeTlv));
-        SuccessOrExit(error = ProcessRouteTlv(routeTlv, aRxInfo));
+        SuccessOrExit(error = aRxInfo.mMessage.ReadRouteTlv(routeTlvData));
+        SuccessOrExit(error = ProcessRouteTlv(routeTlvData, aRxInfo));
         router = mRouterTable.FindRouterById(routerId);
         VerifyOrExit(router != nullptr);
 
@@ -1010,14 +1010,14 @@ void Mle::HandleLinkAcceptVariant(RxInfo &aRxInfo, MessageType aMessageType)
             IgnoreError(SendDataRequest(aRxInfo.mMessageInfo.GetPeerAddr()));
         }
 
-        switch (aRxInfo.mMessage.ReadRouteTlv(routeTlv))
+        switch (aRxInfo.mMessage.ReadRouteTlv(routeTlvData))
         {
         case kErrorNone:
-            VerifyOrExit(routeTlv.IsRouterIdSet(routerId), error = kErrorParse);
+            VerifyOrExit(routeTlvData.GetRouterIdMask().IsAllocated(routerId), error = kErrorParse);
 
-            if (mRouterTable.IsRouteTlvIdSequenceMoreRecent(routeTlv))
+            if (mRouterTable.IsRouterIdSequenceMoreRecent(routeTlvData.GetRouterIdMask().GetSequence()))
             {
-                SuccessOrExit(error = ProcessRouteTlv(routeTlv, aRxInfo));
+                SuccessOrExit(error = ProcessRouteTlv(routeTlvData, aRxInfo));
                 router = mRouterTable.FindRouterById(routerId);
                 OT_ASSERT(router != nullptr);
             }
@@ -1061,7 +1061,7 @@ void Mle::HandleLinkAcceptVariant(RxInfo &aRxInfo, MessageType aMessageType)
 
     if (shouldUpdateRoutes)
     {
-        mRouterTable.UpdateRoutes(routeTlv, routerId);
+        mRouterTable.UpdateRoutes(routeTlvData, routerId);
     }
 
     aRxInfo.mClass = RxInfo::kAuthoritativeMessage;
@@ -1092,9 +1092,9 @@ exit:
     LogProcessError(aMessageType, error);
 }
 
-Error Mle::ProcessRouteTlv(const RouteTlv &aRouteTlv, RxInfo &aRxInfo)
+Error Mle::ProcessRouteTlv(const RouteTlvData &aRouteTlvData, RxInfo &aRxInfo)
 {
-    // This method processes `aRouteTlv` read from an MLE message.
+    // This method processes `aRouteTlvData` read from an MLE message.
     //
     // During processing of Route TLV, the entries in the router table
     // may shuffle. This method ensures that the `aRxInfo.mNeighbor`
@@ -1111,7 +1111,7 @@ Error Mle::ProcessRouteTlv(const RouteTlv &aRouteTlv, RxInfo &aRxInfo)
         neighborRloc16 = aRxInfo.mNeighbor->GetRloc16();
     }
 
-    mRouterTable.UpdateRouterIdSet(aRouteTlv.GetRouterIdSequence(), aRouteTlv.GetRouterIdMask());
+    mRouterTable.UpdateRouterIdMask(aRouteTlvData.GetRouterIdMask());
 
     if (IsAttached() && !mRouterTable.IsAllocated(RouterIdFromRloc16(GetRloc16())))
     {
@@ -1140,16 +1140,16 @@ Error Mle::ReadAndProcessRouteTlvOnFtdChild(RxInfo &aRxInfo, uint8_t aParentId)
     // It MUST be used only when device is acting as a child and
     // for a message received from device's current parent.
 
-    Error    error = kErrorNone;
-    RouteTlv routeTlv;
+    Error        error = kErrorNone;
+    RouteTlvData routeTlvData;
 
     VerifyOrExit(IsFullThreadDevice());
 
-    switch (aRxInfo.mMessage.ReadRouteTlv(routeTlv))
+    switch (aRxInfo.mMessage.ReadRouteTlv(routeTlvData))
     {
     case kErrorNone:
-        SuccessOrExit(error = ProcessRouteTlv(routeTlv, aRxInfo));
-        mRouterTable.UpdateRouterOnFtdChild(routeTlv, aParentId);
+        SuccessOrExit(error = ProcessRouteTlv(routeTlvData, aRxInfo));
+        mRouterTable.UpdateRouterOnFtdChild(routeTlvData, aParentId);
         mRequestRouteTlv = false;
         break;
     case kErrorNotFound:
@@ -1203,19 +1203,20 @@ Error Mle::HandleAdvertisementOnFtd(RxInfo &aRxInfo, uint16_t aSourceAddress, co
     // - `aSourceAddress` is the read value from `SourceAddressTlv`.
     // - `aLeaderData` is the read value from `LeaderDataTlv`.
 
-    Error    error      = kErrorNone;
-    uint8_t  linkMargin = Get<Mac::Mac>().ComputeLinkMargin(aRxInfo.mMessage.GetAverageRss());
-    RouteTlv routeTlv;
-    Router  *router;
-    uint8_t  routerId;
-    uint32_t delay;
+    Error        error       = kErrorNone;
+    uint8_t      linkMargin  = Get<Mac::Mac>().ComputeLinkMargin(aRxInfo.mMessage.GetAverageRss());
+    bool         hasRouteTlv = false;
+    RouteTlvData routeTlvData;
+    Router      *router;
+    uint8_t      routerId;
+    uint32_t     delay;
 
-    switch (aRxInfo.mMessage.ReadRouteTlv(routeTlv))
+    switch (aRxInfo.mMessage.ReadRouteTlv(routeTlvData))
     {
     case kErrorNone:
+        hasRouteTlv = true;
         break;
     case kErrorNotFound:
-        routeTlv.SetLength(0); // Mark that a Route TLV was not included.
         break;
     default:
         ExitNow(error = kErrorParse);
@@ -1231,10 +1232,10 @@ Error Mle::HandleAdvertisementOnFtd(RxInfo &aRxInfo, uint16_t aSourceAddress, co
 
         VerifyOrExit(linkMargin >= kPartitionMergeMinMargin, error = kErrorLinkMarginLow);
 
-        if (routeTlv.IsValid() && (mPreviousPartitionIdTimeout > 0) &&
-            (aLeaderData.GetPartitionId() == mPreviousPartitionId))
+        if (hasRouteTlv && (mPreviousPartitionIdTimeout > 0) && (aLeaderData.GetPartitionId() == mPreviousPartitionId))
         {
-            VerifyOrExit(SerialNumber::IsGreater(routeTlv.GetRouterIdSequence(), mPreviousPartitionRouterIdSequence),
+            VerifyOrExit(SerialNumber::IsGreater(routeTlvData.GetRouterIdMask().GetSequence(),
+                                                 mPreviousPartitionRouterIdSequence),
                          error = kErrorDrop);
         }
 
@@ -1243,7 +1244,9 @@ Error Mle::HandleAdvertisementOnFtd(RxInfo &aRxInfo, uint16_t aSourceAddress, co
             ExitNow();
         }
 
-        if (ComparePartitions(routeTlv.IsSingleton(), aLeaderData, IsSingleton(), mLeaderData) > 0
+        if (hasRouteTlv &&
+            (ComparePartitions(routeTlvData.GetRouterIdMask().IsSingleton(), aLeaderData, IsSingleton(), mLeaderData) >
+             0)
 #if OPENTHREAD_CONFIG_TIME_SYNC_REQUIRED
             // Allow a better partition if it also enables time sync.
             && aRxInfo.mMessage.GetTimeSyncSeq() != OT_TIME_SYNC_INVALID_SEQ
@@ -1273,7 +1276,9 @@ Error Mle::HandleAdvertisementOnFtd(RxInfo &aRxInfo, uint16_t aSourceAddress, co
         ExitNow();
     }
 
-    VerifyOrExit(IsRouterRloc16(aSourceAddress) && routeTlv.IsValid());
+    VerifyOrExit(hasRouteTlv);
+
+    VerifyOrExit(IsRouterRloc16(aSourceAddress));
     routerId = RouterIdFromRloc16(aSourceAddress);
 
 #if OPENTHREAD_CONFIG_TIME_SYNC_ENABLE
@@ -1283,9 +1288,10 @@ Error Mle::HandleAdvertisementOnFtd(RxInfo &aRxInfo, uint16_t aSourceAddress, co
     //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Process `RouteTlv`
 
-    if (aRxInfo.IsNeighborStateValid() && mRouterTable.IsRouteTlvIdSequenceMoreRecent(routeTlv))
+    if (aRxInfo.IsNeighborStateValid() &&
+        mRouterTable.IsRouterIdSequenceMoreRecent(routeTlvData.GetRouterIdMask().GetSequence()))
     {
-        SuccessOrExit(error = ProcessRouteTlv(routeTlv, aRxInfo));
+        SuccessOrExit(error = ProcessRouteTlv(routeTlvData, aRxInfo));
     }
 
     //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -1309,7 +1315,7 @@ Error Mle::HandleAdvertisementOnFtd(RxInfo &aRxInfo, uint16_t aSourceAddress, co
                 mRouterRoleTransition.StartTimeout();
             }
 
-            mRouterTable.UpdateRouterOnFtdChild(routeTlv, routerId);
+            mRouterTable.UpdateRouterOnFtdChild(routeTlvData, routerId);
         }
         else
         {
@@ -1332,7 +1338,7 @@ Error Mle::HandleAdvertisementOnFtd(RxInfo &aRxInfo, uint16_t aSourceAddress, co
     //- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
     // Update routers as a router or leader.
 
-    if (IsRouter() && ShouldDowngrade(routerId, routeTlv))
+    if (IsRouter() && ShouldDowngrade(routerId, routeTlvData))
     {
         mRouterRoleTransition.StartTimeout();
     }
@@ -1361,7 +1367,7 @@ Error Mle::HandleAdvertisementOnFtd(RxInfo &aRxInfo, uint16_t aSourceAddress, co
     // unicast/multicast link request in progress
 
     if (!router->IsStateValid() && !router->IsStateLinkRequest() && (linkMargin >= kLinkRequestMinMargin) &&
-        routeTlv.IsRouterIdSet(mRouterId))
+        routeTlvData.GetRouterIdMask().IsAllocated(mRouterId))
     {
         InitNeighbor(*router, aRxInfo);
         router->SetState(Neighbor::kStateLinkRequest);
@@ -1373,7 +1379,7 @@ Error Mle::HandleAdvertisementOnFtd(RxInfo &aRxInfo, uint16_t aSourceAddress, co
 
     router->SetLastHeard(TimerMilli::GetNow());
 
-    mRouterTable.UpdateRoutes(routeTlv, routerId);
+    mRouterTable.UpdateRoutes(routeTlvData, routerId);
 
 exit:
     if (aRxInfo.mNeighbor && aRxInfo.mNeighbor->GetRloc16() != aSourceAddress)
@@ -3375,11 +3381,11 @@ exit:
 
 void Mle::HandleAddressSolicitResponse(Coap::Msg *aMsg, Error aResult)
 {
-    uint8_t             status;
-    uint16_t            rloc16;
-    ThreadRouterMaskTlv routerMaskTlv;
-    uint8_t             routerId;
-    Router             *router;
+    uint8_t      status;
+    uint8_t      routerId;
+    uint16_t     rloc16;
+    RouterIdMask routerIdMask;
+    Router      *router;
 
     mAddressSolicitPending = false;
 
@@ -3411,8 +3417,8 @@ void Mle::HandleAddressSolicitResponse(Coap::Msg *aMsg, Error aResult)
     SuccessOrExit(Tlv::Find<ThreadRloc16Tlv>(aMsg->mMessage, rloc16));
     routerId = RouterIdFromRloc16(rloc16);
 
-    SuccessOrExit(Tlv::FindTlv(aMsg->mMessage, routerMaskTlv));
-    VerifyOrExit(routerMaskTlv.IsValid());
+    SuccessOrExit(Tlv::Find<ThreadRouterMaskTlv>(aMsg->mMessage, routerIdMask));
+    VerifyOrExit(routerIdMask.IsValid());
 
     SetAlternateRloc16(GetRloc16());
 
@@ -3429,7 +3435,7 @@ void Mle::HandleAddressSolicitResponse(Coap::Msg *aMsg, Error aResult)
 
     mRouterTable.ClearNeighbors();
 
-    mRouterTable.UpdateRouterIdSet(routerMaskTlv.GetIdSequence(), routerMaskTlv.GetAssignedRouterIdMask());
+    mRouterTable.UpdateRouterIdMask(routerIdMask);
 
     router = mRouterTable.FindRouterById(routerId);
     VerifyOrExit(router != nullptr);
@@ -3655,15 +3661,12 @@ template <> void Mle::HandleTmf<kUriAddressSolicit>(Coap::Msg &aMsg)
 
     if (info.mRouter != nullptr)
     {
-        ThreadRouterMaskTlv routerMaskTlv;
+        RouterIdMask routerIdMask;
 
         SuccessOrExit(Tlv::Append<ThreadRloc16Tlv>(*response, info.mRouter->GetRloc16()));
 
-        routerMaskTlv.Init();
-        routerMaskTlv.SetIdSequence(mRouterTable.GetRouterIdSequence());
-        mRouterTable.GetRouterIdSet(routerMaskTlv.GetAssignedRouterIdMask());
-
-        SuccessOrExit(routerMaskTlv.AppendTo(*response));
+        mRouterTable.GetRouterIdMask(routerIdMask);
+        SuccessOrExit(Tlv::Append<ThreadRouterMaskTlv>(*response, routerIdMask));
     }
 
     SuccessOrExit(Get<Tmf::Agent>().SendMessage(*response, aMsg.mMessageInfo));
@@ -3781,11 +3784,11 @@ void Mle::FillConnectivityTlvValue(ConnectivityTlvValue &aTlvValue) const
     aTlvValue.InitFrom(connectivity);
 }
 
-bool Mle::ShouldDowngrade(uint8_t aNeighborId, const RouteTlv &aRouteTlv) const
+bool Mle::ShouldDowngrade(uint8_t aNeighborId, const RouteTlvData &aRouteTlvData) const
 {
     // Determine whether all conditions are satisfied for the router
     // to downgrade after receiving info for a neighboring router
-    // with Router ID `aNeighborId` along with its `aRouteTlv`.
+    // with Router ID `aNeighborId` along with its `aRouteTlvData`.
 
     bool    shouldDowngrade   = false;
     uint8_t activeRouterCount = mRouterTable.GetActiveRouterCount();
@@ -3831,7 +3834,7 @@ bool Mle::ShouldDowngrade(uint8_t aNeighborId, const RouteTlv &aRouteTlv) const
     // Check that the neighbor has as good or better-quality links to
     // same routers.
 
-    VerifyOrExit(NeighborHasComparableConnectivity(aRouteTlv, aNeighborId));
+    VerifyOrExit(NeighborHasComparableConnectivity(aRouteTlvData, aNeighborId));
 
 #if OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE && OPENTHREAD_CONFIG_BORDER_ROUTER_REQUEST_ROUTER_ROLE
     // Check if we are eligible to be router due to being a BR.
@@ -3844,17 +3847,16 @@ exit:
     return shouldDowngrade;
 }
 
-bool Mle::NeighborHasComparableConnectivity(const RouteTlv &aRouteTlv, uint8_t aNeighborId) const
+bool Mle::NeighborHasComparableConnectivity(const RouteTlvData &aRouteTlvData, uint8_t aNeighborId) const
 {
     // Check whether the neighboring router with Router ID `aNeighborId`
-    // (along with its `aRouteTlv`) has as good or better-quality links
+    // (along with its `aRouteTlvData`) has as good or better-quality links
     // to all our neighboring routers which have a two-way link quality
     // of two or better.
 
     bool isComparable = true;
 
-    for (uint8_t routerId = 0, index = 0; routerId <= kMaxRouterId;
-         index += aRouteTlv.IsRouterIdSet(routerId) ? 1 : 0, routerId++)
+    for (uint8_t routerId = 0; routerId <= kMaxRouterId; routerId++)
     {
         const Router *router;
         LinkQuality   localLinkQuality;
@@ -3883,12 +3885,12 @@ bool Mle::NeighborHasComparableConnectivity(const RouteTlv &aRouteTlv, uint8_t a
         // at least two. Check that `aRouteTlv` has as good or
         // better-quality link to it as well.
 
-        if (!aRouteTlv.IsRouterIdSet(routerId))
+        if (!aRouteTlvData.GetRouterIdMask().IsAllocated(routerId))
         {
             ExitNow(isComparable = false);
         }
 
-        peerLinkQuality = Min(aRouteTlv.GetLinkQualityIn(index), aRouteTlv.GetLinkQualityOut(index));
+        peerLinkQuality = Min(aRouteTlvData.GetLinkQualityIn(routerId), aRouteTlvData.GetLinkQualityOut(routerId));
 
         if (peerLinkQuality < localLinkQuality)
         {

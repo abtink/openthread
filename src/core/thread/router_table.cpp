@@ -61,10 +61,9 @@ void RouterTable::Clear(void)
     SignalTableChanged(events);
 }
 
-bool RouterTable::IsRouteTlvIdSequenceMoreRecent(const Mle::RouteTlv &aRouteTlv) const
+bool RouterTable::IsRouterIdSequenceMoreRecent(uint8_t aRouterIdSequence) const
 {
-    return (GetActiveRouterCount() == 0) ||
-           SerialNumber::IsGreater(aRouteTlv.GetRouterIdSequence(), GetRouterIdSequence());
+    return (GetActiveRouterCount() == 0) || SerialNumber::IsGreater(aRouterIdSequence, GetRouterIdSequence());
 }
 
 void RouterTable::ClearNeighbors(void)
@@ -522,19 +521,19 @@ uint16_t RouterTable::GetNextHop(uint16_t aDestRloc16) const
     return nextHopRloc16;
 }
 
-void RouterTable::UpdateRouterIdSet(uint8_t aRouterIdSequence, const Mle::RouterIdSet &aRouterIdSet)
+void RouterTable::UpdateRouterIdMask(const Mle::RouterIdMask &aRouterIdMask)
 {
     bool shouldAdd = false;
 
-    mRouterIdSequence            = aRouterIdSequence;
+    mRouterIdSequence            = aRouterIdMask.GetSequence();
     mRouterIdSequenceLastUpdated = TimerMilli::GetNow();
 
     // Remove all previously allocated routers that are now removed in
-    // new `aRouterIdSet`.
+    // new `aRouterIdMask`.
 
     for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
     {
-        if (IsAllocated(routerId) == aRouterIdSet.Contains(routerId))
+        if (IsAllocated(routerId) == aRouterIdMask.IsAllocated(routerId))
         {
             continue;
         }
@@ -556,11 +555,11 @@ void RouterTable::UpdateRouterIdSet(uint8_t aRouterIdSequence, const Mle::Router
 
     VerifyOrExit(shouldAdd);
 
-    // Now add all new routers in `aRouterIdSet`.
+    // Now add all new routers in `aRouterIdMask`.
 
     for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
     {
-        if (!IsAllocated(routerId) && aRouterIdSet.Contains(routerId))
+        if (!IsAllocated(routerId) && aRouterIdMask.IsAllocated(routerId))
         {
             AddRouter(routerId);
         }
@@ -572,11 +571,11 @@ exit:
     return;
 }
 
-void RouterTable::UpdateRoutes(const Mle::RouteTlv &aRouteTlv, uint8_t aNeighborId)
+void RouterTable::UpdateRoutes(const Mle::RouteTlvData &aRouteTlvData, uint8_t aNeighborId)
 {
-    Router          *neighbor;
-    Mle::RouterIdSet finitePathCostIdSet;
-    uint8_t          linkCostToNeighbor;
+    Router           *neighbor;
+    Mle::RouterIdMask finitePathCostIds;
+    uint8_t           linkCostToNeighbor;
 
     neighbor = FindRouterById(aNeighborId);
     VerifyOrExit(neighbor != nullptr);
@@ -586,32 +585,31 @@ void RouterTable::UpdateRoutes(const Mle::RouteTlv &aRouteTlv, uint8_t aNeighbor
     // cost changed from finite to infinite or vice versa to decide
     // whether to reset the  MLE Advertisement interval.
 
-    finitePathCostIdSet.Clear();
+    finitePathCostIds.Clear();
 
     for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
     {
         if (GetPathCost(Mle::Rloc16FromRouterId(routerId)) < Mle::kMaxRouteCost)
         {
-            finitePathCostIdSet.Add(routerId);
+            finitePathCostIds.Add(routerId);
         }
     }
 
     // Find the entry corresponding to our Router ID in the received
-    // `aRouteTlv` to get the `LinkQualityIn` from the perspective of
-    // neighbor. We use this to update our `LinkQualityOut` to the
+    // `aRouteTlvData` to get the `LinkQualityIn` from the perspective
+    // of neighbor. We use this to update our `LinkQualityOut` to the
     // neighbor.
 
-    for (uint8_t routerId = 0, index = 0; routerId <= Mle::kMaxRouterId;
-         index += aRouteTlv.IsRouterIdSet(routerId) ? 1 : 0, routerId++)
+    for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
     {
         if (!Get<Mle::Mle>().MatchesRouterId(routerId))
         {
             continue;
         }
 
-        if (aRouteTlv.IsRouterIdSet(routerId))
+        if (aRouteTlvData.GetRouterIdMask().IsAllocated(routerId))
         {
-            LinkQuality linkQuality = aRouteTlv.GetLinkQualityIn(index);
+            LinkQuality linkQuality = aRouteTlvData.GetLinkQualityIn(routerId);
 
             if (neighbor->GetLinkQualityOut() != linkQuality)
             {
@@ -619,7 +617,7 @@ void RouterTable::UpdateRoutes(const Mle::RouteTlv &aRouteTlv, uint8_t aNeighbor
                 SignalTableChanged(kEventLinkQualityOutChanged);
             }
 
-            // If the `aRouteTlv` indicates that the neighboring
+            // If the `aRouteTlvData` indicates that the neighboring
             // router claims to have no link to us (by setting its
             // `GetLinkQualityOut()` towards us as `kLinkQuality0`),
             // and we have previously established a link with it, and
@@ -632,7 +630,7 @@ void RouterTable::UpdateRoutes(const Mle::RouteTlv &aRouteTlv, uint8_t aNeighbor
             // trickle timer-triggered Advertisement transmission
             // (which can be up to 32 seconds later).
 
-            if (neighbor->IsStateValid() && (aRouteTlv.GetLinkQualityOut(index) == kLinkQuality0) &&
+            if (neighbor->IsStateValid() && (aRouteTlvData.GetLinkQualityOut(routerId) == kLinkQuality0) &&
                 (neighbor->GetTwoWayLinkQuality() >= kLinkQuality2))
             {
                 Get<Mle::Mle>().ScheduleUnicastAdvertisementTo(*neighbor);
@@ -644,14 +642,13 @@ void RouterTable::UpdateRoutes(const Mle::RouteTlv &aRouteTlv, uint8_t aNeighbor
 
     linkCostToNeighbor = GetLinkCost(*neighbor);
 
-    for (uint8_t routerId = 0, index = 0; routerId <= Mle::kMaxRouterId;
-         index += aRouteTlv.IsRouterIdSet(routerId) ? 1 : 0, routerId++)
+    for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
     {
         Router *router;
         Router *nextHop;
         uint8_t cost;
 
-        if (!aRouteTlv.IsRouterIdSet(routerId))
+        if (!aRouteTlvData.GetRouterIdMask().IsAllocated(routerId))
         {
             continue;
         }
@@ -665,8 +662,7 @@ void RouterTable::UpdateRoutes(const Mle::RouteTlv &aRouteTlv, uint8_t aNeighbor
 
         nextHop = FindNextHopOf(*router);
 
-        cost = aRouteTlv.GetRouteCost(index);
-        cost = (cost == 0) ? Mle::kMaxRouteCost : cost;
+        cost = aRouteTlvData.GetRouteCost(routerId);
 
         if ((nextHop == nullptr) || (nextHop == neighbor))
         {
@@ -701,7 +697,7 @@ void RouterTable::UpdateRoutes(const Mle::RouteTlv &aRouteTlv, uint8_t aNeighbor
 
     for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
     {
-        bool oldCostFinite = finitePathCostIdSet.Contains(routerId);
+        bool oldCostFinite = finitePathCostIds.IsAllocated(routerId);
         bool newCostFinite = (GetPathCost(Mle::Rloc16FromRouterId(routerId)) < Mle::kMaxRouteCost);
 
         if (newCostFinite != oldCostFinite)
@@ -715,16 +711,15 @@ exit:
     return;
 }
 
-void RouterTable::UpdateRouterOnFtdChild(const Mle::RouteTlv &aRouteTlv, uint8_t aParentId)
+void RouterTable::UpdateRouterOnFtdChild(const Mle::RouteTlvData &aRouteTlvData, uint8_t aParentId)
 {
-    for (uint8_t routerId = 0, index = 0; routerId <= Mle::kMaxRouterId;
-         index += aRouteTlv.IsRouterIdSet(routerId) ? 1 : 0, routerId++)
+    for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
     {
         Router *router;
         uint8_t cost;
         uint8_t nextHopId;
 
-        if (!aRouteTlv.IsRouterIdSet(routerId) || (routerId == aParentId))
+        if (!aRouteTlvData.GetRouterIdMask().IsAllocated(routerId) || (routerId == aParentId))
         {
             continue;
         }
@@ -736,8 +731,8 @@ void RouterTable::UpdateRouterOnFtdChild(const Mle::RouteTlv &aRouteTlv, uint8_t
             continue;
         }
 
-        cost      = aRouteTlv.GetRouteCost(index);
-        nextHopId = (cost == 0) ? Mle::kInvalidRouterId : aParentId;
+        cost      = aRouteTlvData.GetRouteCost(routerId);
+        nextHopId = (cost >= Mle::kMaxRouteCost) ? Mle::kInvalidRouterId : aParentId;
 
         if (router->SetNextHopAndCost(nextHopId, cost))
         {
@@ -746,18 +741,40 @@ void RouterTable::UpdateRouterOnFtdChild(const Mle::RouteTlv &aRouteTlv, uint8_t
     }
 }
 
-void RouterTable::FillRouteTlv(Mle::RouteTlv &aRouteTlv, const Neighbor *aNeighbor) const
+void RouterTable::GetRouterIdMask(Mle::RouterIdMask &aRouterIdMask) const
 {
-    uint8_t          routerIdSequence = mRouterIdSequence;
-    Mle::RouterIdSet routerIdSet;
-    uint8_t          routerIndex;
+    aRouterIdMask.Clear();
 
-    mRouterIdMap.GetAsRouterIdSet(routerIdSet);
+    aRouterIdMask.SetSequence(GetRouterIdSequence());
+
+    for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
+    {
+        if (IsAllocated(routerId))
+        {
+            aRouterIdMask.Add(routerId);
+        }
+    }
+}
+
+void RouterTable::PrepareRouteTlvDataForLinkAccept(Mle::RouteTlvData &aRouteTlvData, const Neighbor &aNeighbor) const
+{
+    PrepareRouteTlvData(aRouteTlvData, &aNeighbor);
+}
+
+void RouterTable::PrepareRouteTlvData(Mle::RouteTlvData &aRouteTlvData) const
+{
+    PrepareRouteTlvData(aRouteTlvData, /* aNeighbor */ nullptr);
+}
+
+void RouterTable::PrepareRouteTlvData(Mle::RouteTlvData &aRouteTlvData, const Neighbor *aNeighbor) const
+{
+    aRouteTlvData.Clear();
+    GetRouterIdMask(aRouteTlvData.GetRouterIdMask());
 
     if ((aNeighbor != nullptr) && Mle::IsRouterRloc16(aNeighbor->GetRloc16()))
     {
         // Sending a Link Accept message that may require truncation
-        // of Route64 TLV.
+        // of Route TLV.
 
         uint8_t routerCount = mRouters.GetLength();
 
@@ -773,35 +790,31 @@ void RouterTable::FillRouteTlv(Mle::RouteTlv &aRouteTlv, const Neighbor *aNeighb
                 if (Get<Mle::Mle>().MatchesRouterId(routerId) || (routerId == aNeighbor->GetRouterId()) ||
                     (routerId == Get<Mle::Mle>().GetLeaderId()))
                 {
-                    // Route64 TLV must contain this device and the
+                    // Route TLV must contain this device and the
                     // neighboring router to ensure that at least this
                     // link can be established.
                     continue;
                 }
 
-                if (routerIdSet.Contains(routerId))
+                if (aRouteTlvData.GetRouterIdMask().IsAllocated(routerId))
                 {
-                    routerIdSet.Remove(routerId);
+                    aRouteTlvData.GetRouterIdMask().Remove(routerId);
                     routerCount--;
                 }
             }
 
             // Ensure that the neighbor will process the current
-            // Route64 TLV in a subsequent message exchange
-            routerIdSequence -= kLinkAcceptSequenceRollback;
+            // Route TLV in a subsequent message exchange
+            aRouteTlvData.GetRouterIdMask().SetSequence(GetRouterIdSequence() - kLinkAcceptSequenceRollback);
         }
     }
 
-    aRouteTlv.SetRouterIdSequence(routerIdSequence);
-    aRouteTlv.SetRouterIdMask(routerIdSet);
-
-    routerIndex = 0;
-
     for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
     {
-        uint16_t routerRloc16;
+        const Router *router;
+        uint16_t      routerRloc16;
 
-        if (!routerIdSet.Contains(routerId))
+        if (!aRouteTlvData.GetRouterIdMask().IsAllocated(routerId))
         {
             continue;
         }
@@ -810,29 +823,15 @@ void RouterTable::FillRouteTlv(Mle::RouteTlv &aRouteTlv, const Neighbor *aNeighb
 
         if (Get<Mle::Mle>().HasRloc16(routerRloc16))
         {
-            aRouteTlv.SetRouteData(routerIndex, kLinkQuality0, kLinkQuality0, 1);
+            aRouteTlvData.SetRouteInfoFor(routerId, kLinkQuality0, kLinkQuality0, 1);
         }
         else
         {
-            const Router *router = FindRouterById(routerId);
-            uint8_t       pathCost;
-
-            OT_ASSERT(router != nullptr);
-
-            pathCost = GetPathCost(routerRloc16);
-
-            if (pathCost >= Mle::kMaxRouteCost)
-            {
-                pathCost = 0;
-            }
-
-            aRouteTlv.SetRouteData(routerIndex, router->GetLinkQualityIn(), router->GetLinkQualityOut(), pathCost);
+            router = FindRouterById(routerId);
+            aRouteTlvData.SetRouteInfoFor(routerId, router->GetLinkQualityIn(), router->GetLinkQualityOut(),
+                                          GetPathCost(routerRloc16));
         }
-
-        routerIndex++;
     }
-
-    aRouteTlv.SetRouteDataLength(routerIndex);
 }
 
 void RouterTable::HandleTimeTick(void)
@@ -872,19 +871,6 @@ exit:
     return error;
 }
 #endif
-
-void RouterTable::RouterIdMap::GetAsRouterIdSet(Mle::RouterIdSet &aRouterIdSet) const
-{
-    aRouterIdSet.Clear();
-
-    for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
-    {
-        if (IsAllocated(routerId))
-        {
-            aRouterIdSet.Add(routerId);
-        }
-    }
-}
 
 void RouterTable::RouterIdMap::HandleTimeTick(void)
 {

@@ -42,35 +42,195 @@ namespace ot {
 namespace Mle {
 
 //---------------------------------------------------------------------------------------------------------------------
-// RouteTlv
+// RouteTlvData
 
-#if !OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE
-
-void RouteTlv::Init(void)
+uint8_t RouteTlvData::GetRouteCost(uint8_t aRouterId) const
 {
-    SetType(kRoute);
-    SetLength(sizeof(*this) - sizeof(Tlv));
-    mRouterIdMask.Clear();
-    ClearAllBytes(mRouteData);
+    uint8_t cost = mRouteInfo[aRouterId].mRouteCost;
+
+    if (cost == 0)
+    {
+        cost = kMaxRouteCost;
+    }
+
+    return cost;
 }
 
-bool RouteTlv::IsValid(void) const
+void RouteTlvData::SetRouteInfoFor(uint16_t    aRouterId,
+                                   LinkQuality aLinkQualityIn,
+                                   LinkQuality aLinkQualityOut,
+                                   uint8_t     aRouteCost)
 {
-    bool    isValid = false;
-    uint8_t numAllocatedIds;
+    VerifyOrExit(aRouterId <= kMaxRouterId);
 
-    VerifyOrExit(GetLength() >= sizeof(mRouterIdSequence) + sizeof(mRouterIdMask));
-
-    numAllocatedIds = mRouterIdMask.GetNumberOfAllocatedIds();
-    VerifyOrExit(numAllocatedIds <= kMaxRouters);
-
-    isValid = (GetRouteDataLength() >= numAllocatedIds);
+    mRouteInfo[aRouterId].mLinkQualityIn  = aLinkQualityIn;
+    mRouteInfo[aRouterId].mLinkQualityOut = aLinkQualityOut;
+    mRouteInfo[aRouterId].mRouteCost      = (aRouteCost >= kMaxRouteCost) ? 0 : aRouteCost;
 
 exit:
-    return isValid;
+    return;
 }
 
-#endif // #if !OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE
+Error RouteTlvData::ParseFrom(const Message &aMessage, const OffsetRange &aOffsetRange)
+{
+    Error       error;
+    OffsetRange offsetRange = aOffsetRange;
+#if OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE
+    bool isEven = true;
+#endif
+
+    Clear();
+
+    SuccessOrExit(error = aMessage.Read(offsetRange, mRouterIdMask));
+    offsetRange.AdvanceOffset(sizeof(RouterIdMask));
+
+    VerifyOrExit(mRouterIdMask.IsValid(), error = kErrorParse);
+
+    for (uint8_t routerId = 0; routerId <= kMaxRouterId; routerId++)
+    {
+        RouteInfo::EncodedValue encoded;
+
+        if (!mRouterIdMask.IsAllocated(routerId))
+        {
+            continue;
+        }
+
+        // Read and decode the Route Data encoded entry for each
+        // allocated Router ID. When `LONG_ROUTES` enabled, each entry
+        // uses 12 bits and they are staggered across bytes. Even
+        // entries use the upper 12 bits. Odd entries use the lower 12
+        // bits.
+
+        SuccessOrExit(error = aMessage.Read(offsetRange, encoded));
+
+#if !OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE
+        offsetRange.AdvanceOffset(sizeof(encoded));
+#else
+        encoded = BigEndian::HostSwap(encoded);
+
+        if (isEven)
+        {
+            encoded = (encoded >> RouteInfo::kEvenEntryBitShift);
+            offsetRange.AdvanceOffset(sizeof(uint8_t));
+        }
+        else
+        {
+            encoded &= RouteInfo::kOddEntryMask;
+            offsetRange.AdvanceOffset(sizeof(uint16_t));
+        }
+
+        isEven = !isEven;
+#endif
+
+        mRouteInfo[routerId].DecodeFrom(encoded);
+    }
+
+exit:
+    return error;
+}
+
+Error RouteTlvData::AppendAsTlv(uint8_t aTlvType, Message &aMessage) const
+{
+    Error         error;
+    Tlv::Bookmark tlvBookmark;
+
+#if OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE
+    bool isEven = true;
+#endif
+
+    SuccessOrExit(error = Tlv::StartTlv(aMessage, aTlvType, tlvBookmark));
+
+    SuccessOrExit(error = aMessage.Append(mRouterIdMask));
+
+    for (uint8_t routerId = 0; routerId <= kMaxRouterId; routerId++)
+    {
+        if (!mRouterIdMask.IsAllocated(routerId))
+        {
+            continue;
+        }
+
+#if !OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE
+        SuccessOrExit(error = aMessage.Append<RouteInfo::EncodedValue>(mRouteInfo[routerId].Encode()));
+#else
+        {
+            RouteInfo::EncodedValue encoded = mRouteInfo[routerId].Encode();
+
+            if (isEven)
+            {
+                encoded <<= RouteInfo::kEvenEntryBitShift;
+
+                encoded = BigEndian::HostSwap(encoded);
+                SuccessOrExit(error = aMessage.Append(encoded));
+            }
+            else
+            {
+                uint16_t                offset;
+                RouteInfo::EncodedValue prevValue;
+
+                // When `LONG_ROUTES` is enabled, two 12-bit entries
+                // (1.5 bytes each) are staggered across 3 bytes. The
+                // even entry was appended as a 2-byte `uint16_t`. We
+                // now append one more byte (making 3 bytes in total)
+                // and then update the last 2 bytes to merge the
+                // 12-bit odd entry with the previous 4 bits from the
+                // even entry.
+
+                SuccessOrExit(error = aMessage.Append<uint8_t>(0));
+
+                offset = aMessage.GetLength() - sizeof(RouteInfo::EncodedValue);
+
+                IgnoreError(aMessage.Read(offset, prevValue));
+                prevValue = BigEndian::HostSwap(prevValue);
+
+                encoded |= prevValue;
+
+                encoded = BigEndian::HostSwap(encoded);
+                aMessage.Write(offset, encoded);
+            }
+
+            isEven = !isEven;
+        }
+#endif // OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE
+    }
+
+    error = Tlv::EndTlv(aMessage, tlvBookmark);
+
+exit:
+    return error;
+}
+
+void RouteTlvData::RouteInfo::DecodeFrom(EncodedValue aEncoded)
+{
+    mLinkQualityOut = static_cast<uint8_t>(ReadBits<EncodedValue, kLinkQualityOutMask>(aEncoded));
+    mLinkQualityIn  = static_cast<uint8_t>(ReadBits<EncodedValue, kLinkQualityInMask>(aEncoded));
+    mRouteCost      = static_cast<uint8_t>(ReadBits<EncodedValue, kRouteCostMask>(aEncoded));
+}
+
+RouteTlvData::RouteInfo::EncodedValue RouteTlvData::RouteInfo::Encode(void) const
+{
+    EncodedValue encoded = 0;
+
+    WriteBits<EncodedValue, kLinkQualityOutMask>(encoded, mLinkQualityOut);
+    WriteBits<EncodedValue, kLinkQualityInMask>(encoded, mLinkQualityIn);
+    WriteBits<EncodedValue, kRouteCostMask>(encoded, mRouteCost);
+
+    return encoded;
+}
+
+//---------------------------------------------------------------------------------------------------------------------
+// RouteTlv
+
+Error RouteTlv::FindIn(const Message &aMessage, RouteTlvData &aRouteTlvData)
+{
+    Error       error;
+    OffsetRange offsetRange;
+
+    SuccessOrExit(error = Tlv::FindTlvValueOffsetRange(aMessage, Tlv::kRoute, offsetRange));
+    error = aRouteTlvData.ParseFrom(aMessage, offsetRange);
+
+exit:
+    return error;
+}
 
 //---------------------------------------------------------------------------------------------------------------------
 // ConnectivityTlvValue

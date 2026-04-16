@@ -1604,7 +1604,8 @@ private:
         Error AppendCslClockAccuracyTlv(void);
 #endif
 #if OPENTHREAD_FTD
-        Error AppendRouteTlv(Neighbor *aNeighbor = nullptr);
+        Error AppendRouteTlv(void);
+        Error AppendRouteTlvForLinkAccept(const Neighbor &aNeighbor);
         Error AppendActiveDatasetTlv(void);
         Error AppendPendingDatasetTlv(void);
         Error AppendConnectivityTlv(void);
@@ -1650,7 +1651,7 @@ private:
         Error ReadCslClockAccuracyTlv(Mac::CslAccuracy &aCslAccuracy) const;
 #endif
 #if OPENTHREAD_FTD
-        Error ReadRouteTlv(RouteTlv &aRouteTlv) const;
+        Error ReadRouteTlv(RouteTlvData &aRouteTlvData) const;
 #endif
 
     private:
@@ -2435,7 +2436,7 @@ private:
     void     HandleNetworkDataUpdateRouter(void);
     void     HandleDiscoveryRequest(RxInfo &aRxInfo);
     void     EstablishRouterLinkOnFtdChild(Router &aRouter, RxInfo &aRxInfo, uint8_t aLinkMargin);
-    Error    ProcessRouteTlv(const RouteTlv &aRouteTlv, RxInfo &aRxInfo);
+    Error    ProcessRouteTlv(const RouteTlvData &aRouteTlvData, RxInfo &aRxInfo);
     Error    ReadAndProcessRouteTlvOnFtdChild(RxInfo &aRxInfo, uint8_t aParentId);
     void     StopAdvertiseTrickleTimer(void);
     uint32_t DetermineAdvertiseIntervalMax(void) const;
@@ -2466,8 +2467,8 @@ private:
     void     SetChildStateToValid(Child &aChild);
     bool     HasChildren(void);
     void     RemoveChildren(void);
-    bool     ShouldDowngrade(uint8_t aNeighborId, const RouteTlv &aRouteTlv) const;
-    bool     NeighborHasComparableConnectivity(const RouteTlv &aRouteTlv, uint8_t aNeighborId) const;
+    bool     ShouldDowngrade(uint8_t aNeighborId, const RouteTlvData &aRouteTlvData) const;
+    bool     NeighborHasComparableConnectivity(const RouteTlvData &aRouteTlvData, uint8_t aNeighborId) const;
     void     HandleAdvertiseTrickleTimer(void);
     void     HandleTimeTick(void);
     void     HandleRouterTableEvent(RouterTable::Events aEvents);

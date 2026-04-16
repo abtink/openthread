@@ -88,13 +88,13 @@ Error MeshDiag::DiscoverTopology(const DiscoverConfig &aConfig, DiscoverCallback
         tlvs[tlvsLength++] = ChildTableTlv::kType;
     }
 
-    Get<RouterTable>().GetRouterIdSet(mDiscover.mExpectedRouterIdSet);
+    Get<RouterTable>().GetRouterIdMask(mDiscover.mExpectedRouterIds);
 
     for (uint8_t routerId = 0; routerId <= Mle::kMaxRouterId; routerId++)
     {
         Ip6::Address destination;
 
-        if (!mDiscover.mExpectedRouterIdSet.Contains(routerId))
+        if (!mDiscover.mExpectedRouterIds.IsAllocated(routerId))
         {
             continue;
         }
@@ -136,9 +136,9 @@ void MeshDiag::HandleDiagGetResponse(Coap::Msg *aMsg, Error aResult)
         routerInfo.mChildIterator = &childIterator;
     }
 
-    mDiscover.mExpectedRouterIdSet.Remove(routerInfo.mRouterId);
+    mDiscover.mExpectedRouterIds.Remove(routerInfo.mRouterId);
 
-    if (mDiscover.mExpectedRouterIdSet.GetNumberOfAllocatedIds() == 0)
+    if (mDiscover.mExpectedRouterIds.DetermineAllocatedCount() == 0)
     {
         error  = kErrorNone;
         mState = kStateIdle;
@@ -467,15 +467,15 @@ void MeshDiag::HandleTimer(void) { Finalize(kErrorResponseTimeout); }
 
 Error MeshDiag::RouterInfo::ParseFrom(const Message &aMessage)
 {
-    Error     error = kErrorNone;
-    Mle::Mle &mle   = aMessage.Get<Mle::Mle>();
-    RouteTlv  routeTlv;
+    Error        error = kErrorNone;
+    Mle::Mle    &mle   = aMessage.Get<Mle::Mle>();
+    RouteTlvData routeTlvData;
 
     Clear();
 
     SuccessOrExit(error = Tlv::Find<Address16Tlv>(aMessage, mRloc16));
     SuccessOrExit(error = Tlv::Find<ExtMacAddressTlv>(aMessage, AsCoreType(&mExtAddress)));
-    SuccessOrExit(error = Tlv::FindTlv(aMessage, routeTlv));
+    SuccessOrExit(error = RouteTlv::FindIn(aMessage, routeTlvData));
 
     switch (error = Tlv::Find<VersionTlv>(aMessage, mVersion))
     {
@@ -495,12 +495,11 @@ Error MeshDiag::RouterInfo::ParseFrom(const Message &aMessage)
     mIsLeader           = (mRouterId == mle.GetLeaderId());
     mIsBorderRouter     = aMessage.Get<NetworkData::Leader>().ContainsBorderRouterWithRloc(mRloc16);
 
-    for (uint8_t id = 0, index = 0; id <= Mle::kMaxRouterId; id++)
+    for (uint8_t id = 0; id <= Mle::kMaxRouterId; id++)
     {
-        if (routeTlv.IsRouterIdSet(id))
+        if (routeTlvData.GetRouterIdMask().IsAllocated(id))
         {
-            mLinkQualities[id] = routeTlv.GetLinkQualityIn(index);
-            index++;
+            mLinkQualities[id] = routeTlvData.GetLinkQualityIn(id);
         }
     }
 

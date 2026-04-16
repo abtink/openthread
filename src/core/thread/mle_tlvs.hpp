@@ -36,6 +36,7 @@
 
 #include "openthread-core-config.h"
 
+#include "common/clearable.hpp"
 #include "common/encoding.hpp"
 #include "common/message.hpp"
 #include "common/preference.hpp"
@@ -229,359 +230,166 @@ typedef UintTlvInfo<Tlv::kCslTimeout, uint32_t> CslTimeoutTlv;
  */
 typedef UintTlvInfo<Tlv::kXtalAccuracy, uint16_t> XtalAccuracyTlv;
 
+/**
+ * Represents information from a `RouteTlv`.
+ */
+class RouteTlvData : public Clearable<RouteTlvData>
+{
+public:
+    /**
+     * Returns the Router ID mask.
+     *
+     * @returns The Router ID mask.
+     */
+    const RouterIdMask &GetRouterIdMask(void) const { return mRouterIdMask; }
+
+    /**
+     * Returns the Router ID mask.
+     *
+     * @returns The Router ID mask.
+     */
+    RouterIdMask &GetRouterIdMask(void) { return mRouterIdMask; }
+
+    /**
+     * Returns the Link Quality In value for a given Router ID.
+     *
+     * @param[in]  aRouterId  The Router ID. MUST be less than or equal to `kMaxRouterId`.
+     *
+     * @returns The Link Quality In value.
+     */
+    LinkQuality GetLinkQualityIn(uint8_t aRouterId) const
+    {
+        return static_cast<LinkQuality>(mRouteInfo[aRouterId].mLinkQualityIn);
+    }
+
+    /**
+     * Returns the Link Quality Out value for a given Router ID.
+     *
+     * @param[in]  aRouterId  The Router ID. MUST be less than or equal to `kMaxRouterId`.
+     *
+     * @returns The Link Quality Out value.
+     */
+    LinkQuality GetLinkQualityOut(uint8_t aRouterId) const
+    {
+        return static_cast<LinkQuality>(mRouteInfo[aRouterId].mLinkQualityOut);
+    }
+
+    /**
+     * Returns the Route Cost value for a given Router ID.
+     *
+     * In the encoded Route TLV, a value of 0 indicates that the cost is infinite (i.e., `kMaxRouteCost`).
+     * This method returns the parsed cost, where 0 is mapped to `kMaxRouteCost`.
+     *
+     * @param[in]  aRouterId  The Router ID. MUST be less than or equal to `kMaxRouterId`.
+     *
+     * @returns The Route Cost value.
+     */
+    uint8_t GetRouteCost(uint8_t aRouterId) const;
+
+    /**
+     * Sets the Route Info for a given Router ID.
+     *
+     * The @p aRouteCost can be `kMaxRouteCost`, which is encoded as 0 in the Route TLV.
+     *
+     * @param[in]  aRouterId         The Router ID.
+     * @param[in]  aLinkQualityIn    The Link Quality In value.
+     * @param[in]  aLinkQualityOut   The Link Quality Out value.
+     * @param[in]  aRouteCost        The Route Cost value.
+     */
+    void SetRouteInfoFor(uint16_t    aRouterId,
+                         LinkQuality aLinkQualityIn,
+                         LinkQuality aLinkQualityOut,
+                         uint8_t     aRouteCost);
+
+    /**
+     * Parses and validates the Route Data from a message.
+     *
+     * @param[in]  aMessage      The message to parse from.
+     * @param[in]  aOffsetRange  The offset range in the message to parse from (correspond to the Route TLV value).
+     *
+     * @retval kErrorNone   Successfully parsed from the message.
+     * @retval kErrorParse  Failed to parse from the message (e.g., mask is not valid).
+     */
+    Error ParseFrom(const Message &aMessage, const OffsetRange &aOffsetRange);
+
+    /**
+     * Encodes and appends the Route Data as a given TLV type to a message.
+     *
+     * @param[in]  aTlvType  The TLV type.
+     * @param[in]  aMessage  The message to append to.
+     *
+     * @retval kErrorNone   Successfully appended to the message.
+     * @retval kErrorNoBufs Insufficient buffers to append to the message.
+     */
+    Error AppendAsTlv(uint8_t aTlvType, Message &aMessage) const;
+
+private:
+    struct RouteInfo
+    {
 #if !OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE
+        //   7   6   5   4   3   2   1   0
+        // +---+---+---+---+---+---+---+---+
+        // | LQOut | LQIn  |  Route Cost   |
+        // +---+---+---+---+---+---+---+---+
+
+        typedef uint8_t EncodedValue;
+
+        static constexpr EncodedValue kLinkQualityOutMask = 0x03 << 6;
+        static constexpr EncodedValue kLinkQualityInMask  = 0x03 << 4;
+        static constexpr EncodedValue kRouteCostMask      = 0x0f << 0;
+#else
+        // The experimental `MLE_LONG_ROUTES` uses 12-bit (1.5 bytes)
+        // extending the route cost from 4-bits to 8-bits.
+
+        typedef uint16_t EncodedValue;
+
+        static constexpr EncodedValue kLinkQualityOutMask = 0x03 << 10;
+        static constexpr EncodedValue kLinkQualityInMask  = 0x03 << 8;
+        static constexpr EncodedValue kRouteCostMask      = 0xff << 0;
+
+        static constexpr uint8_t      kEvenEntryBitShift = 4;
+        static constexpr EncodedValue kOddEntryMask      = 0x0fff;
+#endif
+
+        void         DecodeFrom(EncodedValue aEncoded);
+        EncodedValue Encode(void) const;
+
+        uint8_t mLinkQualityOut : 2;
+        uint8_t mLinkQualityIn : 2;
+#if !OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE
+        uint8_t mRouteCost : 4;
+#else
+        uint8_t mRouteCost;
+#endif
+    };
+
+    RouterIdMask mRouterIdMask;
+    RouteInfo    mRouteInfo[kMaxRouterId + 1];
+};
 
 /**
  * Implements Route TLV generation and parsing.
  */
-OT_TOOL_PACKED_BEGIN
-class RouteTlv : public Tlv, public TlvInfo<Tlv::kRoute>
+class RouteTlv : public TlvInfo<Tlv::kRoute>
 {
 public:
     /**
-     * Initializes the TLV.
+     * Searches within a given message for Route TLV, parses and validates the TLV value and returns the
+     * read data.
+     *
+     * TODO: write the rest..
      */
-    void Init(void);
+    static Error FindIn(const Message &aMessage, RouteTlvData &aRouteTlvData);
 
-    /**
-     * Indicates whether or not the TLV appears to be well-formed.
-     *
-     * @retval TRUE   If the TLV appears to be well-formed.
-     * @retval FALSE  If the TLV does not appear to be well-formed.
-     */
-    bool IsValid(void) const;
-
-    /**
-     * Returns the Router ID Sequence value.
-     *
-     * @returns The Router ID Sequence value.
-     */
-    uint8_t GetRouterIdSequence(void) const { return mRouterIdSequence; }
-
-    /**
-     * Sets the Router ID Sequence value.
-     *
-     * @param[in]  aSequence  The Router ID Sequence value.
-     */
-    void SetRouterIdSequence(uint8_t aSequence) { mRouterIdSequence = aSequence; }
-
-    /**
-     * Gets the Router ID Mask.
-     */
-    const RouterIdSet &GetRouterIdMask(void) const { return mRouterIdMask; }
-
-    /**
-     * Sets the Router ID Mask.
-     *
-     * @param[in]  aRouterIdSet The Router ID Mask to set.
-     */
-    void SetRouterIdMask(const RouterIdSet &aRouterIdSet) { mRouterIdMask = aRouterIdSet; }
-
-    /**
-     * Indicates whether or not a Router ID bit is set.
-     *
-     * @param[in]  aRouterId  The Router ID bit.
-     *
-     * @retval TRUE   If the Router ID bit is set.
-     * @retval FALSE  If the Router ID bit is not set.
-     */
-    bool IsRouterIdSet(uint8_t aRouterId) const { return mRouterIdMask.Contains(aRouterId); }
-
-    /**
-     * Indicates whether the `RouteTlv` is a singleton, i.e., only one router is allocated.
-     *
-     * @retval TRUE   It is a singleton.
-     * @retval FALSE  It is not a singleton.
-     */
-    bool IsSingleton(void) const { return IsValid() && (mRouterIdMask.GetNumberOfAllocatedIds() <= 1); }
-
-    /**
-     * Returns the Route Data Length value.
-     *
-     * @returns The Route Data Length value.
-     */
-    uint8_t GetRouteDataLength(void) const { return GetLength() - sizeof(mRouterIdSequence) - sizeof(mRouterIdMask); }
-
-    /**
-     * Sets the Route Data Length value.
-     *
-     * @param[in]  aLength  The Route Data Length value.
-     */
-    void SetRouteDataLength(uint8_t aLength) { SetLength(sizeof(mRouterIdSequence) + sizeof(mRouterIdMask) + aLength); }
-
-    /**
-     * Returns the Route Cost value for a given Router index.
-     *
-     * @param[in]  aRouterIndex  The Router index.
-     *
-     * @returns The Route Cost value for a given Router index.
-     */
-    uint8_t GetRouteCost(uint8_t aRouterIndex) const { return mRouteData[aRouterIndex] & kRouteCostMask; }
-
-    /**
-     * Returns the Link Quality In value for a given Router index.
-     *
-     * @param[in]  aRouterIndex  The Router index.
-     *
-     * @returns The Link Quality In value for a given Router index.
-     */
-    LinkQuality GetLinkQualityIn(uint8_t aRouterIndex) const
+    // TODO: write
+    static Error AppendTo(Message &aMessage, const RouteTlvData &aRouteTlvData)
     {
-        return static_cast<LinkQuality>((mRouteData[aRouterIndex] & kLinkQualityInMask) >> kLinkQualityInOffset);
-    }
-
-    /**
-     * Returns the Link Quality Out value for a given Router index.
-     *
-     * @param[in]  aRouterIndex  The Router index.
-     *
-     * @returns The Link Quality Out value for a given Router index.
-     */
-    LinkQuality GetLinkQualityOut(uint8_t aRouterIndex) const
-    {
-        return static_cast<LinkQuality>((mRouteData[aRouterIndex] & kLinkQualityOutMask) >> kLinkQualityOutOffset);
-    }
-
-    /**
-     * Sets the Route Data (Link Quality In/Out and Route Cost) for a given Router index.
-     *
-     * @param[in]  aRouterIndex    The Router index.
-     * @param[in]  aLinkQualityIn  The Link Quality In value.
-     * @param[in]  aLinkQualityOut The Link Quality Out value.
-     * @param[in]  aRouteCost      The Route Cost value.
-     */
-    void SetRouteData(uint8_t aRouterIndex, LinkQuality aLinkQualityIn, LinkQuality aLinkQualityOut, uint8_t aRouteCost)
-    {
-        mRouteData[aRouterIndex] = (((aLinkQualityIn << kLinkQualityInOffset) & kLinkQualityInMask) |
-                                    ((aLinkQualityOut << kLinkQualityOutOffset) & kLinkQualityOutMask) |
-                                    ((aRouteCost << kRouteCostOffset) & kRouteCostMask));
+        return aRouteTlvData.AppendAsTlv(Tlv::kRoute, aMessage);
     }
 
 private:
-    static constexpr uint8_t kLinkQualityOutOffset = 6;
-    static constexpr uint8_t kLinkQualityOutMask   = 3 << kLinkQualityOutOffset;
-    static constexpr uint8_t kLinkQualityInOffset  = 4;
-    static constexpr uint8_t kLinkQualityInMask    = 3 << kLinkQualityInOffset;
-    static constexpr uint8_t kRouteCostOffset      = 0;
-    static constexpr uint8_t kRouteCostMask        = 0xf << kRouteCostOffset;
-
-    uint8_t     mRouterIdSequence;
-    RouterIdSet mRouterIdMask;
-    uint8_t     mRouteData[kMaxRouterId + 1];
-} OT_TOOL_PACKED_END;
-
-#else // OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE
-
-/**
- * Implements Route TLV generation and parsing.
- */
-OT_TOOL_PACKED_BEGIN
-class RouteTlv : public Tlv, public TlvInfo<Tlv::kRoute>
-{
-public:
-    /**
-     * Initializes the TLV.
-     */
-    void Init(void)
-    {
-        SetType(kRoute);
-        SetLength(sizeof(*this) - sizeof(Tlv));
-    }
-
-    /**
-     * Indicates whether or not the TLV appears to be well-formed.
-     *
-     * @retval TRUE   If the TLV appears to be well-formed.
-     * @retval FALSE  If the TLV does not appear to be well-formed.
-     */
-    bool IsValid(void) const { return GetLength() >= sizeof(mRouterIdSequence) + sizeof(mRouterIdMask); }
-
-    /**
-     * Returns the Router ID Sequence value.
-     *
-     * @returns The Router ID Sequence value.
-     */
-    uint8_t GetRouterIdSequence(void) const { return mRouterIdSequence; }
-
-    /**
-     * Sets the Router ID Sequence value.
-     *
-     * @param[in]  aSequence  The Router ID Sequence value.
-     */
-    void SetRouterIdSequence(uint8_t aSequence) { mRouterIdSequence = aSequence; }
-
-    /**
-     * Gets the Router ID Mask.
-     */
-    const RouterIdSet &GetRouterIdMask(void) const { return mRouterIdMask; }
-
-    /**
-     * Sets the Router ID Mask.
-     *
-     * @param[in]  aRouterIdSet The Router ID Mask to set.
-     */
-    void SetRouterIdMask(const RouterIdSet &aRouterIdSet) { mRouterIdMask = aRouterIdSet; }
-
-    /**
-     * Indicates whether or not a Router ID bit is set.
-     *
-     * @param[in]  aRouterId  The Router ID.
-     *
-     * @retval TRUE   If the Router ID bit is set.
-     * @retval FALSE  If the Router ID bit is not set.
-     */
-    bool IsRouterIdSet(uint8_t aRouterId) const { return mRouterIdMask.Contains(aRouterId); }
-
-    /**
-     * Indicates whether the `RouteTlv` is a singleton, i.e., only one router is allocated.
-     *
-     * @retval TRUE   It is a singleton.
-     * @retval FALSE  It is not a singleton.
-     */
-    bool IsSingleton(void) const { return IsValid() && (mRouterIdMask.GetNumberOfAllocatedIds() <= 1); }
-
-    /**
-     * Sets the Router ID bit.
-     *
-     * @param[in]  aRouterId  The Router ID bit to set.
-     */
-    void SetRouterId(uint8_t aRouterId) { mRouterIdMask.Add(aRouterId); }
-
-    /**
-     * Returns the Route Data Length value.
-     *
-     * @returns The Route Data Length value in bytes
-     */
-    uint8_t GetRouteDataLength(void) const { return GetLength() - sizeof(mRouterIdSequence) - sizeof(mRouterIdMask); }
-
-    /**
-     * Sets the Route Data Length value.
-     *
-     * @param[in]  aLength  The Route Data Length value in number of router entries
-     */
-    void SetRouteDataLength(uint8_t aLength)
-    {
-        SetLength(sizeof(mRouterIdSequence) + sizeof(mRouterIdMask) + aLength + (aLength + 1) / 2);
-    }
-
-    /**
-     * Returns the Route Cost value for a given Router index.
-     *
-     * @param[in]  aRouterIndex  The Router index.
-     *
-     * @returns The Route Cost value for a given Router index.
-     */
-    uint8_t GetRouteCost(uint8_t aRouterIndex) const
-    {
-        if (aRouterIndex & 1)
-        {
-            return mRouteData[aRouterIndex + aRouterIndex / 2 + 1];
-        }
-        else
-        {
-            return static_cast<uint8_t>((mRouteData[aRouterIndex + aRouterIndex / 2] & kRouteCostMask)
-                                        << kOddEntryOffset) |
-                   ((mRouteData[aRouterIndex + aRouterIndex / 2 + 1] &
-                     static_cast<uint8_t>(kRouteCostMask << kOddEntryOffset)) >>
-                    kOddEntryOffset);
-        }
-    }
-
-    /**
-     * Returns the Link Quality In value for a given Router index.
-     *
-     * @param[in]  aRouterIndex  The Router index.
-     *
-     * @returns The Link Quality In value for a given Router index.
-     */
-    LinkQuality GetLinkQualityIn(uint8_t aRouterIndex) const
-    {
-        int offset = ((aRouterIndex & 1) ? kOddEntryOffset : 0);
-        return static_cast<LinkQuality>(
-            (mRouteData[aRouterIndex + aRouterIndex / 2] & (kLinkQualityInMask >> offset)) >>
-            (kLinkQualityInOffset - offset));
-    }
-
-    /**
-     * Returns the Link Quality Out value for a given Router index.
-     *
-     * @param[in]  aRouterIndex  The Router index.
-     *
-     * @returns The Link Quality Out value for a given Router index.
-     */
-    LinkQuality GetLinkQualityOut(uint8_t aRouterIndex) const
-    {
-        int offset = ((aRouterIndex & 1) ? kOddEntryOffset : 0);
-        return static_cast<LinkQuality>(
-            (mRouteData[aRouterIndex + aRouterIndex / 2] & (kLinkQualityOutMask >> offset)) >>
-            (kLinkQualityOutOffset - offset));
-    }
-
-    /**
-     * Sets the Route Data (Link Quality In/Out and Route Cost) for a given Router index.
-     *
-     * @param[in]  aRouterIndex    The Router index.
-     * @param[in]  aLinkQualityIn  The Link Quality In value.
-     * @param[in]  aLinkQualityOut The Link Quality Out value.
-     * @param[in]  aRouteCost      The Route Cost value.
-     */
-    void SetRouteData(uint8_t aRouterIndex, LinkQuality aLinkQualityIn, LinkQuality aLinkQualityOut, uint8_t aRouteCost)
-    {
-        SetLinkQualityIn(aRouterIndex, aLinkQualityIn);
-        SetLinkQualityOut(aRouterIndex, aLinkQualityOut);
-        SetRouteCost(aRouterIndex, aRouteCost);
-    }
-
-private:
-    static constexpr uint8_t kLinkQualityOutOffset = 6;
-    static constexpr uint8_t kLinkQualityOutMask   = 3 << kLinkQualityOutOffset;
-    static constexpr uint8_t kLinkQualityInOffset  = 4;
-    static constexpr uint8_t kLinkQualityInMask    = 3 << kLinkQualityInOffset;
-    static constexpr uint8_t kRouteCostOffset      = 0;
-    static constexpr uint8_t kRouteCostMask        = 0xf << kRouteCostOffset;
-    static constexpr uint8_t kOddEntryOffset       = 4;
-
-    void SetRouteCost(uint8_t aRouterIndex, uint8_t aRouteCost)
-    {
-        if (aRouterIndex & 1)
-        {
-            mRouteData[aRouterIndex + aRouterIndex / 2 + 1] = aRouteCost;
-        }
-        else
-        {
-            mRouteData[aRouterIndex + aRouterIndex / 2] =
-                (mRouteData[aRouterIndex + aRouterIndex / 2] & ~kRouteCostMask) |
-                ((aRouteCost >> kOddEntryOffset) & kRouteCostMask);
-            mRouteData[aRouterIndex + aRouterIndex / 2 + 1] = static_cast<uint8_t>(
-                (mRouteData[aRouterIndex + aRouterIndex / 2 + 1] & ~(kRouteCostMask << kOddEntryOffset)) |
-                ((aRouteCost & kRouteCostMask) << kOddEntryOffset));
-        }
-    }
-
-    void SetLinkQualityIn(uint8_t aRouterIndex, uint8_t aLinkQuality)
-    {
-        int offset = ((aRouterIndex & 1) ? kOddEntryOffset : 0);
-        mRouteData[aRouterIndex + aRouterIndex / 2] =
-            (mRouteData[aRouterIndex + aRouterIndex / 2] & ~(kLinkQualityInMask >> offset)) |
-            ((aLinkQuality << (kLinkQualityInOffset - offset)) & (kLinkQualityInMask >> offset));
-    }
-
-    void SetLinkQualityOut(uint8_t aRouterIndex, LinkQuality aLinkQuality)
-    {
-        int offset = ((aRouterIndex & 1) ? kOddEntryOffset : 0);
-        mRouteData[aRouterIndex + aRouterIndex / 2] =
-            (mRouteData[aRouterIndex + aRouterIndex / 2] & ~(kLinkQualityOutMask >> offset)) |
-            ((aLinkQuality << (kLinkQualityOutOffset - offset)) & (kLinkQualityOutMask >> offset));
-    }
-
-    uint8_t     mRouterIdSequence;
-    RouterIdSet mRouterIdMask;
-    // Since we do hold 12 (compressible to 11) bits of data per router, each entry occupies 1.5 bytes,
-    // consecutively. First 4 bits are link qualities, remaining 8 bits are route cost.
-    uint8_t mRouteData[kMaxRouterId + 1 + kMaxRouterId / 2 + 1];
-} OT_TOOL_PACKED_END;
-
-#endif // OPENTHREAD_CONFIG_MLE_LONG_ROUTES_ENABLE
+    RouteTlv(void) = default;
+};
 
 /**
  * Represents Leader Data TLV value.
