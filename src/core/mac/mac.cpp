@@ -2569,7 +2569,7 @@ exit:
 
 uint32_t Mac::GetCslPeriodInMsec(void) const
 {
-    return DivideAndRoundToClosest<uint32_t>(CslPeriodToUsec(GetCslPeriod()), 1000u);
+    return DivideAndRoundToClosest<uint32_t>(CslPeriodToUsec(GetCslPeriod()), Time::kOneMsecInUsec);
 }
 
 uint32_t Mac::CslPeriodToUsec(uint16_t aPeriodInTenSymbols)

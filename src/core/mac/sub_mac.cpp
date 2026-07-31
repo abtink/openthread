@@ -953,7 +953,7 @@ void SubMac::StartTimer(uint32_t aDelayUs)
 #if OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE
     mTimer.Start(aDelayUs);
 #else
-    mTimer.Start(aDelayUs / Time::kOneMsecInUsec);
+    mTimer.Start(Time::UsecToMsec(aDelayUs));
 #endif
 }
 
@@ -962,7 +962,7 @@ void SubMac::StartTimerAt(Time aStartTime, uint32_t aDelayUs)
 #if OPENTHREAD_CONFIG_PLATFORM_USEC_TIMER_ENABLE
     mTimer.StartAt(aStartTime, aDelayUs);
 #else
-    mTimer.StartAt(aStartTime, aDelayUs / Time::kOneMsecInUsec);
+    mTimer.StartAt(aStartTime, Time::UsecToMsec(aDelayUs))
 #endif
 }
 
