@@ -284,7 +284,7 @@ bool ChannelTlvValue::IsValid(void) const
     VerifyOrExit(Radio::SupportsChannelPage(mChannelPage));
 
     channel = GetChannel();
-    VerifyOrExit((Radio::kChannelMin <= channel) && (channel <= Radio::kChannelMax));
+    VerifyOrExit(Radio::IsChannelValid(channel));
 
     isValid = true;
 

@@ -44,6 +44,7 @@
 #include "common/locator.hpp"
 #include "common/non_copyable.hpp"
 #include "common/numeric_limits.hpp"
+#include "common/num_utils.hpp"
 #include "common/time.hpp"
 #include "mac/mac_frame.hpp"
 #include "mac/mac_types.hpp"
@@ -175,12 +176,17 @@ constexpr bool SupportsChannelPage(uint8_t aChannelPage)
 uint32_t ChannelMaskForPage(uint8_t aChannelPage);
 
 /**
- * Checks if a given channel is valid as a CSL channel.
+ * Checks if a given channel is a valid channel number.
+ *
+ * @param[in] aChannel  The channel number to check.
  *
  * @retval true   The channel is valid.
  * @retval false  The channel is invalid.
  */
-bool IsCslChannelValid(uint8_t aCslChannel);
+inline constexpr bool IsChannelValid(uint16_t aChannel)
+{
+    return IsValueInRange<uint16_t>(aChannel, kChannelMin, kChannelMax);
+}
 
 class Radio;
 
