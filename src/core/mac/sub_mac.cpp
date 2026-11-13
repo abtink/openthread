@@ -369,11 +369,21 @@ void SubMac::HandleReceiveDone(RxFrame *aFrame, Error aError)
     }
 
 #if OPENTHREAD_CONFIG_MAC_FILTER_ENABLE
-    if (!mRadioFilterEnabled)
+    VerifyOrExit(!mRadioFilterEnabled);
 #endif
+
+#if (OPENTHREAD_FTD || OPENTHREAD_MTD) && OPENTHREAD_CONFIG_TD_WAKE_LISTENER_ENABLE
+    if (aError == kErrorNone)
     {
-        mCallbacks.ReceiveDone(frameInfo, aError);
+        VerifyOrExit(!Get<ThreadDirect::Listener>().ProcessRxFrame(frameInfo));
     }
+#endif
+
+    mCallbacks.ReceiveDone(frameInfo, aError);
+    ExitNow();
+
+exit:
+    return;
 }
 
 Error SubMac::Send(void)
